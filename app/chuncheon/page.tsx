@@ -148,7 +148,7 @@ export default function ChuncheonPage() {
       <ComparisonSection />
 
       {/* TODO: 춘천 합격후기 블로그 URL - 나중에 수정 필요 */}
-      <Testimonials reviewUrl="https://blog.naver.com/guy0701/224198180485" />
+      <Testimonials campusName="춘천" reviewUrl="https://blog.naver.com/guy0701/224198180485" />
 
       {/* 내부시설 미리보기 (4-카드 그리드) + 더 알아보기 → /chuncheon/interior 페이지로 이동 */}
       {/* 📁 4-카드 사진 위치: public/images/facility/chuncheon/ (01~04 번호 순서대로) */}

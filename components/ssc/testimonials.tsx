@@ -8,10 +8,23 @@ interface TestimonialsProps {
   testimonials?: TestimonialItem[]
   reviewUrl?: string
   bgImage?: string
+  campusName?: string
 }
 
-export function Testimonials({ testimonials = streamContents.gongmuwon.testimonials, reviewUrl, bgImage }: TestimonialsProps) {
+export function Testimonials({ 
+  testimonials = streamContents.gongmuwon.testimonials, 
+  reviewUrl, 
+  bgImage,
+  campusName
+}: TestimonialsProps) {
   const ref = useScrollReveal()
+
+  // 지역명 자동 치환 함수
+  const formatQuote = (quote: string) => {
+    if (!campusName) return quote
+    // 다른 지역명들을 현재 캠퍼스 명칭으로 변환
+    return quote.replace(/원주|춘천|충주/g, campusName)
+  }
 
   return (
     <section id="testimonials" className="relative py-24 sm:py-32 overflow-hidden bg-[#F5F5F7]" ref={ref}>
@@ -62,8 +75,8 @@ export function Testimonials({ testimonials = streamContents.gongmuwon.testimoni
                 <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
                 <Quote size={28} className="w-10 h-10 text-[#0071E3]/10 mb-6 drop-shadow-sm group-hover:text-[#0071E3]/20 transition-colors duration-300" strokeWidth={2} />
-                <blockquote className="text-[16px] font-medium text-[#1D1D1F] leading-relaxed tracking-tight flex-1 whitespace-pre-line">
-                  &ldquo;{t.quote}&rdquo;
+                <blockquote className="text-[16px] font-medium text-[#1D1D1F] leading-relaxed tracking-tight flex-1 whitespace-pre-line text-balance">
+                  &ldquo;{formatQuote(t.quote)}&rdquo;
                 </blockquote>
                 <div className="flex flex-col gap-1 border-t border-black/5 pt-6 mt-auto">
                   <span className="text-[15px] font-semibold text-[#1D1D1F]">{t.name}</span>
