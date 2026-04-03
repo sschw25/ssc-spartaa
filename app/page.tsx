@@ -53,11 +53,13 @@ const locations = [
 
 const programs = ['공무원', '임용고시', '전문자격', '독학재수']
 
+import { CAMPUS_CONFIG } from '@/lib/campus-config'
+
 export default function SelectLocation() {
   const images: Record<string, string> = {
-    wonju: '/images/campus-wonju.jpg',
-    chuncheon: '/images/campus-chuncheon.png',
-    chungju: '/images/campus-chungju.png',
+    wonju: CAMPUS_CONFIG.wonju.image,
+    chuncheon: CAMPUS_CONFIG.chuncheon.image,
+    chungju: CAMPUS_CONFIG.chungju.image,
   }
 
   return (
