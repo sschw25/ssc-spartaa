@@ -41,11 +41,12 @@ export function Curriculum() {
         
         <div className="mb-16 text-center fade-in-up">
           <p className="text-[#0071E3] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">Timetable</p>
-          <h2 className="text-3xl md:text-5xl font-semibold text-[#1D1D1F] tracking-tighter mb-4">
+          <h2 className="text-3xl md:text-5xl font-semibold text-[#1D1D1F] tracking-tighter mb-4 leading-tight">
             하루가 비상식이 되는 시간
           </h2>
-          <p className="text-[#86868B] text-base md:text-lg font-medium max-w-lg mx-auto">
-            매 순간 가장 몰입할 수 있도록 설계된 스파르타식 교시제. 낭비되는 시간 없이 오직 본질에 집중합니다.
+          <p className="text-[#86868B] text-base md:text-lg font-medium max-w-xl mx-auto break-keep">
+            매 순간 가장 몰입할 수 있도록 설계된 스파르타식 교시제.<br className="hidden md:block" /> 
+            낭비되는 시간 없이 오직 본질에 집중합니다.
           </p>
         </div>
 

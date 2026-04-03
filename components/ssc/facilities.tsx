@@ -63,23 +63,60 @@ export function Facilities({ facilities }: { facilities?: FacilityItem[] } = {})
   const ref = useScrollReveal()
 
   return (
-    <section id="facilities" className="bg-background py-20 md:py-28" ref={ref}>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <section id="facilities" className="bg-white py-24 md:py-32" ref={ref}>
+      <div className="max-w-[72rem] mx-auto px-4 sm:px-6">
         {/* Heading */}
-        <div className="mb-12 fade-in-up">
-          <h2 className="text-3xl md:text-4xl font-bold text-navy dark:text-foreground text-balance mb-3 -tracking-tight">
-            공부가 유지될 수밖에 없는 구조
+        <div className="mb-16 text-center fade-in-up">
+          <p className="text-[#0071E3] text-xs font-bold tracking-[0.3em] uppercase mb-4">World-Class Environment</p>
+          <h2 className="text-[#1D1D1F] text-3xl md:text-5xl font-semibold tracking-tighter mb-6">
+            공부가 유지될 수밖에 없는<br />
+            압도적 몰입의 공간
           </h2>
-          <p className="text-text-secondary leading-relaxed max-w-2xl">
-            의지에만 맡기지 않습니다. 환경이 공부를 만듭니다.
+          <p className="text-[#86868B] text-lg font-medium leading-relaxed max-w-2xl mx-auto break-keep">
+            의지에만 맡기지 않습니다. 완벽하게 설계된 환경이{'\n'}
+            당신을 합격으로 이끄는 가장 강력한 엔진이 됩니다.
           </p>
         </div>
 
-        {/* Facility cards grid — 2x2 on mobile, 4 col on lg */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {items.map((facility, i) => (
-            <FacilityCard key={facility.id} facility={facility} index={i} />
-          ))}
+        {/* Facility Gallery Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+          {items.map((facility, i) => {
+            const Icon = iconMap[facility.icon] ?? BookOpen
+            return (
+              <div
+                key={facility.id}
+                className={`group relative h-[400px] md:h-[500px] rounded-[32px] overflow-hidden bg-[#F5F5F7] border border-black/[0.04] fade-in-up delay-${(i + 1) * 100}`}
+              >
+                {/* Image Background */}
+                <div className="absolute inset-0 transition-transform duration-[2s] ease-out group-hover:scale-105">
+                  <Image
+                    src={facility.image}
+                    alt={facility.title}
+                    fill
+                    className="object-cover"
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                </div>
+
+                {/* Content Overlay */}
+                <div className="absolute inset-0 p-8 md:p-12 flex flex-col justify-end">
+                   <div className="w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center mb-6 text-white group-hover:scale-110 transition-transform duration-500">
+                      <Icon size={24} strokeWidth={1.5} />
+                   </div>
+                   <h3 className="text-white text-2xl md:text-3xl font-semibold tracking-tight mb-3">
+                      {facility.title}
+                   </h3>
+                   <p className="text-white/60 text-[15px] md:text-base font-medium leading-relaxed max-w-sm group-hover:text-white/90 transition-colors duration-300">
+                      {facility.description}
+                   </p>
+                </div>
+
+                {/* Hover States: Nano-texture glow */}
+                <div className="absolute inset-0 border-[0.5px] border-white/0 group-hover:border-white/20 rounded-[32px] transition-all duration-500 pointer-events-none" />
+              </div>
+            )
+          })}
         </div>
       </div>
     </section>

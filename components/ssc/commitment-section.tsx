@@ -44,9 +44,10 @@ export default function CommitmentSection() {
           <BlurFade delay={0.1}>
             <p className="text-[#86868B] text-xs font-bold tracking-[0.3em] uppercase mb-4">Last Check-in</p>
             <h2 className="text-[#1D1D1F] text-3xl md:text-5xl font-semibold tracking-tighter mb-6 leading-tight">
-              입학하기 전,<br className="sm:hidden" /> 스스로에게 물으십시오.
+              입학하기 전,<br /> 
+              스스로에게 물으십시오.
             </h2>
-            <p className="text-[#86868B] text-base md:text-lg font-medium max-w-xl mx-auto">
+            <p className="text-[#86868B] text-base md:text-lg font-medium max-w-xl mx-auto break-keep">
               SSC 스파르타는 모두를 위한 공간이 아닙니다. <br className="hidden md:block" />
               오직 <span className="text-[#1D1D1F] font-bold">합격</span>만이 유일한 목표인 수험생을 위해 존재합니다.
             </p>
@@ -76,7 +77,7 @@ export default function CommitmentSection() {
                     }`}>
                       {c.question}
                     </h3>
-                    <p className={`text-[15px] font-medium leading-relaxed transition-opacity duration-500 ${
+                    <p className={`text-[15px] font-medium leading-relaxed transition-opacity duration-500 break-keep ${
                       checked.includes(c.id) ? 'text-[#434345] opacity-100' : 'text-[#86868B] opacity-60'
                     }`}>
                       {c.desc}
@@ -99,7 +100,10 @@ export default function CommitmentSection() {
                   exit={{ opacity: 0, scale: 0.95 }}
                 >
                   <p className="text-[#0071E3] font-bold text-lg mb-6">당신은 SSC 스파르타의 일원이 될 준비가 되었습니다.</p>
-                  <button className="px-12 py-5 bg-black text-white rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/20 flex items-center gap-3 mx-auto group">
+                  <button 
+                    onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="px-12 py-5 bg-black text-white rounded-full font-bold text-lg hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/20 flex items-center gap-3 mx-auto group"
+                  >
                     전문 상담 예약하기
                     <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
                   </button>

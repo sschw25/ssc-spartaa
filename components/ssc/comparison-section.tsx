@@ -44,11 +44,13 @@ export default function ComparisonSection() {
         <div className="mb-20 text-center">
           <BlurFade delay={0.1}>
             <p className="text-[#0071E3] text-xs font-bold tracking-[0.3em] uppercase mb-4">The Real Difference</p>
-            <h2 className="text-[#1D1D1F] text-3xl md:text-5xl font-semibold tracking-tighter mb-6">
-              의지가 아닌,<br className="sm:hidden" /> 환경의 차이가 합격을 정합니다.
+            <h2 className="text-[#1D1D1F] text-3xl md:text-5xl font-semibold tracking-tighter mb-6 leading-[1.15]">
+              의지가 아닌,<br />
+              환경의 차이가 합격을 정합니다.
             </h2>
-            <p className="text-[#86868B] text-base md:text-lg font-medium max-w-2xl mx-auto">
-              혼자 하는 다짐은 쉽게 무너집니다. 압도적 집중 환경과 전문가의 코칭이 결합될 때 비로소 당신의 진짜 잠재력이 폭발합니다.
+            <p className="text-[#86868B] text-base md:text-lg font-medium max-w-2xl mx-auto break-keep">
+              혼자 하는 다짐은 쉽게 무너집니다.<br className="hidden md:block" /> 
+              압도적 집중 환경과 전문가의 코칭이 결합될 때 비로소 당신의 진짜 잠재력이 폭발합니다.
             </p>
           </BlurFade>
         </div>
@@ -99,12 +101,21 @@ export default function ComparisonSection() {
                 </div>
                 <h3 className="text-white text-3xl md:text-5xl font-semibold tracking-tighter mb-6 leading-[1.1]">
                   전문 지식을 갖춘<br />
-                  <span className="text-indigo-400">자기주도학습지도사</span>들이<br />
-                  당신의 곁을 지킵니다.
+                  <span className="text-indigo-400">자기주도학습지도사</span>들이<br className="hidden md:block" />
+                  당신의 곁을 끝까지 지킵니다.
                 </h3>
-                <p className="text-[#86868B] text-lg font-medium max-w-xl leading-relaxed">
-                  SSC 스파르타의 코멘터는 단순한 감시자가 아닙니다. <span className="text-white">'자기주도학습지도사'</span> 자격증을 취득한 전문가 집단으로서, 수험생의 학습 상황을 분석하고 최적의 몰입 상태로 유도하는 프로페셔널 파트너입니다.
+                <p className="text-[#86868B] text-lg font-medium max-w-xl leading-relaxed break-keep mb-10">
+                  SSC 스파르타의 코멘터는 단순한 감시자가 아닙니다. <br className="hidden md:block" />
+                  <span className="text-white">'자기주도학습지도사'</span> 자격증을 취득한 전문가 집단으로서,<br className="hidden md:block" />
+                  수험생의 학습 상황을 분석하고 최적의 몰입 상태로 유도합니다.
                 </p>
+                <button 
+                  onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="inline-flex items-center gap-2.5 px-8 py-4 rounded-full bg-white text-black font-bold text-[15px] hover:scale-105 active:scale-95 transition-all shadow-xl shadow-white/5"
+                >
+                  전문가와 상담하기
+                  <CheckCircle2 size={18} />
+                </button>
               </BlurFade>
             </div>
             

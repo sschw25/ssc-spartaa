@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { usePathname, useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import type { SiteContent } from '@/lib/content'
 
@@ -19,21 +20,21 @@ const defaultSlides = [
   },
   {
     id: 2,
-    title: '원주 유일 노량진 커넥츠프랩(공단기) 파트너',
+    title: '원주 유일\n노량진 커넥츠프랩(공단기) 파트너',
     subtitle: '공무원 합격자에게 물어보세요, 합격자는 스파르타 했습니다.',
     description: '',
     ctaLabel: '공무원 합격반 알아보기',
   },
   {
     id: 3,
-    title: '임용에서 강합니다. 매년 합격자를 배출합니다',
+    title: '임용에서 강합니다.\n매년 합격자를 배출합니다',
     subtitle: '초등·중등·유아 임용 — 마지막 60일이 합격을 가릅니다',
     description: '',
     ctaLabel: '임용반 알아보기',
   },
   {
     id: 4,
-    title: '합리적 프리미엄 독학재수',
+    title: '합리적 가격,\n압도적 프리미엄 독학재수',
     subtitle: '생활 리듬이 무너지면 강의도 소용없어요. 관리가 먼저입니다.',
     description: '',
     ctaLabel: '프리미엄 독학재수 알아보기',
@@ -48,6 +49,12 @@ const defaultSlides = [
 ]
 
 export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlides } = {}) {
+  const pathname = usePathname()
+  const router = useRouter()
+  
+  // 현재 캠퍼스 경로 추출 (예: /wonju/programs -> wonju)
+  const campusPath = pathname.split('/')[1] || 'wonju'
+
   const { data } = useSWR<SiteContent>('/api/content', fetcher)
   const slides = slidesProp ?? data?.hero?.slides ?? defaultSlides
 
@@ -108,7 +115,7 @@ export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlid
           <div
             key={slide.id}
             className={`absolute inset-0 transition-opacity duration-1000 ease-out ${
-              i === current ? 'opacity-100' : 'opacity-0'
+              i === current ? 'opacity-100 z-10' : 'opacity-0 pointer-events-none'
             }`}
           >
             {/* Background Image handling */}
@@ -159,21 +166,16 @@ export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlid
                       <button
                         onClick={() => {
                           const programId = (slide as { programId?: string }).programId
-                          if (programId) scroll('programs')
-                          else scroll('cta')
+                          if (programId) {
+                            router.push(`/${campusPath}/${programId}`)
+                          } else {
+                            scroll('cta')
+                          }
                         }}
-                        className="px-7 py-3.5 rounded-full font-medium text-[15px] transition-all duration-300 bg-[#1D1D1F] text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)] hover:bg-black hover:scale-105 active:scale-95"
+                        className="px-8 py-4 rounded-full font-bold text-[16px] transition-all duration-300 bg-[#1D1D1F] text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)] hover:bg-black hover:scale-105 active:scale-95"
                       >
                         {slide.ctaLabel}
                       </button>
-                      {slide.ctaSecondaryLabel && (
-                        <button
-                          onClick={() => scroll('programs')}
-                          className="px-7 py-3.5 rounded-full font-medium text-[15px] transition-all duration-300 border border-black/10 text-[#1D1D1F] bg-white/50 backdrop-blur-md hover:bg-white hover:border-black/20 hover:shadow-sm"
-                        >
-                          {slide.ctaSecondaryLabel}
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>

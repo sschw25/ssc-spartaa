@@ -33,11 +33,12 @@ export function Differentiation() {
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="mb-12 fade-in-up text-center">
-          <h2 className="text-3xl md:text-4xl font-semibold text-[#1D1D1F] tracking-tighter mb-4">
-            서울 안 가도 됩니다
+          <h2 className="text-3xl md:text-4xl font-semibold text-[#1D1D1F] tracking-tighter mb-4 leading-tight">
+            서울까지 안 가도 됩니다
           </h2>
-          <p className="text-text-secondary leading-relaxed max-w-2xl mx-auto">
-            노량진 커리큘럼 그대로 · 강원도 밀착 관리로 완성
+          <p className="text-text-secondary leading-relaxed max-w-2xl mx-auto break-keep">
+            노량진 커리큘럼 그대로, 강원도 밀착 관리로 완성하는<br className="hidden md:block" />
+            SSC 스파르타만의 압도적인 합격 관리 시스템
           </p>
         </div>
 
@@ -64,6 +65,17 @@ export function Differentiation() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Added CTA for conversion */}
+        <div className="mt-12 flex justify-center fade-in-up delay-400">
+          <button 
+            onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#1D1D1F] text-white font-bold text-[15px] hover:scale-105 active:scale-95 transition-all shadow-lg"
+          >
+            지금 상담 신청하기
+            <Shield size={18} />
+          </button>
         </div>
       </div>
     </section>

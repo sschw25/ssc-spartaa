@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { Navbar } from '@/components/ssc/navbar'
@@ -22,6 +23,12 @@ import { CAMPUS_CONFIG } from '@/lib/campus-config'
 import BrainScience from '@/components/ssc/brain-science'
 import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
+import { SpartaPulse } from '@/components/ssc/sparta-pulse'
+
+export const metadata: Metadata = {
+  title: 'SSC스파르타 춘천 | 교원 임용 및 수능 단기 합격의 요람',
+  description: '춘천 퇴계동 최고의 면학 분위기. 0교시 단어시험부터 심야 자습까지, 합격을 위한 가장 완벽한 1년을 설계합니다.',
+}
 
 /** public/images/facility/{campus}/ 폴더에서 4-카드 시설 이미지 경로 목록을 읽어옵니다 */
 function getFacilityImages(campus: string): string[] {
@@ -60,7 +67,7 @@ const chuncheonSlides = [
     description: '초등 · 중등 · 유아 임용 — 춘천스파르타에서 시작하세요',
     ctaLabel: '임용반 알아보기',
     ctaSecondaryLabel: '프로그램 둘러보기',
-    programId: 'imdong',
+    programId: 'imyong',
   },
   {
     id: 2,
@@ -69,7 +76,7 @@ const chuncheonSlides = [
     subtitle: '혼자서는 무너집니다. 관리받는 사람이 합격합니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원 전 직렬 커버',
     ctaLabel: '공무원 합격반 알아보기',
-    programId: 'gwanmuwon',
+    programId: 'gongmuwon',
   },
   {
     id: 3,
@@ -78,7 +85,7 @@ const chuncheonSlides = [
     subtitle: '교시제 시간표 + 코멘터 관리 — 전문자격도 관리가 결과를 만듭니다',
     description: '세무사 · 노무사 · 회계사 · 산업기사 · 각종 기사시험 전 방향 커버',
     ctaLabel: '전문자격반 알아보기',
-    programId: 'jagyeok',
+    programId: 'professional',
   },
   {
     id: 4,
@@ -87,7 +94,7 @@ const chuncheonSlides = [
     subtitle: '생활 리듬이 무너지면 강의도 소용없어요. 관리가 먼저입니다.',
     description: '불필요한 실강 비용을 덜어내고 진짜 필요한 관리에만 집중',
     ctaLabel: '프리미엄 독학재수 알아보기',
-    programId: 'jaesu',
+    programId: 'suneung',
   },
 ]
 
@@ -109,6 +116,7 @@ export default function ChuncheonPage() {
       <ScrollRevealInit />
       <Navbar />
       <HeroSlider slides={slides} />
+      <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /chuncheon/programs 페이지로 이동 */}
       {/* 📁 프로그램 사진 위치: public/images/programs/chuncheon/ */}

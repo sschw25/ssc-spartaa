@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { Metadata } from 'next'
 import Link from 'next/link'
 import { ChevronRight } from 'lucide-react'
 import { Navbar } from '@/components/ssc/navbar'
@@ -22,6 +23,12 @@ import { CAMPUS_CONFIG } from '@/lib/campus-config'
 import BrainScience from '@/components/ssc/brain-science'
 import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
+import { SpartaPulse } from '@/components/ssc/sparta-pulse'
+
+export const metadata: Metadata = {
+  title: 'SSC스파르타 충주 | 대치동·노량진 시스템 충주 직영 관리형 독학재수',
+  description: '충주 계명대로에서 경험하는 서울권 압도적 관리 시스템. 철저한 출결 통제와 학습 분석으로 당신의 합격을 앞당깁니다.',
+}
 
 /** public/images/facility/{campus}/ 폴더에서 4-카드 시설 이미지 경로 목록을 읽어옵니다 */
 function getFacilityImages(campus: string): string[] {
@@ -60,7 +67,7 @@ const chungjuSlides = [
     description: '수능 · 독학재수 · 전문자격 전 방향 커버',
     ctaLabel: '수능관 알아보기',
     ctaSecondaryLabel: '프로그램 둘러보기',
-    programId: 'jaesu',
+    programId: 'suneung',
   },
   {
     id: 2,
@@ -69,7 +76,7 @@ const chungjuSlides = [
     subtitle: '독한 관리와 커넥츠프랩 시스템으로 매년 합격자를 배출합니다',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원 전 직렬 커버',
     ctaLabel: '공무원 합격반 알아보기',
-    programId: 'gwanmuwon',
+    programId: 'gongmuwon',
   },
   {
     id: 3,
@@ -78,7 +85,7 @@ const chungjuSlides = [
     subtitle: '충주스파르타 임용 합격생의 후기 — 의지 없어도 시스템이 잡아줍니다',
     description: '초등 · 중등 · 유아 임용 매년 합격자 배출',
     ctaLabel: '임용반 알아보기',
-    programId: 'imdong',
+    programId: 'imyong',
   },
   {
     id: 4,
@@ -87,7 +94,7 @@ const chungjuSlides = [
     subtitle: '교시제 시간표 + 코멘터 관리 — 전문자격도 관리가 결과를 만듭니다',
     description: '세무사 · 노무사 · 회계사 · 산업기사 · 각종 기사시험 전 방향 커버',
     ctaLabel: '전문자격반 알아보기',
-    programId: 'jagyeok',
+    programId: 'professional',
   },
 ]
 
@@ -109,6 +116,7 @@ export default function ChungjuPage() {
       <ScrollRevealInit />
       <Navbar />
       <HeroSlider slides={slides} />
+      <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /chungju/programs 페이지로 이동 */}
       {/* 📁 프로그램 사진 위치: public/images/programs/chungju/ */}

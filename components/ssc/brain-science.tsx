@@ -49,8 +49,9 @@ export default function BrainScience() {
         </BlurFade>
 
         <BlurFade delay={0.3}>
-          <p className="text-[#86868B] text-lg md:text-xl font-medium max-w-2xl mx-auto mb-20 leading-relaxed">
-            공부가 안 되는 것은 당신의 탓이 아닙니다. SSC는 당신의 뇌를 합격에 최적화된 상태로 "강제 전환" 시켜 드립니다.
+          <p className="text-[#86868B] text-lg md:text-xl font-medium max-w-2xl mx-auto mb-20 leading-relaxed break-keep">
+            공부가 안 되는 것은 당신의 탓이 아닙니다.<br className="hidden md:block" />
+            SSC는 당신의 뇌를 합격에 최적화된 상태로 "강제 전환" 시켜 드립니다.
           </p>
         </BlurFade>
 

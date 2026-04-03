@@ -8,6 +8,7 @@ import TiltCard from '@/components/ui/tilt-card'
 import BrainScience from '@/components/ssc/brain-science'
 import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
+import { SpartaPulse } from '@/components/ssc/sparta-pulse'
 
 /** 폴더에서 첫 번째 이미지 경로를 반환. 없으면 null. */
 function getFirstImage(campus: string): string | null {
@@ -118,6 +119,11 @@ export default function SelectLocation() {
             </div>
           </BlurFade>
         </div>
+
+        {/* Real-time Sparta Pulse Timer (High Urgency) */}
+        <BlurFade delay={0.45}>
+          <SpartaPulse />
+        </BlurFade>
 
         {/* 1. Brain Science Section (Foundational Logic) */}
         <BrainScience />
