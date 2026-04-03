@@ -78,17 +78,29 @@ export function Footer() {
           
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-black/60">전화번호 :</span>
+              <span className="font-semibold text-black/60">전화번호(원주) :</span>
               <a href={`tel:${CAMPUS_CONFIG.wonju.phone}`} className="hover:text-[#0071E3]">{CAMPUS_CONFIG.wonju.phone}</a>
             </div>
             <span className="w-[1px] h-2 bg-black/10 hidden sm:block" />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-black/60">전화번호(춘천) :</span>
+              <a href={`tel:${CAMPUS_CONFIG.chuncheon.phone}`} className="hover:text-[#0071E3]">{CAMPUS_CONFIG.chuncheon.phone}</a>
+            </div>
+            <span className="w-[1px] h-2 bg-black/10 hidden sm:block" />
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-black/60">전화번호(충주) :</span>
+              <a href={`tel:${CAMPUS_CONFIG.chungju.phone}`} className="hover:text-[#0071E3]">{CAMPUS_CONFIG.chungju.phone}</a>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-[#86868B]/80">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-black/60">이메일주소 :</span>
               <a href="mailto:cs@sscsparta.com" className="hover:text-[#0071E3]">cs@sscsparta.com</a>
             </div>
             <span className="w-[1px] h-2 bg-black/10 hidden sm:block" />
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-black/60">주소 :</span>
+              <span className="font-semibold text-black/60">주사무소(원주) :</span>
               <span>{CAMPUS_CONFIG.wonju.address}</span>
             </div>
           </div>

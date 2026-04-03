@@ -14,7 +14,7 @@
 export const CAMPUS_CONFIG = {
   wonju: {
     name: '원주',
-    phone: '033-766-7999',
+    phone: '0507-1424-7999',
     address: '강원특별자치도 원주시 치악로 1793 농협건물 4층',
     addrShort: '치악로 1793 농협건물 4층',
     hours: '평일 06:30 – 22:00 / 주말 07:00 – 22:00',
@@ -36,7 +36,7 @@ export const CAMPUS_CONFIG = {
   },
   chungju: {
     name: '충주',
-    phone: '0507-1492-5574',
+    phone: '0507-1379-3752',
     address: '충청북도 충주시 계명대로 283',
     addrShort: '계명대로 283',
     hours: '평일 06:30 – 22:00 / 주말 07:00 – 22:00',
