@@ -5,7 +5,6 @@ import { ChevronRight, ArrowLeft } from 'lucide-react'
 import { Navbar } from '@/components/ssc/navbar'
 import { Facilities } from '@/components/ssc/facilities'
 import { defaultFacilities } from '@/components/ssc/facilities-data'
-import { Curriculum } from '@/components/ssc/curriculum'
 import { Testimonials } from '@/components/ssc/testimonials'
 import { Systems } from '@/components/ssc/systems'
 import { Faq } from '@/components/ssc/faq'
@@ -72,7 +71,7 @@ export default function StreamPage({
       <Navbar />
 
       {/* Stream Specific Hero (Apple Light Aesthetic) */}
-      <section id="hero" className="relative pt-32 pb-20 px-4 sm:px-6 bg-[#F5F5F7] min-h-[500px] flex items-center justify-center border-b border-black/[0.03]">
+      <section id="hero" className="relative pt-24 pb-14 px-4 sm:px-6 bg-[#F5F5F7] min-h-[400px] flex items-center justify-center border-b border-black/[0.03]">
         <div className="max-w-[64rem] w-full mx-auto text-center">
           <BlurFade delay={0.1} yOffset={20}>
             <Link 
@@ -133,10 +132,6 @@ export default function StreamPage({
         <Testimonials campusName={campusName} testimonials={content.testimonials} reviewUrl={reviewUrl} bgImage={bgImage} />
       </div>
       
-      <div id="curriculum">
-        <Curriculum />
-      </div>
-
       <TimelineView />
       
       <div id="comparison">

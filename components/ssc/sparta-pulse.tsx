@@ -64,7 +64,7 @@ export function SpartaPulse() {
             </div>
 
             {/* Massive Digital Clock - Sharp Apple Typography */}
-            <div className="w-full text-center flex flex-col items-center justify-center mb-14 px-8 md:px-16">
+            <div className="w-full text-center flex flex-col items-center justify-center mb-8 px-8 md:px-16">
                <div className="flex items-baseline justify-center font-sans tracking-[-0.06em] w-full max-w-6xl mx-auto">
                   <span className="text-[12vw] md:text-[14vw] lg:text-[12.5rem] font-bold text-white leading-[0.8] tabular-nums">
                     {time.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}
@@ -73,13 +73,13 @@ export function SpartaPulse() {
                     .{formatMs(time)}
                   </span>
                </div>
-               <p className="text-[#86868B] text-[10px] md:text-[13px] font-bold tracking-[0.5em] uppercase mt-12 bg-white/[0.05] border border-white/[0.1] px-6 py-2 rounded-full">
+               <p className="text-[#86868B] text-[10px] md:text-[13px] font-bold tracking-[0.5em] uppercase mt-8 bg-white/[0.05] border border-white/[0.1] px-6 py-2 rounded-full">
                   Every Second Counts Towards Your Future
                </p>
             </div>
 
             {/* Status Message Board - Refined Typography */}
-            <div className="w-full max-w-5xl mx-auto border-t border-white/[0.08] pt-14">
+            <div className="w-full max-w-5xl mx-auto border-t border-white/[0.08] pt-10">
                <AnimatePresence mode="wait">
                   <motion.div
                     key={activeStep?.label || 'offline'}
@@ -88,7 +88,7 @@ export function SpartaPulse() {
                     exit={{ opacity: 0, y: -5 }}
                     className="text-center"
                   >
-                    <h3 className="text-2xl md:text-[2.75rem] font-semibold text-white tracking-[-0.03em] mb-8 break-keep leading-[1.1]">
+                    <h3 className="text-2xl md:text-[2.75rem] font-semibold text-white tracking-[-0.03em] mb-6 break-keep leading-[1.1]">
                       {activeStep ? (
                         <> 지금 이 순간, 스파르타 캠퍼스 전우들은<br /> 
                            <span className="text-[#0071E3] bg-[#0071E3]/10 px-4 py-1 rounded-[12px] inline-block mt-2">{activeStep.label}</span>
@@ -109,7 +109,7 @@ export function SpartaPulse() {
             <motion.div 
                whileHover={{ scale: 1.02 }}
                whileTap={{ scale: 0.98 }}
-               className="mt-20"
+               className="mt-12"
             >
                <a 
                  href="#cta" 

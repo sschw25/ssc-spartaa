@@ -11,7 +11,6 @@ import { Differentiation } from '@/components/ssc/differentiation'
 import { Testimonials } from '@/components/ssc/testimonials'
 import { Facilities } from '@/components/ssc/facilities'
 import { defaultFacilities } from '@/components/ssc/facilities-data'
-import { Curriculum } from '@/components/ssc/curriculum'
 import { Systems } from '@/components/ssc/systems'
 import { Campus } from '@/components/ssc/campus'
 import { Faq } from '@/components/ssc/faq'
@@ -171,7 +170,6 @@ export default function ChungjuPage() {
         </Link>
       </div>
 
-      <Curriculum />
       <Systems />
       <Campus filter="충주" />
       <Faq />
