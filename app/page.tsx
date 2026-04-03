@@ -9,6 +9,7 @@ import BrainScience from '@/components/ssc/brain-science'
 import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
 import { SpartaPulse } from '@/components/ssc/sparta-pulse'
+import { Footer } from '@/components/ssc/footer'
 
 /** 폴더에서 첫 번째 이미지 경로를 반환. 없으면 null. */
 function getFirstImage(campus: string): string | null {
@@ -203,12 +204,7 @@ export default function SelectLocation() {
         {/* 3. Final Commitment Section */}
         <CommitmentSection />
 
-        {/* Footer note */}
-        <div className="text-center pb-12 px-4 relative z-10">
-          <p className="text-[#86868B] text-[10px] font-semibold tracking-[0.2em] uppercase">
-            SSC스파르타 · 033-766-7999
-          </p>
-        </div>
+        <Footer />
       </div>
     </main>
   )
