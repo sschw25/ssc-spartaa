@@ -24,10 +24,9 @@ import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
 import { SpartaPulse } from '@/components/ssc/sparta-pulse'
 
-export const metadata: Metadata = {
-  title: 'SSC스파르타 충주 | 대치동·노량진 시스템 충주 직영 관리형 독학재수',
-  description: '충주 계명대로에서 경험하는 서울권 압도적 관리 시스템. 철저한 출결 통제와 학습 분석으로 당신의 합격을 앞당깁니다.',
-}
+import { getCampusMetadata } from '@/lib/seo-utils'
+
+export const metadata: Metadata = getCampusMetadata('chungju')
 
 /** public/images/facility/{campus}/ 폴더에서 4-카드 시설 이미지 경로 목록을 읽어옵니다 */
 function getFacilityImages(campus: string): string[] {

@@ -24,10 +24,9 @@ import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
 import { SpartaPulse } from '@/components/ssc/sparta-pulse'
 
-export const metadata: Metadata = {
-  title: 'SSC스파르타 원주 | 원주 유일 공단기·커넥츠프랩 파트너 독학재수',
-  description: '원주 공무원 합격의 성지. 노량진 본원과 동일한 관리 시스템과 공단기 콘텐츠를 원주 치악로에서 그대로 경험하세요.',
-}
+import { getCampusMetadata } from '@/lib/seo-utils'
+
+export const metadata: Metadata = getCampusMetadata('wonju')
 
 /** public/images/facility/{campus}/ 폴더에서 4-카드 시설 이미지 경로 목록을 읽어옵니다 */
 function getFacilityImages(campus: string): string[] {

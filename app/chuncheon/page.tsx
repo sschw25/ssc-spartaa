@@ -24,10 +24,9 @@ import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
 import { SpartaPulse } from '@/components/ssc/sparta-pulse'
 
-export const metadata: Metadata = {
-  title: 'SSC스파르타 춘천 | 교원 임용 및 수능 단기 합격의 요람',
-  description: '춘천 퇴계동 최고의 면학 분위기. 0교시 단어시험부터 심야 자습까지, 합격을 위한 가장 완벽한 1년을 설계합니다.',
-}
+import { getCampusMetadata } from '@/lib/seo-utils'
+
+export const metadata: Metadata = getCampusMetadata('chuncheon')
 
 /** public/images/facility/{campus}/ 폴더에서 4-카드 시설 이미지 경로 목록을 읽어옵니다 */
 function getFacilityImages(campus: string): string[] {
