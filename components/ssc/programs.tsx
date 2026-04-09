@@ -9,13 +9,18 @@ const cardColors: Record<string, string> = {
   suneung: '#1D1D1F',
   imyong: '#1D1D1F',
   professional: '#1D1D1F',
+const cardColors: Record<string, string> = {
+  gongmuwon: '#1D1D1F', // Apple Black
+  suneung: '#1D1D1F',
+  imyong: '#1D1D1F',
+  professional: '#1D1D1F',
   job: '#1D1D1F',
 }
 
-const programsTabs = [
+const getProgramsTabs = (location: string) => [
   {
     id: 'gongmuwon',
-    badge: '원주 유일 커넥츠프랩',
+    badge: location === '충주' ? '충주 유일 커넥츠프랩' : '원주 유일 커넥츠프랩',
     title: '공무원 합격반',
     subtitle: '국가직/지방직 맞춤형 압도적 순공시간',
     stat: '자세히 보기',
@@ -55,6 +60,7 @@ const campusKeyMap = { '원주': 'wonju', '춘천': 'chuncheon', '충주': 'chun
 export function Programs({ location = '원주' }: { location?: '원주' | '춘천' | '충주' }) {
   const ref = useScrollReveal()
   const campusRoute = campusKeyMap[location]
+  const programsTabs = getProgramsTabs(location)
 
   return (
     <section id="programs" className="bg-[#F5F5F7] py-20 px-4 sm:px-6 border-t border-black/[0.04]" ref={ref}>

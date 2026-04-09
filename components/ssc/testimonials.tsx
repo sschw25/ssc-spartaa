@@ -80,7 +80,7 @@ export function Testimonials({
 
                 <Quote size={28} className="w-10 h-10 text-[#0071E3]/10 mb-6 drop-shadow-sm group-hover:text-[#0071E3]/20 transition-colors duration-300" strokeWidth={2} />
                 <blockquote className="text-[16px] font-medium text-[#1D1D1F] leading-relaxed tracking-tight flex-1 text-balance">
-                  &ldquo;<RhythmicText text={formatQuote(t.quote)} className="inline" />&rdquo;
+                  <RhythmicText text={`“${formatQuote(t.quote)}”`} className="inline" />
                 </blockquote>
                 <div className="flex flex-col gap-1 border-t border-black/5 pt-6 mt-auto">
                   <span className="text-[15px] font-semibold text-[#1D1D1F]">{t.name}</span>

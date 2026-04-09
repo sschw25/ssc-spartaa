@@ -148,7 +148,7 @@ export default function ChungjuPage() {
       <BrainScience />
 
       <Programs location="충주" />
-      <Differentiation />
+      <Differentiation location="충주" />
 
       {/* 2. Comparison & Commenters Section */}
       <ComparisonSection />

@@ -4,11 +4,11 @@ import { useScrollReveal } from '@/hooks/use-scroll-reveal'
 import { Shield, BarChart3, Users } from 'lucide-react'
 import { RhythmicText } from '@/components/ui/rhythmic-text'
 
-const features = [
+const getFeatures = (location: string) => [
   {
     icon: Shield,
-    title: '원주 유일\n공단기·커넥츠프랩 파트너',
-    description: '노량진 프리미엄 커리큘럼 그대로,\n강원도 밀착 관리로 완성합니다.',
+    title: location === '충주' ? '충주 유일\n공단기·커넥츠프랩 파트너' : '원주 유일\n공단기·커넥츠프랩 파트너',
+    description: location === '충주' ? '노량진 프리미엄 커리큘럼 그대로,\n충주 밀착 관리로 완성합니다.' : '노량진 프리미엄 커리큘럼 그대로,\n강원도 밀착 관리로 완성합니다.',
   },
   {
     icon: BarChart3,
@@ -22,8 +22,9 @@ const features = [
   },
 ]
 
-export function Differentiation() {
+export function Differentiation({ location = '원주' }: { location?: '원주' | '춘천' | '충주' }) {
   const ref = useScrollReveal()
+  const features = getFeatures(location)
 
   return (
     <section
@@ -38,7 +39,7 @@ export function Differentiation() {
             서울까지 안 가도 됩니다
           </h2>
           <div className="text-text-secondary leading-relaxed max-w-2xl mx-auto break-keep" style={{ fontSize: 'var(--font-size-body-lg)' }}>
-            <RhythmicText text={"노량진 커리큘럼 그대로, 강원도 밀착 관리로 완성하는\nSSC 스파르타만의 압도적인 합격 관리 시스템"} />
+            <RhythmicText text={location === '충주' ? "노량진 커리큘럼 그대로, 충주 밀착 관리로 완성하는\nSSC 스파르타만의 압도적인 합격 관리 시스템" : "노량진 커리큘럼 그대로, 강원도 밀착 관리로 완성하는\nSSC 스파르타만의 압도적인 합격 관리 시스템"} />
           </div>
         </div>
 
