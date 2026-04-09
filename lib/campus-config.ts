@@ -37,7 +37,7 @@ export const CAMPUS_CONFIG = {
   chungju: {
     name: '충주',
     phone: '0507-1379-3752',
-    address: '충청북도 충주시 계명대로 283',
+    address: '충청북도 충주시 계명대로 283 4층',
     addrShort: '계명대로 283',
     hours: '평일 06:30 – 22:00 / 주말 07:00 – 22:00',
     naverMapUrl: 'https://naver.me/xmxZQakb',
