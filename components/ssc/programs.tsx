@@ -9,11 +9,6 @@ const cardColors: Record<string, string> = {
   suneung: '#1D1D1F',
   imyong: '#1D1D1F',
   professional: '#1D1D1F',
-const cardColors: Record<string, string> = {
-  gongmuwon: '#1D1D1F', // Apple Black
-  suneung: '#1D1D1F',
-  imyong: '#1D1D1F',
-  professional: '#1D1D1F',
   job: '#1D1D1F',
 }
 
