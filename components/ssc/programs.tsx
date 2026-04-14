@@ -15,7 +15,7 @@ const cardColors: Record<string, string> = {
 const getProgramsTabs = (location: string) => [
   {
     id: 'gongmuwon',
-    badge: location === '충주' ? '충주 유일 커넥츠프랩' : '원주 유일 커넥츠프랩',
+    badge: `${location} 유일 커넥츠프랩`,
     title: '공무원 합격반',
     subtitle: '국가직/지방직 맞춤형 압도적 순공시간',
     stat: '자세히 보기',
