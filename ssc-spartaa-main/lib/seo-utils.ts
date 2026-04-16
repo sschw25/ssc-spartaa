@@ -11,8 +11,8 @@ type SeoContent = {
 const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
   gongmuwon: (region: string) => ({
     title: `${region} 공무원학원`,
-    description: `${region} 경찰·소방·행정 합격의 선두주자. 공단기 파트너 SSC스파르타의 철저한 관리 시스템.`,
-    keywords: [`${region} 공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 커넥츠프랩`, `${region} 스파르타`, `${region} SSC스파르타`],
+    description: `${region} 경찰공무원학원, ${region} 소방공무원학원 준비 및 행정직 합격의 선두주자. 공단기 파트너 SSC스파르타의 철저한 관리 시스템이 성공을 이끕니다.`,
+    keywords: [`${region} 공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 경찰공무원학원`, `${region} 소방공무원학원`, `${region} 커넥츠프랩`, `${region} 스파르타`, `${region} SSC스파르타`],
   }),
   suneung: (region: string) => ({
     title: `${region} 독학재수보다 더 강한 관리`,
@@ -33,6 +33,11 @@ const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
     title: `취업성공을 위한 최고의 선택`,
     description: `${region} 취업준비 관리형 독서실. 공기업·대기업 취업을 위한 최적의 학습 환경과 루틴 관리.`,
     keywords: [`${region} 취업준비`, `${region} 관리형독서실`, `${region} 취업성공`],
+  }),
+  managed: (region: string) => ({
+    title: `${region} 관리형독서실의 표본`,
+    description: `수능, 공무원, 전문자격 등 모든 성인 수험생을 위한 ${region} 관리형독서실. 최적의 학습 환경과 엄격한 생활 관리.`,
+    keywords: [`${region} 관리형독서실`, `${region} 독서실`, `${region} 스터디카페`, `${region} 스파르타`, `${region} 독학`],
   }),
 }
 

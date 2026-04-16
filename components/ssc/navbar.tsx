@@ -46,6 +46,16 @@ const navItems = [
       { name: '충주 캠퍼스', href: '/chungju/suneung' }
     ]
   },
+  { 
+    label: '관리형독서실', 
+    href: '#programs',
+    stream: 'managed',
+    campuses: [
+      { name: '원주 캠퍼스', href: '/wonju/managed' },
+      { name: '춘천 캠퍼스', href: '/chuncheon/managed' },
+      { name: '충주 캠퍼스', href: '/chungju/managed' }
+    ]
+  },
 ]
 
 import { usePathname } from 'next/navigation'

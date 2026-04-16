@@ -47,6 +47,14 @@ const defaultSlides = [
     description: '세무사 · 노무사 · 회계사 · 산업기사 · 각종 기사시험 전 방향 커버',
     ctaLabel: '전문자격반 알아보기',
   },
+  {
+    id: 6,
+    title: '어떤 시험을 준비하든\n완벽한 몰입을 보장합니다',
+    subtitle: '성인 전용 프리미엄 관리형 독서실 — SSC스파르타',
+    description: '공무원 · 수능 · 전문자격 · 취업준비 등 모든 수험생을 위한 최적의 학습 환경',
+    ctaLabel: '관리형독서실 알아보기',
+    programId: 'managed'
+  },
 ]
 
 export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlides } = {}) {

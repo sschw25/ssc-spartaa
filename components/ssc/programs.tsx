@@ -10,6 +10,7 @@ const cardColors: Record<string, string> = {
   imyong: '#1D1D1F',
   professional: '#1D1D1F',
   job: '#1D1D1F',
+  managed: '#1D1D1F',
 }
 
 const getProgramsTabs = (location: string) => [
@@ -46,6 +47,13 @@ const getProgramsTabs = (location: string) => [
     badge: '면접/코테 완벽대비',
     title: 'NCS 및 취업준비',
     subtitle: '가장 치열하게 준비하는 취준생 베이스캠프',
+    stat: '자세히 보기',
+  },
+  {
+    id: 'managed',
+    badge: '성인전용 프리미엄',
+    title: '관리형독서실',
+    subtitle: '어떤 공부든 완벽한 몰입을 위한 공간',
     stat: '자세히 보기',
   },
 ]

@@ -12,7 +12,7 @@ import {
   LucideIcon
 } from 'lucide-react'
 
-export type StreamId = 'gongmuwon' | 'suneung' | 'imyong' | 'professional' | 'job'
+export type StreamId = 'gongmuwon' | 'suneung' | 'imyong' | 'professional' | 'job' | 'managed'
 
 export interface FAQItem {
   q: string
@@ -66,7 +66,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
     hero: {
       title: '공무원 단기합격의\n가장 확실한 길',
       subtitle: '국가직·지방직 맞춤형 관리와\n인강에 최적화된 압도적 열공공간',
-      description: '노량진 커넥츠프랩 공단기의\n독한 관리 시스템을 그대로 이식했습니다.\n합격으로 증명하는 합격자의\n교시제 출결 통제를 직접 경험하세요.',
+      description: '경찰학원, 소방학원 등 경찰공무원학원과 소방공무원학원을 찾는 수험생들을 위한 독한 관리 시스템. 노량진 커넥츠프랩 공단기의 프로그램을 그대로 이식했습니다.\n합격으로 증명하는 합격자의\n교시제 출결 통제를 직접 경험하세요.',
     },
     differentiation: {
       title: '왜 공무원 시험은\nSSC스파르타인가',
@@ -81,7 +81,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
         },
         {
           title: '직렬별\n맞춤 멘토링',
-          desc: '국가직, 지방직, 경찰/소방 등\n각 직렬별 특성에 맞는 수험 전략과\n멘탈 관리를 매니저가 직접 코칭합니다.',
+          desc: '국가직, 지방직뿐만 아니라 경찰학원, 소방학원을 찾는 경찰/소방직 등\n각 직렬별 특성에 맞는 수험 전략과\n멘탈 관리를 매니저가 직접 코칭합니다.',
         }
       ]
     },
@@ -379,6 +379,55 @@ export const streamContents: Record<StreamId, StreamContent> = {
         name: '강O우님',
         result: '코레일 필기 합격',
         quote: '취업 전용 스터디룸에서\n면접 연습하고 피드백\n주고받은 게 큰 도움 됐어요.\n혼자 할 때보다\n정보 교류도 훨씬 원활했습니다.',
+      }
+    ]
+  },
+  managed: {
+    id: 'managed',
+    name: '관리형독서실',
+    hero: {
+      title: '합격을 향한 최적의\n관리형 독서실',
+      subtitle: '공무원, 수능, 전문자격 등\n모든 수험생을 위한 프리미엄 학습 공간',
+      description: '단순한 자습 공간을 넘어\n확실한 시간 관리와 면학 분위기를\n제공하는 완벽한 베이스캠프입니다.',
+    },
+    differentiation: {
+      title: '관리형독서실,\n왜 스파르타인가',
+      items: [
+        {
+          title: '철저한 교시제\n시간표 관리',
+          desc: '실전과 동일한 100분 단위 교시제로\n최적의 바이오리듬을 형성하고\n최대 집중력을 발휘하게 합니다.',
+        },
+        {
+          title: '스마트폰 및\n전자기기 통제',
+          desc: '입실 시 번거로운 유혹을 완벽 차단하여\n수험생 본연의 목표에만\n온전히 집중하도록 돕습니다.',
+        },
+        {
+          title: '프리미엄\n학습 환경',
+          desc: '오랜 시간 착석해도 피로하지 않은\n최고급 의자와 넓은 책상,\n쾌적한 라운지 공간을 제공합니다.',
+        }
+      ]
+    },
+    faqs: [
+      { q: '어떤 시험을 준비하든\n이용이 가능한가요?', a: '네, 공무원, 수능(독학재수), 임용, 전문자격 등\n모든 시험 준비생이 이용 가능합니다.\n성인 학습자 비율이 높아 면학 분위기가 우수합니다.' },
+      { q: '교시제 중간에\n이동할 수 있나요?', a: '기본적으로 교시 중 이동은 통제됩니다.\n다만 긴급한 상황을 대비해 쉬는시간 외에도\n조용히 라운지로 이동할 수 있는 동선을 최소화했습니다.' },
+    ],
+    systems: [
+      COMMON_SYSTEMS[0],
+      COMMON_SYSTEMS[1],
+      COMMON_SYSTEMS[2],
+      { icon: 'ClipboardList', title: '개인별 맞춤형 스케줄 점검', description: '혼자서 계획하기 어려운 학습 플랜을\n주기적으로 점검하고 보완해 드립니다.' },
+      COMMON_SYSTEMS[4]
+    ],
+    testimonials: [
+      {
+        name: '박O수님',
+        result: '공무원 9급 합격',
+        quote: '일반 독서실에서는 휴대폰\n보느라 시간을 다 날렸는데,\n여기는 입실하자마자 폰을\n제출해야 하니 억지로라도\n순공 10시간 이상을\n매일 찍게 되더라고요.',
+      },
+      {
+        name: '최O은님',
+        result: '전문자격증 취득',
+        quote: '교시제가 정말 좋습니다.\n다른 분들 다 앉아있으니\n나도 모르게 일어나기 눈치 보이고,\n그게 결국 목표 달성까지\n저를 이끌어줬습니다.',
       }
     ]
   }

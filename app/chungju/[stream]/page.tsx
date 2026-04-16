@@ -15,6 +15,7 @@ export function generateStaticParams() {
     { stream: 'imyong' },
     { stream: 'professional' },
     { stream: 'job' },
+    { stream: 'managed' },
   ]
 }
 

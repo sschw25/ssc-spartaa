@@ -51,7 +51,7 @@ const locations = [
   },
 ]
 
-const programs = ['공무원', '임용고시', '전문자격', '독학재수']
+const programs = ['공무원', '임용고시', '전문자격', '독학재수', '관리형독서실']
 
 import { CAMPUS_CONFIG } from '@/lib/campus-config'
 
