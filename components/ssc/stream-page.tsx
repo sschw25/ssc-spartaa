@@ -150,7 +150,7 @@ export default function StreamPage({
           {content.hero.description && (
             <BlurFade delay={0.5} yOffset={20}>
                <div className="text-[#86868B] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium tracking-tight">
-                <RhythmicText text={content.hero.description} />
+                <RhythmicText text={content.hero.description.replaceAll('{{region}}', campusName)} />
                </div>
             </BlurFade>
           )}
