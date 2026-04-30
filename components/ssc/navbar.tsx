@@ -109,6 +109,16 @@ export function Navbar() {
           {/* Right CTA */}
           <div className="flex items-center gap-4">
             <Link 
+              href="/summer-school" 
+              className={`hidden md:flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
+                isScrolled 
+                  ? 'text-[#0071E3] hover:bg-[#0071E3]/10' 
+                  : 'text-[#0071E3] hover:bg-white/10'
+              }`}
+            >
+              🔥 썸머스쿨
+            </Link>
+            <Link 
               href="#campuses" 
               className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
                 isScrolled 
@@ -141,11 +151,18 @@ export function Navbar() {
             className="fixed inset-0 z-[90] bg-white pt-24 px-6 overflow-y-auto"
           >
             <div className="flex flex-col gap-4 pb-12">
-              {/* Mobile Menu Items - Removed as per user request */}
+              {/* Mobile Menu Items */}
+              <Link 
+                href="/summer-school" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="mt-2 bg-[#0071E3]/10 text-[#0071E3] text-center py-5 rounded-2xl font-extrabold text-lg shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                🔥 2024/2025 썸머스쿨 알아보기
+              </Link>
               <Link 
                 href="#campuses" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="mt-6 bg-[#1D1D1F] text-white text-center py-5 rounded-2xl font-extrabold text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="mt-2 bg-[#1D1D1F] text-white text-center py-5 rounded-2xl font-extrabold text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 캠퍼스 선택 및 상담 예약
                 <ChevronRight size={20} />

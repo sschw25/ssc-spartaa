@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Target,
   Award,
+  Smartphone,
   LucideIcon
 } from 'lucide-react'
 
@@ -28,7 +29,8 @@ const iconMap: Record<string, LucideIcon> = {
   BookOpen,
   ClipboardList,
   Target,
-  Award
+  Award,
+  Smartphone
 }
 
 interface SystemsProps {
