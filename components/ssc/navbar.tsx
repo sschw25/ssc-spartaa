@@ -108,16 +108,28 @@ export function Navbar() {
 
           {/* Right CTA */}
           <div className="flex items-center gap-4">
-            <Link 
-              href="/summer-school" 
-              className={`hidden md:flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
-                isScrolled 
-                  ? 'text-[#0071E3] hover:bg-[#0071E3]/10' 
-                  : 'text-[#0071E3] hover:bg-white/10'
-              }`}
-            >
-              🔥 썸머스쿨
-            </Link>
+            <div className="hidden md:block relative group">
+              <button 
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
+                  isScrolled 
+                    ? 'text-[#0071E3] hover:bg-[#0071E3]/10' 
+                    : 'text-[#0071E3] hover:bg-white/10'
+                }`}
+              >
+                🔥 썸머스쿨
+                <ChevronRight size={14} className="rotate-90 group-hover:-rotate-90 transition-transform duration-300" />
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-2 group-hover:translate-y-0 overflow-hidden">
+                <div className="py-2 flex flex-col">
+                  <Link href="/summer-school/wonju" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
+                  <Link href="/summer-school/chuncheon" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
+                  <Link href="/summer-school/chungju" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
+                </div>
+              </div>
+            </div>
+            
             <Link 
               href="#campuses" 
               className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
@@ -152,13 +164,32 @@ export function Navbar() {
           >
             <div className="flex flex-col gap-4 pb-12">
               {/* Mobile Menu Items */}
-              <Link 
-                href="/summer-school" 
-                onClick={() => setMobileMenuOpen(false)}
-                className="mt-2 bg-[#0071E3]/10 text-[#0071E3] text-center py-5 rounded-2xl font-extrabold text-lg shadow-sm active:scale-95 transition-all flex items-center justify-center gap-2"
-              >
-                🔥 2024/2025 썸머스쿨 알아보기
-              </Link>
+              <div className="flex flex-col gap-2 mt-2">
+                <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2024/2025 썸머스쿨</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <Link 
+                    href="/summer-school/wonju" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                  >
+                    원주점
+                  </Link>
+                  <Link 
+                    href="/summer-school/chuncheon" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                  >
+                    춘천점
+                  </Link>
+                  <Link 
+                    href="/summer-school/chungju" 
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                  >
+                    충주점
+                  </Link>
+                </div>
+              </div>
               <Link 
                 href="#campuses" 
                 onClick={() => setMobileMenuOpen(false)}
