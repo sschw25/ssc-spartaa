@@ -64,7 +64,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'gongmuwon',
     name: '공무원',
     hero: {
-      title: '공무원 단기합격의\n가장 확실한 길',
+      title: '{{region}} 공무원학원\n단기합격의 가장 확실한 길',
       subtitle: '국가직·지방직 맞춤형 관리와\n인강에 최적화된 압도적 열공공간',
       description: '{{region}} 공무원학원, {{region}} 경찰학원, {{region}} 소방학원(공무원)을 찾으시는 여러분,\n노량진을 {{region}}에서 그대로 만나볼 수 있습니다.\n독한 관리 프로그램, 노량진 커넥츠의 프로그램을 그대로 이식했습니다.\n전국 모의고사를 토대로 한 문항분석과 석차분석의 초격차를 만나보세요.\n합격자에게 물어보세요. 합격자는 우리를 압니다.',
     },
@@ -136,9 +136,9 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'suneung',
     name: '수능(재수)',
     hero: {
-      title: 'N수생의 합격 의지를\n완성하는 결전의 장',
+      title: '{{region}} 독학재수학원\nN수생의 합격 의지를 완성하는 결전의 장',
       subtitle: '독학재수의 불안함을 압도적 관리로\n확신으로 바꾸는 유일한 공간',
-      description: '단순한 자습실을 넘어선 초밀착 관리.\n수능 실전 바이오리듬에 맞춘 교시제로\n당신의 1년을 가장 밀도 있게 채웁니다.',
+      description: '{{region}} 재수학원을 찾는 수험생을 위한 초밀착 관리.\n수능 실전 바이오리듬에 맞춘 교시제로\n당신의 1년을 가장 밀도 있게 채웁니다.',
     },
     differentiation: {
       title: '독학 재수, 실패 없는\n성공 방정식을 제안합니다',
@@ -192,7 +192,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'imyong',
     name: '임용시험',
     hero: {
-      title: '임용 합격의 마지막 관문\n절대 몰입 공간',
+      title: '{{region}} 임용고시 준비\n합격의 마지막 관문 절대 몰입 공간',
       subtitle: '초/중/고 임용 수험생을 위한\n친목 차단과 순공 시간 극대화',
       description: '방대한 암기량 앞에 흔들리는 마음을 다잡아 드립니다.\n조용한 고요함 속에 울려 퍼지는\n암기의 숨소리만 허용되는 공간입니다.',
     },
@@ -262,7 +262,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'professional',
     name: '전문자격사',
     hero: {
-      title: '평범함을 거부하는\n자격사 시험의 요새',
+      title: '{{region}} 자격증 준비 전문\n성인 수험생을 위한 최후의 요새',
       subtitle: '세무사·노무사·CPA 준비생을 위한\n성인 전용 프리미엄 관리반',
       description: '나태해지기 쉬운 성인 수험생을 위한\n강력한 강제 교시제 시스템.\n합격이라는 결과만을 위해 설계된\n철저한 전문가용 관리 시스템입니다.',
     },
@@ -332,7 +332,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'job',
     name: '취업준비',
     hero: {
-      title: '공백기 깨고 합격,\n효과적인 초단기 완성',
+      title: '{{region}} 취업준비 베이스캠프\n공백기 깨고 초단기 합격 완성',
       subtitle: '가장 치열하게 준비하는\n취업준비생을 위한 맞춤형 베이스캠프',
       description: '단기 자격증 취득부터 꾸준한 NCS 대비까지.\n독서실에서 버티는 외로운 싸움 대신\n스파르타의 체계적인 관리를 선택하세요.',
     },
@@ -386,7 +386,7 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'managed',
     name: '관리형독서실',
     hero: {
-      title: '합격을 향한 최적의\n관리형 독서실',
+      title: '{{region}} 관리형독서실\n합격을 향한 최적의 프리미엄 학습 공간',
       subtitle: '공무원, 수능, 전문자격 등\n모든 수험생을 위한 프리미엄 학습 공간',
       description: '단순한 자습 공간을 넘어\n확실한 시간 관리와 면학 분위기를\n제공하는 완벽한 베이스캠프입니다.',
     },

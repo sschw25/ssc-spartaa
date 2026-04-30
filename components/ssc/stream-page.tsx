@@ -89,17 +89,25 @@ export default function StreamPage({
     <main className="overflow-x-hidden pb-16 md:pb-0 bg-[#F5F5F7]">
       <Navbar />
 
-      {/* SEO Optimization Hidden Keywords */}
-      {stream === 'gongmuwon' && (
-        <div className="sr-only" aria-hidden="true">
-          {campusName} 경찰학원, {campusName} 소방학원, {campusName} 경찰공무원학원, {campusName} 소방공무원학원
-        </div>
-      )}
-      {stream === 'managed' && (
-        <div className="sr-only" aria-hidden="true">
-          {campusName} 관리형독서실, {campusName} 독서실, {campusName} 스터디카페, {campusName} 스파르타, {campusName} 독학
-        </div>
-      )}
+      {/* Structured Data for Local SEO */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "EducationalOrganization",
+            "name": `SSC스파르타 ${campusName} ${content.name}`,
+            "url": `https://sscsparta.com/${campus}/${stream}`,
+            "telephone": config.phone,
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": campusName,
+              "addressCountry": "KR"
+            },
+            "description": content.hero.description?.replaceAll('{{region}}', campusName) || ''
+          })
+        }}
+      />
 
       {/* Stream Specific Hero (Apple Light Aesthetic) */}
       <section id="hero" className="relative pt-24 pb-14 px-4 sm:px-6 bg-[#F5F5F7] min-h-[400px] flex items-center justify-center border-b border-black/[0.03]">
@@ -134,7 +142,7 @@ export default function StreamPage({
             <h1 
               className="main-title mb-8 text-balance drop-shadow-sm"
             >
-              <RhythmicText text={content.hero.title} />
+              <RhythmicText text={content.hero.title.replaceAll('{{region}}', campusName)} />
             </h1>
           </BlurFade>
 
@@ -143,7 +151,7 @@ export default function StreamPage({
               className="text-[#434345] font-medium tracking-tight mb-6 text-balance"
               style={{ fontSize: 'var(--font-size-body-lg)' }}
             >
-              <RhythmicText text={content.hero.subtitle} />
+              <RhythmicText text={content.hero.subtitle.replaceAll('{{region}}', campusName)} />
             </div>
           </BlurFade>
 

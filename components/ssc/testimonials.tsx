@@ -72,7 +72,7 @@ export function Testimonials({
           {testimonials.map((t, i) => (
             <article
               key={t.name}
-              className={`snap-center shrink-0 w-[85vw] md:w-auto fade-in-up delay-${(i + 1) * 100}`}
+              className="snap-center shrink-0 w-[85vw] md:w-auto fade-in-up"
             >
               <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] p-8 sm:p-10 h-full flex flex-col shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 relative overflow-hidden group hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500 ease-out hover:-translate-y-1">
                 {/* Subtle Nano-texture glow inside card */}
@@ -93,7 +93,7 @@ export function Testimonials({
 
         {/* 더보기 링크 */}
         {reviewUrl && (
-          <div className="fade-in-up delay-400 flex justify-center mt-24">
+          <div className="fade-in-up delay-200 flex justify-center mt-24">
             <a
               href={reviewUrl}
               target="_blank"

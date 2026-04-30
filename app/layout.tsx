@@ -23,9 +23,15 @@ export const metadata: Metadata = {
     type: 'website',
   },
   verification: {
+    google: '1JM3BiBpnBYLfbbjOvBjEsA1Z6xx9etEGmH7OHLWr1M',
     other: {
       'naver-site-verification': 'c9df103484da5b5ab152abdbb0e288844898c79b',
     },
+  },
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon.ico',
+    apple: '/apple-icon.png',
   },
 }
 
