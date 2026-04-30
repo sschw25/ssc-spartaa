@@ -85,7 +85,7 @@ export function Programs({ location = '원주' }: { location?: '원주' | '춘�
             <Link
               href={`/${campusRoute}/${prog.id}`}
               key={prog.id}
-              className={`group flex flex-col justify-between p-8 rounded-[24px] transition-all duration-500 ease-out border border-black/5 shadow-[0_4px_14px_rgba(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.08)] hover:-translate-y-1 fade-in-up delay-${(index % 3) * 100} ${index === 0 ? 'sm:col-span-2 min-h-[300px]' : 'min-h-[260px]'}`}
+              className={`group flex flex-col justify-between p-8 rounded-[24px] transition-all duration-500 ease-out border border-black/5 shadow-[0_4px_14px_rgba(0,0,0,0.02)] hover:shadow-[0_15px_30px_rgba(0,0,0,0.08)] hover:-translate-y-1 fade-in-up ${index === 0 ? 'sm:col-span-2 min-h-[300px]' : 'min-h-[260px]'}`}
               style={{ backgroundColor: cardColors[prog.id] }}
             >
               <div>

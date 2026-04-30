@@ -23,7 +23,7 @@ function FacilityCard({ facility, index }: { facility: FacilityItem; index: numb
 
   return (
     <div
-      className={`fade-in-up delay-${(index + 1) * 100} rounded-[12px] border border-border-color bg-background-subtle flex flex-col overflow-hidden`}
+      className="fade-in-up rounded-[12px] border border-border-color bg-background-subtle flex flex-col overflow-hidden"
       style={{ borderWidth: '0.5px' }}
     >
       {/* Photo area */}
@@ -84,7 +84,7 @@ export function Facilities({ facilities }: { facilities?: FacilityItem[] } = {})
             return (
               <div
                 key={facility.id}
-                className={`group relative h-[400px] md:h-[500px] rounded-[32px] overflow-hidden bg-[#F5F5F7] border border-black/[0.04] fade-in-up delay-${(i + 1) * 100}`}
+                className="group relative h-[400px] md:h-[500px] rounded-[32px] overflow-hidden bg-[#F5F5F7] border border-black/[0.04] fade-in-up"
               >
                 {/* Image Background */}
                 <div className="absolute inset-0 transition-transform duration-[2s] ease-out group-hover:scale-105">

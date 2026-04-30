@@ -48,7 +48,7 @@ export function Differentiation({ location = '원주' }: { location?: '원주' |
           {features.map((f, i) => (
             <div
               key={f.title}
-              className={`fade-in-up delay-${(i + 1) * 100} rounded-[12px] border border-border-color bg-white dark:bg-background p-6 flex flex-row md:flex-col gap-4`}
+              className="fade-in-up rounded-[12px] border border-border-color bg-white dark:bg-background p-6 flex flex-row md:flex-col gap-4"
               style={{ borderWidth: '0.5px' }}
             >
               {/* Icon — left on mobile, centered on desktop */}
@@ -69,7 +69,7 @@ export function Differentiation({ location = '원주' }: { location?: '원주' |
         </div>
 
         {/* Added CTA for conversion */}
-        <div className="mt-12 flex justify-center fade-in-up delay-400">
+        <div className="mt-12 flex justify-center fade-in-up">
           <button 
             onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
             className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#1D1D1F] text-white font-bold text-[15px] hover:scale-105 active:scale-95 transition-all shadow-lg"

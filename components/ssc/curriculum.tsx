@@ -53,7 +53,7 @@ export function Curriculum() {
           {schedule.map((s, i) => (
             <div
               key={s.label}
-              className={`fade-in-up delay-${(i + 1) * 150} ${s.bgColor} rounded-[40px] p-10 md:p-12 flex flex-col justify-between shadow-premium hover:shadow-premium-hover hover:-translate-y-2 transition-all duration-700 ease-out border border-black/[0.02]`}
+              className={`fade-in-up ${s.bgColor} rounded-[40px] p-10 md:p-12 flex flex-col justify-between shadow-premium hover:shadow-premium-hover hover:-translate-y-2 transition-all duration-700 ease-out border border-black/[0.02]`}
             >
               <div>
                 <div className="flex items-center gap-3 mb-8">

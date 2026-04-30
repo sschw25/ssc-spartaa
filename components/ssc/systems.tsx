@@ -60,7 +60,7 @@ export function Systems({ systems = COMMON_SYSTEMS }: SystemsProps) {
             return (
               <div
                 key={s.title}
-                className={`fade-in-up delay-${(i % 4) * 100} group rounded-[28px] border border-black/[0.04] bg-[#F5F5F7] p-8 md:p-10 flex flex-col gap-5 hover:bg-white hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-black/5 hover:-translate-y-1 transition-all duration-300 ease-out`}
+                className="fade-in-up group rounded-[28px] border border-black/[0.04] bg-[#F5F5F7] p-8 md:p-10 flex flex-col gap-5 hover:bg-white hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:border-black/5 hover:-translate-y-1 transition-all duration-300 ease-out"
               >
                 <div className="w-14 h-14 rounded-[16px] bg-white shadow-sm flex items-center justify-center border border-black/[0.03] group-hover:scale-105 transition-transform duration-300 ease-out">
                   {Icon && <Icon size={24} className="text-[#0071E3]" strokeWidth={1.5} />}

@@ -24,19 +24,19 @@ export function Hero() {
           </div>
 
           {/* H1 */}
-          <h1 className="text-4xl sm:text-5xl md:text-[52px] font-bold leading-tight text-navy dark:text-foreground text-balance mb-6 fade-in-up delay-100">
+          <h1 className="text-4xl sm:text-5xl md:text-[52px] font-bold leading-tight text-navy dark:text-foreground text-balance mb-6 fade-in-up">
             공부 의지에만 맡기지 않습니다.
             <br />
             환경·시간·생활까지 함께 관리합니다.
           </h1>
 
           {/* Sub-headline */}
-          <p className="text-base sm:text-lg text-text-secondary leading-relaxed mb-10 max-w-xl fade-in-up delay-200">
+          <p className="text-base sm:text-lg text-text-secondary leading-relaxed mb-10 max-w-xl fade-in-up">
             원주 · 춘천 · 충주 — 여러분의 합격 파트너 SSC스파르타
           </p>
 
           {/* CTAs */}
-          <div className="flex flex-col sm:flex-row gap-3 fade-in-up delay-300">
+          <div className="flex flex-col sm:flex-row gap-3 fade-in-up">
             <button
               onClick={() => scrollTo('#cta')}
               className="inline-flex items-center justify-center px-7 py-3.5 rounded-xl bg-navy text-text-on-navy font-semibold text-sm hover:bg-navy/90 transition-colors dark:bg-accent-blue"
@@ -52,7 +52,7 @@ export function Hero() {
           </div>
 
           {/* Micro-trust row */}
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-10 fade-in-up delay-400">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-10 fade-in-up">
             {[
               '누적 합격생 600명+',
               '강원 합격률 1위',

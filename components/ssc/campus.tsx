@@ -25,7 +25,7 @@ export function Campus({ filter }: { filter?: string } = {}) {
 
         {/* Tab switcher — only shown when not filtered to a single campus */}
         {!filter && (
-          <div className="w-full grid grid-cols-3 md:inline-flex p-1 bg-background rounded-lg border border-border-color mb-8 fade-in-up delay-100">
+          <div className="w-full grid grid-cols-3 md:inline-flex p-1 bg-background rounded-lg border border-border-color mb-8 fade-in-up">
             {campuses.map((c) => (
               <button
                 key={c.name}
@@ -43,7 +43,7 @@ export function Campus({ filter }: { filter?: string } = {}) {
         )}
 
         {/* Campus detail */}
-        <div className="grid md:grid-cols-2 gap-6 fade-in-up delay-200">
+        <div className="grid md:grid-cols-2 gap-6 fade-in-up">
           {/* Info card */}
           <div
             className="rounded-[12px] border border-border-color bg-background p-8 flex flex-col gap-5"
