@@ -1,7 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight } from 'lucide-react'
+import { ChevronRight, Target, BookOpen, Award } from 'lucide-react'
 import { Navbar } from '@/components/ssc/navbar'
 import { TrustBar } from '@/components/ssc/trust-bar'
 import { Testimonials } from '@/components/ssc/testimonials'
@@ -88,6 +88,41 @@ export default function CampusSummerSchoolPage({ params }: Props) {
 
       <SpartaPulse />
       <TrustBar />
+
+      {/* Features specific to Summer School */}
+      <section className="bg-white py-20 md:py-28" style={{ backgroundColor: '#EEF2FF' }}>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div className="mb-12 text-center fade-in-up">
+            <h2 className="text-3xl md:text-5xl font-semibold text-[#1D1D1F] tracking-tighter mb-4 leading-tight">
+              <RhythmicText text={summerContent.features.title} />
+            </h2>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {summerContent.features.items.map((f, i) => {
+              const Icon = [Target, BookOpen, Award][i % 3]
+              return (
+                <div
+                  key={f.title}
+                  className="fade-in-up rounded-[24px] border border-black/5 bg-white p-8 flex flex-col gap-6 shadow-sm hover:shadow-md transition-shadow duration-300"
+                >
+                  <div className="w-14 h-14 rounded-full bg-[#0071E3]/10 flex items-center justify-center flex-shrink-0 text-[#0071E3]">
+                    <Icon size={28} strokeWidth={1.5} />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-[#1D1D1F] tracking-tight mb-3">
+                      <RhythmicText text={f.title} />
+                    </h3>
+                    <div className="text-[15px] font-medium text-[#434345] leading-relaxed break-keep">
+                       <RhythmicText text={f.desc} />
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* Testimonials */}
       <Testimonials 
