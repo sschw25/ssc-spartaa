@@ -186,7 +186,7 @@ export const campusSummerContent: Record<CampusKey, SummerContent> = {
   },
   chuncheon: {
     ...baseContent,
-    reservationUrl: '#' // 추후 입력
+    reservationUrl: 'https://docs.google.com/forms/d/1zB9xJWiCvyipnPxx2Li96lQinSuuFSqWAZlM40JjBUI/viewform'
   },
   chungju: {
     ...baseContent,
