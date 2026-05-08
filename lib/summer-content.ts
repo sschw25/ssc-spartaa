@@ -182,14 +182,26 @@ const baseContent: Omit<SummerContent, 'reservationUrl'> = {
 export const campusSummerContent: Record<CampusKey, SummerContent> = {
   wonju: {
     ...baseContent,
+    overview: {
+      ...baseContent.overview,
+      period: '2026.07.20 – 08.16 (4주)',
+    },
     reservationUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSdeG0f43iMLgvJY_4q7VuEWFbZ53OHRbZT5DaI2SOSFUBYOkw/viewform'
   },
   chuncheon: {
     ...baseContent,
+    overview: {
+      ...baseContent.overview,
+      period: '2026.07.21 – 08.17 (4주)',
+    },
     reservationUrl: 'https://docs.google.com/forms/d/1zB9xJWiCvyipnPxx2Li96lQinSuuFSqWAZlM40JjBUI/viewform'
   },
   chungju: {
     ...baseContent,
+    overview: {
+      ...baseContent.overview,
+      period: '2026.07.21 – 08.17 (4주)',
+    },
     reservationUrl: 'https://forms.gle/F2MohzXsLx9zmER86'
   }
 };
