@@ -1,0 +1,283 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Brand Colors - Apple Light */
+  --navy: #1D1D1F; /* Premium dark gray instead of deep blue */
+  --accent-blue: #0071E3; /* Apple bright blue */
+  --accent-amber: #F56300;
+  --accent-green: #34C759;
+
+  /* Background */
+  --background: #FFFFFF;
+  --background-subtle: #F5F5F7;
+  --background-blue-soft: #F5F5F7;
+
+  /* Text */
+  --text-primary: #1D1D1F;
+  --text-secondary: #86868B;
+  --text-on-navy: #FFFFFF;
+
+  /* Border */
+  --border-color: #E5E7EB;
+
+  /* Radius */
+  --radius: 0.75rem;
+
+  /* Shadcn tokens (mapped) */
+  --foreground: var(--text-primary);
+  --card: var(--background);
+  --card-foreground: var(--text-primary);
+  --popover: var(--background);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--navy);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--background-subtle);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--background-subtle);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--background-subtle);
+  --accent-foreground: var(--text-primary);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: var(--border-color);
+  --input: var(--border-color);
+  --ring: var(--accent-blue);
+  --sidebar: var(--background-subtle);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--navy);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--background-subtle);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-color);
+  --sidebar-ring: var(--accent-blue);
+}
+
+.dark {
+  /* Lock Dark mode to Apple Light mode as requested */
+  --background: #FFFFFF;
+  --background-subtle: #F5F5F7;
+  --background-blue-soft: #F5F5F7;
+
+  --text-primary: #1D1D1F;
+  --text-secondary: #86868B;
+  --text-on-navy: #FFFFFF;
+
+  --border-color: #E5E7EB;
+
+  --foreground: var(--text-primary);
+  --card: var(--background);
+  --card-foreground: var(--text-primary);
+  --popover: var(--background);
+  --popover-foreground: var(--text-primary);
+  --primary: var(--navy);
+  --primary-foreground: #FFFFFF;
+  --secondary: var(--background-subtle);
+  --secondary-foreground: var(--text-primary);
+  --muted: var(--background-subtle);
+  --muted-foreground: var(--text-secondary);
+  --accent: var(--background-subtle);
+  --accent-foreground: var(--text-primary);
+  --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.577 0.245 27.325);
+  --border: var(--border-color);
+  --input: var(--border-color);
+  --ring: var(--accent-blue);
+  --sidebar: var(--background-subtle);
+  --sidebar-foreground: var(--text-primary);
+  --sidebar-primary: var(--navy);
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: var(--background-subtle);
+  --sidebar-accent-foreground: var(--text-primary);
+  --sidebar-border: var(--border-color);
+  --sidebar-ring: var(--accent-blue);
+}
+
+@theme inline {
+  --font-sans: 'Pretendard', 'var(--font-inter)', sans-serif;
+  --font-mono: 'var(--font-inter)', monospace;
+
+  --color-background: var(--background);
+  --color-background-subtle: var(--background-subtle);
+  --color-background-blue-soft: var(--background-blue-soft);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Brand tokens */
+  --color-navy: var(--navy);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-green: var(--accent-green);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-on-navy: var(--text-on-navy);
+  --color-border-color: var(--border-color);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-card: 12px;
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Pretendard', var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* Fluid Typography & Sizing Tokens */
+:root {
+  /* Headings - Base values */
+  --font-size-hero: clamp(2.25rem, 1.5rem + 4vw, 4.25rem); /* 36px ~ 68px */
+  --font-size-section-title: clamp(1.75rem, 1.3rem + 2.5vw, 3rem); /* 28px ~ 48px */
+  --font-size-body-lg: clamp(1rem, 0.95rem + 0.3vw, 1.125rem); /* 16px ~ 18px */
+  
+  /* Buttons */
+  --btn-font-size: clamp(0.875rem, 0.83rem + 0.2vw, 1rem); /* 14px ~ 16px */
+  --btn-padding-y: clamp(0.75rem, 0.65rem + 0.4vw, 1rem); /* 12px ~ 16px */
+  --btn-padding-x: clamp(1.25rem, 1rem + 1vw, 2rem); /* 20px ~ 32px */
+}
+
+/* Typography Utility Classes */
+.main-title {
+  font-size: var(--font-size-hero);
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+  font-weight: 600;
+  color: inherit; /* 유틸리티 클래스로 색상 제어 허용 */
+}
+
+.section-title {
+  font-size: var(--font-size-section-title);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  color: inherit; /* 유틸리티 클래스로 색상 제어 허용 */
+}
+
+/* Mobile Fine-tuning (under 768px) */
+@media (max-width: 767px) {
+  .main-title {
+    letter-spacing: -0.02em; /* 공간 확보를 위해 자간 소폭 완화 */
+  }
+  .section-title {
+    letter-spacing: -0.01em;
+  }
+}
+
+/* Extra Small (iPhone SE 등) */
+@media (max-width: 375px) {
+  :root {
+    --font-size-hero: clamp(2rem, 1.2rem + 3vw, 2.5rem); /* 32px ~ 40px */
+  }
+}
+
+/* Fluid Button Utility */
+.btn-fluid {
+  font-size: var(--btn-font-size);
+  padding-top: var(--btn-padding-y);
+  padding-bottom: var(--btn-padding-y);
+  padding-left: var(--btn-padding-x);
+  padding-right: var(--btn-padding-x);
+}
+
+/* Dot-grid hero pattern */
+.dot-grid {
+  background-image: radial-gradient(circle, #0F1C3F18 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+.dark .dot-grid {
+  background-image: radial-gradient(circle, #378ADD22 1px, transparent 1px);
+}
+
+/* Fade-in animation for scroll reveal */
+.fade-in-up {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger delays */
+.delay-100 { transition-delay: 0.1s; }
+.delay-200 { transition-delay: 0.2s; }
+.delay-300 { transition-delay: 0.3s; }
+.delay-400 { transition-delay: 0.4s; }
+.delay-500 { transition-delay: 0.5s; }
+
+/* ── Apple Design Language ── */
+
+/* Smooth font rendering */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Display title — tight tracking + tight line-height */
+.display-title {
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+/* Eyebrow label — small caps style */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Programs overlay slide-up animation */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Programs inline accordion slide-down animation */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

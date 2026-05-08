@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://www.sscsparta.com/</loc>
+    <lastmod>2026-04-16</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <!-- Campuses -->
+  <url><loc>https://www.sscsparta.com/wonju</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.sscsparta.com/chuncheon</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.sscsparta.com/chungju</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <!-- Wonju Streams -->
+  <url><loc>https://www.sscsparta.com/wonju/gongmuwon</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/wonju/suneung</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/wonju/imyong</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/wonju/professional</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/wonju/job</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/wonju/managed</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <!-- Chuncheon Streams -->
+  <url><loc>https://www.sscsparta.com/chuncheon/gongmuwon</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chuncheon/suneung</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chuncheon/imyong</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</lastfreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chuncheon/professional</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chuncheon/job</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chuncheon/managed</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <!-- Chungju Streams -->
+  <url><loc>https://www.sscsparta.com/chungju/gongmuwon</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chungju/suneung</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chungju/imyong</loc><lastmod>2026-04-16</lastmod><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chungju/professional</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chungju/job</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.sscsparta.com/chungju/managed</loc><lastmod>2026-04-16</lastmod><changefreq>weekly</changefreq><priority>0.6</priority></url>
+</urlset>
