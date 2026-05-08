@@ -123,9 +123,9 @@ export function Navbar() {
               {/* Dropdown Menu */}
               <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-2 group-hover:translate-y-0 overflow-hidden">
                 <div className="py-2 flex flex-col">
-                  <Link href="/summer-school/wonju" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
-                  <Link href="/summer-school/chuncheon" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
-                  <Link href="/summer-school/chungju" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
+                  <Link href="/wonju/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
+                  <Link href="/chuncheon/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
+                  <Link href="/chungju/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
                 </div>
               </div>
             </div>
@@ -168,21 +168,21 @@ export function Navbar() {
                 <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2024/2025 썸머스쿨</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
-                    href="/summer-school/wonju" 
+                    href="/wonju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
                     className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     원주점
                   </Link>
                   <Link 
-                    href="/summer-school/chuncheon" 
+                    href="/chuncheon/summer" 
                     onClick={() => setMobileMenuOpen(false)}
                     className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     춘천점
                   </Link>
                   <Link 
-                    href="/summer-school/chungju" 
+                    href="/chungju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
                     className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
