@@ -1,7 +1,11 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Sun, Coffee, Moon, BookOpen } from 'lucide-react'
+import { Sun, Coffee, Moon, BookOpen, Target, CheckSquare, Heart, Home } from 'lucide-react'
+
+const iconMap: Record<string, any> = {
+  Sun, Coffee, Moon, BookOpen, Target, CheckSquare, Heart, Home
+}
 
 const SCHEDULE = [
   { time: '08:20', label: '오전 집중 학습 시작', desc: '0교시 단어 테스트 및 가장 상쾌한 오전의 몰입', icon: Sun },
@@ -12,10 +16,21 @@ const SCHEDULE = [
   { time: '22:10', label: '최종 하원 및 심야 자율 학습', desc: '순공 12시간의 성취감과 함께하는 하루의 마무리', icon: Moon },
 ]
 
-export function TimelineView() {
+interface ScheduleItem {
+  time: string
+  label: string
+  desc: string
+  icon: any
+}
+
+interface TimelineViewProps {
+  schedule?: ScheduleItem[]
+}
+
+export function TimelineView({ schedule = SCHEDULE }: TimelineViewProps) {
   return (
-    <section id="timeline" className="pb-24 md:pb-32 pt-0 bg-[#F5F5F7] overflow-hidden">
-      <div className="max-w-[72rem] mx-auto px-6 sm:px-8 -mt-24 md:-mt-36">
+    <section id="timeline" className="py-24 md:py-32 bg-[#F5F5F7]">
+      <div className="max-w-[72rem] mx-auto px-6 sm:px-8">
         <div className="mb-12 md:mb-16 text-center fade-in-up">
             <p className="text-[#0071E3] text-[11px] sm:text-xs font-extrabold tracking-[0.3em] uppercase mb-6 opacity-80">Daily Workflow</p>
             <h2 className="text-4xl md:text-5xl lg:text-7xl font-bold text-[#1D1D1F] tracking-tighter mb-8 leading-[1.05] text-balance">
@@ -33,7 +48,9 @@ export function TimelineView() {
           <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-[2px] bg-black/[0.05] -translate-x-1/2" />
           
           <div className="flex flex-col gap-12">
-            {SCHEDULE.map((item, i) => (
+            {schedule.map((item, i) => {
+              const Icon = typeof item.icon === 'string' ? (iconMap[item.icon] || Sun) : item.icon
+              return (
               <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 20 }}
@@ -54,14 +71,14 @@ export function TimelineView() {
                 {/* Counterpart Side (Dot/Icon) */}
                 <div className="absolute left-4 md:left-1/2 -translate-x-1/2 z-10">
                   <div className="w-12 h-12 rounded-full bg-white border-4 border-[#F5F5F7] flex items-center justify-center shadow-premium-hover transition-transform duration-500 hover:scale-110">
-                    <item.icon size={22} className="text-[#1D1D1F]" strokeWidth={2.5} />
+                    <Icon size={22} className="text-[#1D1D1F]" strokeWidth={2.5} />
                   </div>
                 </div>
 
                 {/* Empty Side for layout */}
                 <div className="hidden md:block flex-1 w-1/2" />
               </motion.div>
-            ))}
+            )})}
           </div>
         </div>
 
@@ -74,7 +91,7 @@ export function TimelineView() {
         >
           <p className="text-[#86868B] text-sm font-semibold flex items-center justify-center gap-2">
             <span className="w-1 h-1 rounded-full bg-[#0071E3]" />
-            등원 및 하원 시간은 수험생의 거주지에 따라 유동적으로 운영됩니다.
+            학교에 가지 않는 방학 기간이므로, 본인의 스케줄에 맞춰 등하원 시간을 유동적으로 조정할 수 있습니다.
           </p>
         </motion.div>
       </div>

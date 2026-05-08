@@ -52,7 +52,7 @@ export function SpartaPulse() {
 
   return (
     <div className="w-full bg-[#0A0A0B] text-white overflow-hidden">
-      <div className="relative py-16 md:py-28 px-4 sm:px-6">
+      <div className="relative pt-16 md:pt-28 pb-8 md:pb-12 px-4 sm:px-6">
         {/* Apple-style Subtle Gradient Background */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
            <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[90%] h-[60%] bg-[radial-gradient(circle_at_center,rgba(0,113,227,0.12)_0%,transparent_80%)] blur-[40px]" />
