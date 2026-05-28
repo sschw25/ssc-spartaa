@@ -10,7 +10,7 @@ type SeoContent = {
 
 const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
   gongmuwon: (region: string) => ({
-    title: `${region} 공무원학원`,
+    title: `${region} 공무원·경찰·소방학원`,
     description: `${region} 경찰학원, ${region} 소방학원 등 모든 직렬 공무원 합격을 위한 관리형 학원. 노량진 커넥츠프랩 시스템을 ${region} SSC스파르타에서 그대로 경험하세요.`,
     keywords: [`${region} 공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 공무원준비`, `${region} 커넥츠프랩`, `${region} 공단기`, `${region} 스파르타`, `공무원기숙학원`],
   }),
@@ -72,9 +72,9 @@ export function getStreamMetadata(campus: CampusKey, stream: StreamId): Metadata
       description: config.description,
     },
     icons: {
-      icon: '/favicon.ico',
-      shortcut: '/favicon.ico',
-      apple: '/apple-icon.png',
+      icon: '/icon.png',
+      shortcut: '/icon.png',
+      apple: '/icon.png',
     },
   }
 }
@@ -91,9 +91,9 @@ export function getCampusMetadata(campus: CampusKey): Metadata {
       description: config.description,
     },
     icons: {
-      icon: '/favicon.ico',
-      shortcut: '/favicon.ico',
-      apple: '/apple-icon.png',
+      icon: '/icon.png',
+      shortcut: '/icon.png',
+      apple: '/icon.png',
     },
   }
 }
