@@ -25,9 +25,10 @@ interface ScheduleItem {
 
 interface TimelineViewProps {
   schedule?: ScheduleItem[]
+  showFlexibleNote?: boolean
 }
 
-export function TimelineView({ schedule = SCHEDULE }: TimelineViewProps) {
+export function TimelineView({ schedule = SCHEDULE, showFlexibleNote = false }: TimelineViewProps) {
   return (
     <section id="timeline" className="py-24 md:py-32 bg-[#F5F5F7]">
       <div className="max-w-[72rem] mx-auto px-6 sm:px-8">
@@ -83,17 +84,19 @@ export function TimelineView({ schedule = SCHEDULE }: TimelineViewProps) {
         </div>
 
         {/* Flexible Schedule Note - Moved outside the vertical line container to avoid overlap */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          className="mt-24 text-center"
-        >
-          <p className="text-[#86868B] text-sm font-semibold flex items-center justify-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-[#0071E3]" />
-            학교에 가지 않는 방학 기간이므로, 본인의 스케줄에 맞춰 등하원 시간을 유동적으로 조정할 수 있습니다.
-          </p>
-        </motion.div>
+        {showFlexibleNote && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            className="mt-24 text-center"
+          >
+            <p className="text-[#86868B] text-sm font-semibold flex items-center justify-center gap-2">
+              <span className="w-1 h-1 rounded-full bg-[#0071E3]" />
+              학교에 가지 않는 방학 기간이므로, 본인의 스케줄에 맞춰 등하원 시간을 유동적으로 조정할 수 있습니다.
+            </p>
+          </motion.div>
+        )}
       </div>
     </section>
   )

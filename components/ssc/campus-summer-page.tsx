@@ -181,7 +181,7 @@ export function CampusSummerPage({ campusKey }: Props) {
       </section>
 
       {/* Schedule -> Reusing TimelineView for now but we could customize */}
-      <TimelineView />
+      <TimelineView showFlexibleNote={true} />
 
       {/* Registration Process & Pricing */}
       <section className="bg-white py-20 md:py-28">
