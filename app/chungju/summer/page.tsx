@@ -1,11 +1,8 @@
 import { Metadata } from 'next'
 import { CampusSummerPage } from '@/components/ssc/campus-summer-page'
-import { campusSummerContent } from '@/lib/summer-content'
+import { getSummerMetadata } from '@/lib/seo-utils'
 
-export const metadata: Metadata = {
-  title: '충주 썸머스쿨 | SSC스파르타',
-  description: campusSummerContent.chungju.hero.description,
-}
+export const metadata: Metadata = getSummerMetadata('chungju')
 
 export default function ChungjuSummerSchool() {
   return <CampusSummerPage campusKey="chungju" />

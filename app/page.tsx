@@ -3,6 +3,7 @@ import path from 'path'
 import Link from 'next/link'
 import Image from 'next/image'
 import { ChevronRight, MapPin } from 'lucide-react'
+import { Metadata } from 'next'
 import BlurFade from '@/components/ui/blur-fade'
 import TiltCard from '@/components/ui/tilt-card'
 import BrainScience from '@/components/ssc/brain-science'
@@ -11,6 +12,38 @@ import CommitmentSection from '@/components/ssc/commitment-section'
 import { SpartaPulse } from '@/components/ssc/sparta-pulse'
 import { Footer } from '@/components/ssc/footer'
 import { RhythmicText } from '@/components/ui/rhythmic-text'
+import { MainNavbar } from '@/components/ssc/main-navbar'
+import { CAMPUS_CONFIG } from '@/lib/campus-config'
+
+export const metadata: Metadata = {
+  title: 'SSC 스파르타 | 압도적 합격을 위한 스파르타식 통제 시스템',
+  description: '원주, 춘천, 충주 전국의 단기합격을 증명하는 독학재수, 공무원, 임용고시 관리형 독서실. 철저한 통제와 노량진 관리 시스템으로 순공 시간을 극대화하세요.',
+  keywords: [
+    'SSC 스파르타',
+    '관리형 독서실',
+    '독학재수학원',
+    '원주 독학재수',
+    '춘천 임용고시',
+    '충주 공무원학원',
+    '스파르타식 통제',
+    '순공시간 확보',
+    '커넥츠프랩',
+  ],
+  openGraph: {
+    title: 'SSC 스파르타 | 압도적 합격을 위한 통제 시스템',
+    description: '가장 본질적인 학습에 몰입하는 공간. 원주, 춘천, 충주 관리형 독서실 및 스파르타식 독학재수.',
+    url: 'https://sscsparta.com',
+    type: 'website',
+    images: [
+      {
+        url: 'https://sscsparta.com/images/og-main.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'SSC 스파르타 메인',
+      },
+    ],
+  },
+}
 
 const locations = [
   {
@@ -53,8 +86,6 @@ const locations = [
 
 const programs = ['공무원', '임용고시', '전문자격', '독학재수', '관리형독서실']
 
-import { CAMPUS_CONFIG } from '@/lib/campus-config'
-
 export default function SelectLocation() {
   const images: Record<string, string> = {
     wonju: CAMPUS_CONFIG.wonju.image,
@@ -65,13 +96,65 @@ export default function SelectLocation() {
   return (
     <main className="relative min-h-screen bg-[#F5F5F7] flex flex-col font-sans overflow-hidden text-[#1D1D1F] selection:bg-black/10 selection:text-black transition-colors duration-500">
       
+      {/* Structured Data for Local SEO (JSON-LD) */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "EducationalOrganization",
+            "name": "SSC스파르타",
+            "url": "https://sscsparta.com",
+            "logo": "https://sscsparta.com/images/logo.png",
+            "description": "원주, 춘천, 충주 전국의 단기합격을 증명하는 독학재수, 공무원, 임용고시 관리형 독서실. 철저한 통제와 노량진 관리 시스템으로 순공 시간을 극대화하세요.",
+            "subOrganization": [
+              {
+                "@type": "EducationalOrganization",
+                "name": "SSC스파르타 원주캠퍼스",
+                "telephone": "033-766-0701",
+                "address": {
+                  "@type": "PostalAddress",
+                  "streetAddress": "치악로 1793 농협건물 4층",
+                  "addressLocality": "원주시",
+                  "addressCountry": "KR"
+                }
+              },
+              {
+                "@type": "EducationalOrganization",
+                "name": "SSC스파르타 춘천캠퍼스",
+                "telephone": "033-264-0701",
+                "address": {
+                  "@type": "PostalAddress",
+                  "streetAddress": "퇴계로 249 5층",
+                  "addressLocality": "춘천시",
+                  "addressCountry": "KR"
+                }
+              },
+              {
+                "@type": "EducationalOrganization",
+                "name": "SSC스파르타 충주캠퍼스",
+                "telephone": "043-855-0701",
+                "address": {
+                  "@type": "PostalAddress",
+                  "streetAddress": "계명대로 283 4층",
+                  "addressLocality": "충주시",
+                  "addressCountry": "KR"
+                }
+              }
+            ]
+          })
+        }}
+      />
+
+      <MainNavbar />
+
       {/* Background Soft Glow (Clean Apple Light) */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute top-[0%] left-[50%] -translate-x-1/2 w-[100%] h-[40%] bg-gradient-to-b from-white/80 via-white/40 to-transparent blur-[120px] rounded-[100%]" />
         <div className="absolute bottom-[10%] right-[0%] w-[50%] h-[30%] bg-[#0071E3]/05 blur-[120px] rounded-full" />
       </div>
 
-      <div className="relative z-10 flex flex-col flex-1">
+      <div className="relative z-10 flex flex-col flex-1 pt-12">
         {/* Header Section */}
         <header className="pt-16 md:pt-24 pb-20 px-6 text-center max-w-5xl mx-auto">
           <BlurFade delay={0.1} yOffset={20}>
@@ -147,6 +230,8 @@ export default function SelectLocation() {
                               src={image}
                               alt={`${loc.name} 캠퍼스`}
                               fill
+                              priority={idx < 2}
+                              sizes="(max-width: 768px) 100vw, 33vw"
                               className="object-cover transition-transform duration-[2s] ease-out group-hover:scale-[1.08]"
                             />
                           )}

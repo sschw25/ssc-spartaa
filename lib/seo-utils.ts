@@ -97,3 +97,27 @@ export function getCampusMetadata(campus: CampusKey): Metadata {
     },
   }
 }
+
+export function getSummerMetadata(campus: CampusKey): Metadata {
+  const campusName = CAMPUS_CONFIG[campus].name
+  const title = `${campusName} 썸머스쿨 초격차 몰입 캠프 | SSC스파르타`
+  const description = `${campusName} 썸머스쿨 완벽한 생활 관리와 압도적인 면학 분위기 속에서 여름방학을 순공 12시간으로 채우는 초격차 몰입 캠프.`
+  const keywords = [`${campusName} 썸머스쿨`, `${campusName} 여름방학 특강`, `${campusName} 방학 몰입`, `${campusName} 독학재수`, `${campusName} 관리형독서실`, '썸머스쿨', '방학캠프']
+
+  return {
+    title,
+    description,
+    keywords,
+    openGraph: {
+      title,
+      description,
+      type: 'website',
+    },
+    icons: {
+      icon: '/icon.png',
+      shortcut: '/icon.png',
+      apple: '/icon.png',
+    },
+  }
+}
+
