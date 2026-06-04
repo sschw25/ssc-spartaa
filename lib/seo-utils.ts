@@ -15,7 +15,7 @@ const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
     keywords: [`${region} 공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 공무원준비`, `${region} 커넥츠프랩`, `${region} 공단기`, `${region} 스파르타`, `공무원기숙학원`],
   }),
   suneung: (region: string) => ({
-    title: `${region} 독학재수학원 관리의 정석`,
+    title: `${region} 독학재수보다 더 강한 관리`,
     description: `${region} 독학재수학원보다 강력한 밀착 관리. 무너진 생활 리듬을 완벽히 통제하는 ${region} 수능 관리형 독서실 SSC스파르타입니다.`,
     keywords: [`${region} 독학재수학원`, `${region} 독학재수`, `${region} 재수학원`, `${region} 수능학원`, `${region} 수능준비`, `${region} 관리형독서실`, `${region} 관리형 스터디카페`],
   }),
@@ -43,32 +43,33 @@ const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
 
 const CAMPUS_SEO_CONFIG: Record<CampusKey, SeoContent> = {
   wonju: {
-    title: '원주 공무원학원 | 원주 독학재수학원 | SSC스파르타',
-    description: '원주 공무원학원, 원주 독학재수 및 자격증 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
-    keywords: ['원주 공무원학원', '원주 독학재수학원', '원주 자격증 준비', '원주 관리형독서실', '원주 커넥츠프랩', '원주 공단기', 'SSC스파르타'],
+    title: '원주 공무원학원 | SSC스파르타',
+    description: '원주 공무원학원, 경찰·소방·공무원 시험 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
+    keywords: ['원주 공무원학원', '원주 경찰학원', '원주 소방학원', '원주 공무원준비', '원주 커넥츠프랩', '원주 공단기', 'SSC스파르타'],
   },
   chuncheon: {
-    title: '춘천 공무원학원 | 춘천 독학재수학원 | SSC스파르타',
-    description: '춘천 공무원학원, 춘천 독학재수 및 취업 준비생을 위한 최적의 관리형독서실. 철저한 생활 관리와 압도적인 면학 분위기.',
-    keywords: ['춘천 공무원학원', '춘천 독학재수학원', '춘천 자격증 준비', '춘천 관리형독서실', '춘천 커넥츠프랩', '춘천 공단기', 'SSC스파르타'],
+    title: '춘천 공무원학원 | SSC스파르타',
+    description: '춘천 공무원학원, 경찰·소방·공무원 시험 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
+    keywords: ['춘천 공무원학원', '춘천 경찰학원', '춘천 소방학원', '춘천 공무원준비', '춘천 커넥츠프랩', '춘천 공단기', 'SSC스파르타'],
   },
   chungju: {
-    title: '충주 공무원학원 | 충주 독학재수학원 | SSC스파르타',
-    description: '충주 공무원학원, 충주 독학재수 및 전문직 합격의 성지. 1:1 밀착 코멘터 관리와 교시제로 당신의 합격을 앞당깁니다.',
-    keywords: ['충주 공무원학원', '충주 독학재수학원', '충주 자격증 준비', '충주 관리형독서실', '충주 커넥츠프랩', '충주 공단기', 'SSC스파르타'],
+    title: '충주 공무원학원 | SSC스파르타',
+    description: '충주 공무원학원, 경찰·소방·공무원 시험 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
+    keywords: ['충주 공무원학원', '충주 경찰학원', '충주 소방학원', '충주 공무원준비', '충주 커넥츠프랩', '충주 공단기', 'SSC스파르타'],
   },
 }
 
 export function getStreamMetadata(campus: CampusKey, stream: StreamId): Metadata {
   const campusName = CAMPUS_CONFIG[campus].name
   const config = STREAM_SEO_CONFIG[stream](campusName)
+  const title = `${config.title} | SSC스파르타`
 
   return {
-    title: `${config.title} | SSC스파르타 ${campusName}`,
+    title,
     description: config.description,
     keywords: config.keywords,
     openGraph: {
-      title: `${config.title} | SSC스파르타 ${campusName}`,
+      title,
       description: config.description,
     },
     icons: {

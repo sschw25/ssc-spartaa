@@ -43,32 +43,33 @@ const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
 
 const CAMPUS_SEO_CONFIG: Record<CampusKey, SeoContent> = {
   wonju: {
-    title: '원주 공무원학원 | 원주 관리형 독서실 SSC스파르타',
-    description: '원주 공무원·독학재수 합격의 성지. 노량진 본원과 동일한 관리 시스템과 공단기 콘텐츠를 원주에서 그대로 경험하세요.',
-    keywords: ['원주 공무원학원', '원주 관리형 독서실', '원주 독학재수', '원주 커넥츠프랩', '원주 공단기'],
+    title: '원주 공무원학원 | SSC스파르타',
+    description: '원주 공무원학원, 경찰·소방·공무원 시험 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
+    keywords: ['원주 공무원학원', '원주 경찰학원', '원주 소방학원', '원주 공무원준비', '원주 커넥츠프랩', '원주 공단기', 'SSC스파르타'],
   },
   chuncheon: {
-    title: '춘천 공무원학원 | 춘천 관리형 독서실 SSC스파르타',
-    description: '춘천 공무원·독학재수 합격의 지름길. 철저한 생활 관리와 최적의 학습 환경으로 단기 합격을 완성합니다.',
-    keywords: ['춘천 공무원학원', '춘천 관리형 독서실', '춘천 독학재수', '춘천 커넥츠프랩', '춘천 공단기'],
+    title: '춘천 공무원학원 | SSC스파르타',
+    description: '춘천 공무원학원, 경찰·소방·공무원 시험 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
+    keywords: ['춘천 공무원학원', '춘천 경찰학원', '춘천 소방학원', '춘천 공무원준비', '춘천 커넥츠프랩', '춘천 공단기', 'SSC스파르타'],
   },
   chungju: {
-    title: '충주 공무원학원 | 충주 관리형 독서실 SSC스파르타',
-    description: '충주 공무원·독학재수 합격 시스템. 1:1 밀착 관리와 정기적인 테스트로 합격까지 함께합니다.',
-    keywords: ['충주 공무원학원', '충주 관리형 독서실', '충주 독학재수', '충주 커넥츠프랩', '충주 공단기'],
+    title: '충주 공무원학원 | SSC스파르타',
+    description: '충주 공무원학원, 경찰·소방·공무원 시험 준비의 중심. 노량진 공단기 콘텐츠와 스파르타식 밀착 관리로 단기 합격을 완성하세요.',
+    keywords: ['충주 공무원학원', '충주 경찰학원', '충주 소방학원', '충주 공무원준비', '충주 커넥츠프랩', '충주 공단기', 'SSC스파르타'],
   },
 }
 
 export function getStreamMetadata(campus: CampusKey, stream: StreamId): Metadata {
   const campusName = CAMPUS_CONFIG[campus].name
   const config = STREAM_SEO_CONFIG[stream](campusName)
+  const title = `${config.title} | SSC스파르타`
 
   return {
-    title: `${config.title} | SSC스파르타 ${campusName}`,
+    title,
     description: config.description,
     keywords: config.keywords,
     openGraph: {
-      title: `${config.title} | SSC스파르타 ${campusName}`,
+      title,
       description: config.description,
     },
   }
