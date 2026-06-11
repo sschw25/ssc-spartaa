@@ -61,7 +61,7 @@ const wonjuSlides = [
   {
     id: 1,
     image: '/images/campus-wonju.jpg',
-    title: '원주 유일\n노량진 커넥츠프랩(공단기) 파트너',
+    title: '원주공무원학원 유일의\n노량진 커넥츠프랩(공단기) 파트너',
     subtitle: '공무원 합격자에게 물어보세요.\n합격자는 스파르타 했습니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
     ctaLabel: '공무원 합격반 알아보기',
@@ -73,7 +73,7 @@ const wonjuSlides = [
     image: '/images/campus-wonju.jpg',
     title: '합리적 프리미엄 독학재수',
     subtitle: '생활 리듬이 무너지면 강의도 소용없습니다.\n관리가 먼저입니다.',
-    description: '불필요한 실강 비용을 덜어내고\n진짜 필요한 관리에만 집중합니다.',
+    description: '원주관리형독서실을 찾는다면, 불필요한 실강 비용을 덜어내고\n진짜 필요한 순공 시간 관리에만 집중하는 독학재수반.',
     ctaLabel: '프리미엄 독학재수 알아보기',
     programId: 'suneung',
   },
@@ -118,7 +118,7 @@ export default function WonjuPage() {
       />
       <ScrollRevealInit />
       <Navbar />
-      <HeroSlider slides={slides} heading="SSC스파르타 원주캠퍼스 시간 관리형 학습관" />
+      <HeroSlider slides={slides} heading="SSC스파르타 원주캠퍼스 | 원주 독학재수 · 관리형독서실 · 공무원학원" />
       <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /wonju/programs 페이지로 이동 */}

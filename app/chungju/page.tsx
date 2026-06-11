@@ -63,7 +63,7 @@ const chungjuSlides = [
     image: '/images/campus-chungju.png',
     title: '대치동의 자료 그대로\n커넥츠프랩 수능관',
     subtitle: '서울 대치동 수준의 콘텐츠를 충주에서 —\n거리의 차이는 없앴습니다.',
-    description: '수능 · 독학재수 · 전문자격\n전 직렬 완벽 커버 시스템',
+    description: '충주독학재수학원, 충주관리형독서실을 찾는다면! 대치동 콘텐츠 그대로 충주에서 공부하는 수능관.',
     ctaLabel: '수능관 알아보기',
     ctaSecondaryLabel: '프로그램 둘러보기',
     programId: 'suneung',
@@ -71,7 +71,7 @@ const chungjuSlides = [
   {
     id: 2,
     image: '/images/campus-chungju.png',
-    title: '충주 공무원 합격의 메카',
+    title: '충주공무원학원 합격의 메카',
     subtitle: '독한 관리와 커넥츠프랩 시스템으로\n매년 합격자를 배출합니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
     ctaLabel: '공무원 합격반 알아보기',
@@ -118,7 +118,7 @@ export default function ChungjuPage() {
       />
       <ScrollRevealInit />
       <Navbar />
-      <HeroSlider slides={slides} heading="SSC스파르타 충주캠퍼스 시간 관리형 학습관" />
+      <HeroSlider slides={slides} heading="SSC스파르타 충주캠퍼스 | 충주 독학재수 · 관리형독서실 · 공무원학원" />
       <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /chungju/programs 페이지로 이동 */}

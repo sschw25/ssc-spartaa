@@ -71,7 +71,7 @@ const chuncheonSlides = [
   {
     id: 2,
     image: '/images/campus-chuncheon.png',
-    title: '공무원 합격을 묻는다면?\n춘천스파르타',
+    title: '춘천공무원학원을 찾으신다면?\n춘천스파르타',
     subtitle: '혼자서는 무너집니다.\n관리받는 사람이 합격합니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
     ctaLabel: '공무원 합격반 알아보기',
@@ -91,7 +91,7 @@ const chuncheonSlides = [
     image: '/images/campus-chuncheon.png',
     title: '합리적 프리미엄 독학재수',
     subtitle: '생활 리듬이 무너지면 강의도 소용없습니다.\n관리가 먼저입니다.',
-    description: '불필요한 실강 비용을 덜어내고\n진짜 필요한 관리에만 집중합니다.',
+    description: '춘천관리형독서실을 찾는다면, 불필요한 실강 비용을 덜어내고 진짜 필요한 관리에만 집중합니다.',
     ctaLabel: '프리미엄 독학재수 알아보기',
     programId: 'suneung',
   },
@@ -118,7 +118,7 @@ export default function ChuncheonPage() {
       />
       <ScrollRevealInit />
       <Navbar />
-      <HeroSlider slides={slides} heading="SSC스파르타 춘천캠퍼스 시간 관리형 학습관" />
+      <HeroSlider slides={slides} heading="SSC스파르타 춘천캠퍼스 | 춘천 독학재수 · 관리형독서실 · 임용고시학원" />
       <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /chuncheon/programs 페이지로 이동 */}
