@@ -7,6 +7,9 @@ import { CAMPUS_CONFIG } from '@/lib/campus-config'
 import { Footer } from '@/components/ssc/footer'
 import { MobileCtaBar } from '@/components/ssc/mobile-cta-bar'
 import { ScrollRevealInit } from '@/components/ssc/scroll-reveal-init'
+import { getCampusSubpageMetadata } from '@/lib/seo-utils'
+
+export const metadata = getCampusSubpageMetadata('wonju', 'programs')
 
 export default function WonjuProgramsPage() {
   return (

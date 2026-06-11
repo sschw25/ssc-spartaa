@@ -29,14 +29,17 @@ export const metadata: Metadata = {
     '순공시간 확보',
     '커넥츠프랩',
   ],
+  alternates: {
+    canonical: 'https://www.sscsparta.com',
+  },
   openGraph: {
     title: 'SSC 스파르타 | 압도적 합격을 위한 통제 시스템',
     description: '가장 본질적인 학습에 몰입하는 공간. 원주, 춘천, 충주 관리형 독서실 및 스파르타식 독학재수.',
-    url: 'https://sscsparta.com',
+    url: 'https://www.sscsparta.com',
     type: 'website',
     images: [
       {
-        url: 'https://sscsparta.com/images/og-main.jpg',
+        url: 'https://www.sscsparta.com/images/og-main.jpg',
         width: 1200,
         height: 630,
         alt: 'SSC 스파르타 메인',
@@ -104,8 +107,8 @@ export default function SelectLocation() {
             "@context": "https://schema.org",
             "@type": "EducationalOrganization",
             "name": "SSC스파르타",
-            "url": "https://sscsparta.com",
-            "logo": "https://sscsparta.com/images/logo.png",
+            "url": "https://www.sscsparta.com",
+            "logo": "https://www.sscsparta.com/icon.png",
             "description": "원주, 춘천, 충주 전국의 단기합격을 증명하는 독학재수, 공무원, 임용고시 관리형 독서실. 철저한 통제와 노량진 관리 시스템으로 순공 시간을 극대화하세요.",
             "subOrganization": [
               {

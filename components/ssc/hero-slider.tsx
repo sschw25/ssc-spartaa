@@ -4,13 +4,20 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { usePathname, useRouter } from 'next/navigation'
-import useSWR from 'swr'
-import type { SiteContent } from '@/lib/content'
 import { RhythmicText } from '@/components/ui/rhythmic-text'
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+type HeroSlide = {
+  id: number
+  title: string
+  subtitle: string
+  description: string
+  ctaLabel: string
+  ctaSecondaryLabel?: string
+  image?: string
+  programId?: string
+}
 
-const defaultSlides = [
+const defaultSlides: HeroSlide[] = [
   {
     id: 1,
     title: '혼자서는 무너집니다.\nSSC스파르타와 함께라면 버팁니다.',
@@ -57,15 +64,20 @@ const defaultSlides = [
   },
 ]
 
-export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlides } = {}) {
+export function HeroSlider({
+  slides: slidesProp,
+  heading = 'SSC스파르타 시간 관리형 학습관',
+}: {
+  slides?: HeroSlide[]
+  heading?: string
+} = {}) {
   const pathname = usePathname()
   const router = useRouter()
   
   // 현재 캠퍼스 경로 추출 (예: /wonju/programs -> wonju)
   const campusPath = pathname.split('/')[1] || 'wonju'
 
-  const { data } = useSWR<SiteContent>('/api/content', fetcher)
-  const slides = slidesProp ?? data?.hero?.slides ?? defaultSlides
+  const slides: HeroSlide[] = slidesProp ?? defaultSlides
 
   const [current, setCurrent] = useState(0)
   const [autoPlay, setAutoPlay] = useState(true)
@@ -118,6 +130,7 @@ export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlid
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
+      <h1 className="sr-only">{heading}</h1>
       {/* Slides */}
       <div className="relative h-full">
         {slides.map((slide, i) => (
@@ -128,9 +141,9 @@ export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlid
             }`}
           >
             {/* Background Image handling */}
-            {(slide as {image?: string}).image ? (
+            {slide.image ? (
               <>
-                <Image src={(slide as {image?: string}).image!} alt="" fill className="object-cover transition-transform duration-[10s] ease-out scale-100 origin-center" priority={i === 0} style={{ transform: i === current ? 'scale(1.05)' : 'scale(1)' }} />
+                <Image src={slide.image} alt="" fill className="object-cover transition-transform duration-[10s] ease-out scale-100 origin-center" priority={i === 0} style={{ transform: i === current ? 'scale(1.05)' : 'scale(1)' }} />
                 <div className="absolute inset-0 bg-white/70 backdrop-blur-[2px]" />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#F5F5F7]/95 via-transparent to-transparent" />
               </>
@@ -155,11 +168,11 @@ export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlid
                     <p className="text-[#86868B] text-[10px] sm:text-xs font-semibold tracking-[0.2em] uppercase mb-4 opacity-80">
                       PREMIUM SPARTAN CENTER
                     </p>
-                    <h1
+                    <h2
                       className="main-title mb-8 display-title drop-shadow-sm text-balance"
                     >
                       <RhythmicText text={slide.title} />
-                    </h1>
+                    </h2>
                     <p className="text-[#434345] font-medium tracking-tight mb-4 text-balance" style={{ fontSize: 'var(--font-size-body-lg)' }}>
                       <RhythmicText text={slide.subtitle} />
                     </p>
@@ -173,7 +186,7 @@ export function HeroSlider({ slides: slidesProp }: { slides?: typeof defaultSlid
                     <div className="flex flex-col sm:flex-row gap-4 mt-8 flex-wrap">
                         <button
                           onClick={() => {
-                            const programId = (slide as { programId?: string }).programId
+                            const programId = slide.programId
                             if (programId) {
                               router.push(`/${campusPath}/${programId}`)
                             } else {

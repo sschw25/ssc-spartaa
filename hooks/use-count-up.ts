@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 export function useCountUp(end: number, duration = 1800) {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(end)
   const ref = useRef<HTMLElement>(null)
   const started = useRef(false)
 
@@ -16,6 +16,7 @@ export function useCountUp(end: number, duration = 1800) {
         entries.forEach((entry) => {
           if (entry.isIntersecting && !started.current) {
             started.current = true
+            setCount(0)
             const startTime = performance.now()
             const tick = (now: number) => {
               const elapsed = now - startTime

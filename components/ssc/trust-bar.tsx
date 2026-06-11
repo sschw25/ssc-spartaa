@@ -1,10 +1,6 @@
 'use client'
 
 import { useCountUp } from '@/hooks/use-count-up'
-import useSWR from 'swr'
-import type { SiteContent } from '@/lib/content'
-
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 function StatItem({
   value,
@@ -41,14 +37,11 @@ const defaultStats = [
 ]
 
 export function TrustBar() {
-  const { data } = useSWR<SiteContent>('/api/content', fetcher)
-  const stats = data?.trustBar?.stats ?? defaultStats
-
   return (
     <section className="bg-[#1D1D1F] py-16 md:py-24 border-y border-black">
       <div className="max-w-[64rem] mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0 md:divide-x md:divide-white/10">
-          {stats.map((stat, index) => (
+          {defaultStats.map((stat, index) => (
             <StatItem key={index} value={stat.value} label={stat.label} />
           ))}
         </div>

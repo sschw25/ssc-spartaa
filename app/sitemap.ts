@@ -30,6 +30,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
         lastModified: new Date(),
         changeFrequency: 'monthly' as const,
         priority: 0.7,
+      },
+      {
+        url: `${baseUrl}/${campus}/summer`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly' as const,
+        priority: 0.8,
       }
     ])
   ]

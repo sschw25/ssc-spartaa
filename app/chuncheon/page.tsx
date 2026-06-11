@@ -23,6 +23,7 @@ import BrainScience from '@/components/ssc/brain-science'
 import ComparisonSection from '@/components/ssc/comparison-section'
 import CommitmentSection from '@/components/ssc/commitment-section'
 import { SpartaPulse } from '@/components/ssc/sparta-pulse'
+import { CampusStructuredData } from '@/components/ssc/seo-structured-data'
 
 import { getCampusMetadata } from '@/lib/seo-utils'
 
@@ -111,9 +112,13 @@ export default function ChuncheonPage() {
 
   return (
     <main className="overflow-x-hidden pb-16 md:pb-0">
+      <CampusStructuredData
+        campus="chuncheon"
+        description="춘천 임용·공무원·전문자격·독학재수 수험생을 위한 시간 관리형 학습관입니다. 교시제 학습과 출결·스마트폰 관리, 밀착 상담으로 순공시간을 관리합니다."
+      />
       <ScrollRevealInit />
       <Navbar />
-      <HeroSlider slides={slides} />
+      <HeroSlider slides={slides} heading="SSC스파르타 춘천캠퍼스 시간 관리형 학습관" />
       <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /chuncheon/programs 페이지로 이동 */}

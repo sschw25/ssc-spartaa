@@ -12,6 +12,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.sscsparta.com'),
   title: 'SSC스파르타 | 철저한 관리가 합격을 만든다',
   description:
     '원주·춘천·충주에서 노량진 프로그램 그대로. 공무원·임용·독학재수·전문자격 학습관, SSC스파르타',
@@ -19,6 +20,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'SSC스파르타 | 철저한 관리가 합격을 만든다',
     description: '원주·춘천·충주에서 노량진 프로그램 그대로. 공무원·임용·독학재수·전문자격 학습관, SSC스파르타',
+    url: 'https://www.sscsparta.com',
     locale: 'ko_KR',
     type: 'website',
   },

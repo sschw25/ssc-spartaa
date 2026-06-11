@@ -23,6 +23,7 @@ import { streamContents, StreamId } from '@/lib/stream-content'
 import { CAMPUS_CONFIG } from '@/lib/campus-config'
 import { RhythmicText } from '@/components/ui/rhythmic-text'
 import BlurFade from '@/components/ui/blur-fade'
+import { StreamStructuredData } from '@/components/ssc/seo-structured-data'
 
 export default function StreamPage({
   campus,
@@ -89,24 +90,12 @@ export default function StreamPage({
     <main className="overflow-x-hidden pb-16 md:pb-0 bg-[#F5F5F7]">
       <Navbar />
 
-      {/* Structured Data for Local SEO */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "EducationalOrganization",
-            "name": `SSC스파르타 ${campusName} ${content.name}`,
-            "url": `https://sscsparta.com/${campus}/${stream}`,
-            "telephone": config.phone,
-            "address": {
-              "@type": "PostalAddress",
-              "addressLocality": campusName,
-              "addressCountry": "KR"
-            },
-            "description": content.hero.description?.replaceAll('{{region}}', campusName) || ''
-          })
-        }}
+      <StreamStructuredData
+        campus={campus}
+        stream={stream}
+        streamName={content.name}
+        description={content.hero.description?.replaceAll('{{region}}', campusName) || ''}
+        faqs={content.faqs}
       />
 
       {/* Stream Specific Hero (Apple Light Aesthetic) */}
