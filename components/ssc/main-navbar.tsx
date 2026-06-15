@@ -143,7 +143,7 @@ export function MainNavbar() {
 
               {/* Mobile Summer School Info */}
               <div className="flex flex-col gap-2">
-                <p className="text-[#0071E3] font-extrabold text-sm px-1 mb-1">🔥 2024/2025 썸머스쿨 바로가기</p>
+                <p className="text-[#0071E3] font-extrabold text-sm px-1 mb-1">🔥 2026 썸머스쿨 바로가기</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
                     href="/wonju/summer" 

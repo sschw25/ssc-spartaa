@@ -165,7 +165,7 @@ export function Navbar() {
             <div className="flex flex-col gap-4 pb-12">
               {/* Mobile Menu Items */}
               <div className="flex flex-col gap-2 mt-2">
-                <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2024/2025 썸머스쿨</p>
+                <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
                     href="/wonju/summer" 
