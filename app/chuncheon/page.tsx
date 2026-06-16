@@ -64,17 +64,17 @@ const chuncheonSlides = [
     title: '임용합격생의 추천으로\n이어지는 합격',
     subtitle: '매년 배출되는 합격자들이\n다음 수험생을 이끌어 갑니다.',
     description: '초등 · 중등 · 유아 임용\n춘천스파르타에서 시작하세요.',
-    ctaLabel: '임용반 알아보기',
+    ctaLabel: '춘천 임용고시학원 알아보기',
     ctaSecondaryLabel: '프로그램 둘러보기',
     programId: 'imyong',
   },
   {
     id: 2,
     image: '/images/campus-chuncheon.png',
-    title: '춘천공무원학원을 찾으신다면?\n춘천스파르타',
+    title: '춘천 공무원학원을 찾으신다면?\n춘천스파르타',
     subtitle: '혼자서는 무너집니다.\n관리받는 사람이 합격합니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
-    ctaLabel: '공무원 합격반 알아보기',
+    ctaLabel: '춘천 공무원학원 알아보기',
     programId: 'gongmuwon',
   },
   {
@@ -83,7 +83,7 @@ const chuncheonSlides = [
     title: '세무사·노무사·기사시험\n4개월 단기합격의 비밀',
     subtitle: '교시제 시간표 + 코멘터 관리\n전문자격도 관리가 결과를 만듭니다.',
     description: '세무사 · 노무사 · 회계사 · 산업기사 · 기사시험\n전 직렬 관리 시스템',
-    ctaLabel: '전문자격반 알아보기',
+    ctaLabel: '춘천 자격증학원 알아보기',
     programId: 'professional',
   },
   {
@@ -92,7 +92,7 @@ const chuncheonSlides = [
     title: '합리적 프리미엄 독학재수',
     subtitle: '생활 리듬이 무너지면 강의도 소용없습니다.\n관리가 먼저입니다.',
     description: '춘천관리형독서실을 찾는다면, 불필요한 실강 비용을 덜어내고 진짜 필요한 관리에만 집중합니다.',
-    ctaLabel: '프리미엄 독학재수 알아보기',
+    ctaLabel: '춘천 독학재수학원 알아보기',
     programId: 'suneung',
   },
 ]

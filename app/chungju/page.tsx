@@ -64,17 +64,17 @@ const chungjuSlides = [
     title: '대치동의 자료 그대로\n커넥츠프랩 수능관',
     subtitle: '서울 대치동 수준의 콘텐츠를 충주에서 —\n거리의 차이는 없앴습니다.',
     description: '충주독학재수학원, 충주관리형독서실을 찾는다면! 대치동 콘텐츠 그대로 충주에서 공부하는 수능관.',
-    ctaLabel: '수능관 알아보기',
+    ctaLabel: '충주 독학재수학원 알아보기',
     ctaSecondaryLabel: '프로그램 둘러보기',
     programId: 'suneung',
   },
   {
     id: 2,
     image: '/images/campus-chungju.png',
-    title: '충주공무원학원 합격의 메카',
+    title: '충주 공무원학원 합격의 메카',
     subtitle: '독한 관리와 커넥츠프랩 시스템으로\n매년 합격자를 배출합니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
-    ctaLabel: '공무원 합격반 알아보기',
+    ctaLabel: '충주 공무원학원 알아보기',
     programId: 'gongmuwon',
   },
   {
@@ -83,7 +83,7 @@ const chungjuSlides = [
     title: '"스파르타는 임용생에게\n빛입니다"',
     subtitle: '충주스파르타 임용 합격생의 후기 —\n의지 없어도 시스템이 잡아줍니다.',
     description: '초등 · 중등 · 유아 임용\n매년 합격자 배출의 노하우',
-    ctaLabel: '임용반 알아보기',
+    ctaLabel: '충주 임용고시학원 알아보기',
     programId: 'imyong',
   },
   {
@@ -92,7 +92,7 @@ const chungjuSlides = [
     title: '세무사·노무사·기사시험\n4개월 단기합격의 비밀',
     subtitle: '교시제 시간표 + 코멘터 관리\n전문자격도 관리가 결과를 만듭니다.',
     description: '세무사 · 노무사 · 회계사 · 산업기사 · 기사시험\n전 직렬 관리 시스템',
-    ctaLabel: '전문자격반 알아보기',
+    ctaLabel: '충주 자격증학원 알아보기',
     programId: 'professional',
   },
 ]

@@ -61,10 +61,10 @@ const wonjuSlides = [
   {
     id: 1,
     image: '/images/campus-wonju.jpg',
-    title: '원주공무원학원 유일의\n노량진 커넥츠프랩(공단기) 파트너',
+    title: '원주 공무원학원 유일의\n노량진 커넥츠프랩(공단기) 파트너',
     subtitle: '공무원 합격자에게 물어보세요.\n합격자는 스파르타 했습니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
-    ctaLabel: '공무원 합격반 알아보기',
+    ctaLabel: '원주 공무원학원 알아보기',
     ctaSecondaryLabel: '프로그램 둘러보기',
     programId: 'gongmuwon',
   },
@@ -74,7 +74,7 @@ const wonjuSlides = [
     title: '합리적 프리미엄 독학재수',
     subtitle: '생활 리듬이 무너지면 강의도 소용없습니다.\n관리가 먼저입니다.',
     description: '원주관리형독서실을 찾는다면, 불필요한 실강 비용을 덜어내고\n진짜 필요한 순공 시간 관리에만 집중하는 독학재수반.',
-    ctaLabel: '프리미엄 독학재수 알아보기',
+    ctaLabel: '원주 독학재수학원 알아보기',
     programId: 'suneung',
   },
   {
@@ -83,7 +83,7 @@ const wonjuSlides = [
     title: '임용에서 강합니다.\n매년 합격자를 배출합니다',
     subtitle: '초등·중등·유아 임용\n마지막 60일이 합격을 가릅니다.',
     description: '',
-    ctaLabel: '임용반 알아보기',
+    ctaLabel: '원주 임용고시학원 알아보기',
     programId: 'imyong',
   },
   {
@@ -92,7 +92,7 @@ const wonjuSlides = [
     title: '세무사·노무사·기사시험\n4개월 단기합격의 비밀',
     subtitle: '교시제 시간표 + 코멘터 관리\n전문자격도 관리가 결과를 만듭니다.',
     description: '세무사 · 노무사 · 회계사 · 산업기사 · 기사시험\n전 직렬 관리 시스템',
-    ctaLabel: '전문자격반 알아보기',
+    ctaLabel: '원주 자격증학원 알아보기',
     programId: 'professional',
   },
 ]
