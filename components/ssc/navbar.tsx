@@ -65,6 +65,10 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
+  if (pathname?.startsWith('/admin')) {
+    return null
+  }
+
   // 공무원 페이지(gongmuwon)인지 확인하는 로직
   const isGongmuwonPage = pathname?.includes('gongmuwon')
 

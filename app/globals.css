@@ -285,3 +285,117 @@ body {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* Admin compact fitting helpers */
+.admin-fluid-ui,
+.admin-fit-box {
+  min-width: 0;
+}
+
+.admin-fluid-ui {
+  container-type: inline-size;
+}
+
+.admin-fit-box {
+  container-type: inline-size;
+  overflow: hidden;
+}
+
+.admin-fit-row,
+.admin-fit-row > * {
+  min-width: 0;
+}
+
+.admin-fit-text {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-fit-title {
+  font-size: clamp(0.75rem, 5.2cqw, 0.875rem);
+  line-height: 1.25;
+}
+
+.admin-fit-label {
+  font-size: clamp(0.5625rem, 3.2cqw, 0.6875rem);
+  line-height: 1.25;
+}
+
+.admin-fit-caption {
+  font-size: clamp(0.5rem, 2.9cqw, 0.625rem);
+  line-height: 1.35;
+}
+
+.admin-fit-number {
+  font-size: clamp(1rem, 9cqw, 1.5rem);
+  line-height: 1.15;
+}
+
+.admin-fit-icon {
+  width: clamp(0.75rem, 5cqw, 1rem) !important;
+  height: clamp(0.75rem, 5cqw, 1rem) !important;
+  flex-shrink: 0;
+}
+
+.admin-fluid-ui button,
+.admin-fluid-ui [role="tab"],
+.admin-fluid-ui [role="button"] {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-fit-button {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: clamp(0.5rem, 2.8cqw, 0.75rem) !important;
+  line-height: 1.15;
+}
+
+.admin-fit-button svg {
+  width: clamp(0.7rem, 4.2cqw, 1rem) !important;
+  height: clamp(0.7rem, 4.2cqw, 1rem) !important;
+  flex-shrink: 0;
+}
+
+.admin-detail-tab {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  min-width: 0;
+  overflow: hidden;
+  font-size: clamp(0.625rem, 2.4cqw, 0.75rem) !important;
+  line-height: 1.15;
+}
+
+.admin-detail-tab svg {
+  margin-right: 0 !important;
+  width: clamp(0.8rem, 2.8cqw, 0.95rem) !important;
+  height: clamp(0.8rem, 2.8cqw, 0.95rem) !important;
+  flex: 0 0 auto;
+}
+
+.admin-detail-tab span {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 640px) {
+  .admin-fluid-ui .admin-mobile-wrap {
+    flex-wrap: wrap;
+  }
+
+  .admin-fluid-ui .admin-mobile-full {
+    width: 100%;
+  }
+}
+
+body:has(.admin-fluid-ui) {
+  padding-top: 0 !important;
+}
