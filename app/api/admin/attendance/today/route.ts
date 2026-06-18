@@ -58,18 +58,29 @@ export async function GET() {
         };
       });
 
-    // 오늘 하원 완료 (퇴실했고, 지금은 재등원 중이 아님)
-    const leftToday = todaySessions
-      .filter((s) => s.check_out && studentMap.has(s.student_id) && !openIds.has(s.student_id))
-      .map((s) => {
-        const stu = studentMap.get(s.student_id)!;
+    // 오늘 하원 완료 — 학생 단위로 묶음 (한 학생이 여러 번 등하원해도 1회만, 순공은 합산)
+    const todayByStudent = new Map<string, typeof todaySessions>();
+    for (const s of todaySessions) {
+      if (!studentMap.has(s.student_id)) continue;
+      const arr = todayByStudent.get(s.student_id) || [];
+      arr.push(s);
+      todayByStudent.set(s.student_id, arr);
+    }
+    const leftToday = Array.from(todayByStudent.entries())
+      .filter(([sid, arr]) => !openIds.has(sid) && arr.some((s) => s.check_out))
+      .map(([sid, arr]) => {
+        const stu = studentMap.get(sid)!;
+        const closed = arr.filter((s) => s.check_out);
+        const firstIn = arr.reduce((min, s) => (s.check_in < min ? s.check_in : min), arr[0].check_in);
+        const lastOut = closed.reduce((max, s) => (s.check_out! > max ? s.check_out! : max), closed[0].check_out!);
+        const todayMinutes = closed.reduce((a, s) => a + (s.minutes || 0), 0);
         return {
           id: stu.id,
           name: stu.name,
           campus: stu.campus,
-          checkInAt: seoulHm(s.check_in),
-          checkOutAt: s.check_out ? seoulHm(s.check_out) : '',
-          minutes: s.minutes || 0,
+          checkInAt: seoulHm(firstIn),
+          checkOutAt: seoulHm(lastOut),
+          minutes: todayMinutes,
           weekMinutes: weekMinutesByStudent[stu.id] || 0,
         };
       });
