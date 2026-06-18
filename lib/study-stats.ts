@@ -63,18 +63,26 @@ export interface Leaderboard {
   total: number;   // 이번 주 순공 1분 이상 기록한 학생 수
 }
 
-// 주간 순공 랭킹 — 이름 마스킹, 본인 등수 포함. (순공 0분은 순위 제외)
+// 순공 랭킹 — 이름 마스킹, 본인 등수 포함. (순공 0분은 순위 제외)
+// 표준 경쟁 순위(동점은 같은 등수, 다음 등수는 건너뜀) — studyStats.weekRank 와 일치.
 export function buildLeaderboard(
-  weeklyMinutesByStudent: Record<string, number>,
+  minutesByStudent: Record<string, number>,
   students: Array<{ id: string; name: string; campus: string }>,
   myId: string,
   topN = 20
 ): Leaderboard {
-  const ranked = students
-    .map((s) => ({ id: s.id, name: s.name, campus: s.campus, minutes: weeklyMinutesByStudent[s.id] || 0 }))
+  const sorted = students
+    .map((s) => ({ id: s.id, name: s.name, campus: s.campus, minutes: minutesByStudent[s.id] || 0 }))
     .filter((r) => r.minutes > 0)
-    .sort((a, b) => b.minutes - a.minutes)
-    .map((r, i) => ({ ...r, rank: i + 1 }));
+    .sort((a, b) => b.minutes - a.minutes);
+
+  let lastMin: number | null = null;
+  let lastRank = 0;
+  const ranked = sorted.map((r, i) => {
+    const rank = lastMin !== null && r.minutes === lastMin ? lastRank : i + 1;
+    lastMin = r.minutes; lastRank = rank;
+    return { ...r, rank };
+  });
 
   const top = ranked.slice(0, topN).map((r) => ({
     rank: r.rank, name: maskName(r.name), campus: r.campus, minutes: r.minutes, isMe: r.id === myId,

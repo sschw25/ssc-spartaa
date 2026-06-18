@@ -17,25 +17,27 @@ export async function GET() {
   }
 
   try {
-    const { weekStart } = getPeriodBounds();
-    const [students, weekMin, openSessions] = await Promise.all([
+    const { weekStart, todayStr } = getPeriodBounds();
+    const [students, weekMin, dayMin, openSessions] = await Promise.all([
       getStudents(),
       getStudyMinutesByStudent(weekStart),
+      getStudyMinutesByStudent(todayStr),
       getOpenSessions(),
     ]);
 
-    const leaderboard = buildLeaderboard(
-      weekMin,
-      students.map((s) => ({ id: s.id, name: s.name, campus: s.campus })),
-      sid || '',
-      20
-    );
+    const roster = students.map((s) => ({ id: s.id, name: s.name, campus: s.campus }));
+    const leaderboard = buildLeaderboard(weekMin, roster, sid || '', 20);   // 하위호환(주간)
+    const leaderboardWeek = leaderboard;
+    const leaderboardDay = buildLeaderboard(dayMin, roster, sid || '', 20);
 
     return NextResponse.json({
       success: true,
       configured: true,
       weekStart,
-      leaderboard,
+      today: todayStr,
+      leaderboard,         // 기존 키 유지
+      leaderboardWeek,
+      leaderboardDay,
       liveCount: openSessions.length,
     });
   } catch (e: any) {
