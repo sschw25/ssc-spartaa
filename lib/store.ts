@@ -101,9 +101,9 @@ export async function checkIn(studentId: string, source = 'qr'): Promise<StudySe
   requireSupabase();
   return checkInSupabase(studentId, source);
 }
-export async function checkOut(session: StudySession): Promise<StudySession> {
+export async function checkOut(session: StudySession, at?: Date): Promise<StudySession> {
   requireSupabase();
-  return checkOutSupabase(session);
+  return at ? checkOutSupabase(session, at) : checkOutSupabase(session);
 }
 export async function getStudySessions(studentId: string, sinceDate?: string): Promise<StudySession[]> {
   requireSupabase();

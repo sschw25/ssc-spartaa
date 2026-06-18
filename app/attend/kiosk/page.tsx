@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 // 입구 디스플레이용 키오스크. 30초마다 바뀌는 QR을 띄우고 학생이 본인 폰으로 스캔한다.
-// (관리자 세션이 있어야 토큰을 받을 수 있음 — 관리자 기기에서 띄울 것)
+// 인증: 관리자 세션이 있거나, URL에 전용 키오스크 키(?key=...)가 있으면 동작.
+// (상시 디스플레이는 ?key= 방식으로 띄우면 관리자 로그인 만료와 무관하게 유지됨)
 export default function AttendKioskPage() {
   const [url, setUrl] = useState<string>('');
   const [error, setError] = useState<string>('');
@@ -12,9 +13,13 @@ export default function AttendKioskPage() {
 
   useEffect(() => {
     let active = true;
+    const kioskKey = new URLSearchParams(window.location.search).get('key') || '';
+    const tokenEndpoint = kioskKey
+      ? `/api/attend/token?key=${encodeURIComponent(kioskKey)}`
+      : '/api/attend/token';
     const fetchToken = async () => {
       try {
-        const res = await fetch('/api/attend/token', { cache: 'no-store' });
+        const res = await fetch(tokenEndpoint, { cache: 'no-store' });
         const json = await res.json();
         if (!active) return;
         if (res.ok && json.success) {

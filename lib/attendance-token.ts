@@ -34,3 +34,13 @@ export function verifyAttendToken(token: string, now: number = Date.now()): bool
 }
 
 export const ATTEND_WINDOW_MS = WINDOW_MS;
+
+// 전용 키오스크 디바이스 키 검증.
+// 입구 디스플레이를 관리자 로그인 없이 상시 운영하기 위한 장기 키.
+// (이 키는 30초 QR 토큰 발급만 허용 — 데이터 접근 권한은 전혀 없음. 실제 출결은 학생 본인 로그인 필수.)
+// ATTEND_KIOSK_KEY 미설정 시 항상 false → 키오스크는 기존처럼 관리자 세션으로만 동작.
+export function verifyKioskKey(key?: string | null): boolean {
+  const expected = process.env.ATTEND_KIOSK_KEY;
+  if (!expected || !key) return false;
+  return safeEqual(String(key), expected);
+}
