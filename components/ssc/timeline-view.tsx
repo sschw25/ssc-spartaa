@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion'
 import { Sun, Coffee, Moon, BookOpen, Target, CheckSquare, Heart, Home } from 'lucide-react'
 
+import { useScrollReveal } from '@/hooks/use-scroll-reveal'
+
 const iconMap: Record<string, any> = {
   Sun, Coffee, Moon, BookOpen, Target, CheckSquare, Heart, Home
 }
@@ -29,8 +31,9 @@ interface TimelineViewProps {
 }
 
 export function TimelineView({ schedule = SCHEDULE, showFlexibleNote = false }: TimelineViewProps) {
+  const ref = useScrollReveal()
   return (
-    <section id="timeline" className="py-24 md:py-32 bg-[#F5F5F7]">
+    <section id="timeline" className="py-16 md:py-24 bg-[#F5F5F7]" ref={ref}>
       <div className="max-w-[72rem] mx-auto px-6 sm:px-8">
         <div className="mb-12 md:mb-16 text-center fade-in-up">
             <p className="text-[#0071E3] text-[11px] sm:text-xs font-extrabold tracking-[0.3em] uppercase mb-6 opacity-80">Daily Workflow</p>
