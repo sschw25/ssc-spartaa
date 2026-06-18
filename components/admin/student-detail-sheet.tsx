@@ -1794,7 +1794,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const activeDrafts = overrideDrafts || progressDrafts;
     const nowStr = new Date().toISOString();
 
-    let tempSubjects = subjectsState.map((subject) => {
+    const tempSubjects = subjectsState.map((subject) => {
       const preview = getConsultationPlanPreview(activeDrafts);
       const subjectChanges = preview.filter((item) => item.subjectId === subject.id && selectedConsultationPlanItems[item.selectionKey] !== false);
 

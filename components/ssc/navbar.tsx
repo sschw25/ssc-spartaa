@@ -65,11 +65,6 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
-  // 관리자/학생 포털/출결/리포트 화면에서는 마케팅 네비 숨김
-  if (['/admin', '/attend', '/student', '/report'].some((p) => pathname?.startsWith(p))) {
-    return null
-  }
-
   // 공무원 페이지(gongmuwon)인지 확인하는 로직
   const isGongmuwonPage = pathname?.includes('gongmuwon')
 
@@ -80,6 +75,11 @@ export function Navbar() {
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
+
+  // 관리자/학생 포털/출결/리포트 화면에서는 마케팅 네비 숨김
+  if (['/admin', '/attend', '/student', '/report'].some((p) => pathname?.startsWith(p))) {
+    return null
+  }
 
   return (
     <>
