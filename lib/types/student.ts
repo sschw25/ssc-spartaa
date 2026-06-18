@@ -106,6 +106,7 @@ export interface Student {
   parentPhone?: string;
   studentPhone?: string;
   smsTargets?: Array<'parent' | 'student'>;
+  expectedArrival?: '08:20' | '09:00'; // 지각 기준(등원 마감) — 학생별 그룹, 기본 08:20
   createdAt: string;
   updatedAt: string;
   

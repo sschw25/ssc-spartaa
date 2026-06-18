@@ -14,6 +14,7 @@ import {
   getStudentAuthRecordsSupabase,
   setStudentPasswordHashSupabase,
   setStudentNotifyInfoSupabase,
+  setStudentExpectedArrivalSupabase,
   type NotifyInfo,
   getOpenSessionSupabase,
   getOpenSessionsSupabase,
@@ -79,6 +80,11 @@ export async function setStudentPasswordHash(studentId: string, hash: string): P
 export async function setStudentNotifyInfo(studentId: string, info: NotifyInfo): Promise<void> {
   if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 알림 연락처를 저장할 수 있습니다.');
   return setStudentNotifyInfoSupabase(studentId, info);
+}
+
+export async function setStudentExpectedArrival(studentId: string, value: '08:20' | '09:00'): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 지각 기준을 저장할 수 있습니다.');
+  return setStudentExpectedArrivalSupabase(studentId, value);
 }
 
 // ── 출결/순공 (Supabase 필요) ──

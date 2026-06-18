@@ -47,6 +47,7 @@ function rowToStudent(r: any): Student {
     parentPhone: r.parent_phone || undefined,
     studentPhone: r.student_phone || undefined,
     smsTargets: Array.isArray(r.sms_targets) ? r.sms_targets : ['parent'],
+    expectedArrival: r.expected_arrival === '09:00' ? '09:00' : '08:20',
     createdAt: r.created_at || '',
     updatedAt: r.updated_at || '',
     speedMultiplier: r.speed_multiplier !== undefined && r.speed_multiplier !== null ? Number(r.speed_multiplier) : 1.0,
@@ -182,6 +183,15 @@ export async function setStudentNotifyInfoSupabase(studentId: string, info: Noti
       student_phone: info.studentPhone || null,
       sms_targets: info.smsTargets && info.smsTargets.length ? info.smsTargets : ['parent'],
     })
+    .eq('id', studentId);
+  if (error) throw error;
+}
+
+// 지각 기준(등원 마감) 단일 컬럼 타깃 업데이트
+export async function setStudentExpectedArrivalSupabase(studentId: string, value: '08:20' | '09:00'): Promise<void> {
+  const { error } = await getClient()
+    .from('students')
+    .update({ expected_arrival: value === '09:00' ? '09:00' : '08:20' })
     .eq('id', studentId);
   if (error) throw error;
 }

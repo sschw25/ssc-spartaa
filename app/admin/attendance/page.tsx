@@ -2,42 +2,38 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ArrowLeft, ChevronUp, ChevronDown, ChevronsUpDown, Loader2, RefreshCw, CalendarDays } from 'lucide-react';
 
+type Arrival = '08:20' | '09:00';
 interface Row {
   id: string; name: string; campus: string;
   checkIn: string; checkInMin: number;
   checkOut: string | null; checkOutMin: number | null;
   minutes: number; isOpen: boolean;
-  late: 'ontime' | 'late0820' | 'late0900';
+  expectedArrival: Arrival; isLate: boolean;
 }
 interface Data {
   configured: boolean;
   date?: string;
   total?: number;
   attended?: number;
-  lateCount?: { late0820: number; late0900: number; ontime: number };
+  summary?: { ontime: number; late: number; group0820: { total: number; late: number }; group0900: { total: number; late: number } };
   rows?: Row[];
 }
 
-type SortKey = 'name' | 'checkIn' | 'checkOut' | 'minutes' | 'late';
+type SortKey = 'name' | 'checkIn' | 'checkOut' | 'minutes' | 'arrival' | 'late';
 type SortDir = 'asc' | 'desc';
 
+const DEADLINE: Record<Arrival, number> = { '08:20': 500, '09:00': 540 };
 const campusLabel = (v: string) => ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' } as Record<string, string>)[v] || '기타';
 const fmtMin = (m: number) => {
   if (!m || m <= 0) return '-';
   const h = Math.floor(m / 60); const min = m % 60;
   return h > 0 ? `${h}시간 ${min}분` : `${min}분`;
 };
-const lateBadge = (late: Row['late']) => {
-  if (late === 'late0900') return { text: '09:00 지각', cls: 'text-red-700 bg-red-50 border-red-100' };
-  if (late === 'late0820') return { text: '08:20 지각', cls: 'text-[#F56300] bg-[#F56300]/10 border-[#F56300]/15' };
-  return { text: '정시', cls: 'text-emerald-700 bg-emerald-50 border-emerald-100' };
-};
 
-function todayKST() {
-  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
-}
+const todayKST = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
 function shiftDate(date: string, delta: number) {
   const [y, m, d] = date.split('-').map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
@@ -55,6 +51,7 @@ export default function AdminAttendancePage() {
   const [campusFilter, setCampusFilter] = useState('all');
   const [sortKey, setSortKey] = useState<SortKey>('checkIn');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     (async () => {
@@ -81,7 +78,27 @@ export default function AdminAttendancePage() {
       finally { if (active) setLoading(false); }
     })();
     return () => { active = false; };
-  }, [date, checkingAuth]);
+  }, [date, checkingAuth, reloadKey]);
+
+  // 학생별 지각 기준 변경 (낙관적 업데이트 + 저장)
+  const changeArrival = async (id: string, value: Arrival) => {
+    setData((prev) => prev && {
+      ...prev,
+      rows: (prev.rows || []).map((r) => (r.id === id ? { ...r, expectedArrival: value, isLate: r.checkInMin > DEADLINE[value] } : r)),
+    });
+    try {
+      const res = await fetch(`/api/admin/students/${id}/arrival`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ expectedArrival: value }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || '저장 실패');
+      toast.success(`지각 기준을 ${value} 으로 저장했습니다.`);
+    } catch (e: any) {
+      toast.error(e?.message || '지각 기준 저장에 실패했습니다.');
+      setReloadKey((k) => k + 1); // 실패 시 서버값으로 롤백
+    }
+  };
 
   const toggleSort = (key: SortKey) => {
     if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -90,15 +107,15 @@ export default function AdminAttendancePage() {
 
   const rows = useMemo(() => {
     const filtered = (data?.rows || []).filter((r) => campusFilter === 'all' || r.campus === campusFilter);
-    const lateOrder = { ontime: 0, late0820: 1, late0900: 2 };
     const dir = sortDir === 'asc' ? 1 : -1;
     const val = (r: Row): number | string => {
       switch (sortKey) {
         case 'name': return r.name;
         case 'checkIn': return r.checkInMin;
-        case 'checkOut': return r.checkOutMin ?? Number.MAX_SAFE_INTEGER; // 미하원은 뒤로
+        case 'checkOut': return r.checkOutMin ?? Number.MAX_SAFE_INTEGER;
         case 'minutes': return r.minutes;
-        case 'late': return lateOrder[r.late];
+        case 'arrival': return DEADLINE[r.expectedArrival];
+        case 'late': return (r.isLate ? 1 : 0) * 100000 + r.checkInMin; // 지각 먼저, 그 안에서 늦은 순
       }
     };
     return [...filtered].sort((a, b) => {
@@ -124,6 +141,8 @@ export default function AdminAttendancePage() {
     return <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7]"><Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" /></div>;
   }
 
+  const s = data?.summary;
+
   return (
     <div className="min-h-screen bg-[#F5F5F7] font-sans text-[#1D1D1F]">
       <nav className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-black/[0.05] px-4 md:px-8 py-3 flex items-center justify-between">
@@ -133,17 +152,16 @@ export default function AdminAttendancePage() {
           </button>
           <h1 className="text-sm font-bold">출결 상세 표</h1>
         </div>
-        <button onClick={() => setDate((d) => d)} className="text-[#86868B] hover:text-[#1D1D1F]" title="새로고침">
+        <button onClick={() => setReloadKey((k) => k + 1)} className="text-[#86868B] hover:text-[#1D1D1F]" title="새로고침">
           <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </nav>
 
       <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-5">
-        {/* 날짜 + 캠퍼스 + 지각 요약 */}
         <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <button onClick={() => setDate((d) => shiftDate(d, -1))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">◀ 어제</button>
-            <div className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
               <CalendarDays className="w-3.5 h-3.5 text-[#86868B]" />
               <input type="date" value={date} max={todayKST()} onChange={(e) => e.target.value && setDate(e.target.value)} className="bg-transparent text-xs font-bold outline-none" />
             </div>
@@ -159,17 +177,17 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
-        {data?.lateCount && (
+        {s && (
           <div className="flex flex-wrap gap-3 text-xs font-bold">
-            <span className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">정시 {data.lateCount.ontime}</span>
-            <span className="px-3 py-1.5 rounded-full bg-[#F56300]/10 text-[#F56300] border border-[#F56300]/15">08:20 지각 {data.lateCount.late0820}</span>
-            <span className="px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-100">09:00 지각 {data.lateCount.late0900}</span>
-            <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">출석 {data.attended ?? rows.length} / {data.total ?? '-'}</span>
+            <span className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">정시 {s.ontime}</span>
+            <span className="px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-100">지각 {s.late}</span>
+            <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">08:20 그룹 {s.group0820.total}명(지각 {s.group0820.late})</span>
+            <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">09:00 그룹 {s.group0900.total}명(지각 {s.group0900.late})</span>
+            <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">출석 {data?.attended ?? rows.length} / {data?.total ?? '-'}</span>
           </div>
         )}
 
-        {/* 표 */}
-        <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-x-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" /><span className="text-xs text-[#86868B]">불러오는 중…</span></div>
           ) : error ? (
@@ -184,32 +202,44 @@ export default function AdminAttendancePage() {
                   <Th k="checkIn" label="등원시간" />
                   <Th k="checkOut" label="하원시간" />
                   <Th k="minutes" label="체류" className="hidden sm:table-cell" />
+                  <Th k="arrival" label="지각기준" />
                   <Th k="late" label="지각" />
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => {
-                  const b = lateBadge(r.late);
-                  return (
-                    <tr key={r.id} className="border-b border-black/[0.04] hover:bg-[#F5F5F7]/60">
-                      <td className="px-4 py-3">
-                        <span className="font-bold text-[#1D1D1F]">{r.name}</span>
-                        <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
-                      </td>
-                      <td className="px-4 py-3 font-bold tabular-nums">{r.checkIn}</td>
-                      <td className="px-4 py-3 font-bold tabular-nums">
-                        {r.checkOut ? r.checkOut : <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full text-[10px]">등원중</span>}
-                      </td>
-                      <td className="px-4 py-3 text-[#86868B] hidden sm:table-cell">{fmtMin(r.minutes)}</td>
-                      <td className="px-4 py-3"><span className={`px-2 py-0.5 rounded-full border text-[10px] font-bold ${b.cls}`}>{b.text}</span></td>
-                    </tr>
-                  );
-                })}
+                {rows.map((r) => (
+                  <tr key={r.id} className="border-b border-black/[0.04] hover:bg-[#F5F5F7]/60">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <span className="font-bold text-[#1D1D1F]">{r.name}</span>
+                      <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
+                    </td>
+                    <td className="px-4 py-3 font-bold tabular-nums whitespace-nowrap">{r.checkIn}</td>
+                    <td className="px-4 py-3 font-bold tabular-nums whitespace-nowrap">
+                      {r.checkOut ? r.checkOut : <span className="text-emerald-700 bg-emerald-50 border border-emerald-100 px-1.5 py-0.5 rounded-full text-[10px]">등원중</span>}
+                    </td>
+                    <td className="px-4 py-3 text-[#86868B] hidden sm:table-cell whitespace-nowrap">{fmtMin(r.minutes)}</td>
+                    <td className="px-4 py-3">
+                      <select
+                        value={r.expectedArrival}
+                        onChange={(e) => changeArrival(r.id, e.target.value as Arrival)}
+                        className="text-[11px] font-bold bg-white border border-black/[0.1] rounded-lg px-2 py-1 outline-none cursor-pointer hover:border-[#0071E3]"
+                      >
+                        <option value="08:20">08:20까지</option>
+                        <option value="09:00">09:00까지</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {r.isLate
+                        ? <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-red-700 bg-red-50 border-red-100">지각 ({r.expectedArrival})</span>
+                        : <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-emerald-700 bg-emerald-50 border-emerald-100">정시</span>}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           )}
         </div>
-        <p className="text-[10px] text-[#86868B] text-center">지각 기준: 08:20 이후 등원 = 08:20 지각, 09:00 이후 등원 = 09:00 지각. 컬럼 머리글을 누르면 정렬됩니다.</p>
+        <p className="text-[10px] text-[#86868B] text-center">학생별 지각 기준(08:20 / 09:00)을 바로 지정할 수 있습니다. 등원시각이 기준을 넘으면 ‘지각’으로 표시됩니다. 컬럼 머리글을 누르면 정렬됩니다.</p>
       </main>
     </div>
   );

@@ -48,6 +48,9 @@ alter table students add column if not exists student_phone text;
 -- 수신 대상: ["parent"], ["student"], ["parent","student"] 중 선택
 alter table students add column if not exists sms_targets jsonb not null default '["parent"]'::jsonb;
 
+-- 지각 기준(등원 마감): '08:20' 또는 '09:00' 그룹
+alter table students add column if not exists expected_arrival text not null default '08:20';
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,

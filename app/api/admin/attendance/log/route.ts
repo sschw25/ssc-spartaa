@@ -12,12 +12,7 @@ function seoulHm(iso: string): { label: string; min: number } {
   return { label, min: h * 60 + m };
 }
 
-// 지각 분류: 08:20(500분)·09:00(540분) 두 기준
-function lateStatus(checkInMin: number): 'ontime' | 'late0820' | 'late0900' {
-  if (checkInMin <= 8 * 60 + 20) return 'ontime';
-  if (checkInMin <= 9 * 60) return 'late0820';
-  return 'late0900';
-}
+const DEADLINE_MIN: Record<string, number> = { '08:20': 8 * 60 + 20, '09:00': 9 * 60 };
 
 // 관리자: 특정 날짜의 학생별 출결 로그 (이름/등원/하원/체류/지각). 정렬은 클라이언트에서.
 export async function GET(request: Request) {
@@ -61,19 +56,22 @@ export async function GET(request: Request) {
       const stillOpen = openIds.has(sid) && arr.some((s) => !s.check_out);
       const ci = seoulHm(firstIn);
       const co = lastOut ? seoulHm(lastOut) : null;
+      const expectedArrival = (stu.expectedArrival === '09:00' ? '09:00' : '08:20') as '08:20' | '09:00';
+      const isLate = ci.min > DEADLINE_MIN[expectedArrival];
       return {
         id: stu.id, name: stu.name, campus: stu.campus,
         checkIn: ci.label, checkInMin: ci.min,
         checkOut: co?.label ?? null, checkOutMin: co?.min ?? null,
         minutes, isOpen: stillOpen,
-        late: lateStatus(ci.min),
+        expectedArrival, isLate,
       };
     });
 
-    const lateCount = {
-      late0820: rows.filter((r) => r.late === 'late0820').length,
-      late0900: rows.filter((r) => r.late === 'late0900').length,
-      ontime: rows.filter((r) => r.late === 'ontime').length,
+    const summary = {
+      ontime: rows.filter((r) => !r.isLate).length,
+      late: rows.filter((r) => r.isLate).length,
+      group0820: { total: rows.filter((r) => r.expectedArrival === '08:20').length, late: rows.filter((r) => r.expectedArrival === '08:20' && r.isLate).length },
+      group0900: { total: rows.filter((r) => r.expectedArrival === '09:00').length, late: rows.filter((r) => r.expectedArrival === '09:00' && r.isLate).length },
     };
 
     return NextResponse.json({
@@ -82,7 +80,7 @@ export async function GET(request: Request) {
       date,
       total: students.length,
       attended: rows.length,
-      lateCount,
+      summary,
       rows,
     });
   } catch (e: any) {
