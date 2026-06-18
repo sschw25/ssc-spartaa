@@ -39,7 +39,35 @@ create table if not exists shared_materials (
 create index if not exists idx_shared_materials_type on shared_materials (type);
 create index if not exists idx_shared_materials_subject on shared_materials (subject);
 
+-- 학생 포털 비밀번호(해시만 저장 — 평문 금지)
+alter table students add column if not exists password_hash text;
+
+-- 출결 알림 문자 수신 정보 (PII — 리포트엔 노출 안 함)
+alter table students add column if not exists parent_phone text;
+alter table students add column if not exists student_phone text;
+-- 수신 대상: ["parent"], ["student"], ["parent","student"] 중 선택
+alter table students add column if not exists sms_targets jsonb not null default '["parent"]'::jsonb;
+
+-- 등하원/순공 세션 (QR 출결)
+create table if not exists study_sessions (
+  id          text primary key,
+  student_id  text not null references students(id) on delete cascade,
+  date        date not null,                 -- 로컬 날짜 (YYYY-MM-DD)
+  check_in    timestamptz not null,
+  check_out   timestamptz,                   -- 퇴실 전이면 null (진행 중)
+  minutes     integer,                       -- 퇴실 시 계산된 체류(순공)분
+  source      text not null default 'qr',    -- 'qr' | 'manual'
+  created_at  timestamptz not null default now()
+);
+
+create index if not exists idx_study_sessions_student on study_sessions (student_id);
+create index if not exists idx_study_sessions_date on study_sessions (date);
+-- 한 학생이 같은 시점에 '진행 중(미퇴실)' 세션을 중복 생성하지 못하도록 부분 유니크 인덱스
+create unique index if not exists idx_study_sessions_open
+  on study_sessions (student_id) where check_out is null;
+
 -- 서비스 롤 키로만 접근하므로(RLS 미사용) 별도 정책 불필요.
 -- 만약 anon 키로 클라이언트 직접 접근을 막고 싶다면 RLS 활성화 권장:
 -- alter table students enable row level security;
 -- alter table shared_materials enable row level security;
+-- alter table study_sessions enable row level security;

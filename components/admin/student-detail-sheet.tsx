@@ -29,6 +29,7 @@ import { Slider } from '@/components/ui/slider';
 import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting } from '@/lib/types/student';
 import { getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
+import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { toast } from 'sonner';
 import { 
   Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, 
@@ -168,6 +169,7 @@ const ConsultationContentEditor = React.memo(function ConsultationContentEditor(
 export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [] }: StudentDetailSheetProps) {
   const [loading, setLoading] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [isApplyingQuickPlan, setIsApplyingQuickPlan] = useState(false);
   const [isCloseConfirmOpen, setIsCloseConfirmOpen] = useState(false);
   const [isLearningInputOpen, setIsLearningInputOpen] = useState(false);
   const [learningInputMode, setLearningInputMode] = useState<'quick' | 'material' | null>(null);
@@ -2001,9 +2003,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const nextDate = cslNextDate || nextConsultationDate || '미지정';
     const template = `[현재 학습상황 요약]\n${subjectLines}\n\n[시간표 및 상담 일정]\n${scheduleLines}\n- 다음 상담 예정일: ${nextDate}\n\n[진도 판단]\n- \n\n[이번 주 조치]\n- \n\n[다음 상담 확인 사항]\n- `;
 
-    const currentContent = cslContentRef.current.trim();
-    updateConsultationDraft(currentContent ? `${currentContent}\n\n${template}` : template);
-    toast.info('현재 학습상황 요약을 상담 기록에 삽입했습니다.');
+    updateConsultationDraft(template);
+    toast.info('현재 학습상황 요약을 상담 기록에 불러왔습니다.');
   };
 
   const getLearningDaysUntil = (targetDate?: string) => {
@@ -2598,10 +2599,73 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const quickPlanPreview = parseQuickPlanLines(debouncedQuickPlanText);
 
+  const normalizeQuickPlanKeyPart = (value: string) => {
+    return value
+      .normalize('NFKC')
+      .toLowerCase()
+      .replace(/[\s\-_()[\]{}.,:;|/\\]+/g, '');
+  };
+
+  const getQuickPlanMaterialKey = (plan: {
+    subjectName: string;
+    title: string;
+    type: 'book' | 'lecture';
+  }) => {
+    return [
+      normalizeQuickPlanKeyPart(plan.subjectName),
+      plan.type,
+      normalizeQuickPlanKeyPart(plan.title),
+    ].join('|');
+  };
+
   const handleApplyQuickPlan = async () => {
+    if (isApplyingQuickPlan) return;
+
     const parsedPlans = parseQuickPlanLines(quickPlanText);
     if (parsedPlans.length === 0) {
       toast.error('예: 매 월요일 오전 행정법 기본강의 3강 형식으로 입력해 주세요.');
+      return;
+    }
+
+    const existingPlanKeys = new Set<string>();
+    subjectsState.forEach((subject) => {
+      (subject.books || []).forEach((book) => {
+        existingPlanKeys.add(getQuickPlanMaterialKey({
+          subjectName: subject.name,
+          title: book.title,
+          type: 'book',
+        }));
+      });
+      (subject.lectures || []).forEach((lecture) => {
+        existingPlanKeys.add(getQuickPlanMaterialKey({
+          subjectName: subject.name,
+          title: lecture.name,
+          type: 'lecture',
+        }));
+      });
+    });
+
+    const seenPlanKeys = new Set<string>();
+    const duplicatePlanLabels: string[] = [];
+    const uniquePlans = parsedPlans.filter((plan) => {
+      const key = getQuickPlanMaterialKey(plan);
+      if (existingPlanKeys.has(key)) {
+        duplicatePlanLabels.push(`${plan.subjectName} - ${plan.title}`);
+        return false;
+      }
+      if (seenPlanKeys.has(key)) {
+        duplicatePlanLabels.push(`${plan.subjectName} - ${plan.title}`);
+        return false;
+      }
+      seenPlanKeys.add(key);
+      return true;
+    });
+    const skippedDuplicateCount = parsedPlans.length - uniquePlans.length;
+
+    if (uniquePlans.length === 0) {
+      const duplicateSummary = Array.from(new Set(duplicatePlanLabels)).slice(0, 3).join(', ');
+      const hiddenDuplicateCount = Math.max(0, new Set(duplicatePlanLabels).size - 3);
+      toast.info(`모두 중복이라 반영할 새 항목이 없습니다: ${duplicateSummary}${hiddenDuplicateCount > 0 ? ` 외 ${hiddenDuplicateCount}건` : ''}`);
       return;
     }
 
@@ -2612,8 +2676,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       lectures: [...sub.lectures],
     }));
 
-    parsedPlans.forEach(plan => {
-      let subject = updatedSubjects.find(sub => sub.name === plan.subjectName);
+    let skippedExistingPlanCount = 0;
+    let appliedPlanCount = 0;
+
+    uniquePlans.forEach(plan => {
+      const normalizedSubjectName = normalizeQuickPlanKeyPart(plan.subjectName);
+      const normalizedTitle = normalizeQuickPlanKeyPart(plan.title);
+      let subject = updatedSubjects.find(sub => normalizeQuickPlanKeyPart(sub.name) === normalizedSubjectName);
       if (!subject) {
         subject = {
           id: `sub_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
@@ -2645,24 +2714,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       const goalDescription = `${plan.cadence}${plan.timeLabel ? ` ${plan.timeLabel}` : ''} ${plan.title} ${plan.amount}${plan.unit}`;
 
       if (plan.type === 'lecture') {
-        const existing = subject.lectures.find(lecture => lecture.name === plan.title);
+        const existing = subject.lectures.find(lecture => normalizeQuickPlanKeyPart(lecture.name) === normalizedTitle);
         if (existing) {
-          existing.totalLectures = plan.totalAmount;
-          existing.goalType = goalType;
-          existing.goalValue = plan.amount;
-          existing.goalDescription = goalDescription;
-          const { plans: lPlans, calculatedTargetDate: lDate } = generateDetailedPlans(
-            existing.id,
-            plan.totalAmount,
-            'lecture',
-            goalType,
-            plan.amount,
-            existing.completedLectures,
-            undefined
-          );
-          existing.detailedPlans = lPlans;
-          existing.targetDate = lDate;
-          existing.updatedAt = now;
+          skippedExistingPlanCount += 1;
+          duplicatePlanLabels.push(`${plan.subjectName} - ${plan.title}`);
+          return;
         } else {
           const newLecId = `lec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
           const { plans: lPlans, calculatedTargetDate: lDate } = generateDetailedPlans(
@@ -2686,27 +2742,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             detailedPlans: lPlans,
             updatedAt: now,
           });
+          appliedPlanCount += 1;
         }
       } else {
-        const existing = subject.books.find(book => book.title === plan.title);
+        const existing = subject.books.find(book => normalizeQuickPlanKeyPart(book.title) === normalizedTitle);
         if (existing) {
-          existing.totalPages = plan.totalAmount;
-          existing.goalType = goalType;
-          existing.goalValue = plan.amount;
-          existing.goalDescription = goalDescription;
-          existing.unit = plan.unit;
-          const { plans: bPlans, calculatedTargetDate: bDate } = generateDetailedPlans(
-            existing.id,
-            plan.totalAmount,
-            'book',
-            goalType,
-            plan.amount,
-            existing.currentPage,
-            plan.unit
-          );
-          existing.detailedPlans = bPlans;
-          existing.targetDate = bDate;
-          existing.updatedAt = now;
+          skippedExistingPlanCount += 1;
+          duplicatePlanLabels.push(`${plan.subjectName} - ${plan.title}`);
+          return;
         } else {
           const newBookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
           const { plans: bPlans, calculatedTargetDate: bDate } = generateDetailedPlans(
@@ -2731,11 +2774,21 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             detailedPlans: bPlans,
             updatedAt: now,
           });
+          appliedPlanCount += 1;
         }
       }
 
       subject.updatedAt = now;
     });
+
+    const totalDuplicateCount = skippedDuplicateCount + skippedExistingPlanCount;
+    const duplicateSummary = Array.from(new Set(duplicatePlanLabels)).slice(0, 3).join(', ');
+    const hiddenDuplicateCount = Math.max(0, new Set(duplicatePlanLabels).size - 3);
+
+    if (appliedPlanCount === 0) {
+      toast.info(`모두 중복이라 반영할 새 항목이 없습니다: ${duplicateSummary}${hiddenDuplicateCount > 0 ? ` 외 ${hiddenDuplicateCount}건` : ''}`);
+      return;
+    }
 
     const updatedStudent: Student = {
       ...student,
@@ -2743,24 +2796,29 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       updatedAt: now,
     };
 
-    setLoading(true);
-    const success = await saveStudentData(updatedStudent);
-    if (success) {
-      await Promise.all(parsedPlans.map(plan => fetch('/api/admin/shared-materials', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: plan.type,
-          name: plan.title,
-          subject: plan.subjectName,
-          totalPagesOrLectures: plan.totalAmount,
-        }),
-      }).catch(() => null)));
-      setSubjectsState(updatedSubjects);
-      setQuickPlanText('');
-      toast.success('빠른 학습 입력이 학습관리 DB에 반영되었습니다.');
+    setIsApplyingQuickPlan(true);
+    try {
+      const success = await saveStudentData(updatedStudent);
+      if (success) {
+        await Promise.all(uniquePlans.map(plan => fetch('/api/admin/shared-materials', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: plan.type,
+            name: plan.title,
+            subject: plan.subjectName,
+            totalPagesOrLectures: plan.totalAmount,
+          }),
+        }).catch(() => null)));
+        setSubjectsState(updatedSubjects);
+        setQuickPlanText('');
+        toast.success(totalDuplicateCount > 0
+          ? `빠른 학습 입력이 학습관리 DB에 반영되었습니다. 중복 제외: ${duplicateSummary}${hiddenDuplicateCount > 0 ? ` 외 ${hiddenDuplicateCount}건` : ''}`
+          : '빠른 학습 입력이 학습관리 DB에 반영되었습니다.');
+      }
+    } finally {
+      setIsApplyingQuickPlan(false);
     }
-    setLoading(false);
   };
 
   // 4. 성적 추가 등록
@@ -2833,6 +2891,49 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   };
 
   // 5. 학생 삭제
+  const handleSetPassword = async () => {
+    const pw = window.prompt(`${name} 학생의 포털 비밀번호를 입력하세요 (4자 이상).`);
+    if (pw === null) return;
+    if (pw.trim().length < 4) {
+      toast.error('비밀번호는 4자 이상이어야 합니다.');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/students/${student.id}/password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('포털 비밀번호가 설정되었습니다.');
+      } else {
+        toast.error(data.message || '비밀번호 설정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류로 비밀번호 설정에 실패했습니다.');
+    }
+  };
+
+  const handleSaveNotify = async (info: { parentPhone: string; studentPhone: string; smsTargets: Array<'parent' | 'student'> }) => {
+    try {
+      const res = await fetch(`/api/admin/students/${student.id}/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(info),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast.success('출결 알림 설정이 저장되었습니다.');
+        onUpdate({ ...student, parentPhone: info.parentPhone, studentPhone: info.studentPhone, smsTargets: info.smsTargets });
+      } else {
+        toast.error(data.message || '알림 설정 저장에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류로 알림 설정 저장에 실패했습니다.');
+    }
+  };
+
   const handleDeleteStudent = async () => {
     if (!confirm(`${name} 원생의 데이터를 모든 시트에서 정말 삭제하시겠습니까? 관련 데이터가 복구 불가능하게 지워집니다.`)) {
       return;
@@ -2869,6 +2970,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   // 성적 차트용 데이터 조립 (최신순 -> 과거순 정렬되어 있으므로 그래프를 위해 날짜순 정렬 필요)
   const chartData = getGradeChartData(student.grades);
   const gradeSubjects = getGradeSubjects(student.grades);
+  const materialBenchmarks = buildMaterialBenchmarks(students);
 
   const subjects = Array.from(new Set([
     '국어', '영어', '수학', '한국사', '기타',
@@ -3375,6 +3477,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 integratedSearchResults,
                 integratedSearchTimerRef,
                 isAutoSaving,
+                isApplyingQuickPlan,
                 isCustomUnit,
                 isLearningInputOpen,
                 isSearchingIntegrated,
@@ -3384,6 +3487,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 loadEtcStudyTemplate,
                 loadNotionTemplate,
                 loading,
+                materialBenchmarks,
                 materialTargetDates,
                 newMaterialAuthor,
                 newMaterialCategory,
@@ -3500,6 +3604,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 loading={loading}
                 onUpdateInfo={handleUpdateInfo}
                 onDeleteStudent={handleDeleteStudent}
+                onSetPassword={handleSetPassword}
+                initialParentPhone={student.parentPhone || ''}
+                initialStudentPhone={student.studentPhone || ''}
+                initialSmsTargets={student.smsTargets || ['parent']}
+                onSaveNotify={handleSaveNotify}
               />
             </TabsContent>
           </Tabs>

@@ -1,12 +1,14 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Loader2 } from 'lucide-react';
+import { Trash2, Loader2, KeyRound, Bell } from 'lucide-react';
+
+type SmsTarget = 'parent' | 'student';
 
 interface InfoTabProps {
   name: string;
@@ -27,6 +29,11 @@ interface InfoTabProps {
   loading: boolean;
   onUpdateInfo: () => void;
   onDeleteStudent: () => void;
+  onSetPassword: () => void;
+  initialParentPhone?: string;
+  initialStudentPhone?: string;
+  initialSmsTargets?: SmsTarget[];
+  onSaveNotify: (info: { parentPhone: string; studentPhone: string; smsTargets: SmsTarget[] }) => Promise<void>;
 }
 
 // 학생 기본정보 탭 (프레젠테이셔널). 상태·핸들러는 부모가 소유하고 props 로 전달.
@@ -42,7 +49,29 @@ export function InfoTab({
   loading,
   onUpdateInfo,
   onDeleteStudent,
+  onSetPassword,
+  initialParentPhone = '',
+  initialStudentPhone = '',
+  initialSmsTargets = ['parent'],
+  onSaveNotify,
 }: InfoTabProps) {
+  const [parentPhone, setParentPhone] = useState(initialParentPhone);
+  const [studentPhone, setStudentPhone] = useState(initialStudentPhone);
+  const [smsTargets, setSmsTargets] = useState<SmsTarget[]>(initialSmsTargets.length ? initialSmsTargets : ['parent']);
+  const [savingNotify, setSavingNotify] = useState(false);
+
+  const toggleTarget = (t: SmsTarget) =>
+    setSmsTargets((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+
+  const saveNotify = async () => {
+    setSavingNotify(true);
+    try {
+      await onSaveNotify({ parentPhone, studentPhone, smsTargets });
+    } finally {
+      setSavingNotify(false);
+    }
+  };
+
   return (
     <>
       <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-black/[0.05] bg-white">
@@ -154,7 +183,76 @@ export function InfoTab({
         </div>
       </div>
 
-      <div className="flex gap-2 justify-end">
+      {/* 출결 알림 문자 설정 */}
+      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
+        <div className="flex items-center gap-1.5">
+          <Bell className="w-4 h-4 text-[#0071E3]" />
+          <h4 className="text-xs font-bold text-[#1D1D1F]">출결 알림 문자</h4>
+        </div>
+        <p className="text-[10px] text-[#86868B]">
+          등/하원 시 아래 번호로 자동 발송됩니다. (PII — 결과지엔 노출되지 않음)
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-[#1D1D1F]">학부모 휴대폰</Label>
+            <Input
+              value={parentPhone}
+              onChange={(e) => setParentPhone(e.target.value)}
+              placeholder="01012345678"
+              inputMode="numeric"
+              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-[#1D1D1F]">학생 휴대폰</Label>
+            <Input
+              value={studentPhone}
+              onChange={(e) => setStudentPhone(e.target.value)}
+              placeholder="01087654321"
+              inputMode="numeric"
+              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 pt-1">
+          <span className="text-[11px] font-semibold text-[#86868B]">수신 대상</span>
+          {([
+            { key: 'parent' as const, label: '학부모' },
+            { key: 'student' as const, label: '학생' },
+          ]).map((opt) => (
+            <label key={opt.key} className="flex items-center gap-1.5 text-xs cursor-pointer">
+              <input
+                type="checkbox"
+                checked={smsTargets.includes(opt.key)}
+                onChange={() => toggleTarget(opt.key)}
+                className="accent-[#0071E3] w-3.5 h-3.5"
+              />
+              {opt.label}
+            </label>
+          ))}
+          <Button
+            onClick={saveNotify}
+            disabled={savingNotify}
+            size="sm"
+            className="ml-auto rounded-lg text-xs h-8 px-4 bg-[#0071E3] hover:bg-[#0077ED] text-white font-bold"
+          >
+            {savingNotify ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '알림 설정 저장'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 justify-between items-center">
+        <Button
+          onClick={onSetPassword}
+          disabled={loading}
+          variant="outline"
+          className="rounded-lg text-xs py-4 px-4 border-black/[0.1] bg-white hover:bg-[#F5F5F7] font-bold"
+        >
+          <KeyRound className="w-3.5 h-3.5 mr-1" />
+          포털 비밀번호 설정
+        </Button>
+
+        <div className="flex gap-2">
         <Button
           onClick={onDeleteStudent}
           disabled={loading}
@@ -179,6 +277,7 @@ export function InfoTab({
             '원생 정보 저장'
           )}
         </Button>
+        </div>
       </div>
     </>
   );

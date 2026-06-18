@@ -44,6 +44,9 @@ function rowToStudent(r: any): Student {
     studentLifeComment: r.student_life_comment || '',
     specialNote: r.special_note || '',
     nextConsultationDate: r.next_consultation_date || undefined,
+    parentPhone: r.parent_phone || undefined,
+    studentPhone: r.student_phone || undefined,
+    smsTargets: Array.isArray(r.sms_targets) ? r.sms_targets : ['parent'],
     createdAt: r.created_at || '',
     updatedAt: r.updated_at || '',
     speedMultiplier: r.speed_multiplier !== undefined && r.speed_multiplier !== null ? Number(r.speed_multiplier) : 1.0,
@@ -70,6 +73,9 @@ function studentToRow(student: Student, nowIso: string) {
     manager: student.manager || '',
     contact: student.contact || '',
     next_consultation_date: student.nextConsultationDate || null,
+    parent_phone: student.parentPhone || null,
+    student_phone: student.studentPhone || null,
+    sms_targets: student.smsTargets && student.smsTargets.length ? student.smsTargets : ['parent'],
     speed_multiplier: student.speedMultiplier ?? 1.0,
     life_comment: student.lifeComment || '',
     special_note: student.specialNote || '',
@@ -140,6 +146,124 @@ export async function readSharedMaterialsSupabase(): Promise<SharedMaterial[]> {
   const { data, error } = await getClient().from('shared_materials').select('*');
   if (error) throw error;
   return (data || []).map(rowToMaterial);
+}
+
+// ── 학생 인증 (비밀번호 해시 — 서버 전용, 클라이언트로 노출하지 않음) ──
+export interface StudentAuthRecord {
+  id: string;
+  name: string;
+  contact: string | null;
+  password_hash: string | null;
+}
+
+export async function getStudentAuthRecordsSupabase(): Promise<StudentAuthRecord[]> {
+  const { data, error } = await getClient()
+    .from('students')
+    .select('id, name, contact, password_hash');
+  if (error) throw error;
+  return (data || []) as StudentAuthRecord[];
+}
+
+export async function setStudentPasswordHashSupabase(studentId: string, hash: string): Promise<void> {
+  const { error } = await getClient().from('students').update({ password_hash: hash }).eq('id', studentId);
+  if (error) throw error;
+}
+
+export interface NotifyInfo {
+  parentPhone?: string;
+  studentPhone?: string;
+  smsTargets?: Array<'parent' | 'student'>;
+}
+export async function setStudentNotifyInfoSupabase(studentId: string, info: NotifyInfo): Promise<void> {
+  const { error } = await getClient()
+    .from('students')
+    .update({
+      parent_phone: info.parentPhone || null,
+      student_phone: info.studentPhone || null,
+      sms_targets: info.smsTargets && info.smsTargets.length ? info.smsTargets : ['parent'],
+    })
+    .eq('id', studentId);
+  if (error) throw error;
+}
+
+// ── 등하원/순공 세션 ──
+export interface StudySession {
+  id: string;
+  student_id: string;
+  date: string;
+  check_in: string;
+  check_out: string | null;
+  minutes: number | null;
+  source: string;
+}
+
+function seoulDate(d: Date): string {
+  // KST 기준 YYYY-MM-DD
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(d);
+}
+
+export async function getOpenSessionSupabase(studentId: string): Promise<StudySession | null> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .select('*')
+    .eq('student_id', studentId)
+    .is('check_out', null)
+    .maybeSingle();
+  if (error) throw error;
+  return (data as StudySession) || null;
+}
+
+export async function checkInSupabase(studentId: string, source = 'qr', now = new Date()): Promise<StudySession> {
+  const row = {
+    id: `att_${now.getTime()}_${Math.random().toString(36).slice(2, 7)}`,
+    student_id: studentId,
+    date: seoulDate(now),
+    check_in: now.toISOString(),
+    check_out: null,
+    minutes: null,
+    source,
+  };
+  const { data, error } = await getClient().from('study_sessions').insert(row).select().single();
+  if (error) throw error;
+  return data as StudySession;
+}
+
+export async function checkOutSupabase(session: StudySession, now = new Date()): Promise<StudySession> {
+  const minutes = Math.max(0, Math.round((now.getTime() - new Date(session.check_in).getTime()) / 60000));
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .update({ check_out: now.toISOString(), minutes })
+    .eq('id', session.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as StudySession;
+}
+
+export async function getStudySessionsSupabase(studentId: string, sinceDate?: string): Promise<StudySession[]> {
+  let q = getClient()
+    .from('study_sessions')
+    .select('*')
+    .eq('student_id', studentId)
+    .order('check_in', { ascending: false });
+  if (sinceDate) q = q.gte('date', sinceDate);
+  const { data, error } = await q;
+  if (error) throw error;
+  return (data || []) as StudySession[];
+}
+
+// 기간 내 전체 학생의 (학생별) 순공 합계 — 등수 계산용 (서버 전용 집계)
+export async function getStudyMinutesByStudentSupabase(sinceDate: string): Promise<Record<string, number>> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .select('student_id, minutes')
+    .gte('date', sinceDate);
+  if (error) throw error;
+  const totals: Record<string, number> = {};
+  (data || []).forEach((r: any) => {
+    if (r.minutes) totals[r.student_id] = (totals[r.student_id] || 0) + r.minutes;
+  });
+  return totals;
 }
 
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {

@@ -65,7 +65,8 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const pathname = usePathname()
 
-  if (pathname?.startsWith('/admin')) {
+  // 관리자/학생 포털/출결/리포트 화면에서는 마케팅 네비 숨김
+  if (['/admin', '/attend', '/student', '/report'].some((p) => pathname?.startsWith(p))) {
     return null
   }
 

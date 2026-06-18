@@ -11,6 +11,17 @@ import {
   deleteStudentSupabase,
   readSharedMaterialsSupabase,
   saveSharedMaterialSupabase,
+  getStudentAuthRecordsSupabase,
+  setStudentPasswordHashSupabase,
+  setStudentNotifyInfoSupabase,
+  type NotifyInfo,
+  getOpenSessionSupabase,
+  checkInSupabase,
+  checkOutSupabase,
+  getStudySessionsSupabase,
+  getStudyMinutesByStudentSupabase,
+  type StudentAuthRecord,
+  type StudySession,
 } from './supabase';
 import {
   getStudentsLocal,
@@ -47,4 +58,46 @@ export async function readSharedMaterials(): Promise<SharedMaterial[]> {
 
 export async function saveSharedMaterial(material: SharedMaterial): Promise<SharedMaterial> {
   return isSupabaseConfigured() ? saveSharedMaterialSupabase(material) : saveSharedMaterialLocal(material);
+}
+
+// ── 학생 인증 ──
+export async function getStudentAuthRecords(): Promise<StudentAuthRecord[]> {
+  if (isSupabaseConfigured()) return getStudentAuthRecordsSupabase();
+  // 로컬 폴백: 비밀번호 미지원
+  return getStudentsLocal().map((s) => ({ id: s.id, name: s.name, contact: s.contact || null, password_hash: null }));
+}
+
+export async function setStudentPasswordHash(studentId: string, hash: string): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 학생 비밀번호를 저장할 수 있습니다.');
+  return setStudentPasswordHashSupabase(studentId, hash);
+}
+
+export async function setStudentNotifyInfo(studentId: string, info: NotifyInfo): Promise<void> {
+  if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 알림 연락처를 저장할 수 있습니다.');
+  return setStudentNotifyInfoSupabase(studentId, info);
+}
+
+// ── 출결/순공 (Supabase 필요) ──
+function requireSupabase() {
+  if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 출결 기능을 사용할 수 있습니다.');
+}
+export async function getOpenSession(studentId: string): Promise<StudySession | null> {
+  requireSupabase();
+  return getOpenSessionSupabase(studentId);
+}
+export async function checkIn(studentId: string, source = 'qr'): Promise<StudySession> {
+  requireSupabase();
+  return checkInSupabase(studentId, source);
+}
+export async function checkOut(session: StudySession): Promise<StudySession> {
+  requireSupabase();
+  return checkOutSupabase(session);
+}
+export async function getStudySessions(studentId: string, sinceDate?: string): Promise<StudySession[]> {
+  requireSupabase();
+  return getStudySessionsSupabase(studentId, sinceDate);
+}
+export async function getStudyMinutesByStudent(sinceDate: string): Promise<Record<string, number>> {
+  requireSupabase();
+  return getStudyMinutesByStudentSupabase(sinceDate);
 }

@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getStudentById } from '@/lib/store';
+import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
+import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
+import { canViewStudent } from '@/lib/auth';
+import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
 
 // 학부모/학생용 비로그인 결과 리포트 조회 API
 export async function GET(
@@ -7,6 +10,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  // 본인 학생 또는 관리자만 열람 가능 (리포트엔 성적·생활코멘트 등 민감정보 포함)
+  if (!(await canViewStudent(id))) {
+    return NextResponse.json(
+      { success: false, message: '열람 권한이 없습니다. 학생 본인으로 로그인해 주세요.' },
+      { status: 401 }
+    );
+  }
 
   try {
     const student = await getStudentById(id);
@@ -37,7 +48,28 @@ export async function GET(
       subjects: student.subjects || []
     };
 
-    return NextResponse.json({ success: true, data: maskedStudent });
+    const students = await getStudents();
+    const materialBenchmarks = buildMaterialBenchmarks(students);
+
+    // 순공/등하원 통계 (Supabase 필요 — 실패해도 리포트 본문은 정상 반환)
+    let studyStats = null;
+    try {
+      const { weekStart, monthStart } = getPeriodBounds();
+      const [sessions, weeklyMinutesByStudent] = await Promise.all([
+        getStudySessions(id, monthStart),
+        getStudyMinutesByStudent(weekStart),
+      ]);
+      studyStats = buildStudyStats({
+        sessions,
+        weeklyMinutesByStudent,
+        myId: id,
+        totalStudents: students.length,
+      });
+    } catch (e) {
+      console.warn('studyStats 계산 생략:', (e as Error)?.message);
+    }
+
+    return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats });
   } catch (error) {
     console.error(`API GET /report/${id} error:`, error);
     return NextResponse.json(

@@ -100,6 +100,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: '이름, 종류(type), 과목, 분량은 필수 필드입니다.' }, { status: 400 });
     }
 
+    const existingMaterials = await readSharedMaterials();
+    const existingMaterial = existingMaterials.find((material) => (
+      material.type === data.type
+      && normalizeSearchText(material.subject || '') === normalizeSearchText(data.subject || '')
+      && normalizeSearchText(material.name || '') === normalizeSearchText(data.name || '')
+    ));
+
+    if (existingMaterial) {
+      return NextResponse.json({ success: true, data: existingMaterial, duplicate: true });
+    }
+
     const material: SharedMaterial = {
       id: data.id || `mat_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
       type: data.type as 'book' | 'lecture',

@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
+  const rl = rateLimit(`admin-login:${clientIp(request)}`, 10, 5 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, message: `로그인 시도가 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },
+      { status: 429 }
+    );
+  }
   try {
     const { username, password } = await request.json();
     const correctPassword = process.env.ADMIN_PASSWORD || 'sparta123!';

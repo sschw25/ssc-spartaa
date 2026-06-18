@@ -102,6 +102,10 @@ export interface Student {
   studentLifeComment?: string; // 학생 공유용 생활 관리 코멘트
   specialNote?: string; // 내부 관리용 특이사항 (학부모 결과지 비노출)
   nextConsultationDate?: string; // 다음 상담 예정일 (YYYY-MM-DD)
+  // 출결 알림 문자 (PII — 학부모/학생용 리포트엔 노출하지 않음)
+  parentPhone?: string;
+  studentPhone?: string;
+  smsTargets?: Array<'parent' | 'student'>;
   createdAt: string;
   updatedAt: string;
   

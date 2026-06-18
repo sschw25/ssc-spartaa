@@ -7,8 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target } from 'lucide-react';
 import { Student, DetailedPlan } from '@/lib/types/student';
+import {
+  MaterialBenchmarkMap,
+  formatPaceComparison,
+  getMaterialBenchmark,
+  getMaterialDailyPace,
+} from '@/lib/material-benchmark';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
+import { StudyStatsCard } from '@/components/report/study-stats-card';
 
 export default function StudentReportPage() {
   const params = useParams();
@@ -19,9 +26,12 @@ export default function StudentReportPage() {
   const isParentReport = audience === 'parent';
 
   const [student, setStudent] = useState<Student | null>(null);
+  const [materialBenchmarks, setMaterialBenchmarks] = useState<MaterialBenchmarkMap>({});
+  const [studyStats, setStudyStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
 
   useEffect(() => {
     setMounted(true);
@@ -32,6 +42,8 @@ export default function StudentReportPage() {
           const json = await res.json();
           if (json.success) {
             setStudent(json.data);
+            setMaterialBenchmarks(json.materialBenchmarks || {});
+            setStudyStats(json.studyStats || null);
           } else {
             setError(true);
           }
@@ -125,30 +137,28 @@ export default function StudentReportPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const weekStart = new Date(today);
-  weekStart.setDate(today.getDate() - today.getDay() + 1);
+  weekStart.setDate(today.getDate() - today.getDay());
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-  const isPlanInRange = (plan: DetailedPlan, start: Date, end: Date) => {
+  const doesPlanStartInRange = (plan: DetailedPlan, start: Date, end: Date) => {
     const planStart = new Date(plan.startDate);
-    const planEnd = new Date(plan.endDate);
     planStart.setHours(0, 0, 0, 0);
-    planEnd.setHours(0, 0, 0, 0);
-    return planStart <= end && planEnd >= start;
+    return start <= planStart && planStart <= end;
   };
 
   const collectPlans = (start: Date, end: Date) => {
     return (student.subjects || []).flatMap((subject) => [
       ...(subject.books || []).flatMap((book) =>
         (book.detailedPlans || [])
-          .filter((plan) => isPlanInRange(plan, start, end))
+          .filter((plan) => doesPlanStartInRange(plan, start, end))
           .map((plan) => ({ ...plan, subject: subject.name, title: book.title, type: '교재' }))
       ),
       ...(subject.lectures || []).flatMap((lecture) =>
         (lecture.detailedPlans || [])
-          .filter((plan) => isPlanInRange(plan, start, end))
+          .filter((plan) => doesPlanStartInRange(plan, start, end))
           .map((plan) => ({ ...plan, subject: subject.name, title: lecture.name, type: '인강' }))
       ),
     ]);
@@ -225,6 +235,106 @@ export default function StudentReportPage() {
   ] as const;
 
   // 요일별 은은한 캡슐 색상 헬퍼
+  const planWeekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
+  const studyTimeOrder: Record<string, number> = { morning: 0, afternoon: 1, night: 2, '': 3 };
+  const studyTimeLabels: Record<string, string> = {
+    morning: '오전',
+    afternoon: '오후',
+    night: '야간',
+    '': '미지정',
+  };
+
+  const formatDateKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const formatShortDate = (date: Date) =>
+    `${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+
+  const getDailyAmountLabel = (plan: DetailedPlan) => {
+    const amount = plan.dailyAmount || Math.ceil(plan.targetAmount / 6);
+    const range = plan.rangeText || '';
+    const rangeWithoutPass = range.replace(/\d+회독/g, '');
+    const unit =
+      range.includes('문제') ? '문제' :
+      range.includes('강') ? '강' :
+      range.toLowerCase().includes('p') ? 'p' :
+      rangeWithoutPass.includes('회') ? '회' :
+      '';
+    return `하루 ${amount}${unit}`;
+  };
+
+  const isPlanActiveOnDate = (plan: DetailedPlan, dateKey: string) =>
+    plan.startDate <= dateKey && dateKey <= plan.endDate;
+
+  const weeklyDailyPlans = Array.from({ length: visiblePlanWeeks }, (_, weekOffset) => {
+    const start = new Date(weekStart);
+    start.setDate(weekStart.getDate() + weekOffset * 7);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+
+    const days = weekDaySlots.map((day, dayIndex) => {
+      const currentDate = new Date(start);
+      currentDate.setDate(start.getDate() + dayIndex);
+      const dateKey = formatDateKey(currentDate);
+
+      const entries = (student.subjects || [])
+        .filter((subject) => {
+          const days = subject.studyDays || [];
+          return days.length === 0 || days.includes(day.key);
+        })
+        .sort((a, b) => {
+          const timeDiff = studyTimeOrder[a.studyTime || ''] - studyTimeOrder[b.studyTime || ''];
+          return timeDiff || a.name.localeCompare(b.name);
+        })
+        .flatMap((subject) => {
+          const lectures = (subject.lectures || []).flatMap((lecture) =>
+            (lecture.detailedPlans || [])
+              .filter((plan) => isPlanActiveOnDate(plan, dateKey))
+              .map((plan) => ({
+                id: `${subject.id}_${lecture.id}_${plan.id}`,
+                subject: subject.name,
+                title: lecture.name,
+                type: '강의',
+                studyTime: subject.studyTime || '',
+                rangeText: plan.rangeText,
+                dailyLabel: getDailyAmountLabel(plan),
+              }))
+          );
+          const books = (subject.books || []).flatMap((book) =>
+            (book.detailedPlans || [])
+              .filter((plan) => isPlanActiveOnDate(plan, dateKey))
+              .map((plan) => ({
+                id: `${subject.id}_${book.id}_${plan.id}`,
+                subject: subject.name,
+                title: book.title,
+                type: '교재',
+                studyTime: subject.studyTime || '',
+                rangeText: plan.rangeText,
+                dailyLabel: getDailyAmountLabel(plan),
+              }))
+          );
+          return [...lectures, ...books];
+        });
+
+      return {
+        key: day.key,
+        label: day.label,
+        dateLabel: formatShortDate(currentDate),
+        entries,
+      };
+    });
+
+    return {
+      weekNumber: weekOffset + 1,
+      rangeLabel: `${formatShortDate(start)} ~ ${formatShortDate(end)}`,
+      days,
+    };
+  });
+
   const getSubjectColorClass = (subjectName: string) => {
     const hash = subjectName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const colors = [
@@ -332,6 +442,25 @@ export default function StudentReportPage() {
               {isStudentReport ? 'SSC SPARTA · 학생 맞춤 학습 결과 리포트' : 'SSC SPARTA · 학부모용 학습 결과 브리핑 결과지'}
             </div>
           </div>
+          {isStudentReport && (
+            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-1.5 shadow-inner">
+              <span className="px-2 text-[10px] font-black text-slate-500">계획</span>
+              {planWeekOptions.map((week) => (
+                <button
+                  key={week}
+                  type="button"
+                  onClick={() => setVisiblePlanWeeks(week)}
+                  className={`h-7 min-w-8 rounded-xl px-2 text-[10px] font-black transition-all ${
+                    visiblePlanWeeks === week
+                      ? 'bg-[#111827] text-white shadow-sm'
+                      : 'text-slate-500 hover:bg-white hover:text-slate-900'
+                  }`}
+                >
+                  {week}주
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex items-center gap-2 shrink-0">
             <Button
               onClick={() => window.location.href = '/admin/dashboard'}
@@ -433,6 +562,9 @@ export default function StudentReportPage() {
           )}
 
 
+
+          {/* 순공 시간 / 등하원 통계 */}
+          <StudyStatsCard stats={studyStats} />
 
           {/* 2. 최근 생활 및 종합 피드백 */}
           <div className="space-y-4 print-card">
@@ -578,6 +710,87 @@ export default function StudentReportPage() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          )}
+
+          {isStudentReport && (
+            <div className="space-y-5 print-card">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#0071E3]" />
+                    {visiblePlanWeeks}주 실행 학습 계획표
+                  </h3>
+                  <p className="mt-1 text-[10px] font-bold text-slate-400">
+                    요일별로 어떤 공부를 어떤 순서로, 하루에 어느 정도 진행할지 정리했습니다.
+                  </p>
+                </div>
+                <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
+                  최대 8주까지 출력 가능
+                </span>
+              </div>
+
+              <div className="space-y-5">
+                {weeklyDailyPlans.map((week) => (
+                  <div key={week.weekNumber} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm break-inside-avoid">
+                    <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div>
+                        <p className="text-xs font-black text-slate-900">{week.weekNumber}주차</p>
+                        <p className="text-[10px] font-bold text-slate-400">{week.rangeLabel}</p>
+                      </div>
+                      <span className="rounded-xl bg-slate-50 px-2.5 py-1 text-[9px] font-black text-slate-500">
+                        요일별 실행 순서
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
+                      {week.days.map((day) => (
+                        <div key={`${week.weekNumber}_${day.key}`} className="min-h-[170px] rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                          <div className="mb-3 flex items-center justify-between">
+                            <div>
+                              <p className="text-[10px] font-black text-slate-800">{day.label}</p>
+                              <p className="text-[9px] font-bold text-slate-400">{day.dateLabel}</p>
+                            </div>
+                            <span className="rounded-lg bg-white px-1.5 py-0.5 text-[8px] font-black text-slate-400">
+                              {day.entries.length}개
+                            </span>
+                          </div>
+
+                          {day.entries.length === 0 ? (
+                            <p className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-2 py-5 text-center text-[9px] font-bold text-slate-300">
+                              계획 없음
+                            </p>
+                          ) : (
+                            <div className="space-y-2">
+                              {day.entries.map((entry, index) => (
+                                <div key={`${entry.id}_${index}`} className="rounded-xl border border-white bg-white p-2 shadow-sm">
+                                  <div className="mb-1 flex items-center gap-1.5">
+                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[8px] font-black text-white">
+                                      {index + 1}
+                                    </span>
+                                    <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-500">
+                                      {studyTimeLabels[entry.studyTime] || '미지정'}
+                                    </span>
+                                  </div>
+                                  <p className="text-[9px] font-black text-slate-800 leading-snug">
+                                    {entry.subject} · {entry.title}
+                                  </p>
+                                  <p className="mt-1 text-[8px] font-bold text-slate-400 leading-snug">
+                                    {entry.type} / {entry.rangeText}
+                                  </p>
+                                  <p className="mt-1 rounded-lg bg-[#0071E3]/5 px-2 py-1 text-[8px] font-black text-[#0071E3]">
+                                    {entry.dailyLabel}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -759,6 +972,10 @@ export default function StudentReportPage() {
                             const completedPlans = oneMonthPlans.filter(p => p.isCompleted).length;
                             const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
                             const status = getPlanStatus(b.currentPage, getExpectedAmountFromPlans(b.detailedPlans));
+                            const paceComparison = formatPaceComparison(
+                              getMaterialDailyPace(b.detailedPlans),
+                              getMaterialBenchmark(materialBenchmarks, 'book', b.title)
+                            );
 
                             return (
                               <div key={b.id} className="p-5 rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50/50 to-white space-y-4 shadow-sm">
@@ -768,6 +985,11 @@ export default function StudentReportPage() {
                                     {b.goalDescription && (
                                       <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
                                         <span>🏁</span> 완독 목표: {b.goalDescription}
+                                      </p>
+                                    )}
+                                    {isStudentReport && paceComparison && (
+                                      <p className="text-[10px] text-slate-500 font-bold mt-1.5">
+                                        {paceComparison}
                                       </p>
                                     )}
                                   </div>
@@ -844,6 +1066,10 @@ export default function StudentReportPage() {
                             const completedPlans = oneMonthPlans.filter(p => p.isCompleted).length;
                             const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
                             const status = getPlanStatus(l.completedLectures, getExpectedAmountFromPlans(l.detailedPlans));
+                            const paceComparison = formatPaceComparison(
+                              getMaterialDailyPace(l.detailedPlans),
+                              getMaterialBenchmark(materialBenchmarks, 'lecture', l.name)
+                            );
 
                             return (
                               <div key={l.id} className="p-5 rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50/50 to-white space-y-4 shadow-sm">
@@ -853,6 +1079,11 @@ export default function StudentReportPage() {
                                     {l.goalDescription && (
                                       <p className="text-[10px] text-[#862BF7] font-bold mt-1.5 flex items-center gap-1">
                                         <span>🏁</span> 수강 목표: {l.goalDescription}
+                                      </p>
+                                    )}
+                                    {isStudentReport && paceComparison && (
+                                      <p className="text-[10px] text-slate-500 font-bold mt-1.5">
+                                        {paceComparison}
                                       </p>
                                     )}
                                   </div>

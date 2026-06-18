@@ -13,6 +13,10 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Slider } from '@/components/ui/slider';
 import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting } from '@/lib/types/student';
 import { getStudentTodayTotalStudyTimeMin, getEstimatedStudyTimeMin } from '@/lib/progress-plan';
+import {
+  formatMaterialBenchmarkSummary,
+  getMaterialBenchmark,
+} from '@/lib/material-benchmark';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
@@ -48,6 +52,7 @@ export function ProgressTab() {
     integratedSearchResults,
     integratedSearchTimerRef,
     isAutoSaving,
+    isApplyingQuickPlan,
     isCustomUnit,
     isLearningInputOpen,
     isSearchingIntegrated,
@@ -57,6 +62,7 @@ export function ProgressTab() {
     loadEtcStudyTemplate,
     loadNotionTemplate,
     loading,
+    materialBenchmarks,
     materialTargetDates,
     newMaterialAuthor,
     newMaterialCategory,
@@ -187,21 +193,31 @@ export function ProgressTab() {
                       Todoist처럼 한 줄로 입력하면 과목과 교재/강좌 목표를 자동으로 잡습니다.
                     </p>
                   </div>
-                  <Button
-                    type="button"
-                    onClick={handleApplyQuickPlan}
-                    disabled={loading || isAutoSaving}
-                    className="admin-fit-button rounded-lg text-xs h-8 bg-[#1D1D1F] hover:bg-[#323236] text-white px-3 font-bold shrink-0 flex items-center justify-center"
-                  >
-                    {loading || isAutoSaving ? (
-                      <>
-                        <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                        반영 중...
-                      </>
-                    ) : (
-                      '학습DB 반영'
-                    )}
-                  </Button>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setQuickPlanText('매 월수금 오전 행정법 기본강의 3강/30강\n매일 영어 단어장 20p/200p\n화목금 오후 수학I 기출문제집 15/150p\n매 월수금 오후 국어 봉투모의고사 1회/10회')}
+                      className="admin-fit-button rounded-lg text-xs h-8 border-black/[0.08] bg-white px-3 font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+                    >
+                      예시 입력
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={handleApplyQuickPlan}
+                      disabled={isApplyingQuickPlan}
+                      className="admin-fit-button rounded-lg text-xs h-8 bg-[#1D1D1F] hover:bg-[#323236] text-white px-3 font-bold flex items-center justify-center"
+                    >
+                      {isApplyingQuickPlan ? (
+                        <>
+                          <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                          반영 중...
+                        </>
+                      ) : (
+                        '학습DB 반영'
+                      )}
+                    </Button>
+                  </div>
                 </div>
 
                 <textarea
@@ -837,6 +853,9 @@ export function ProgressTab() {
                                 const commitBookCurrent = () => commitProgressValue(sub.id, 'book', book.id, currentPageValue, book.totalPages);
                                 const bookReviewPass2 = book.reviewPasses?.find((pass) => pass.passNumber === 2);
                                 const bookReviewPass3 = book.reviewPasses?.find((pass) => pass.passNumber === 3);
+                                const bookBenchmarkSummary = formatMaterialBenchmarkSummary(
+                                  getMaterialBenchmark(materialBenchmarks, 'book', book.title)
+                                );
                                 return (
                                   <div key={book.id} className="p-3.5 rounded-xl border border-black/[0.04] bg-white flex flex-col gap-2.5 shadow-sm">
                                     {isEditing ? (
@@ -904,6 +923,11 @@ export function ProgressTab() {
                                       <div className="flex justify-between items-start">
                                         <div>
                                           <h5 className="text-xs font-bold text-[#1D1D1F]">{book.title}</h5>
+                                          {bookBenchmarkSummary && (
+                                            <p className="mt-1 text-[10px] font-semibold leading-relaxed text-[#0071E3]">
+                                              {bookBenchmarkSummary}
+                                            </p>
+                                          )}
                                           <div className="flex items-center gap-2 mt-1">
                                             <Label className="text-[9px] text-[#86868B] font-semibold">목표 완독일:</Label>
                                             <input
@@ -1199,6 +1223,9 @@ export function ProgressTab() {
                                 const commitLectureCurrent = () => commitProgressValue(sub.id, 'lecture', lec.id, completedLectureValue, lec.totalLectures);
                                 const lectureReviewPass2 = lec.reviewPasses?.find((pass) => pass.passNumber === 2);
                                 const lectureReviewPass3 = lec.reviewPasses?.find((pass) => pass.passNumber === 3);
+                                const lectureBenchmarkSummary = formatMaterialBenchmarkSummary(
+                                  getMaterialBenchmark(materialBenchmarks, 'lecture', lec.name)
+                                );
                                 return (
                                   <div key={lec.id} className="p-3.5 rounded-xl border border-black/[0.04] bg-white flex flex-col gap-2.5 shadow-sm">
                                     {isEditing ? (
@@ -1266,6 +1293,11 @@ export function ProgressTab() {
                                       <div className="flex justify-between items-start">
                                         <div>
                                           <h5 className="text-xs font-bold text-[#1D1D1F]">{lec.name}</h5>
+                                          {lectureBenchmarkSummary && (
+                                            <p className="mt-1 text-[10px] font-semibold leading-relaxed text-[#862bf7]">
+                                              {lectureBenchmarkSummary}
+                                            </p>
+                                          )}
                                           <div className="flex items-center gap-2 mt-1">
                                             <Label className="text-[9px] text-[#86868B] font-semibold">목표 완강일:</Label>
                                             <input
