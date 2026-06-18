@@ -622,6 +622,14 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* 2-1. 오늘 출결 현황 + 주간 순공 랭킹(전체) */}
+        <div className="flex justify-end -mb-1">
+          <button
+            onClick={() => router.push('/admin/attendance')}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0071E3] hover:underline"
+          >
+            출결 상세 표 (등·하원 시간 / 지각 정렬) →
+          </button>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <TodayAttendanceWidget
             campusFilter={campusFilter}

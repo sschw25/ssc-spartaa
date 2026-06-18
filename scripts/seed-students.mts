@@ -47,6 +47,9 @@ async function purge() {
     const isSunday = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short' }).format(dayBase) === 'Sun';
     if (isSunday) continue; // 일요일 휴원
 
+    const kstDate = seoulDate(dayBase);
+    // 등원시각 3종 분포 → 지각 분류(정시 08:20이내 / 08:20지각 / 09:00지각) 다양화
+    const ARRIVALS = ['08:10', '08:40', '09:30'];
     await Promise.all(Array.from({ length: N }, async (_, i) => {
       const diligence = ((i * 37) % 100) / 100; // 0~0.99 결정론적
       // 성실한 학생일수록 출석 확률↑ (결석으로 streak/랭킹 분포 다양화)
@@ -55,12 +58,13 @@ async function purge() {
       if (seedRand > attendProb) return; // 결석
 
       const minutes = Math.round(120 + diligence * 300); // 120~420분
-      const inAt = new Date(dayBase); inAt.setUTCHours(0, 30, 0, 0); // ≈09:30 KST
+      const arrival = ARRIVALS[(i + d) % 3];
+      const inAt = new Date(`${kstDate}T${arrival}:00+09:00`);
       const outAt = new Date(inAt.getTime() + minutes * 60000);
 
       // 오늘(d===0)이고 일부 학생은 '현재 등원중'(미퇴실)으로 남김 → present 버킷
       if (d === 0 && i % 6 === 0) {
-        await checkInSupabase(`seed_${String(i + 1).padStart(3, '0')}`, 'qr', new Date(now.getTime() - (minutes % 90 + 20) * 60000));
+        await checkInSupabase(`seed_${String(i + 1).padStart(3, '0')}`, 'qr', inAt);
         sessionCount++;
         return;
       }
