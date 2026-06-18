@@ -17,6 +17,7 @@ import {
   formatMaterialBenchmarkSummary,
   getMaterialBenchmark,
 } from '@/lib/material-benchmark';
+import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
@@ -782,11 +783,18 @@ export function ProgressTab() {
                             </SelectTrigger>
                             <SelectContent className="bg-white">
                               <SelectItem value="none" className="text-xs">미지정</SelectItem>
-                              <SelectItem value="morning" className="text-xs">오전</SelectItem>
-                              <SelectItem value="afternoon" className="text-xs">오후</SelectItem>
-                              <SelectItem value="night" className="text-xs">야간</SelectItem>
+                              {STUDY_TIME_SLOTS.map((slot) => (
+                                <SelectItem key={slot.key} value={slot.key} className="text-xs">
+                                  {slot.displayLabel} ({slot.timeRange})
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
+                          {sub.studyTime && (
+                            <p className="text-[9px] font-semibold text-[#86868B]">
+                              {STUDY_TIME_SLOTS.find((slot) => slot.key === sub.studyTime)?.periodLabel}
+                            </p>
+                          )}
                           <div className="pt-1.5 space-y-1">
                             <Label className="text-[9px] font-semibold text-[#86868B]">요일별 계획</Label>
                             <div className="grid grid-cols-7 gap-1">
@@ -1089,7 +1097,7 @@ export function ProgressTab() {
                                               <SelectContent>
                                                 <SelectItem value="weeks">기간 지정 (몇 주)</SelectItem>
                                                 <SelectItem value="weeklyAmount">주당 분량 지정</SelectItem>
-                                                <SelectItem value="dailyAmount">일일 분량 (일요일 제외)</SelectItem>
+                                                <SelectItem value="dailyAmount">일일 분량 (학습 요일 기준)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -1135,7 +1143,7 @@ export function ProgressTab() {
                                     {/* 주간 학습 계획 테이블 */}
                                     {book.targetDate && (
                                       <div className="pt-2 border-t border-black/[0.03] space-y-2">
-                                        <Label className="text-[10px] font-bold text-[#434345]">📆 주간 학습 계획표 (일요일 제외)</Label>
+                                        <Label className="text-[10px] font-bold text-[#434345]">📆 주간 학습 계획표 (학습 요일 기준)</Label>
                                         
                                         {!hasDetailedPlans ? (
                                           <p className="text-[9px] text-[#86868B] py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>
@@ -1446,7 +1454,7 @@ export function ProgressTab() {
                                           />
                                         </div>
 
-                                        <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_96px_92px] gap-2 items-end">
+                                        <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_96px_96px_92px] gap-2 items-end">
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">설정 방식</Label>
                                             <Select
@@ -1459,7 +1467,7 @@ export function ProgressTab() {
                                               <SelectContent>
                                                 <SelectItem value="weeks">기간 지정 (몇 주)</SelectItem>
                                                 <SelectItem value="weeklyAmount">주당 분량 지정</SelectItem>
-                                                <SelectItem value="dailyAmount">일일 분량 (일요일 제외)</SelectItem>
+                                                <SelectItem value="dailyAmount">일일 분량 (학습 요일 기준)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -1474,6 +1482,23 @@ export function ProgressTab() {
                                               onChange={(e) => updateLectureGoalField(sub.id, lec.id, 'goalValue', Number(e.target.value))}
                                               placeholder="값"
                                               className="h-8 text-[10px] bg-white rounded-lg border-black/[0.08] goal-value-input-lecture"
+                                            />
+                                          </div>
+
+                                          <div className="space-y-1 min-w-0">
+                                            <Label className="text-[9px] text-[#86868B]">평균 시간(분)</Label>
+                                            <Input
+                                              type="number"
+                                              min={1}
+                                              value={lec.estimatedMinutesPerUnit ?? ''}
+                                              onChange={(e) => updateLectureGoalField(
+                                                sub.id,
+                                                lec.id,
+                                                'estimatedMinutesPerUnit',
+                                                e.target.value === '' ? undefined : Math.max(1, Number(e.target.value) || 1)
+                                              )}
+                                              placeholder="기본 60"
+                                              className="h-8 text-[10px] bg-white rounded-lg border-black/[0.08] estimated-minutes-input-lecture"
                                             />
                                           </div>
 
@@ -1505,7 +1530,7 @@ export function ProgressTab() {
                                     {/* 주간 학습 계획 테이블 */}
                                     {lec.targetDate && (
                                       <div className="pt-2 border-t border-black/[0.03] space-y-2">
-                                        <Label className="text-[10px] font-bold text-[#434345]">📆 주간 학습 계획표 (일요일 제외)</Label>
+                                        <Label className="text-[10px] font-bold text-[#434345]">📆 주간 학습 계획표 (학습 요일 기준)</Label>
                                         
                                         {!hasDetailedPlans ? (
                                           <p className="text-[9px] text-[#86868B] py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>

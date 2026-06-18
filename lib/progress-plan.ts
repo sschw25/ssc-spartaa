@@ -192,19 +192,15 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
       const dayKeys: Array<'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'> = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
       const todayKey = dayKeys[dayIndex];
       
-      let isStudyDay = true;
+      let isStudyDay = todayKey !== 'sun';
       if (student.subjects) {
         const parentSubject = student.subjects.find(sub => 
           (sub.books || []).some(b => b.id === todayPlan.materialId) ||
           (sub.lectures || []).some(l => l.id === todayPlan.materialId)
         );
         if (parentSubject && parentSubject.studyDays && parentSubject.studyDays.length > 0) {
-          isStudyDay = parentSubject.studyDays.includes(todayKey as any);
+          isStudyDay = parentSubject.studyDays.includes(todayKey);
         }
-      }
-      
-      if (todayKey === 'sun') {
-        isStudyDay = false;
       }
 
       if (isStudyDay) {

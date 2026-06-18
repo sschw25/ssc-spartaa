@@ -6,7 +6,7 @@ export interface DetailedPlan {
   startDate: string;       // 주차 시작일 (YYYY-MM-DD)
   endDate: string;         // 주차 종료일 (YYYY-MM-DD)
   targetAmount: number;    // 이번 주 목표량 (페이지 또는 강의 수)
-  dailyAmount?: number;    // 일요일 제외 일일 학습량
+  dailyAmount?: number;    // 과목 학습 요일 기준 일일 학습량
   rangeText: string;       // 범위 설명 (예: "1p ~ 40p" 또는 "1강 ~ 8강")
   isCompleted: boolean;    // 완료 여부
 }

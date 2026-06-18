@@ -10,7 +10,7 @@ async function isAuthenticated(): Promise<boolean> {
   return sessionToken === 'ssc-admin-authorized-token-2026';
 }
 
-// 1. 특정 원생의 상세 내용 일괄 수정 (교재/인강 진도율 및 기본정보)
+// 1. 특정 원생의 상세 내용 일괄 수정 (교재/인강 진도 및 기본정보)
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -24,7 +24,7 @@ export async function PUT(
   try {
     const studentData = await request.json() as Student;
     if (studentData.id !== id) {
-      return NextResponse.json({ success: false, message: '요청 정보 불일치' }, { status: 400 });
+      return NextResponse.json({ success: false, message: '요청 정보가 일치하지 않습니다.' }, { status: 400 });
     }
 
     const updated = await saveStudent(studentData);

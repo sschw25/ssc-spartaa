@@ -13,6 +13,7 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
+import { STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { StudyStatsCard } from '@/components/report/study-stats-card';
@@ -219,10 +220,14 @@ export default function StudentReportPage() {
   }
 
   const studyTimeSlots = [
-    { key: 'morning', label: '☀️ 오전' },
-    { key: 'afternoon', label: '🌤️ 오후' },
-    { key: 'night', label: '🌙 야간' },
-    { key: '', label: '⚙️ 미지정' },
+    ...STUDY_TIME_SLOTS.map((slot) => ({
+      key: slot.key,
+      label: slot.displayLabel,
+      timeRange: slot.timeRange,
+      periodLabel: slot.periodLabel,
+      description: slot.description,
+    })),
+    { key: '', label: '미지정', timeRange: '', periodLabel: '시간대 미지정', description: '아직 학원 시간표 구간이 배정되지 않았습니다.' },
   ] as const;
   const weekDaySlots = [
     { key: 'mon', label: '월요일' },
@@ -238,9 +243,9 @@ export default function StudentReportPage() {
   const planWeekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
   const studyTimeOrder: Record<string, number> = { morning: 0, afternoon: 1, night: 2, '': 3 };
   const studyTimeLabels: Record<string, string> = {
-    morning: '오전',
-    afternoon: '오후',
-    night: '야간',
+    morning: getStudyTimeSlot('morning')?.displayLabel || '오전',
+    afternoon: getStudyTimeSlot('afternoon')?.displayLabel || '오후',
+    night: getStudyTimeSlot('night')?.displayLabel || '야간',
     '': '미지정',
   };
 
@@ -683,10 +688,16 @@ export default function StudentReportPage() {
                   
                   return (
                     <div key={slot.key || 'none'} className={`p-5 rounded-2xl border bg-white space-y-4 shadow-sm transition-all duration-300 ${getSlotStyle(slot.key)}`}>
-                      <h4 className="text-xs font-black text-slate-800 border-b border-slate-100 pb-2.5 flex justify-between items-center">
-                        <span>{slot.label}</span>
-                        <span className="text-[9px] text-slate-400 font-extrabold bg-slate-100 px-2 py-0.5 rounded-full">{subjectsInSlot.length}개 과목</span>
-                      </h4>
+                      <div className="border-b border-slate-100 pb-2.5">
+                        <div className="flex justify-between items-center gap-2">
+                          <h4 className="text-xs font-black text-slate-800">{slot.label}</h4>
+                          <span className="text-[9px] text-slate-400 font-extrabold bg-slate-100 px-2 py-0.5 rounded-full">{subjectsInSlot.length}개 과목</span>
+                        </div>
+                        <p className="mt-1 text-[10px] font-extrabold text-slate-500">{slot.timeRange || slot.periodLabel}</p>
+                        {slot.key && (
+                          <p className="mt-0.5 text-[9px] font-bold text-slate-400">{slot.periodLabel}</p>
+                        )}
+                      </div>
                       
                       {subjectsInSlot.length === 0 ? (
                         <p className="text-[10px] text-slate-300 font-bold py-4 text-center">배정된 학습 과목 없음</p>
@@ -1010,7 +1021,7 @@ export default function StudentReportPage() {
                                 </div>
 
                                 {/* 세부 계획 타임라인 */}
-                                {oneMonthPlans.length > 0 && (
+                                {isStudentReport && oneMonthPlans.length > 0 && (
                                   <div className="pt-4 border-t border-slate-100 space-y-3">
                                     <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
                                       <span>최근 1개월 주간 학습 스케줄 ({completedPlans}/{totalPlans}주 완료)</span>
@@ -1104,7 +1115,7 @@ export default function StudentReportPage() {
                                 </div>
 
                                 {/* 세부 계획 타임라인 */}
-                                {oneMonthPlans.length > 0 && (
+                                {isStudentReport && oneMonthPlans.length > 0 && (
                                   <div className="pt-4 border-t border-slate-100 space-y-3">
                                     <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
                                       <span>최근 1개월 주간 수강 스케줄 ({completedPlans}/{totalPlans}주 완료)</span>

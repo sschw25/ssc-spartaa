@@ -30,6 +30,7 @@ import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, Sub
 import { getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
+import { getStudyTimeSlot } from '@/lib/academy-timetable';
 import { toast } from 'sonner';
 import { 
   Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, 
@@ -858,7 +859,28 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     }
   };
 
-  // 6. 일요일을 제외한 학습 계획표 생성 헬퍼 함수
+  const getActiveStudyDays = (studyDays?: SubjectProgress['studyDays']) => {
+    return studyDays && studyDays.length > 0 ? studyDays : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+  };
+
+  const getActiveStudyDayCount = (studyDays?: SubjectProgress['studyDays']) => {
+    return getActiveStudyDays(studyDays).length;
+  };
+
+  const isStudyDay = (date: Date, studyDays?: SubjectProgress['studyDays']) => {
+    const dayMap: Record<number, NonNullable<SubjectProgress['studyDays']>[number]> = {
+      0: 'sun',
+      1: 'mon',
+      2: 'tue',
+      3: 'wed',
+      4: 'thu',
+      5: 'fri',
+      6: 'sat',
+    };
+    return getActiveStudyDays(studyDays).includes(dayMap[date.getDay()]);
+  };
+
+  // 6. 과목별 학습 요일을 반영한 학습 계획표 생성 헬퍼 함수
   const generateDetailedPlans = (
     materialId: string,
     totalAmount: number,
@@ -888,22 +910,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       return hasBook || hasLecture;
     });
 
-    const studyDays = parentSubject?.studyDays || [];
-    const activeDays = studyDays.filter(d => d !== 'sun'); // 일요일 제외
-    const daysCountPerWeek = activeDays.length > 0 ? activeDays.length : 6; // 미지정 시 기본 6일
-    const dayMap: Record<number, Exclude<NonNullable<SubjectProgress['studyDays']>[number], 'sun'>> = {
-      1: 'mon',
-      2: 'tue',
-      3: 'wed',
-      4: 'thu',
-      5: 'fri',
-      6: 'sat',
-    };
+    const activeStudyDays = getActiveStudyDays(parentSubject?.studyDays);
+    const daysCountPerWeek = activeStudyDays.length;
 
     // 이번 주 월요일 구하기
     const dayOfWeek = today.getDay();
     const startOfWeek = new Date(today);
-    if (dayOfWeek === 0) { // 일요일인 경우 다음 주 월요일부터 시작
+    if (dayOfWeek === 0 && isStudyDay(today, parentSubject?.studyDays)) {
+      startOfWeek.setDate(today.getDate() - 6);
+    } else if (dayOfWeek === 0) { // 일요일이 학습일이 아닌 경우 다음 주 월요일 기준 주차로 시작
       startOfWeek.setDate(today.getDate() + 1);
     } else { // 월~토인 경우 이번 주 월요일로 보정
       startOfWeek.setDate(today.getDate() - (dayOfWeek - 1));
@@ -914,15 +929,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       const lowerBound = fromDate ? new Date(fromDate) : new Date(weekStart);
       lowerBound.setHours(0, 0, 0, 0);
 
-      for (let offset = 0; offset <= 5; offset++) {
+      for (let offset = 0; offset <= 6; offset++) {
         const targetDate = new Date(weekStart);
         targetDate.setDate(weekStart.getDate() + offset);
         targetDate.setHours(0, 0, 0, 0);
         if (targetDate < lowerBound) continue;
 
-        const dayKey = dayMap[targetDate.getDay()];
-        if (!dayKey) continue;
-        if (activeDays.length > 0 && !activeDays.includes(dayKey)) continue;
+        if (!isStudyDay(targetDate, parentSubject?.studyDays)) continue;
         studyDayCount++;
       }
 
@@ -1146,7 +1159,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       return;
     }
 
-    // 계획 생성 (일요일 제외)
+    // 계획 생성
     if (currentAmount >= totalAmount && reviewPasses.length === 0) {
       toast.error('이미 완료된 자료입니다. 2회독 또는 3회독을 선택하면 추가 계획을 생성할 수 있습니다.');
       return;
@@ -1155,9 +1168,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const customUnit = type === 'book' ? (targetMaterial as BookProgress).unit : undefined;
 
     // 하루당 평균 소화해야 할 학습량 추정 및 완료일 조정 가이드 팝업
-    const studyDays = sub.studyDays || [];
-    const activeDays = studyDays.filter(d => d !== 'sun');
-    const daysCount = activeDays.length > 0 ? activeDays.length : 6;
+    const daysCount = getActiveStudyDayCount(sub.studyDays);
 
     let estimatedDailyAmount = 0;
     const remainingAmount = totalAmount - currentAmount;
@@ -1971,9 +1982,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const loadCurrentStudySummaryTemplate = () => {
     const timeLabels: Record<string, string> = {
-      morning: '오전',
-      afternoon: '오후',
-      night: '야간',
+      morning: getStudyTimeSlot('morning')?.displayLabel || '오전',
+      afternoon: getStudyTimeSlot('afternoon')?.displayLabel || '오후',
+      night: getStudyTimeSlot('night')?.displayLabel || '야간',
       '': '시간대 미지정',
     };
     const dayLabels: Record<string, string> = {
@@ -1996,7 +2007,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const scheduleLines = subjectsState.length > 0
       ? subjectsState.map((subject) => {
           const days = (subject.studyDays || []).map((day) => dayLabels[day] || day).join(', ') || '요일 미지정';
-          return `- ${subject.name}: ${timeLabels[subject.studyTime || ''] || '시간대 미지정'} / ${days}`;
+          const slot = getStudyTimeSlot(subject.studyTime || '');
+          const timeText = slot
+            ? `${slot.displayLabel} ${slot.timeRange} (${slot.periodLabel})`
+            : timeLabels[subject.studyTime || ''] || '시간대 미지정';
+          return `- ${subject.name}: ${timeText} / ${days}`;
         }).join('\n')
       : '- 등록된 시간표가 없습니다.';
 
@@ -2007,7 +2022,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     toast.info('현재 학습상황 요약을 상담 기록에 불러왔습니다.');
   };
 
-  const getLearningDaysUntil = (targetDate?: string) => {
+  const findSubjectByMaterialId = (materialId: string) => {
+    return subjectsState.find((subject) => {
+      const hasBook = subject.books?.some((book) => book.id === materialId);
+      const hasLecture = subject.lectures?.some((lecture) => lecture.id === materialId);
+      return hasBook || hasLecture;
+    });
+  };
+
+  const getLearningDaysUntil = (targetDate?: string, studyDays?: SubjectProgress['studyDays']) => {
     if (!targetDate) return 0;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -2018,7 +2041,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     let days = 0;
     const cursor = new Date(today);
     while (cursor <= target) {
-      if (cursor.getDay() !== 0) days += 1;
+      if (isStudyDay(cursor, studyDays)) days += 1;
       cursor.setDate(cursor.getDate() + 1);
     }
     return days;
@@ -2068,9 +2091,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
     let goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' = fallbackGoalType;
     let goalValue = fallbackGoalValue;
+    const parentSubject = findSubjectByMaterialId(material.id);
 
     if (mode === 'keepTargetDate' && material.targetDate) {
-      const learningDays = getLearningDaysUntil(material.targetDate);
+      const learningDays = getLearningDaysUntil(material.targetDate, parentSubject?.studyDays);
       if (learningDays > 0) {
         const speed = student?.speedMultiplier || 1.0;
         goalType = 'dailyAmount';
@@ -2106,9 +2130,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const getConsultationPlanPreview = (overrideDrafts?: Record<string, number>) => {
     const activeDrafts = overrideDrafts || progressDrafts;
     return subjectsState.flatMap((subject) => {
-      const studyDays = subject.studyDays || [];
-      const activeDays = studyDays.filter(d => d !== 'sun');
-      const daysCount = activeDays.length > 0 ? activeDays.length : 6;
+      const daysCount = getActiveStudyDayCount(subject.studyDays);
 
       const bookItems = (subject.books || []).map((book) => {
         const draftProgress = activeDrafts[book.id];
