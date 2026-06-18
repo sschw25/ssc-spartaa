@@ -266,6 +266,28 @@ export async function getStudyMinutesByStudentSupabase(sinceDate: string): Promi
   return totals;
 }
 
+// 현재 등원 중(미퇴실)인 전체 세션 — 관리자 실시간 출결 현황용
+export async function getOpenSessionsSupabase(): Promise<StudySession[]> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .select('*')
+    .is('check_out', null)
+    .order('check_in', { ascending: true });
+  if (error) throw error;
+  return (data || []) as StudySession[];
+}
+
+// 특정 날짜(KST, YYYY-MM-DD)의 전체 학생 세션 — '오늘 출결' 명단용
+export async function getSessionsByDateSupabase(date: string): Promise<StudySession[]> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .select('*')
+    .eq('date', date)
+    .order('check_in', { ascending: true });
+  if (error) throw error;
+  return (data || []) as StudySession[];
+}
+
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {
   const client = getClient();
   // 기존 db.ts 동작 유지: id 또는 (name+type) 동일하면 갱신, 아니면 신규

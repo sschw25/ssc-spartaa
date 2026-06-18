@@ -17,6 +17,7 @@ import { Student } from '@/lib/types/student';
 import { getManagedProgressItems, getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
 import { AddStudentModal } from '@/components/admin/add-student-modal';
 import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
+import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -56,6 +57,18 @@ export default function AdminDashboardPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  // 출결 위젯 새로고침 신호 (학생 목록 새로고침 시 함께 갱신)
+  const [attendanceRefresh, setAttendanceRefresh] = useState(0);
+
+  const handleOpenStudentById = (id: string) => {
+    const target = studentsRef.current.find((s) => s.id === id);
+    if (!target) {
+      toast.error('해당 원생을 목록에서 찾을 수 없습니다. 새로고침 후 다시 시도해 주세요.');
+      return;
+    }
+    setSelectedStudent(target);
+    setIsDetailOpen(true);
+  };
 
   // 1. 인증 체크
   useEffect(() => {
@@ -80,6 +93,7 @@ export default function AdminDashboardPage() {
   // 2. 학생 데이터 로드
   const loadStudents = async () => {
     setLoading(true);
+    setAttendanceRefresh((n) => n + 1);
     try {
       const res = await fetch('/api/admin/students');
       if (res.ok) {
@@ -605,6 +619,13 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* 2-1. 오늘 출결 현황 위젯 */}
+        <TodayAttendanceWidget
+          campusFilter={campusFilter}
+          refreshSignal={attendanceRefresh}
+          onSelectStudentId={handleOpenStudentById}
+        />
 
         {/* 3. 필터 및 검색 바 */}
         <div className="admin-fit-box flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4.5 rounded-2xl border border-black/[0.05] shadow-sm">

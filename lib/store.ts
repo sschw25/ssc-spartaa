@@ -16,6 +16,8 @@ import {
   setStudentNotifyInfoSupabase,
   type NotifyInfo,
   getOpenSessionSupabase,
+  getOpenSessionsSupabase,
+  getSessionsByDateSupabase,
   checkInSupabase,
   checkOutSupabase,
   getStudySessionsSupabase,
@@ -23,6 +25,8 @@ import {
   type StudentAuthRecord,
   type StudySession,
 } from './supabase';
+
+export type { StudySession } from './supabase';
 import {
   getStudentsLocal,
   getStudentLocal,
@@ -84,6 +88,14 @@ function requireSupabase() {
 export async function getOpenSession(studentId: string): Promise<StudySession | null> {
   requireSupabase();
   return getOpenSessionSupabase(studentId);
+}
+export async function getOpenSessions(): Promise<StudySession[]> {
+  requireSupabase();
+  return getOpenSessionsSupabase();
+}
+export async function getSessionsByDate(date: string): Promise<StudySession[]> {
+  requireSupabase();
+  return getSessionsByDateSupabase(date);
 }
 export async function checkIn(studentId: string, source = 'qr'): Promise<StudySession> {
   requireSupabase();
