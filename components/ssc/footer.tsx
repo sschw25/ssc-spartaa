@@ -8,6 +8,15 @@ export function Footer() {
     <footer className="bg-white border-t border-black/5 py-14">
       <div className="max-w-[72rem] mx-auto px-4 sm:px-6">
         
+        {/* SEO Internal Links */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 text-[12px] font-bold text-[#434345] border-b border-black/5 pb-6">
+          <a href="/wonju/gongmuwon" className="text-[#0071E3] hover:underline">원주 공무원학원</a>
+          <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+          <a href="/chuncheon/gongmuwon" className="hover:text-[#0071E3] hover:underline">춘천 공무원학원</a>
+          <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+          <a href="/chungju/gongmuwon" className="hover:text-[#0071E3] hover:underline">충주 공무원학원</a>
+        </div>
+
         {/* Company Info Block */}
         <div className="text-[12px] leading-[1.8] text-[#86868B]">
           <p className="font-bold text-[#434345] mb-2 text-[13px]">(주)에스에스씨 스파르타</p>

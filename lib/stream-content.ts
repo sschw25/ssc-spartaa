@@ -64,9 +64,9 @@ export const streamContents: Record<StreamId, StreamContent> = {
     id: 'gongmuwon',
     name: '공무원',
     hero: {
-      title: '{{region}} 공무원학원\n단기합격의 가장 확실한 길',
+      title: '{{region}} 공무원학원, SSC스파르타 공무원 합격관리반',
       subtitle: '국가직·지방직 맞춤형 관리와\n인강에 최적화된 압도적 열공공간',
-      description: '{{region}} 공무원학원, {{region}} 경찰학원, {{region}} 소방학원(공무원)을 찾으시는 여러분,\n노량진을 {{region}}에서 그대로 만나볼 수 있습니다.\n독한 관리 프로그램, 노량진 커넥츠의 프로그램을 그대로 이식했습니다.\n전국 모의고사를 토대로 한 문항분석과 석차분석의 초격차를 만나보세요.\n합격자에게 물어보세요. 합격자는 우리를 압니다.',
+      description: 'SSC스파르타 {{region}} 공무원학원은 국가직·지방직·경찰·소방·군무원 수험생을 대상으로 출결, 학습계획, 모의고사, 면접까지 관리하는 공무원 시험 전문 관리학원입니다.',
     },
     differentiation: {
       title: '왜 공무원 시험은\nSSC스파르타인가',

@@ -61,7 +61,7 @@ const wonjuSlides = [
   {
     id: 1,
     image: '/images/campus-wonju.jpg',
-    title: '원주 공무원학원 유일의\n노량진 커넥츠프랩(공단기) 파트너',
+    title: '원주 독학재수 · 관리형학습관\n밀착 관리형 전문 학습센터',
     subtitle: '공무원 합격자에게 물어보세요.\n합격자는 스파르타 했습니다.',
     description: '국가직 · 지방직 · 경찰 · 소방 · 군무원\n전 직렬 완벽 커버 시스템',
     ctaLabel: '원주 공무원학원 알아보기',
@@ -118,7 +118,7 @@ export default function WonjuPage() {
       />
       <ScrollRevealInit />
       <Navbar />
-      <HeroSlider slides={slides} heading="SSC스파르타 원주캠퍼스 | 원주 독학재수 · 관리형독서실 · 공무원학원" />
+      <HeroSlider slides={slides} heading="SSC스파르타 원주캠퍼스 | 원주 관리형학습관" />
       <SpartaPulse />
 
       {/* 이달의 프로그램 테이저 → /wonju/programs 페이지로 이동 */}

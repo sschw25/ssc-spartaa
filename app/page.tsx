@@ -280,6 +280,16 @@ export default function SelectLocation() {
               )
             })}
           </div>
+
+          {/* Quick Links for SEO & User Convenience */}
+          <div className="max-w-[64rem] mx-auto mt-16 pt-8 border-t border-black/[0.05] flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-xs md:text-sm font-bold">
+            <span className="text-[#86868B] cursor-default">바로가기:</span>
+            <Link href="/wonju/gongmuwon" className="text-[#0071E3] hover:underline">원주 공무원학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chuncheon/gongmuwon" className="text-[#434345] hover:text-[#0071E3] hover:underline">춘천 공무원학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chungju/gongmuwon" className="text-[#434345] hover:text-[#0071E3] hover:underline">충주 공무원학원</Link>
+          </div>
         </div>
 
         {/* 2. Comparison & Commenters Section */}

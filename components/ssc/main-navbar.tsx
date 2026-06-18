@@ -62,6 +62,12 @@ export function MainNavbar() {
             >
               캠퍼스 안내
             </a>
+            <Link 
+              href="/wonju/gongmuwon" 
+              className="text-xs font-bold text-[#0071E3] hover:text-[#005bb5] transition-colors"
+            >
+              원주 공무원학원
+            </Link>
           </div>
 
           {/* Right Action Area */}
@@ -139,6 +145,13 @@ export function MainNavbar() {
                 >
                   캠퍼스 안내
                 </a>
+                <Link 
+                  href="/wonju/gongmuwon" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-lg font-bold text-[#0071E3] py-2"
+                >
+                  원주 공무원학원
+                </Link>
               </div>
 
               {/* Mobile Summer School Info */}

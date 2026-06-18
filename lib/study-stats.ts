@@ -69,6 +69,7 @@ export interface MyStanding {
   myMinutes: number;
   inTop10: boolean;
   rank: number | null;       // TOP 10 안일 때만 (총원 추정 방지)
+  topPercent: number | null; // 상위 몇 % (전체 원생 대비, 1~100) — 절대등수/총원 비노출
   toTop10: number;           // TOP 10 진입까지 더 필요한 순공(분)
   nextUpGap: number | null;  // 바로 위 한 명까지 남은 순공(분) — 익명
   cutline: number;           // TOP 10 커트라인(10위 순공, 익명)
@@ -88,13 +89,16 @@ export function buildMyStanding(
   const hasRecord = myMinutes > 0;
   const myRank = hasRecord ? ranked.filter((r) => r.minutes > myMinutes).length + 1 : null;
   const inTop10 = !!myRank && myRank <= 10;
+  // 상위 % — 전체 원생 수 대비(1위는 1%로 표기), 절대등수/총원은 노출하지 않음
+  const denom = Math.max(students.length, 1);
+  const topPercent = myRank ? (myRank === 1 ? 1 : Math.max(1, Math.round((myRank / denom) * 100))) : null;
   const cutline = ranked.length >= 10 ? ranked[9].minutes : (ranked.length ? ranked[ranked.length - 1].minutes : 0);
   const toTop10 = inTop10 ? 0 : Math.max(0, cutline - myMinutes);
   const ahead = ranked.filter((r) => r.minutes > myMinutes).map((r) => r.minutes);
   const nextUpGap = ahead.length ? Math.min(...ahead) - myMinutes : null;
   const top1 = ranked.length ? ranked[0].minutes : 0;
 
-  return { hasRecord, myMinutes, inTop10, rank: inTop10 ? myRank : null, toTop10, nextUpGap, cutline, top1 };
+  return { hasRecord, myMinutes, inTop10, rank: inTop10 ? myRank : null, topPercent, toTop10, nextUpGap, cutline, top1 };
 }
 
 // 순공 랭킹 — 이름 마스킹, 본인 등수 포함. (순공 0분은 순위 제외)

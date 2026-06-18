@@ -12,7 +12,7 @@ const SITE_URL = 'https://www.sscsparta.com'
 
 const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
   gongmuwon: (region: string) => ({
-    title: `${region} 공무원학원 | 9급·경찰·소방 관리형 단기합격반 - SSC스파르타`,
+    title: `${region} 공무원학원 | SSC스파르타 ${region} 공무원 합격관리반`,
     description: `${region} 공무원학원 대표 SSC스파르타! ${region} 경찰·소방·행정직 등 공무원 시험 합격을 위한 독한 관리형 학원. 노량진 커넥츠프랩의 전국 평가 시스템을 그대로 제공합니다.`,
     keywords: [`${region} 공무원학원`, `${region}공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 공무원준비`, `${region} 커넥츠프랩`, `${region} 공단기`, `${region} 스파르타`, `공무원기숙학원`],
   }),
@@ -45,7 +45,7 @@ const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
 
 const CAMPUS_SEO_CONFIG: Record<CampusKey, SeoContent> = {
   wonju: {
-    title: 'SSC스파르타 원주캠퍼스 | 시간 관리형 성인/수험생 전문 학습관',
+    title: 'SSC스파르타 원주캠퍼스 | 원주 관리형학습관',
     description: '원주에서 공부하는 수험생을 위한 시간 관리형 학습관 SSC스파르타 원주캠퍼스. 철저한 통제, 교시제 자습, 스마트폰 관리로 순공시간을 극대화합니다.',
     keywords: ['SSC스파르타 원주캠퍼스', '원주 독학재수', '원주 관리형독서실', '원주 관리형 학습관', '원주 스파르타'],
   },

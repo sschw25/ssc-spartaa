@@ -8,6 +8,7 @@ interface Standing {
   myMinutes: number;
   inTop10: boolean;
   rank: number | null;
+  topPercent: number | null;
   toTop10: number;
   nextUpGap: number | null;
   cutline: number;
@@ -102,9 +103,9 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
             <p className="text-[11px] font-bold text-[#86868B]">{periodLabel} 나의 순공</p>
             <p className="text-3xl font-black text-[#1D1D1F] mt-0.5">{fmt(st.myMinutes)}</p>
           </div>
-          {st.inTop10 && st.rank && (
+          {st.hasRecord && st.topPercent != null && (
             <span className="inline-flex items-center gap-1 text-sm font-black text-[#F56300] bg-[#F56300]/10 border border-[#F56300]/15 px-3 py-1.5 rounded-full">
-              <Trophy className="w-4 h-4" /> {st.rank}위
+              <Trophy className="w-4 h-4" /> 상위 {st.topPercent}%
             </span>
           )}
         </div>

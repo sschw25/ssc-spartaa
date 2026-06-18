@@ -109,6 +109,12 @@ export function Navbar() {
 
           {/* Desktop Menu - Removed items as per user request */}
           <div className="hidden md:flex items-center gap-10">
+            <Link 
+              href="/wonju/gongmuwon" 
+              className="text-xs font-bold text-[#0071E3] hover:text-[#005bb5] transition-colors"
+            >
+              원주 공무원학원
+            </Link>
           </div>
 
           {/* Right CTA */}
@@ -169,6 +175,15 @@ export function Navbar() {
           >
             <div className="flex flex-col gap-4 pb-12">
               {/* Mobile Menu Items */}
+              <div className="flex flex-col gap-2 border-b border-black/[0.05] pb-2">
+                <Link 
+                  href="/wonju/gongmuwon" 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="text-base font-bold text-[#0071E3] py-2 px-2"
+                >
+                  원주 공무원학원
+                </Link>
+              </div>
               <div className="flex flex-col gap-2 mt-2">
                 <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
                 <div className="grid grid-cols-3 gap-2">
