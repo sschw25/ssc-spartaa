@@ -61,34 +61,21 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
             </h2>
           </div>
           
-          {/* Scroll Navigation Controls (Desktop) */}
-          <div className="hidden md:flex items-center gap-3">
-            <button
-              onClick={() => handleScroll('left')}
-              className="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center bg-[#F5F5F7] text-[#1D1D1F] hover:bg-black/5 hover:scale-105 active:scale-95 transition-all shadow-sm"
-              aria-label="이전 카드"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            <button
-              onClick={() => handleScroll('right')}
-              className="w-10 h-10 rounded-full border border-black/5 flex items-center justify-center bg-[#F5F5F7] text-[#1D1D1F] hover:bg-black/5 hover:scale-105 active:scale-95 transition-all shadow-sm"
-              aria-label="다음 카드"
-            >
-              <ChevronRight size={20} />
-            </button>
+          {/* Scroll Navigation Controls (Only show if cards are scrollable - hidden in desktop grid) */}
+          <div className="flex md:hidden items-center gap-3">
+            {/* Mobile does not need navigation buttons as touch drag is standard, keeping hidden */}
           </div>
         </div>
 
-        {/* Horizontal Card Carousel */}
+        {/* Horizontal Card Carousel (Mobile: flex scroll / Desktop: grid layout) */}
         <div
           ref={scrollRef}
-          className="flex gap-6 overflow-x-auto snap-x snap-mandatory scrollbar-none pb-4 -mx-6 px-6 md:mx-0 md:px-0 scroll-smooth"
+          className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 md:pb-0 -mx-6 px-6 md:mx-0 md:px-0 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
         >
           {cardsData.map((card) => (
             <div
               key={card.id}
-              className="group relative rounded-[28px] bg-[#F5F5F7] border border-black/[0.02] p-8 shadow-sm flex flex-col justify-between min-h-[300px] w-[290px] sm:w-[320px] shrink-0 snap-start hover:shadow-md hover:border-black/5 transition-all duration-300"
+              className="group relative rounded-[28px] bg-[#F5F5F7] border border-black/[0.02] p-8 shadow-sm flex flex-col justify-between min-h-[300px] w-[290px] sm:w-[320px] md:w-full shrink-0 md:shrink snap-start hover:shadow-md hover:border-black/5 transition-all duration-300"
             >
               {/* Card Header */}
               <div>

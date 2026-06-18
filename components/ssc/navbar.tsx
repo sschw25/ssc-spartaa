@@ -68,6 +68,18 @@ export function Navbar() {
   // 공무원 페이지(gongmuwon)인지 확인하는 로직
   const isGongmuwonPage = pathname?.includes('gongmuwon')
 
+  // 경로에서 캠퍼스명 파싱 (예: /wonju/gongmuwon -> wonju)
+  const campusMatch = pathname?.match(/^\/([^\/]+)/)
+  const currentCampus = campusMatch ? campusMatch[1] : 'wonju'
+  
+  // 허용된 캠퍼스 목록
+  const allowedCampuses = ['wonju', 'chuncheon', 'chungju']
+  const isCampusPage = allowedCampuses.includes(currentCampus)
+
+  // 현재 스트림 파싱 (예: /wonju/gongmuwon -> gongmuwon)
+  const streamMatch = pathname?.match(/^\/[^\/]+\/([^\/]+)/)
+  const currentStream = streamMatch ? streamMatch[1] : ''
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20)
@@ -107,14 +119,24 @@ export function Navbar() {
             </div>
           </Link>
 
-          {/* Desktop Menu - Removed items as per user request */}
-          <div className="hidden md:flex items-center gap-10">
-            <Link 
-              href="/wonju/gongmuwon" 
-              className="text-xs font-bold text-[#0071E3] hover:text-[#005bb5] transition-colors"
-            >
-              원주 공무원학원
-            </Link>
+          {/* Desktop Menu - Dynamically render streams for current campus */}
+          <div className="hidden md:flex items-center gap-8">
+            {isCampusPage && navItems.map((item) => {
+              const isActive = currentStream === item.stream
+              return (
+                <Link
+                  key={item.stream}
+                  href={`/${currentCampus}/${item.stream}`}
+                  className={`text-[13px] font-bold transition-all duration-300 ${
+                    isActive 
+                      ? 'text-[#0071E3] scale-105' 
+                      : 'text-[#434345] hover:text-black'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              )
+            })}
           </div>
 
           {/* Right CTA */}
@@ -174,16 +196,33 @@ export function Navbar() {
             className="fixed inset-0 z-[90] bg-white pt-24 px-6 overflow-y-auto"
           >
             <div className="flex flex-col gap-4 pb-12">
-              {/* Mobile Menu Items */}
-              <div className="flex flex-col gap-2 border-b border-black/[0.05] pb-2">
-                <Link 
-                  href="/wonju/gongmuwon" 
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="text-base font-bold text-[#0071E3] py-2 px-2"
-                >
-                  원주 공무원학원
-                </Link>
-              </div>
+              {/* Mobile Menu Items - Dynamic Link Grid */}
+              {isCampusPage && (
+                <div className="flex flex-col gap-2 border-b border-black/[0.05] pb-4">
+                  <p className="text-[#86868B] text-[10px] font-extrabold tracking-[0.2em] uppercase px-2 mb-1">
+                    프로그램 바로가기
+                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {navItems.map((item) => {
+                      const isActive = currentStream === item.stream
+                      return (
+                        <Link 
+                          key={item.stream}
+                          href={`/${currentCampus}/${item.stream}`} 
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`text-center py-3.5 rounded-xl font-bold text-[13px] active:scale-95 transition-all ${
+                            isActive
+                              ? 'bg-[#0071E3]/10 text-[#0071E3]'
+                              : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-black/5'
+                          }`}
+                        >
+                          {item.label}
+                        </Link>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="flex flex-col gap-2 mt-2">
                 <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
                 <div className="grid grid-cols-3 gap-2">
