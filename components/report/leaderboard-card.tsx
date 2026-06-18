@@ -1,16 +1,16 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Trophy, Flame, Users, Loader2 } from 'lucide-react';
+import { Trophy, Flame, Loader2, Target, Sparkles } from 'lucide-react';
 
 interface Entry { rank: number; name: string; campus: string; minutes: number; isMe: boolean }
-interface Board { top: Entry[]; my: { rank: number; minutes: number; total: number } | null; total: number }
+interface MeInfo { inTop: boolean; rank: number | null; myMinutes: number; hasRecord: boolean; minutesToEnterTop: number }
+interface Board { top: Entry[]; me: MeInfo }
 interface Data {
   configured: boolean;
   liveCount?: number;
-  leaderboard?: Board;       // 하위호환(주간)
-  leaderboardWeek?: Board;
-  leaderboardDay?: Board;
+  week?: Board;
+  day?: Board;
 }
 
 const fmt = (m: number) => {
@@ -47,17 +47,13 @@ export function LeaderboardCard() {
       </div>
     );
   }
-  if (!data || data.configured === false) return null;
-  const board: Board | undefined =
-    period === 'day'
-      ? data.leaderboardDay || data.leaderboard
-      : data.leaderboardWeek || data.leaderboard;
-  // 주간 데이터가 아예 없으면(아무도 기록 없음) 숨김
-  const weekBoard = data.leaderboardWeek || data.leaderboard;
-  if (!weekBoard || weekBoard.total === 0) return null;
+  if (!data || data.configured === false || !data.week) return null;
+  // 이번 주에 아무도 기록이 없으면 숨김
+  if (data.week.top.length === 0 && !data.week.me.hasRecord) return null;
 
-  const top = board?.top || [];
-  const my = board?.my || null;
+  const board: Board = period === 'day' ? (data.day || data.week) : data.week;
+  const top = board.top;
+  const me = board.me;
   const periodLabel = period === 'day' ? '오늘' : '이번 주';
 
   return (
@@ -65,7 +61,7 @@ export function LeaderboardCard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-[#F56300]" />
-          <h3 className="text-base font-bold text-[#1D1D1F]">{periodLabel} 순공 랭킹</h3>
+          <h3 className="text-base font-bold text-[#1D1D1F]">{periodLabel} 순공 랭킹 <span className="text-[#F56300]">TOP 10</span></h3>
         </div>
         {typeof data.liveCount === 'number' && data.liveCount > 0 && (
           <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
@@ -74,7 +70,7 @@ export function LeaderboardCard() {
         )}
       </div>
 
-      {/* 주간 / 일간 토글 */}
+      {/* 주간 / 오늘 토글 */}
       <div className="inline-flex p-0.5 rounded-xl bg-[#F5F5F7] border border-black/[0.05]">
         {([['week', '주간'], ['day', '오늘']] as const).map(([key, label]) => (
           <button
@@ -90,16 +86,8 @@ export function LeaderboardCard() {
         ))}
       </div>
 
-      {my && (
-        <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[#0071E3]/[0.08] to-[#862BF7]/[0.06] border border-[#0071E3]/15 px-4 py-3">
-          <span className="text-xs font-bold text-[#0071E3] flex items-center gap-1.5">
-            <Users className="w-4 h-4" /> 내 등수
-          </span>
-          <span className="text-sm font-bold text-[#1D1D1F]">
-            <span className="text-[#0071E3]">{my.rank}등</span> / {my.total}명 · {fmt(my.minutes)}
-          </span>
-        </div>
-      )}
+      {/* 내 위치 — 동기부여 배너 (절대 등수/총원은 노출하지 않음) */}
+      <MeBanner me={me} periodLabel={periodLabel} />
 
       <div className="space-y-1">
         {top.length === 0 && (
@@ -125,6 +113,40 @@ export function LeaderboardCard() {
       </div>
 
       <p className="text-[10px] text-[#86868B] text-center">QR 등하원으로 측정된 {periodLabel} 순공 시간 기준입니다. 이름은 보호를 위해 일부 가려집니다.</p>
+    </div>
+  );
+}
+
+// 내 위치 배너 — 절대 등수/총원 비노출, "얼마나 더 채우면 TOP10" 중심
+function MeBanner({ me, periodLabel }: { me: MeInfo; periodLabel: string }) {
+  if (me.inTop && me.rank) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#F56300]/[0.1] to-[#F5A623]/[0.06] border border-[#F56300]/15 px-4 py-3">
+        <Sparkles className="w-4 h-4 text-[#F56300] shrink-0" />
+        <span className="text-xs font-bold text-[#1D1D1F]">
+          🎉 현재 <span className="text-[#F56300]">{periodLabel} {me.rank}등</span> · TOP 10 유지 중! ({fmt(me.myMinutes)})
+        </span>
+      </div>
+    );
+  }
+  if (!me.hasRecord) {
+    return (
+      <div className="flex items-center gap-2.5 rounded-2xl bg-[#0071E3]/[0.05] border border-[#0071E3]/15 px-4 py-3">
+        <Target className="w-4 h-4 text-[#0071E3] shrink-0" />
+        <span className="text-xs font-bold text-[#1D1D1F]">{periodLabel} 첫 순공을 기록하고 TOP 10에 도전해 보세요!</span>
+      </div>
+    );
+  }
+  return (
+    <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#0071E3]/[0.08] to-[#862BF7]/[0.06] border border-[#0071E3]/15 px-4 py-3">
+      <Target className="w-4 h-4 text-[#0071E3] shrink-0" />
+      <span className="text-xs font-bold text-[#1D1D1F]">
+        {me.minutesToEnterTop > 0 ? (
+          <>TOP 10까지 <span className="text-[#0071E3]">{fmt(me.minutesToEnterTop)}</span> 더 채우면 진입! <span className="text-[#86868B] font-semibold">(현재 {fmt(me.myMinutes)})</span></>
+        ) : (
+          <>TOP 10 진입까지 한 걸음! 조금만 더 몰입해 보세요. <span className="text-[#86868B] font-semibold">(현재 {fmt(me.myMinutes)})</span></>
+        )}
+      </span>
     </div>
   );
 }

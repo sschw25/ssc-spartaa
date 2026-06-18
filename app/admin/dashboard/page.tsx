@@ -18,6 +18,7 @@ import { getManagedProgressItems, getStudentTodayTotalStudyTimeMin } from '@/lib
 import { AddStudentModal } from '@/components/admin/add-student-modal';
 import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
+import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -620,12 +621,19 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
 
-        {/* 2-1. 오늘 출결 현황 위젯 */}
-        <TodayAttendanceWidget
-          campusFilter={campusFilter}
-          refreshSignal={attendanceRefresh}
-          onSelectStudentId={handleOpenStudentById}
-        />
+        {/* 2-1. 오늘 출결 현황 + 주간 순공 랭킹(전체) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <TodayAttendanceWidget
+            campusFilter={campusFilter}
+            refreshSignal={attendanceRefresh}
+            onSelectStudentId={handleOpenStudentById}
+          />
+          <AdminLeaderboard
+            campusFilter={campusFilter}
+            refreshSignal={attendanceRefresh}
+            onSelectStudentId={handleOpenStudentById}
+          />
+        </div>
 
         {/* 3. 필터 및 검색 바 */}
         <div className="admin-fit-box flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4.5 rounded-2xl border border-black/[0.05] shadow-sm">
