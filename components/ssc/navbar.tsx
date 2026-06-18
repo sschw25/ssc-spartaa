@@ -76,8 +76,8 @@ export function Navbar() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  // 관리자/학생 포털/출결/리포트 화면에서는 마케팅 네비 숨김
-  if (['/admin', '/attend', '/student', '/report'].some((p) => pathname?.startsWith(p))) {
+  // 관리자/학생 포털/출결/리포트 화면 및 메인 페이지에서는 마케팅 네비 숨김 (메인 페이지는 MainNavbar를 사용)
+  if (pathname === '/' || ['/admin', '/attend', '/student', '/report'].some((p) => pathname?.startsWith(p))) {
     return null
   }
 
