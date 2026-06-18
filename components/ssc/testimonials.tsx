@@ -1,7 +1,8 @@
 'use client'
 
+import React, { useRef } from 'react'
 import { useScrollReveal } from '@/hooks/use-scroll-reveal'
-import { Quote } from 'lucide-react'
+import { Quote, ChevronLeft, ChevronRight } from 'lucide-react'
 import { type TestimonialItem, streamContents } from '@/lib/stream-content'
 import { RhythmicText } from '@/components/ui/rhythmic-text'
 
@@ -19,6 +20,19 @@ export function Testimonials({
   campusName
 }: TestimonialsProps) {
   const ref = useScrollReveal()
+  const scrollRef = useRef<HTMLDivElement>(null)
+
+  const handleScroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const { scrollLeft } = scrollRef.current
+      const cardWidth = window.innerWidth * 0.85 + 16 // 모바일 카드 너비(85vw) + gap
+      const scrollAmount = direction === 'left' ? -cardWidth : cardWidth
+      scrollRef.current.scrollTo({
+        left: scrollLeft + scrollAmount,
+        behavior: 'smooth',
+      })
+    }
+  }
 
   // 지역명 자동 치환 함수
   const formatQuote = (quote: string) => {
@@ -67,8 +81,32 @@ export function Testimonials({
           </p>
         </div>
 
+        {/* Mobile Scroll Controls */}
+        <div className="flex md:hidden items-center justify-center gap-4 mb-6">
+          <button
+            onClick={() => handleScroll('left')}
+            className="w-9 h-9 rounded-full border border-black/5 flex items-center justify-center bg-white text-[#1D1D1F] active:scale-95 transition-all shadow-sm"
+            aria-label="이전 후기"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <span className="text-[11px] font-bold text-[#86868B] uppercase tracking-wider">
+            후기 넘겨보기
+          </span>
+          <button
+            onClick={() => handleScroll('right')}
+            className="w-9 h-9 rounded-full border border-black/5 flex items-center justify-center bg-white text-[#1D1D1F] active:scale-95 transition-all shadow-sm"
+            aria-label="다음 후기"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+
         {/* Desktop: grid / Mobile: snap scroll */}
-        <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-8 -mx-4 px-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-visible md:snap-none md:mx-0 md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden mb-12">
+        <div 
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-8 -mx-4 px-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-visible md:snap-none md:mx-0 md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden mb-12 scroll-smooth"
+        >
           {testimonials.map((t, i) => (
             <article
               key={t.name}

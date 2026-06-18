@@ -24,6 +24,7 @@ import { CAMPUS_CONFIG } from '@/lib/campus-config'
 import { RhythmicText } from '@/components/ui/rhythmic-text'
 import BlurFade from '@/components/ui/blur-fade'
 import { StreamStructuredData } from '@/components/ssc/seo-structured-data'
+import GongmuwonCards from '@/components/ssc/gongmuwon-cards'
 
 export default function StreamPage({
   campus,
@@ -169,6 +170,9 @@ export default function StreamPage({
 
       {/* Stats Section */}
       <AnimatedStats />
+
+      {/* Gongmuwon Specific Strengths Cards */}
+      {stream === 'gongmuwon' && <GongmuwonCards campusName={campusName} />}
 
       {/* Shared Components */}
       <div id="testimonials">
