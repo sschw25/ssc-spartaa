@@ -11,6 +11,9 @@ interface StudyStats {
   weekRank: { rank: number; total: number } | null;
   weekStart: string;
   monthStart: string;
+  weekAttendedDays?: number;
+  weekExpectedDays?: number;
+  weekAbsentDays?: number;
 }
 
 function fmt(min: number): string {
@@ -62,6 +65,29 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
               </div>
             </div>
           </div>
+
+          {/* 이번 주 출석 현황 */}
+          {typeof stats.weekExpectedDays === 'number' && stats.weekExpectedDays > 0 && (
+            <div className="flex items-center justify-between rounded-2xl border border-black/[0.05] bg-[#F5F5F7] px-4 py-3">
+              <span className="text-[11px] font-semibold text-[#86868B] flex items-center gap-1.5">
+                <CalendarDays className="w-3.5 h-3.5" /> 이번 주 출석
+              </span>
+              <span className="flex items-center gap-2">
+                <span className="text-sm font-bold text-[#1D1D1F]">
+                  {stats.weekAttendedDays ?? 0} / {stats.weekExpectedDays}일
+                </span>
+                {(stats.weekAbsentDays ?? 0) > 0 ? (
+                  <span className="text-[10px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
+                    결석 {stats.weekAbsentDays}일
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    개근
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
 
           {/* 요일별 분포 */}
           <div>

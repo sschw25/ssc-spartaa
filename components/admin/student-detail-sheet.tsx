@@ -1980,7 +1980,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return [...bookSummaries, ...lectureSummaries];
   };
 
-  const loadCurrentStudySummaryTemplate = () => {
+  const loadCurrentStudySummaryTemplate = async () => {
     const timeLabels: Record<string, string> = {
       morning: getStudyTimeSlot('morning')?.displayLabel || '오전',
       afternoon: getStudyTimeSlot('afternoon')?.displayLabel || '오후',
@@ -2016,7 +2016,30 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       : '- 등록된 시간표가 없습니다.';
 
     const nextDate = cslNextDate || nextConsultationDate || '미지정';
-    const template = `[현재 학습상황 요약]\n${subjectLines}\n\n[시간표 및 상담 일정]\n${scheduleLines}\n- 다음 상담 예정일: ${nextDate}\n\n[진도 판단]\n- \n\n[이번 주 조치]\n- \n\n[다음 상담 확인 사항]\n- `;
+
+    // 실제 출결/순공 통계 주입 (리포트 API 재사용 — 실패해도 요약은 정상 생성)
+    let attendanceBlock = '';
+    try {
+      const res = await fetch(`/api/report/${student.id}`, { cache: 'no-store' });
+      const json = await res.json();
+      const st = json?.studyStats;
+      if (st) {
+        const fmtStudyMin = (m: number) => {
+          const total = Math.max(0, Math.round(m || 0));
+          const h = Math.floor(total / 60);
+          const mm = total % 60;
+          return h > 0 ? `${h}시간 ${mm}분` : `${mm}분`;
+        };
+        const attendText = `이번 주 출석: ${st.weekAttendedDays ?? 0}/${st.weekExpectedDays ?? 0}일`
+          + ((st.weekAbsentDays ?? 0) > 0 ? ` (결석 ${st.weekAbsentDays}일)` : ' (개근)');
+        const rankText = st.weekRank ? `\n- 이번 주 순공 등수: ${st.weekRank.rank}등 / ${st.weekRank.total}명` : '';
+        attendanceBlock = `\n\n[출결·순공 현황]\n- 이번 주 순공: ${fmtStudyMin(st.weekTotalMin)} / 이번 달: ${fmtStudyMin(st.monthTotalMin)}\n- ${attendText}${rankText}`;
+      }
+    } catch {
+      // 출결 데이터 없이 진행
+    }
+
+    const template = `[현재 학습상황 요약]\n${subjectLines}\n\n[시간표 및 상담 일정]\n${scheduleLines}\n- 다음 상담 예정일: ${nextDate}${attendanceBlock}\n\n[진도 판단]\n- \n\n[이번 주 조치]\n- \n\n[다음 상담 확인 사항]\n- `;
 
     updateConsultationDraft(template);
     toast.info('현재 학습상황 요약을 상담 기록에 불러왔습니다.');
