@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowLeft, ChevronUp, ChevronDown, ChevronsUpDown, Loader2, RefreshCw, CalendarDays } from 'lucide-react';
+import { WeeklyTardiness } from '@/components/admin/weekly-tardiness';
 
 type Arrival = '08:20' | '09:00';
 interface Row {
@@ -49,6 +50,7 @@ export default function AdminAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [campusFilter, setCampusFilter] = useState('all');
+  const [mode, setMode] = useState<'daily' | 'weekly'>('daily');
   const [sortKey, setSortKey] = useState<SortKey>('checkIn');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [reloadKey, setReloadKey] = useState(0);
@@ -159,14 +161,23 @@ export default function AdminAttendancePage() {
 
       <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-5">
         <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setDate((d) => shiftDate(d, -1))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">◀ 어제</button>
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
-              <CalendarDays className="w-3.5 h-3.5 text-[#86868B]" />
-              <input type="date" value={date} max={todayKST()} onChange={(e) => e.target.value && setDate(e.target.value)} className="bg-transparent text-xs font-bold outline-none" />
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="inline-flex p-0.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
+              {([['daily', '일별'], ['weekly', '주간 지각']] as const).map(([k, label]) => (
+                <button key={k} onClick={() => setMode(k)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mode === k ? 'bg-white text-[#1D1D1F] shadow-sm' : 'text-[#86868B]'}`}>{label}</button>
+              ))}
             </div>
-            <button onClick={() => setDate((d) => shiftDate(d, 1))} disabled={date >= todayKST()} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7] disabled:opacity-40">내일 ▶</button>
-            <button onClick={() => setDate(todayKST())} className="px-2.5 py-1.5 rounded-lg bg-[#1D1D1F] text-white text-xs font-bold">오늘</button>
+            {mode === 'daily' && (
+              <>
+                <button onClick={() => setDate((d) => shiftDate(d, -1))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">◀ 어제</button>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
+                  <CalendarDays className="w-3.5 h-3.5 text-[#86868B]" />
+                  <input type="date" value={date} max={todayKST()} onChange={(e) => e.target.value && setDate(e.target.value)} className="bg-transparent text-xs font-bold outline-none" />
+                </div>
+                <button onClick={() => setDate((d) => shiftDate(d, 1))} disabled={date >= todayKST()} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7] disabled:opacity-40">내일 ▶</button>
+                <button onClick={() => setDate(todayKST())} className="px-2.5 py-1.5 rounded-lg bg-[#1D1D1F] text-white text-xs font-bold">오늘</button>
+              </>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {['all', 'wonju', 'chuncheon', 'chungju'].map((c) => (
@@ -177,6 +188,10 @@ export default function AdminAttendancePage() {
           </div>
         </div>
 
+        {mode === 'weekly' ? (
+          <WeeklyTardiness campusFilter={campusFilter} />
+        ) : (
+        <>
         {s && (
           <div className="flex flex-wrap gap-3 text-xs font-bold">
             <span className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">정시 {s.ontime}</span>
@@ -240,6 +255,8 @@ export default function AdminAttendancePage() {
           )}
         </div>
         <p className="text-[10px] text-[#86868B] text-center">학생별 지각 기준(08:20 / 09:00)을 바로 지정할 수 있습니다. 등원시각이 기준을 넘으면 ‘지각’으로 표시됩니다. 컬럼 머리글을 누르면 정렬됩니다.</p>
+        </>
+        )}
       </main>
     </div>
   );

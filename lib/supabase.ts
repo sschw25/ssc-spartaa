@@ -298,6 +298,18 @@ export async function getSessionsByDateSupabase(date: string): Promise<StudySess
   return (data || []) as StudySession[];
 }
 
+// 날짜 구간([start, end], KST)의 전체 학생 세션 — 주간 지각 누적 등 기간 집계용
+export async function getSessionsInRangeSupabase(start: string, end: string): Promise<StudySession[]> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .select('*')
+    .gte('date', start)
+    .lte('date', end)
+    .order('check_in', { ascending: true });
+  if (error) throw error;
+  return (data || []) as StudySession[];
+}
+
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {
   const client = getClient();
   // 기존 db.ts 동작 유지: id 또는 (name+type) 동일하면 갱신, 아니면 신규

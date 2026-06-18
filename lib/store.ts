@@ -19,6 +19,7 @@ import {
   getOpenSessionSupabase,
   getOpenSessionsSupabase,
   getSessionsByDateSupabase,
+  getSessionsInRangeSupabase,
   checkInSupabase,
   checkOutSupabase,
   getStudySessionsSupabase,
@@ -102,6 +103,10 @@ export async function getOpenSessions(): Promise<StudySession[]> {
 export async function getSessionsByDate(date: string): Promise<StudySession[]> {
   requireSupabase();
   return getSessionsByDateSupabase(date);
+}
+export async function getSessionsInRange(start: string, end: string): Promise<StudySession[]> {
+  requireSupabase();
+  return getSessionsInRangeSupabase(start, end);
 }
 export async function checkIn(studentId: string, source = 'qr'): Promise<StudySession> {
   requireSupabase();
