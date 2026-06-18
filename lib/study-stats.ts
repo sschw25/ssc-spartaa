@@ -63,6 +63,40 @@ export interface Leaderboard {
   total: number;   // 이번 주 순공 1분 이상 기록한 학생 수
 }
 
+// 내 순공 위치(동기부여용) — 타인 명단 없이 본인 중심. 총원/절대등수(10위 밖)는 비노출.
+export interface MyStanding {
+  hasRecord: boolean;
+  myMinutes: number;
+  inTop10: boolean;
+  rank: number | null;       // TOP 10 안일 때만 (총원 추정 방지)
+  toTop10: number;           // TOP 10 진입까지 더 필요한 순공(분)
+  nextUpGap: number | null;  // 바로 위 한 명까지 남은 순공(분) — 익명
+  cutline: number;           // TOP 10 커트라인(10위 순공, 익명)
+  top1: number;              // 1위 순공(익명, 목표)
+}
+export function buildMyStanding(
+  minutesByStudent: Record<string, number>,
+  students: Array<{ id: string }>,
+  myId: string
+): MyStanding {
+  const ranked = students
+    .map((s) => ({ id: s.id, minutes: minutesByStudent[s.id] || 0 }))
+    .filter((r) => r.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes);
+
+  const myMinutes = minutesByStudent[myId] || 0;
+  const hasRecord = myMinutes > 0;
+  const myRank = hasRecord ? ranked.filter((r) => r.minutes > myMinutes).length + 1 : null;
+  const inTop10 = !!myRank && myRank <= 10;
+  const cutline = ranked.length >= 10 ? ranked[9].minutes : (ranked.length ? ranked[ranked.length - 1].minutes : 0);
+  const toTop10 = inTop10 ? 0 : Math.max(0, cutline - myMinutes);
+  const ahead = ranked.filter((r) => r.minutes > myMinutes).map((r) => r.minutes);
+  const nextUpGap = ahead.length ? Math.min(...ahead) - myMinutes : null;
+  const top1 = ranked.length ? ranked[0].minutes : 0;
+
+  return { hasRecord, myMinutes, inTop10, rank: inTop10 ? myRank : null, toTop10, nextUpGap, cutline, top1 };
+}
+
 // 순공 랭킹 — 이름 마스킹, 본인 등수 포함. (순공 0분은 순위 제외)
 // 표준 경쟁 순위(동점은 같은 등수, 다음 등수는 건너뜀) — studyStats.weekRank 와 일치.
 export function buildLeaderboard(

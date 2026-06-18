@@ -573,7 +573,7 @@ export default function StudentReportPage() {
           <StudyStatsCard stats={studyStats} />
 
           {/* 주간 순공 랭킹 (열품타식 — 학생 본인 화면에서만) */}
-          {isStudentReport && <LeaderboardCard />}
+          {isStudentReport && <LeaderboardCard studentId={studentId} />}
 
           {/* 2. 최근 생활 및 종합 피드백 */}
           <div className="space-y-4 print-card">

@@ -1,39 +1,26 @@
 import { NextResponse } from 'next/server';
-import { getStudentSessionId, isAdmin } from '@/lib/auth';
+import { getStudentSessionId, isAdmin, canViewStudent } from '@/lib/auth';
 import { activeBackend, getStudents, getStudyMinutesByStudent, getOpenSessions } from '@/lib/store';
-import { getPeriodBounds, buildLeaderboard, type Leaderboard } from '@/lib/study-stats';
+import { getPeriodBounds, buildMyStanding } from '@/lib/study-stats';
 
-const TOP_N = 10;
+// 내 순공 위치(동기부여) — 타인 명단 없이 본인 중심, 총원/절대등수(10위 밖) 비노출.
+// studentId(리포트 주인공) 지정 시 canViewStudent 로 본인/관리자만 허용.
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const studentId = url.searchParams.get('studentId') || '';
 
-// 학생에게는 전체 인원/절대 등수를 노출하지 않음.
-// 상위 10명 + "내가 10위까지 얼마나 더 채우면 되는지"만 제공 (동기부여, 프라이버시).
-function toStudentBoard(board: Leaderboard) {
-  const top = board.top.slice(0, TOP_N);
-  const meInTop = top.find((e) => e.isMe) || null;
-  const myMinutes = board.my?.minutes ?? 0;
-  // 10위(마지막 노출) 순공 — 진입 기준선
-  const threshold = top.length ? top[top.length - 1].minutes : 0;
-  const inTop = !!meInTop;
-  return {
-    top,
-    me: {
-      inTop,
-      rank: inTop ? meInTop!.rank : null, // 10위 밖이면 등수 비노출 (총원 추정 방지)
-      myMinutes,
-      hasRecord: myMinutes > 0,
-      // 10위 진입까지 더 필요한 순공(분). 자리가 10개 미만이면 0(빈 자리 존재).
-      minutesToEnterTop: inTop || top.length < TOP_N ? 0 : Math.max(0, threshold - myMinutes),
-    },
-  };
-}
-
-// 순공 랭킹 (열품타식 동기부여). 로그인 학생 본인 또는 관리자만.
-// 이름 마스킹 + 총원/절대등수 비노출. 'liveCount'는 지금 등원 중 인원.
-export async function GET() {
-  const sid = await getStudentSessionId();
-  const admin = await isAdmin();
-  if (!sid && !admin) {
-    return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
+  let meId = '';
+  if (studentId) {
+    if (!(await canViewStudent(studentId))) {
+      return NextResponse.json({ success: false, message: '열람 권한이 없습니다.' }, { status: 401 });
+    }
+    meId = studentId;
+  } else {
+    const sid = await getStudentSessionId();
+    if (!sid && !(await isAdmin())) {
+      return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    meId = sid || '';
   }
 
   if (activeBackend() !== 'supabase') {
@@ -48,18 +35,15 @@ export async function GET() {
       getStudyMinutesByStudent(todayStr),
       getOpenSessions(),
     ]);
-
-    const roster = students.map((s) => ({ id: s.id, name: s.name, campus: s.campus }));
-    const week = toStudentBoard(buildLeaderboard(weekMin, roster, sid || '', TOP_N));
-    const day = toStudentBoard(buildLeaderboard(dayMin, roster, sid || '', TOP_N));
+    const roster = students.map((s) => ({ id: s.id }));
 
     return NextResponse.json({
       success: true,
       configured: true,
       weekStart,
       today: todayStr,
-      week,
-      day,
+      week: buildMyStanding(weekMin, roster, meId),
+      day: buildMyStanding(dayMin, roster, meId),
       liveCount: openSessions.length,
     });
   } catch (e: any) {
