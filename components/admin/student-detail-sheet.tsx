@@ -2032,7 +2032,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         };
         const attendText = `이번 주 출석: ${st.weekAttendedDays ?? 0}/${st.weekExpectedDays ?? 0}일`
           + ((st.weekAbsentDays ?? 0) > 0 ? ` (결석 ${st.weekAbsentDays}일)` : ' (개근)');
-        const rankText = st.weekRank ? `\n- 이번 주 순공 등수: ${st.weekRank.rank}등 / ${st.weekRank.total}명` : '';
+        const rankText = st.weekPercent != null ? `\n- 이번 주 순공 상위: 상위 ${st.weekPercent}%` : '';
         attendanceBlock = `\n\n[출결·순공 현황]\n- 이번 주 순공: ${fmtStudyMin(st.weekTotalMin)} / 이번 달: ${fmtStudyMin(st.monthTotalMin)}\n- ${attendText}${rankText}`;
       }
     } catch {

@@ -32,7 +32,8 @@ export interface StudyStats {
   monthTotalMin: number;
   byWeekday: { label: string; min: number }[];
   peakWeekday: { label: string; min: number } | null;
-  weekRank: { rank: number; total: number } | null; // 본인 등수 (남의 정보 미포함)
+  weekRank: { rank: number; total: number } | null; // 본인 등수 (내부용 — 화면엔 상위%만 노출)
+  weekPercent: number | null; // 상위 % (전체 원생 대비) — 절대등수/총원 비노출
   weekStart: string;
   monthStart: string;
   weekAttendedDays: number;  // 이번 주 출석(등하원 기록 있는) 일수
@@ -192,13 +193,16 @@ export function buildStudyStats(opts: {
   // 등수: 본인보다 이번 주 순공이 많은 학생 수 + 1. (남의 분/이름은 반환하지 않음)
   const myWeekMin = weeklyMinutesByStudent[myId] || 0;
   let weekRank: { rank: number; total: number } | null = null;
+  let weekPercent: number | null = null; // 상위 % (전체 원생 대비) — 절대등수/총원 비노출용
   if (myWeekMin > 0) {
     const moreCount = Object.values(weeklyMinutesByStudent).filter((v) => v > myWeekMin).length;
-    weekRank = { rank: moreCount + 1, total: Math.max(totalStudents, moreCount + 1) };
+    const rank = moreCount + 1;
+    weekRank = { rank, total: Math.max(totalStudents, rank) };
+    weekPercent = rank === 1 ? 1 : Math.max(1, Math.round((rank / Math.max(totalStudents, rank)) * 100));
   }
 
   return {
-    weekTotalMin, monthTotalMin, byWeekday, peakWeekday, weekRank, weekStart, monthStart,
+    weekTotalMin, monthTotalMin, byWeekday, peakWeekday, weekRank, weekPercent, weekStart, monthStart,
     weekAttendedDays, weekExpectedDays, weekAbsentDays, currentStreak,
   };
 }

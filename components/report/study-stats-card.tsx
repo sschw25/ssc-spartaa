@@ -9,6 +9,7 @@ interface StudyStats {
   byWeekday: { label: string; min: number }[];
   peakWeekday: { label: string; min: number } | null;
   weekRank: { rank: number; total: number } | null;
+  weekPercent?: number | null;
   weekStart: string;
   monthStart: string;
   weekAttendedDays?: number;
@@ -59,10 +60,10 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
             </div>
             <div className="rounded-2xl bg-[#0071E3]/[0.06] border border-[#0071E3]/15 p-4">
               <div className="text-[11px] text-[#0071E3] font-semibold flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" /> 이번 주 등수
+                <Trophy className="w-3.5 h-3.5" /> 이번 주 상위
               </div>
               <div className="text-xl font-bold text-[#0071E3] mt-1">
-                {stats.weekRank ? `${stats.weekRank.rank}등 / ${stats.weekRank.total}명` : '—'}
+                {stats.weekPercent != null ? `상위 ${stats.weekPercent}%` : '—'}
               </div>
             </div>
           </div>
