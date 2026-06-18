@@ -38,6 +38,50 @@ export interface StudyStats {
   weekAttendedDays: number;  // 이번 주 출석(등하원 기록 있는) 일수
   weekExpectedDays: number;  // 이번 주 월~토 중 오늘까지 경과 일수 (학원 운영일 기준)
   weekAbsentDays: number;    // 결석일 = 기대 출석일 − 실제 출석일
+  currentStreak: number;     // 연속 공부일 (일요일 휴원은 건너뜀, 오늘 미출석은 깨지 않음)
+}
+
+// 이름 마스킹: 가운데 글자를 O 로 (랭킹 등 타인 노출 시 프라이버시)
+export function maskName(name: string): string {
+  const n = (name || '').trim();
+  if (n.length <= 1) return n || '익명';
+  if (n.length === 2) return n[0] + 'O';
+  return n[0] + 'O'.repeat(n.length - 2) + n[n.length - 1];
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  name: string;     // 마스킹된 이름
+  campus: string;
+  minutes: number;
+  isMe: boolean;
+}
+
+export interface Leaderboard {
+  top: LeaderboardEntry[];
+  my: { rank: number; minutes: number; total: number } | null;
+  total: number;   // 이번 주 순공 1분 이상 기록한 학생 수
+}
+
+// 주간 순공 랭킹 — 이름 마스킹, 본인 등수 포함. (순공 0분은 순위 제외)
+export function buildLeaderboard(
+  weeklyMinutesByStudent: Record<string, number>,
+  students: Array<{ id: string; name: string; campus: string }>,
+  myId: string,
+  topN = 20
+): Leaderboard {
+  const ranked = students
+    .map((s) => ({ id: s.id, name: s.name, campus: s.campus, minutes: weeklyMinutesByStudent[s.id] || 0 }))
+    .filter((r) => r.minutes > 0)
+    .sort((a, b) => b.minutes - a.minutes)
+    .map((r, i) => ({ ...r, rank: i + 1 }));
+
+  const top = ranked.slice(0, topN).map((r) => ({
+    rank: r.rank, name: maskName(r.name), campus: r.campus, minutes: r.minutes, isMe: r.id === myId,
+  }));
+  const meRow = ranked.find((r) => r.id === myId);
+  const my = meRow ? { rank: meRow.rank, minutes: meRow.minutes, total: ranked.length } : null;
+  return { top, my, total: ranked.length };
 }
 
 export function buildStudyStats(opts: {
@@ -82,6 +126,23 @@ export function buildStudyStats(opts: {
   }
   const weekAbsentDays = Math.max(0, weekExpectedDays - weekAttendedDays);
 
+  // 연속 공부일: 오늘부터 거슬러, 일요일(휴원)은 건너뛰고, 출석한 운영일을 연속 카운트.
+  // 오늘 아직 미출석이면 streak 를 깨지 않고 어제부터 계산. (세션 데이터 범위 = 이번 달 이후로 상한)
+  const attendedDates = new Set(sessions.map((s) => s.date));
+  let currentStreak = 0;
+  let cursor = todayStr;
+  let isFirst = true;
+  while (cursor >= monthStart) {
+    if (weekdayOf(cursor) === 0) { cursor = addDays(cursor, -1); continue; } // 일요일 휴원 → 건너뜀
+    if (attendedDates.has(cursor)) {
+      currentStreak += 1;
+    } else if (!isFirst) {
+      break; // 운영일인데 결석 → 연속 종료
+    }
+    isFirst = false;
+    cursor = addDays(cursor, -1);
+  }
+
   // 등수: 본인보다 이번 주 순공이 많은 학생 수 + 1. (남의 분/이름은 반환하지 않음)
   const myWeekMin = weeklyMinutesByStudent[myId] || 0;
   let weekRank: { rank: number; total: number } | null = null;
@@ -92,6 +153,6 @@ export function buildStudyStats(opts: {
 
   return {
     weekTotalMin, monthTotalMin, byWeekday, peakWeekday, weekRank, weekStart, monthStart,
-    weekAttendedDays, weekExpectedDays, weekAbsentDays,
+    weekAttendedDays, weekExpectedDays, weekAbsentDays, currentStreak,
   };
 }

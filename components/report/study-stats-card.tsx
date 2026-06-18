@@ -14,6 +14,7 @@ interface StudyStats {
   weekAttendedDays?: number;
   weekExpectedDays?: number;
   weekAbsentDays?: number;
+  currentStreak?: number;
 }
 
 function fmt(min: number): string {
@@ -73,6 +74,11 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
                 <CalendarDays className="w-3.5 h-3.5" /> 이번 주 출석
               </span>
               <span className="flex items-center gap-2">
+                {(stats.currentStreak ?? 0) > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
+                    <Flame className="w-3 h-3" /> {stats.currentStreak}일 연속
+                  </span>
+                )}
                 <span className="text-sm font-bold text-[#1D1D1F]">
                   {stats.weekAttendedDays ?? 0} / {stats.weekExpectedDays}일
                 </span>
