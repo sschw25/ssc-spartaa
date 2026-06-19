@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target } from 'lucide-react';
+import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu } from 'lucide-react';
 import { Student, DetailedPlan } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
@@ -13,11 +13,12 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
-import { STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
+import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { StudyStatsCard } from '@/components/report/study-stats-card';
 import { LeaderboardCard } from '@/components/report/leaderboard-card';
+import { AttendanceStatusCard } from '@/components/report/attendance-status-card';
 
 export default function StudentReportPage() {
   const params = useParams();
@@ -34,12 +35,13 @@ export default function StudentReportPage() {
   const [error, setError] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     async function loadReport() {
       try {
-        const res = await fetch(`/api/report/${studentId}`);
+        const res = await fetch(`/api/report/${studentId}?audience=${audience}`);
         if (res.ok) {
           const json = await res.json();
           if (json.success) {
@@ -61,7 +63,7 @@ export default function StudentReportPage() {
     if (studentId) {
       loadReport();
     }
-  }, [studentId]);
+  }, [studentId, audience]);
 
   const getCampusLabel = (val: string) => {
     switch(val) {
@@ -75,6 +77,15 @@ export default function StudentReportPage() {
   // 인쇄 대화 상자 열기
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/student/auth/logout', { method: 'POST' });
+    } catch {
+      // 로그아웃 요청 실패 시에도 로그인 화면으로 이동
+    }
+    window.location.href = '/student/login';
   };
 
   if (loading) {
@@ -169,6 +180,49 @@ export default function StudentReportPage() {
   const weeklyPlans = collectPlans(weekStart, weekEnd);
   const monthlyPlans = collectPlans(monthStart, monthEnd);
 
+  const getPlanUnitLabel = (rangeText: string) => {
+    const rangeWithoutPass = rangeText.replace(/\d+회독/g, '');
+    if (rangeText.includes('문제')) return '문제';
+    if (rangeText.includes('강')) return '강';
+    if (rangeText.toLowerCase().includes('p')) return 'p';
+    if (rangeWithoutPass.includes('회')) return '회';
+    return '';
+  };
+
+  const monthlyPlanSummaries = Array.from(monthlyPlans.reduce((acc, plan) => {
+    const key = `${plan.type}_${plan.materialId}_${plan.subject}_${plan.title}`;
+    const unit = getPlanUnitLabel(plan.rangeText || '');
+    const current = acc.get(key) || {
+      key,
+      subject: plan.subject,
+      title: plan.title,
+      type: plan.type,
+      totalAmount: 0,
+      unit,
+      startDate: plan.startDate,
+      endDate: plan.endDate,
+      planCount: 0,
+    };
+
+    current.totalAmount += Number(plan.targetAmount || 0);
+    current.planCount += 1;
+    current.startDate = plan.startDate < current.startDate ? plan.startDate : current.startDate;
+    current.endDate = plan.endDate > current.endDate ? plan.endDate : current.endDate;
+    current.unit = current.unit || unit;
+    acc.set(key, current);
+    return acc;
+  }, new Map<string, {
+    key: string;
+    subject: string;
+    title: string;
+    type: string;
+    totalAmount: number;
+    unit: string;
+    startDate: string;
+    endDate: string;
+    planCount: number;
+  }>()).values()).sort((a, b) => a.subject.localeCompare(b.subject) || a.title.localeCompare(b.title));
+
   // 오늘 기준 1개월치 상세 계획 필터링 (지난 1주 ~ 향후 3주, 약 4~5주 분량)
   const getOneMonthPlans = (plans: DetailedPlan[] | undefined) => {
     if (!plans || plans.length === 0) return [];
@@ -249,6 +303,12 @@ export default function StudentReportPage() {
     night: getStudyTimeSlot('night')?.displayLabel || '야간',
     '': '미지정',
   };
+  const studyTimeRanges: Record<string, string> = {
+    morning: '08:20~12:30',
+    afternoon: '13:50~17:40',
+    night: '18:50~23:20',
+    '': '',
+  };
 
   const formatDateKey = (date: Date) => {
     const year = date.getFullYear();
@@ -272,6 +332,70 @@ export default function StudentReportPage() {
       '';
     return `하루 ${amount}${unit}`;
   };
+
+  const getKstNowParts = () => {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Seoul',
+      weekday: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(new Date());
+    const value = (type: string) => parts.find((part) => part.type === type)?.value || '';
+    return {
+      weekday: value('weekday'),
+      hour: Number(value('hour')),
+      minute: Number(value('minute')),
+    };
+  };
+
+  const toMinutes = (time: string) => {
+    const [hour, minute] = time.split(':').map(Number);
+    return hour * 60 + minute;
+  };
+
+  const kstNow = getKstNowParts();
+  const currentMinutes = kstNow.hour * 60 + kstNow.minute;
+  const currentPeriod = ACADEMY_TIMETABLE.find((period) => {
+    const start = toMinutes(period.start);
+    const end = toMinutes(period.end);
+    return start <= currentMinutes && currentMinutes < end;
+  });
+  const currentStudyTimeKey = currentPeriod?.studyTime || '';
+  const weekdayKeyMap: Record<string, 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'> = {
+    Sun: 'sun',
+    Mon: 'mon',
+    Tue: 'tue',
+    Wed: 'wed',
+    Thu: 'thu',
+    Fri: 'fri',
+    Sat: 'sat',
+  };
+  const todayDayKey = weekdayKeyMap[kstNow.weekday] || 'mon';
+  const currentSubjects = (student.subjects || []).filter((subject) => {
+    const subjectDays = subject.studyDays || [];
+    const matchesDay = subjectDays.length === 0 || subjectDays.includes(todayDayKey);
+    return matchesDay && (subject.studyTime || '') === currentStudyTimeKey;
+  });
+  const todaySubjects = (student.subjects || []).filter((subject) => {
+    const subjectDays = subject.studyDays || [];
+    return subjectDays.length === 0 || subjectDays.includes(todayDayKey);
+  });
+  const nonStudyPeriodLabel = currentPeriod && !currentPeriod.studyTime ? currentPeriod.label : '';
+  const currentSubjectText = currentSubjects.length > 0
+    ? currentSubjects.map((subject) => subject.name).join(' · ')
+    : currentStudyTimeKey
+      ? '배정 과목 확인 중'
+      : nonStudyPeriodLabel || '운영 시간 외';
+  const currentBriefingPhrase = currentSubjects.length > 0
+    ? `지금은 ${currentSubjectText} 시간입니다`
+    : `지금은 ${currentSubjectText}입니다`;
+  const currentStudyLabel = currentStudyTimeKey
+    ? studyTimeLabels[currentStudyTimeKey]
+    : nonStudyPeriodLabel || '운영 시간 외';
+  const currentStudyRange = currentPeriod
+    ? `${currentPeriod.start}~${currentPeriod.end}`
+    : '시간표 외 구간';
 
   const isPlanActiveOnDate = (plan: DetailedPlan, dateKey: string) =>
     plan.startDate <= dateKey && dateKey <= plan.endDate;
@@ -354,6 +478,24 @@ export default function StudentReportPage() {
     return colors[hash % colors.length];
   };
 
+  const reportNavItems = [
+    { href: '#report-overview', label: '리포트 개요', meta: getCampusLabel(student.campus), icon: User },
+    ...(isStudentReport
+      ? [{ href: '#attendance-status', label: '등하원 상태', meta: '실시간 출결', icon: Clock }]
+      : []),
+    { href: '#study-stats', label: isStudentReport ? '순공/랭킹' : '학습 통계', meta: '학습 시간 비교', icon: Award },
+    { href: '#coach-feedback', label: '코칭 소견', meta: isStudentReport ? '학생 피드백' : '학부모 브리핑', icon: MessageSquare },
+    ...(isStudentReport
+      ? [
+          { href: '#timetable', label: '요일 시간표', meta: `${student.subjects?.length || 0}개 과목`, icon: Calendar },
+          { href: '#execution-plan', label: '실행 계획표', meta: '학습 플래너', icon: Target },
+          { href: '#period-plan', label: '주·월간 계획', meta: '핵심 범위', icon: Sparkles },
+        ]
+      : []),
+    { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
+    { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
+  ];
+
   return (
     <div className="report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] py-8 md:py-16 px-4 font-sans text-[#1E293B] antialiased transition-all">
       
@@ -397,6 +539,7 @@ export default function StudentReportPage() {
           }
 
           .print-container {
+            display: block !important;
             max-width: 190mm !important;
             width: 190mm !important;
             margin: 0 auto !important;
@@ -412,6 +555,37 @@ export default function StudentReportPage() {
             border-radius: 0 !important;
             padding: 4mm 4mm !important;
             box-shadow: none !important;
+          }
+
+          .report-paper [class~="md:flex-row"] {
+            flex-direction: row !important;
+          }
+
+          .report-paper [class~="md:items-start"] {
+            align-items: flex-start !important;
+          }
+
+          .report-paper [class~="md:grid-cols-2"] {
+            display: grid !important;
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+
+          .report-paper [class~="md:grid-cols-3"] {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+          }
+
+          .report-paper [class~="md:grid-cols-4"] {
+            display: grid !important;
+            grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+          }
+
+          .report-paper [class~="md:col-span-2"] {
+            grid-column: span 2 / span 2 !important;
+          }
+
+          .report-paper [class~="md:col-span-3"] {
+            grid-column: span 3 / span 3 !important;
           }
 
           .print-card,
@@ -438,75 +612,202 @@ export default function StudentReportPage() {
         }
       `}</style>
 
-      <div className="max-w-5xl mx-auto space-y-6 print-container">
+      <div className={`${isStudentReport ? 'max-w-5xl' : 'max-w-[1320px] xl:grid xl:grid-cols-[250px_minmax(0,1fr)] xl:items-start xl:gap-6'} mx-auto print-container`}>
+        {isParentReport && (
+          <aside className="no-print sticky top-6 hidden xl:block">
+            <nav className="rounded-[28px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+              <div className="border-b border-slate-100 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#0071E3]">Parent Report Menu</p>
+                <h2 className="mt-2 text-lg font-black tracking-tight text-slate-900">학습 결과 목차</h2>
+                <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">필요한 영역을 바로 확인하세요.</p>
+              </div>
+
+              <div className="mt-4 space-y-1.5">
+                {reportNavItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="group flex items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-all hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/40"
+                    >
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-slate-100 bg-slate-50 text-slate-500 transition-colors group-hover:border-[#0071E3]/20 group-hover:bg-[#0071E3]/5 group-hover:text-[#0071E3]">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block truncate text-xs font-black text-slate-800">{item.label}</span>
+                        <span className="block truncate text-[10px] font-bold text-slate-400">{item.meta}</span>
+                      </span>
+                    </a>
+                  );
+                })}
+              </div>
+            </nav>
+          </aside>
+        )}
+
+        <div className="min-w-0 space-y-6">
         
-        {/* 상단 컨트롤러 (인쇄 전용 - no-print) */}
-        <div className="no-print flex flex-col sm:flex-row justify-between sm:items-center gap-4 bg-white/80 backdrop-blur-xl p-4 sm:p-5 rounded-3xl border border-slate-200/80 shadow-[0_10px_30px_rgba(0,0,0,0.03)] transition-all">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-2.5 h-2.5 rounded-full bg-[#0071E3] animate-pulse shrink-0" />
-            <div className="text-xs font-bold text-slate-500 tracking-tight truncate">
-              {isStudentReport ? 'SSC SPARTA · 학생 맞춤 학습 결과 리포트' : 'SSC SPARTA · 학부모용 학습 결과 브리핑 결과지'}
+        {/* 상단 컨트롤러 (인쇄 제외) */}
+        {isStudentReport ? (
+          <div className="no-print fixed left-4 top-4 z-50">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 bg-white/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+              aria-expanded={mobileMenuOpen}
+              aria-label="학습 메뉴 열기"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+
+            {mobileMenuOpen && (
+              <div className="mt-2 w-[min(82vw,320px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Menu</p>
+                    <p className="mt-0.5 text-sm font-black text-slate-900">학습 메뉴</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm"
+                  >
+                    <LogOut className="h-3.5 w-3.5 text-slate-400" />
+                    로그아웃
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 gap-1.5">
+                  {reportNavItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10"
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
+                          <Icon className="h-4 w-4" />
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block truncate text-[11px] font-black text-slate-800">{item.label}</span>
+                          <span className="block truncate text-[9px] font-bold text-slate-400">{item.meta}</span>
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="no-print flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl transition-all sm:flex-row sm:items-center sm:justify-between sm:p-5">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="h-2.5 w-2.5 shrink-0 animate-pulse rounded-full bg-[#0071E3]" />
+              <div className="truncate text-xs font-bold tracking-tight text-slate-500">
+                SSC SPARTA · 학부모용 학습 결과 브리핑 결과지
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button
+                onClick={() => window.location.href = '/admin/dashboard'}
+                size="sm"
+                variant="outline"
+                className="flex h-10 items-center gap-2 rounded-2xl border-slate-200/80 bg-white px-4 text-xs font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+              >
+                <LayoutDashboard className="h-4 w-4 text-slate-400" />
+                대시보드
+              </Button>
+              <Button
+                onClick={handlePrint}
+                size="sm"
+                className="flex h-10 items-center gap-2 rounded-2xl border-0 bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-5 text-xs font-semibold text-white shadow-[0_4px_14px_rgba(0,113,227,0.3)] transition-all hover:from-[#005DB9] hover:to-[#00A3FF]"
+              >
+                <Printer className="h-4 w-4" />
+                PDF 저장 / 리포트 출력
+              </Button>
             </div>
           </div>
-          {isStudentReport && (
-            <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-slate-50/80 p-1.5 shadow-inner">
-              <span className="px-2 text-[10px] font-black text-slate-500">계획</span>
-              {planWeekOptions.map((week) => (
-                <button
-                  key={week}
-                  type="button"
-                  onClick={() => setVisiblePlanWeeks(week)}
-                  className={`h-7 min-w-8 rounded-xl px-2 text-[10px] font-black transition-all ${
-                    visiblePlanWeeks === week
-                      ? 'bg-[#111827] text-white shadow-sm'
-                      : 'text-slate-500 hover:bg-white hover:text-slate-900'
-                  }`}
-                >
-                  {week}주
-                </button>
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              onClick={() => window.location.href = '/admin/dashboard'}
-              size="sm"
-              variant="outline"
-              className="rounded-2xl border-slate-200/80 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold px-4 h-10 transition-all shadow-sm flex items-center gap-2"
-            >
-              <LayoutDashboard className="w-4 h-4 text-slate-400" />
-              대시보드
-            </Button>
-            <Button
-              onClick={handlePrint}
-              size="sm"
-              className="rounded-2xl bg-gradient-to-r from-[#0071E3] to-[#00C7FF] hover:from-[#005DB9] hover:to-[#00A3FF] text-white text-xs font-semibold px-5 h-10 transition-all shadow-[0_4px_14px_rgba(0,113,227,0.3)] border-0 flex items-center gap-2"
-            >
-              <Printer className="w-4 h-4" />
-              PDF 저장 / 리포트 출력
-            </Button>
-          </div>
-        </div>
+        )}
 
         {/* 결과 리포트 종이 영역 */}
         <div className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10">
           
           {/* 1. 리포트 헤더 */}
-          <div className="border-b border-slate-100 pb-8 flex flex-col md:flex-row justify-between md:items-start gap-6">
-            <div className="space-y-3">
-              <div className="inline-flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.2em] text-[#0071E3] bg-[#0071E3]/5 px-3 py-1.5 rounded-lg uppercase">
-                <Sparkles className="w-3.5 h-3.5 text-[#0071E3]" />
-                SSC SPARTA STUDY REPORT
+          <div id="report-overview" className="scroll-mt-24 border-b border-slate-100 pb-8 flex flex-col md:flex-row justify-between md:items-start gap-6">
+            {isStudentReport ? (
+              <div className="w-full space-y-6">
+                <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0 space-y-3">
+                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#0071E3]/5 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0071E3]">
+                      <Sparkles className="h-3.5 w-3.5 text-[#0071E3]" />
+                      SSC SPARTA DAILY BRIEFING
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-[#0071E3]">오늘의 학습 브리핑</p>
+                      <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl md:leading-tight">
+                        {student.name}님,
+                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">
+                          {currentBriefingPhrase} 👋
+                        </span>
+                      </h1>
+                    </div>
+                    <p className="max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+                      오늘 배정된 학습 흐름과 현재 집중해야 할 과목을 먼저 확인하세요.
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/5 p-4 text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)] md:min-w-[190px] md:text-right">
+                    <span className="block text-[9px] font-bold uppercase tracking-wider text-[#0071E3]/70">현재 시간대</span>
+                    <span className="mt-1 block text-sm font-black text-slate-800">{currentStudyLabel}</span>
+                    <span className="mt-1 block text-[10px] font-bold text-slate-400">{currentStudyRange}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">오늘 과목</p>
+                    <p className="mt-2 text-sm font-black text-slate-800">
+                      {todaySubjects.length > 0 ? `${todaySubjects.length}개 과목` : '배정 과목 없음'}
+                    </p>
+                    <p className="mt-1 truncate text-[10px] font-bold text-slate-400">
+                      {todaySubjects.map((subject) => subject.name).join(' · ') || '오늘 등록된 과목이 없습니다.'}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">현재 집중</p>
+                    <p className="mt-2 text-sm font-black text-slate-800">{currentSubjectText}</p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-400">{currentStudyLabel}</p>
+                  </div>
+                  <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">발행 일자</p>
+                    <p className="mt-2 text-sm font-black text-slate-800">
+                      {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-slate-400">실시간 학생용 화면</p>
+                  </div>
+                </div>
               </div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900 md:leading-tight">
-                {student.name} 원생 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">{isStudentReport ? '학생용' : '학부모용'}</span> 학습 결과지
-              </h1>
-            </div>
-            
-            <div className="text-left md:text-right shrink-0 bg-slate-50/80 border border-slate-100 p-4 rounded-2xl min-w-[150px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)]">
-              <span className="text-[9px] text-slate-400 font-bold block tracking-wider uppercase mb-1">발행 일자</span>
-              <span className="text-xs font-bold text-slate-700">{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-            </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <div className="inline-flex items-center gap-1.5 text-[10px] font-extrabold tracking-[0.2em] text-[#0071E3] bg-[#0071E3]/5 px-3 py-1.5 rounded-lg uppercase">
+                    <Sparkles className="w-3.5 h-3.5 text-[#0071E3]" />
+                    SSC SPARTA STUDY REPORT
+                  </div>
+                  <h1 className="text-3xl font-black tracking-tight text-slate-900 md:leading-tight">
+                    {student.name} 원생 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">학부모용</span> 학습 결과지
+                  </h1>
+                </div>
+
+                <div className="text-left md:text-right shrink-0 bg-slate-50/80 border border-slate-100 p-4 rounded-2xl min-w-[150px] shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)]">
+                  <span className="text-[9px] text-slate-400 font-bold block tracking-wider uppercase mb-1">발행 일자</span>
+                  <span className="text-xs font-bold text-slate-700">{new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* 원생 메타 격자 프로필 카드 */}
@@ -569,14 +870,23 @@ export default function StudentReportPage() {
 
 
 
+          {/* 학생 본인 등하원 상태 */}
+          {isStudentReport && (
+            <div id="attendance-status" className="scroll-mt-24">
+              <AttendanceStatusCard />
+            </div>
+          )}
+
           {/* 순공 시간 / 등하원 통계 */}
-          <StudyStatsCard stats={studyStats} />
+          <div id="study-stats" className="scroll-mt-24">
+            <StudyStatsCard stats={studyStats} />
+          </div>
 
           {/* 주간 순공 랭킹 (열품타식 — 학생 본인 화면에서만) */}
           {isStudentReport && <LeaderboardCard studentId={studentId} />}
 
           {/* 2. 최근 생활 및 종합 피드백 */}
-          <div className="space-y-4 print-card">
+          <div id="coach-feedback" className="scroll-mt-24 space-y-4 print-card">
             <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-[#0071E3]" />
               학습 코칭 및 관리 위원회 최종 소견
@@ -625,7 +935,7 @@ export default function StudentReportPage() {
 
           {/* 2-1. 과목별 학습 시간표 */}
           {isStudentReport && (
-            <div className="space-y-5 print-card">
+            <div id="timetable" className="scroll-mt-24 space-y-5 print-card">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#862BF7]" />
@@ -730,19 +1040,19 @@ export default function StudentReportPage() {
           )}
 
           {isStudentReport && (
-            <div className="space-y-5 print-card">
+            <div id="execution-plan" className="scroll-mt-24 space-y-5 print-card">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-[#0071E3]" />
-                    {visiblePlanWeeks}주 실행 학습 계획표
+                    오늘 기준 실행 학습 계획표
                   </h3>
                   <p className="mt-1 text-[10px] font-bold text-slate-400">
                     요일별로 어떤 공부를 어떤 순서로, 하루에 어느 정도 진행할지 정리했습니다.
                   </p>
                 </div>
                 <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
-                  최대 8주까지 출력 가능
+                  오늘 기준 실행 브리핑
                 </span>
               </div>
 
@@ -812,7 +1122,7 @@ export default function StudentReportPage() {
 
           {/* 2-2. 이번 주 / 이번 달 학습 계획 */}
           {isStudentReport && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 print-card">
+            <div id="period-plan" className="scroll-mt-24 grid grid-cols-1 md:grid-cols-2 gap-6 print-card">
               <div className="p-6 rounded-3xl border border-slate-100 bg-white space-y-4.5 shadow-sm transition-all hover:shadow-md">
                 <h3 className="text-xs font-black text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-2">
                   <span>📅</span> 이번 주 핵심 주간 학습 계획
@@ -840,18 +1150,29 @@ export default function StudentReportPage() {
                 <h3 className="text-xs font-black text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-2">
                   <span>📈</span> 이번 달 핵심 월간 학습 계획
                 </h3>
-                {monthlyPlans.length === 0 ? (
+                {monthlyPlanSummaries.length === 0 ? (
                   <p className="text-xs text-slate-400 font-bold py-6 text-center italic">이번 달 설정된 월간 학습 계획이 없습니다.</p>
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 print:max-h-none print:overflow-visible print:pr-0">
-                    {monthlyPlans.map((plan) => (
-                      <div key={`${plan.materialId}_${plan.id}_month`} className="text-[10px] p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100/50 hover:bg-slate-50 transition-colors">
-                        <div className="flex justify-between items-center font-bold text-slate-700 mb-1">
-                          <span className="truncate max-w-[190px]">{plan.subject} · {plan.title}</span>
-                          <span className="text-[#862BF7] shrink-0 font-extrabold bg-[#862BF7]/5 px-2 py-0.5 rounded-lg border border-[#862BF7]/10">{plan.weekNumber}주차</span>
+                    {monthlyPlanSummaries.map((summary) => (
+                      <div key={summary.key} className="text-[10px] p-4 rounded-2xl bg-slate-50/70 border border-slate-100/50 hover:bg-slate-50 transition-colors">
+                        <div className="flex justify-between items-start gap-3 font-bold text-slate-700 mb-2">
+                          <span className="min-w-0">
+                            <span className="block truncate text-[11px] font-black text-slate-700">{summary.subject} · {summary.title}</span>
+                            <span className="mt-1 inline-flex rounded-md bg-white px-1.5 py-0.5 text-[8px] font-black text-slate-400 ring-1 ring-slate-100">
+                              {summary.type}
+                            </span>
+                          </span>
+                          <span className="shrink-0 rounded-2xl border border-[#862BF7]/10 bg-[#862BF7]/5 px-3 py-1.5 text-right">
+                            <span className="block text-[8px] font-black text-[#862BF7]/70">월 총량</span>
+                            <span className="block text-sm font-black text-[#862BF7]">
+                              {summary.totalAmount}
+                              {summary.unit}
+                            </span>
+                          </span>
                         </div>
                         <p className="text-slate-400 text-[9px] font-semibold">
-                          범위: {plan.rangeText} · 일일 목표: {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}
+                          월간 집계 기간: {summary.startDate} ~ {summary.endDate} · {summary.planCount}개 계획 합산
                         </p>
                       </div>
                     ))}
@@ -862,7 +1183,7 @@ export default function StudentReportPage() {
           )}
 
           {/* 3. 과목별 진도율 및 학습 진척도 */}
-          <div className="space-y-5 print-card">
+          <div id="subject-progress" className="scroll-mt-24 space-y-5 print-card">
             <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
               <FileText className="w-4 h-4 text-[#862BF7]" />
               {isStudentReport ? '과목별 상세 학습 목표 및 주간 달성 스케줄러' : '과목별 학습 진도율 요약'}
@@ -1165,7 +1486,7 @@ export default function StudentReportPage() {
           </div>
 
           {/* 4. 성적 및 모의고사 분석 결과 */}
-          <div className="space-y-5 print-card">
+          <div id="grade-analysis" className="scroll-mt-24 space-y-5 print-card">
             <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-600" />
               모의고사 성적 추이 및 주간 테스트 분석 결과
@@ -1266,6 +1587,7 @@ export default function StudentReportPage() {
           이 결과 브리핑 리포트는 SSC 스파르타 관리형 학습센터의 공식 학원 관리 솔루션을 사용하여 실시간으로 보안 출력되었습니다.
         </div>
 
+      </div>
       </div>
     </div>
   );
