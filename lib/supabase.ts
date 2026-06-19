@@ -298,6 +298,33 @@ export async function getSessionsByDateSupabase(date: string): Promise<StudySess
   return (data || []) as StudySession[];
 }
 
+// 특정 학생의 특정 날짜 세션 전체 삭제 (수동 출결 입력 시 해당 일자 초기화/결석 처리)
+export async function deleteSessionsByStudentDateSupabase(studentId: string, date: string): Promise<void> {
+  const { error } = await getClient()
+    .from('study_sessions')
+    .delete()
+    .eq('student_id', studentId)
+    .eq('date', date);
+  if (error) throw error;
+}
+
+// 수동 출결 세션 1건 생성 (관리자 직접 입력)
+export async function insertManualSessionSupabase(
+  studentId: string, date: string, checkInIso: string, checkOutIso: string | null
+): Promise<StudySession> {
+  const minutes = checkOutIso
+    ? Math.max(0, Math.round((new Date(checkOutIso).getTime() - new Date(checkInIso).getTime()) / 60000))
+    : null;
+  const row = {
+    id: `att_m_${new Date(checkInIso).getTime()}_${Math.random().toString(36).slice(2, 7)}`,
+    student_id: studentId, date,
+    check_in: checkInIso, check_out: checkOutIso, minutes, source: 'manual',
+  };
+  const { data, error } = await getClient().from('study_sessions').insert(row).select().single();
+  if (error) throw error;
+  return data as StudySession;
+}
+
 // 날짜 구간([start, end], KST)의 전체 학생 세션 — 주간 지각 누적 등 기간 집계용
 export async function getSessionsInRangeSupabase(start: string, end: string): Promise<StudySession[]> {
   const { data, error } = await getClient()

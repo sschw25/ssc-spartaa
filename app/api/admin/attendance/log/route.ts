@@ -26,6 +26,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const dateParam = url.searchParams.get('date');
   const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam || '') ? dateParam! : getPeriodBounds().todayStr;
+  const includeAbsent = url.searchParams.get('includeAbsent') === '1';
 
   try {
     const [students, sessions, openSessions] = await Promise.all([

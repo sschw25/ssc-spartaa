@@ -20,6 +20,8 @@ import {
   getOpenSessionsSupabase,
   getSessionsByDateSupabase,
   getSessionsInRangeSupabase,
+  deleteSessionsByStudentDateSupabase,
+  insertManualSessionSupabase,
   checkInSupabase,
   checkOutSupabase,
   getStudySessionsSupabase,
@@ -107,6 +109,17 @@ export async function getSessionsByDate(date: string): Promise<StudySession[]> {
 export async function getSessionsInRange(start: string, end: string): Promise<StudySession[]> {
   requireSupabase();
   return getSessionsInRangeSupabase(start, end);
+}
+export async function deleteSessionsByStudentDate(studentId: string, date: string): Promise<void> {
+  requireSupabase();
+  return deleteSessionsByStudentDateSupabase(studentId, date);
+}
+export async function setManualAttendance(
+  studentId: string, date: string, checkInIso: string, checkOutIso: string | null
+): Promise<StudySession> {
+  requireSupabase();
+  await deleteSessionsByStudentDateSupabase(studentId, date); // 해당 일자 1건으로 정규화
+  return insertManualSessionSupabase(studentId, date, checkInIso, checkOutIso);
 }
 export async function checkIn(studentId: string, source = 'qr'): Promise<StudySession> {
   requireSupabase();
