@@ -40,6 +40,14 @@ function enrollmentText(daysLeft: number) {
   return `등록 종료 D-${daysLeft} · 재등록 문의`;
 }
 
+function nowLabelKST() {
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(new Date());
+}
+
+const AUTO_RESET_SEC = 6;
+
 export default function AttendKioskPage() {
   const [mode, setMode] = useState<Mode>('qr');
   const [token, setToken] = useState('');
@@ -55,6 +63,8 @@ export default function AttendKioskPage() {
   const [minutes, setMinutes] = useState<number | null>(null);
   const [enrollmentDaysLeft, setEnrollmentDaysLeft] = useState<number | null>(null);
   const [gradeReminder, setGradeReminder] = useState(false);
+  const [doneTime, setDoneTime] = useState('');
+  const [autoResetIn, setAutoResetIn] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -90,6 +100,18 @@ export default function AttendKioskPage() {
     };
   }, []);
 
+  // 완료 화면 자동 초기화 카운트다운 (입구 키오스크 회전율 ↑)
+  useEffect(() => {
+    if (submitState !== 'done') return;
+    if (autoResetIn == null) return;
+    if (autoResetIn <= 0) {
+      resetPhoneFlow();
+      return;
+    }
+    const t = setTimeout(() => setAutoResetIn((n) => (n == null ? null : n - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [submitState, autoResetIn]);
+
   const keypad = useMemo(() => ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'], []);
 
   const resetPhoneFlow = () => {
@@ -101,6 +123,8 @@ export default function AttendKioskPage() {
     setMinutes(null);
     setEnrollmentDaysLeft(null);
     setGradeReminder(false);
+    setDoneTime('');
+    setAutoResetIn(null);
   };
 
   const pressKey = (key: string) => {
@@ -157,8 +181,10 @@ export default function AttendKioskPage() {
       setMinutes(json.minutes ?? null);
       setEnrollmentDaysLeft(json.enrollmentDaysLeft ?? null);
       setGradeReminder(Boolean(json.gradeReminder));
+      setDoneTime(nowLabelKST());
       setMessage(json.studentName ? `${json.studentName} 학생` : '처리되었습니다.');
       setSubmitState('done');
+      setAutoResetIn(AUTO_RESET_SEC);
     } catch {
       setSubmitState('error');
       setMessage('네트워크 오류가 발생했습니다.');
@@ -254,29 +280,42 @@ export default function AttendKioskPage() {
 
               <div className="min-h-[360px] rounded-[24px] bg-white/10 p-5">
                 {submitState === 'done' ? (
-                  <div className="flex h-full flex-col items-center justify-center text-center">
-                    {action === 'check-out' ? (
-                      <LogOut className="mb-4 size-14 text-sky-300" />
-                    ) : (
-                      <CheckCircle2 className="mb-4 size-14 text-emerald-300" />
-                    )}
-                    <h2 className="text-2xl font-black">
+                  <div className="flex h-full flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-500">
+                    <span
+                      className={`mb-4 grid size-24 place-items-center rounded-full ${action === 'check-out' ? 'bg-sky-400/15' : 'bg-emerald-400/15'}`}
+                    >
+                      {action === 'check-out' ? (
+                        <LogOut className="size-12 text-sky-300 animate-in zoom-in-50 duration-700" />
+                      ) : (
+                        <CheckCircle2 className="size-12 text-emerald-300 animate-in zoom-in-50 duration-700" />
+                      )}
+                    </span>
+                    <h2 className="text-3xl font-black tracking-tight">
                       {action === 'check-out' ? '하원 완료' : '등원 완료'}
                     </h2>
-                    <p className="mt-2 text-sm font-bold text-slate-300">{message}</p>
-                    {action === 'check-out' && (
-                      <p className="mt-2 text-lg font-black text-white">{formatMinutes(minutes)}</p>
-                    )}
+                    <p className="mt-1.5 text-base font-bold text-slate-200">{message}</p>
+
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-bold">
+                      <span className="text-slate-400">{action === 'check-out' ? '하원' : '등원'}</span>
+                      <span className="text-white">{doneTime}</span>
+                      {action === 'check-out' && minutes != null && (
+                        <>
+                          <span className="text-slate-500">·</span>
+                          <span className="text-white">체류 {formatMinutes(minutes)}</span>
+                        </>
+                      )}
+                    </div>
+
                     {(enrollmentDaysLeft != null || gradeReminder) && (
                       <div className="mt-4 w-full max-w-xs space-y-2">
                         {enrollmentDaysLeft != null && (
-                          <div className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold ${enrollmentDaysLeft < 0 ? 'bg-red-500/20 text-red-200' : 'bg-amber-500/20 text-amber-200'}`}>
+                          <div className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold ${enrollmentDaysLeft < 0 ? 'bg-red-500/20 text-red-200' : 'bg-amber-500/20 text-amber-100'}`}>
                             <CalendarClock className="size-4 shrink-0" />
                             {enrollmentText(enrollmentDaysLeft)}
                           </div>
                         )}
                         {gradeReminder && (
-                          <div className="flex items-center justify-center gap-2 rounded-xl bg-sky-500/20 px-3 py-2 text-sm font-bold text-sky-200">
+                          <div className="flex items-center justify-center gap-2 rounded-xl bg-sky-500/20 px-3 py-2.5 text-sm font-bold text-sky-100">
                             <ClipboardList className="size-4 shrink-0" />
                             이번 주 성적 미입력 · 선생님께 전달
                           </div>
@@ -286,9 +325,9 @@ export default function AttendKioskPage() {
                     <button
                       type="button"
                       onClick={resetPhoneFlow}
-                      className="mt-6 h-11 rounded-lg bg-white px-5 text-sm font-black text-slate-950"
+                      className="mt-6 h-12 rounded-xl bg-white px-6 text-sm font-black text-slate-950 transition active:scale-[0.98]"
                     >
-                      다음 학생
+                      다음 학생{autoResetIn != null ? ` (${autoResetIn})` : ''}
                     </button>
                   </div>
                 ) : submitState === 'error' ? (
