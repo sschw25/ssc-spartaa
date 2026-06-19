@@ -132,14 +132,40 @@ export async function getStudentByIdSupabase(id: string): Promise<Student | null
 export async function saveStudentSupabase(student: Student): Promise<Student> {
   const nowIso = new Date().toISOString();
   const row = studentToRow(student, nowIso);
-  // 단일 행 upsert — 학생 수와 무관하게 O(1)
-  const { data, error } = await getClient()
+
+  // 기존 학생이 존재하는지 확인 (password_hash 유실 방지)
+  const { data: existing, error: checkError } = await getClient()
     .from('students')
-    .upsert(row, { onConflict: 'id' })
-    .select()
-    .single();
-  if (error) throw error;
-  return rowToStudent(data);
+    .select('id')
+    .eq('id', student.id)
+    .maybeSingle();
+
+  if (checkError) throw checkError;
+
+  let result;
+  if (existing) {
+    // 이미 존재하는 경우 update 실행.
+    // update는 명시된 컬럼만 수정하므로 password_hash가 보존됩니다.
+    const { data, error } = await getClient()
+      .from('students')
+      .update(row)
+      .eq('id', student.id)
+      .select()
+      .single();
+    if (error) throw error;
+    result = data;
+  } else {
+    // 존재하지 않는 경우 insert 실행.
+    const { data, error } = await getClient()
+      .from('students')
+      .insert(row)
+      .select()
+      .single();
+    if (error) throw error;
+    result = data;
+  }
+
+  return rowToStudent(result);
 }
 
 export async function deleteStudentSupabase(id: string): Promise<boolean> {

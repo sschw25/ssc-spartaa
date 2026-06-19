@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { LogIn, LogOut, UserX, Loader2, RefreshCw, Clock, Flame, ChevronDown } from 'lucide-react';
+import { Loader2, RefreshCw, Clock, Flame, ChevronDown } from 'lucide-react';
 
 type PresentRow = { id: string; name: string; campus: string; checkInAt: string; minutesSoFar: number; weekMinutes: number };
 type LeftRow = { id: string; name: string; campus: string; checkInAt: string; checkOutAt: string; minutes: number; weekMinutes: number };
@@ -101,13 +101,11 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     );
   }
 
-  const goDetail = (status: 'present' | 'left' | 'absent') => {
-    router.push(`/admin/attendance?status=${status}`);
-  };
+
 
   const Tile = ({
-    label, count, color, icon, section,
-  }: { label: string; count: number; color: string; icon: React.ReactNode; section: 'present' | 'left' | 'absent' }) => (
+    label, count, color, section,
+  }: { label: string; count: number; color: string; section: 'present' | 'left' | 'absent' }) => (
     <button
       type="button"
       onClick={() => {
@@ -121,23 +119,11 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     >
       <div className="flex items-center justify-between gap-2">
         <span className="admin-fit-label text-[10px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
-        <div className="p-1 rounded-lg bg-white/80 shadow-sm shrink-0">
-          {icon}
-        </div>
       </div>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-1">
+      <div className="mt-2 flex items-end justify-between">
         <div className="admin-fit-number text-xl font-extrabold tracking-tight text-[#1D1D1F]">
           {count}<span className="text-[10px] font-bold opacity-75 ml-0.5">명</span>
         </div>
-        <span
-          onClick={(event) => {
-            event.stopPropagation();
-            goDetail(section);
-          }}
-          className="rounded-full bg-white/90 hover:bg-white px-2.5 py-1 text-[9px] font-black shadow-sm ring-1 ring-black/[0.03] transition-colors whitespace-nowrap"
-        >
-          자세히
-        </span>
       </div>
     </button>
   );
@@ -175,21 +161,26 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
             <span className="text-[10px] font-extrabold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
           )}
         </div>
-        <button onClick={load} disabled={loading} className="text-[#86868B] hover:text-[#1D1D1F] transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7]" title="출결 새로고침">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => router.push('/admin/attendance')}
+            className="text-[11px] font-bold text-[#86868B] hover:text-[#1D1D1F] transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F5F7]"
+          >
+            자세히
+          </button>
+          <button onClick={load} disabled={loading} className="text-[#86868B] hover:text-[#1D1D1F] transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7]" title="출결 새로고침">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
       </div>
 
       <div className="flex gap-3">
         <Tile label="등원 중" count={present.length} section="present"
-          color="border-emerald-100/80 bg-gradient-to-br from-emerald-50/80 to-emerald-100/40 text-emerald-800"
-          icon={<LogIn className="w-3.5 h-3.5 text-emerald-600" />} />
+          color="border-emerald-100/80 bg-gradient-to-br from-emerald-50/80 to-emerald-100/40 text-emerald-800" />
         <Tile label="하원" count={left.length} section="left"
-          color="border-blue-100/80 bg-gradient-to-br from-blue-50/80 to-blue-100/40 text-blue-800"
-          icon={<LogOut className="w-3.5 h-3.5 text-blue-600" />} />
+          color="border-blue-100/80 bg-gradient-to-br from-blue-50/80 to-blue-100/40 text-blue-800" />
         <Tile label="미등원" count={absent.length} section="absent"
-          color="border-slate-200/80 bg-gradient-to-br from-slate-50/80 to-slate-100/40 text-slate-700"
-          icon={<UserX className="w-3.5 h-3.5 text-slate-500" />} />
+          color="border-slate-200/80 bg-gradient-to-br from-slate-50/80 to-slate-100/40 text-slate-700" />
       </div>
 
       {detailsOpen && (

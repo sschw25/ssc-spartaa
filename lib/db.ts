@@ -229,10 +229,13 @@ export function saveStudentLocal(student: Student): Student {
     });
   }
 
-  const updatedStudent = {
+  const existingStudent = index >= 0 ? students[index] : null;
+
+  const updatedStudent: Student = {
     ...student,
     books: allBooks.length > 0 ? allBooks : (student.books || []),
     lectures: allLectures.length > 0 ? allLectures : (student.lectures || []),
+    passwordHash: student.passwordHash || (existingStudent ? existingStudent.passwordHash : undefined),
     updatedAt: now,
     createdAt: student.createdAt || now,
   };

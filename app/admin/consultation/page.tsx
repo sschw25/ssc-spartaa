@@ -203,6 +203,24 @@ function ConsultationContent() {
     setCampusFilter(campus);
   };
 
+  const handleQuickFilterChange = (filter: 'all' | 'consultation' | 'behind') => {
+    setQuickFilter(filter);
+    if (filter === 'consultation') {
+      setDashboardTab('cards');
+    } else if (filter === 'behind') {
+      setDashboardTab('db');
+    }
+  };
+
+  const handleDashboardTabChange = (tab: string) => {
+    setDashboardTab(tab);
+    if (tab === 'cards' && quickFilter === 'behind') {
+      setQuickFilter('all');
+    } else if (tab === 'db' && quickFilter === 'consultation') {
+      setQuickFilter('all');
+    }
+  };
+
   useEffect(() => {
     if (checkingAuth) return;
 
@@ -662,7 +680,7 @@ function ConsultationContent() {
         
         {/* 필터 및 검색 바 */}
         <div className="admin-fit-box flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4.5 rounded-2xl border border-black/[0.05] shadow-sm">
-          <div className="admin-fit-row flex flex-1 items-center gap-2 admin-mobile-wrap">
+          <div className="admin-fit-row flex flex-1 flex-wrap items-center gap-3 admin-mobile-wrap">
             <div className="relative flex-1 max-w-md min-w-[14rem] admin-mobile-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B]" />
               <Input
@@ -672,6 +690,40 @@ function ConsultationContent() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 rounded-xl border-black/[0.08] text-xs h-10 bg-[#F5F5F7]"
               />
+            </div>
+
+            {/* 퀵 필터 토글 그룹 */}
+            <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
+              <Button
+                variant={quickFilter === 'all' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleQuickFilterChange('all')}
+                className={`h-8 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                  quickFilter === 'all' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                }`}
+              >
+                전체
+              </Button>
+              <Button
+                variant={quickFilter === 'consultation' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleQuickFilterChange('consultation')}
+                className={`h-8 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                  quickFilter === 'consultation' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                }`}
+              >
+                상담 대상
+              </Button>
+              <Button
+                variant={quickFilter === 'behind' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => handleQuickFilterChange('behind')}
+                className={`h-8 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                  quickFilter === 'behind' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                }`}
+              >
+                진도 부족
+              </Button>
             </div>
           </div>
 
@@ -691,7 +743,7 @@ function ConsultationContent() {
             <p className="text-xs text-[#86868B]">스마트 시트 정보 불러오는 중...</p>
           </div>
         ) : (
-          <Tabs value={dashboardTab} onValueChange={setDashboardTab} className="w-full" id="student-list-section">
+          <Tabs value={dashboardTab} onValueChange={handleDashboardTabChange} className="w-full" id="student-list-section">
             <div className="admin-fit-row flex justify-between items-center border-b border-black/[0.05] pb-4 mb-4 gap-3 admin-mobile-wrap">
               <TabsList className="bg-white border border-black/[0.06] p-1 grid grid-cols-2 gap-1 h-auto min-w-0 w-full sm:w-auto rounded-full shadow-sm">
                 <TabsTrigger 
@@ -1310,7 +1362,7 @@ function ConsultationContent() {
                                     const nextValue = Math.min(item.total, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
                                     setProgressDrafts(prev => ({
                                       ...prev,
-                                      [getProgressDraftKey(studentId, item.itemId)]: nextValue,
+                                      [getProgressDraftKey(item.studentId, item.itemId)]: nextValue,
                                     }));
                                   }}
                                   onBlur={() => {

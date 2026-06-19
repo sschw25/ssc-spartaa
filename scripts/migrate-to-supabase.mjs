@@ -88,6 +88,15 @@ async function run() {
       grades: s.grades || [],
       created_at: s.createdAt || now,
       updated_at: now,
+      // 신규 추가된 로그인/설정 필드 마이그레이션
+      login_id: s.loginId || null,
+      password_hash: s.passwordHash || null,
+      parent_phone: s.parentPhone || null,
+      student_phone: s.studentPhone || null,
+      sms_targets: s.smsTargets && s.smsTargets.length ? s.smsTargets : ['parent'],
+      expected_arrival: s.expectedArrival === '09:00' ? '09:00' : '08:20',
+      enrollment_end_date: s.enrollmentEndDate || null,
+      weekly_grade_check: Boolean(s.weeklyGradeCheck),
     };
   });
 

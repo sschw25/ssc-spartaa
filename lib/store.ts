@@ -71,18 +71,24 @@ export async function saveSharedMaterial(material: SharedMaterial): Promise<Shar
 // ── 학생 인증 ──
 export async function getStudentAuthRecords(): Promise<StudentAuthRecord[]> {
   if (isSupabaseConfigured()) return getStudentAuthRecordsSupabase();
-  // 로컬 폴백: 비밀번호 미지원
+  // 로컬 폴백: 비밀번호 지원
   return getStudentsLocal().map((s) => ({
     id: s.id,
     name: s.name,
     login_id: s.loginId || null,
     contact: s.contact || null,
-    password_hash: null
+    password_hash: s.passwordHash || null
   }));
 }
 
 export async function setStudentPasswordHash(studentId: string, hash: string): Promise<void> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 학생 비밀번호를 저장할 수 있습니다.');
+  if (!isSupabaseConfigured()) {
+    const student = getStudentLocal(studentId);
+    if (!student) throw new Error('원생 정보를 찾을 수 없습니다.');
+    student.passwordHash = hash;
+    saveStudentLocal(student);
+    return;
+  }
   return setStudentPasswordHashSupabase(studentId, hash);
 }
 

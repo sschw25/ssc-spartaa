@@ -31,7 +31,10 @@ export async function POST(request: Request) {
       const verified = [];
 
       for (const r of records) {
-        if (r.login_id && r.login_id.toLowerCase() === normalizedId && r.password_hash) {
+        const matchesLoginId = r.login_id && r.login_id.toLowerCase() === normalizedId;
+        const matchesName = r.name && normalizeName(r.name) === normalizeName(normalizedId);
+
+        if ((matchesLoginId || matchesName) && r.password_hash) {
           if (await bcrypt.compare(String(password), r.password_hash)) {
             verified.push(r);
           }
