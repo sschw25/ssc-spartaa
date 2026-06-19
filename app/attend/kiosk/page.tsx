@@ -203,15 +203,15 @@ export default function AttendKioskPage() {
   return (
     <main className="min-h-screen bg-[#111827] text-white font-sans">
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold tracking-[0.3em] text-slate-400">SSC SPARTA</p>
             <h1 className="mt-1 text-3xl font-black tracking-tight">등하원 체크</h1>
             {clock && <p className="mt-1 text-xs font-semibold text-slate-500">{clock}</p>}
           </div>
-          {/* 번호 입력 대신 스캔할 수 있는 작은 QR (상시 노출) */}
-          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-2.5 ring-1 ring-white/10">
-            <div className="grid size-[108px] place-items-center rounded-xl bg-white p-2.5">
+          {/* 번호 입력 대신 스캔으로 로그인할 수 있는 작은 QR (상시 노출) */}
+          <div className="flex shrink-0 items-center gap-3 rounded-2xl bg-white/[0.06] p-2.5 ring-1 ring-white/10">
+            <div className="grid size-[108px] shrink-0 place-items-center rounded-xl bg-white p-2.5">
               {tokenError ? (
                 <ScanLine className="size-8 text-red-400" />
               ) : url ? (
@@ -220,16 +220,16 @@ export default function AttendKioskPage() {
                 <Loader2 className="size-6 animate-spin text-slate-400" />
               )}
             </div>
-            <div className="hidden pr-1 sm:block">
+            <div className="pr-1">
               <p className="flex items-center gap-1.5 text-sm font-black text-white">
                 <span className="relative flex size-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
                 </span>
-                QR 스캔
+                QR로도 로그인
               </p>
               <p className="mt-1 text-[11px] leading-4 text-slate-400">
-                번호 입력 대신<br />휴대폰으로 스캔해도 돼요
+                번호 입력 대신<br />휴대폰으로 스캔해<br />로그인·등하원하세요
               </p>
             </div>
           </div>
