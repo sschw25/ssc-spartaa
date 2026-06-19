@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,6 +37,7 @@ export default function StudentReportPage() {
   const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('report-overview');
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   // 탭 전환 시 활성 탭을 가로 스크롤 영역 안으로 보이게(특히 메뉴로 먼 탭 선택 시)
   useEffect(() => {
@@ -513,6 +514,42 @@ export default function StudentReportPage() {
     { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
   ];
 
+  // 좌우 스와이프로 탭 전환 (앱형 제스처)
+  const tabIds = reportNavItems.map((item) => item.href.slice(1));
+  const goAdjacentTab = (dir: number) => {
+    const idx = tabIds.indexOf(activeTab);
+    if (idx === -1) return;
+    const next = Math.min(tabIds.length - 1, Math.max(0, idx + dir));
+    if (next !== idx) {
+      setActiveTab(tabIds[next]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+  const handleSwipeStart = (e: React.TouchEvent) => {
+    // 가로 스크롤되는 내부 요소(탭바/리스트)에서 시작하면 스와이프 무시
+    let node = e.target as HTMLElement | null;
+    while (node && node !== e.currentTarget) {
+      if (node.scrollWidth > node.clientWidth + 4) {
+        const ox = window.getComputedStyle(node).overflowX;
+        if (ox === 'auto' || ox === 'scroll') { swipeStart.current = null; return; }
+      }
+      node = node.parentElement;
+    }
+    const t = e.touches[0];
+    swipeStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const handleSwipeEnd = (e: React.TouchEvent) => {
+    const s = swipeStart.current;
+    swipeStart.current = null;
+    if (!s) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - s.x;
+    const dy = t.clientY - s.y;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) {
+      goAdjacentTab(dx < 0 ? 1 : -1);
+    }
+  };
+
   return (
     <div className="report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] py-8 md:py-16 px-4 font-sans text-[#1E293B] antialiased transition-all">
       
@@ -779,7 +816,11 @@ export default function StudentReportPage() {
         )}
 
         {/* 결과 리포트 종이 영역 */}
-        <div className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10">
+        <div
+          className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10"
+          onTouchStart={isStudentReport ? handleSwipeStart : undefined}
+          onTouchEnd={isStudentReport ? handleSwipeEnd : undefined}
+        >
           
           {/* 1. 리포트 헤더 */}
           <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
