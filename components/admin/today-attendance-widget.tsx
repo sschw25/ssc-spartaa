@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { LogIn, LogOut, UserX, Loader2, RefreshCw, ChevronDown, ChevronUp, Clock, Flame } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { LogIn, LogOut, UserX, Loader2, RefreshCw, Clock, Flame, ChevronDown } from 'lucide-react';
 
 type PresentRow = { id: string; name: string; campus: string; checkInAt: string; minutesSoFar: number; weekMinutes: number };
 type LeftRow = { id: string; name: string; campus: string; checkInAt: string; checkOutAt: string; minutes: number; weekMinutes: number };
@@ -33,10 +34,12 @@ const fmtMin = (m: number) => {
 };
 
 export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStudentId }: Props) {
+  const router = useRouter();
   const [data, setData] = useState<AttendanceData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [openSection, setOpenSection] = useState<'present' | 'left' | 'absent' | null>('present');
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [openSection, setOpenSection] = useState<'present' | 'left' | 'absent'>('present');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -73,7 +76,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     return (
       <div className={`${wrap} flex items-center justify-center py-8`}>
         <Loader2 className="w-5 h-5 text-[#0071E3] animate-spin mr-2" />
-        <span className="text-xs text-[#86868B]">오늘 출결 현황 불러오는 중…</span>
+        <span className="text-xs text-[#86868B]">오늘 출결 현황 불러오는 중...</span>
       </div>
     );
   }
@@ -92,27 +95,45 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
       <div className={`${wrap} flex items-center gap-3`}>
         <Clock className="w-4 h-4 text-[#86868B] shrink-0" />
         <p className="text-[11px] text-[#86868B] font-semibold leading-relaxed">
-          출결 연동(Supabase)이 설정되지 않아 실시간 출결을 표시할 수 없습니다. 키오스크 QR 출결을 사용하려면 데이터베이스 연결이 필요합니다.
+          출결 연동(Supabase)이 설정되지 않아 실시간 출결을 표시할 수 없습니다.
         </p>
       </div>
     );
   }
+
+  const goDetail = (status: 'present' | 'left' | 'absent') => {
+    router.push(`/admin/attendance?status=${status}`);
+  };
 
   const Tile = ({
     label, count, color, icon, section,
   }: { label: string; count: number; color: string; icon: React.ReactNode; section: 'present' | 'left' | 'absent' }) => (
     <button
       type="button"
-      onClick={() => setOpenSection((cur) => (cur === section ? null : section))}
+      onClick={() => {
+        setOpenSection(section);
+        setDetailsOpen(true);
+      }}
       className={`flex-1 rounded-xl border p-3 text-left transition-all ${
-        openSection === section ? 'ring-2 ring-offset-1' : 'hover:bg-black/[0.015]'
+        detailsOpen && openSection === section ? 'ring-2 ring-offset-1' : 'hover:bg-black/[0.015]'
       } ${color}`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span className="admin-fit-label text-[11px] font-bold uppercase tracking-wider opacity-80">{label}</span>
         {icon}
       </div>
-      <div className="admin-fit-number text-2xl font-bold mt-1.5">{count}<span className="text-sm font-semibold opacity-70"> 명</span></div>
+      <div className="mt-1.5 flex items-end justify-between gap-2">
+        <div className="admin-fit-number text-2xl font-bold">{count}<span className="text-sm font-semibold opacity-70"> 명</span></div>
+        <span
+          onClick={(event) => {
+            event.stopPropagation();
+            goDetail(section);
+          }}
+          className="rounded-lg bg-white/75 px-2 py-1 text-[10px] font-black shadow-sm ring-1 ring-black/[0.05]"
+        >
+          자세히
+        </span>
+      </div>
     </button>
   );
 
@@ -135,20 +156,25 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
 
   const WeekPace = ({ min }: { min: number }) => (
     <span className="flex items-center gap-1 text-[10px] font-bold text-[#86868B] shrink-0">
-      <Flame className="w-3 h-3 text-[#F56300]" />주 {fmtMin(min)}
+      <Flame className="w-3 h-3 text-[#F56300]" /> 주 {fmtMin(min)}
     </span>
   );
 
   return (
     <div className={wrap}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="mb-3 flex items-center justify-between">
+        <button
+          type="button"
+          onClick={() => setDetailsOpen((open) => !open)}
+          className="flex min-w-0 items-center gap-2 text-left"
+        >
           <h3 className="admin-fit-text text-sm font-bold text-[#1D1D1F]">오늘 출결 현황</h3>
           {data?.today && <span className="text-[10px] font-bold text-[#86868B]">{data.today}</span>}
           {campusFilter !== 'all' && (
             <span className="text-[10px] font-bold text-[#0071E3] bg-blue-50 px-1.5 py-0.5 rounded-full">{campusLabel(campusFilter)}</span>
           )}
-        </div>
+          <ChevronDown className={`h-4 w-4 text-[#86868B] transition-transform ${detailsOpen ? 'rotate-180' : ''}`} />
+        </button>
         <button onClick={load} disabled={loading} className="text-[#86868B] hover:text-[#1D1D1F] disabled:opacity-50" title="출결 새로고침">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
@@ -166,8 +192,8 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
           icon={<UserX className="w-4 h-4 text-slate-500" />} />
       </div>
 
-      {openSection && (
-        <div className="mt-3 pt-3 border-t border-black/[0.05] max-h-72 overflow-y-auto -mx-1 px-1">
+      {detailsOpen && (
+        <div className="mt-3 max-h-72 overflow-y-auto border-t border-black/[0.05] px-1 pt-3">
           {openSection === 'present' && (
             present.length === 0 ? <Empty text="현재 등원 중인 원생이 없습니다." /> :
             present.map((r) => (

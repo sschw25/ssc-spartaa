@@ -9,8 +9,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
-  Users, User, Calendar, BarChart3, Search, Plus, Minus, LogOut, Loader2, 
-  MapPin, AlertTriangle, ChevronRight, SlidersHorizontal, BookOpen, Tv, Settings,
+  Users, User, Calendar, BarChart3, Search, Plus, Minus, LogOut, Loader2,
+  AlertTriangle, ChevronRight, SlidersHorizontal, BookOpen,
   ArrowLeft, LayoutDashboard, LayoutGrid, Table, Menu, ClipboardList, ScanLine
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -22,6 +22,9 @@ import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 
+const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
+const isCampusFilterValue = (value: string | null): value is string => !!value && CAMPUS_FILTERS.includes(value);
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -32,6 +35,7 @@ export default function AdminDashboardPage() {
   // 검색 & 필터 상태
   const [searchTerm, setSearchTerm] = useState('');
   const [campusFilter, setCampusFilter] = useState('all');
+  const [campusFilterStorageKey, setCampusFilterStorageKey] = useState('');
   const [quickFilter, setQuickFilter] = useState<'all' | 'consultation' | 'behind'>('all');
   const [dashboardTab, setDashboardTab] = useState('cards');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('table');
@@ -83,6 +87,14 @@ export default function AdminDashboardPage() {
           router.replace('/admin');
           return;
         }
+        const json = await res.json();
+        const userKey = json.userId || json.username || json.role || 'admin';
+        const storageKey = `ssc-admin-dashboard-campus-filter:${userKey}`;
+        const savedCampusFilter = window.localStorage.getItem(storageKey);
+        if (isCampusFilterValue(savedCampusFilter)) {
+          setCampusFilter(savedCampusFilter);
+        }
+        setCampusFilterStorageKey(storageKey);
         // 인증 성공 시 데이터 로드
         loadStudents();
       } catch (err) {
@@ -93,6 +105,11 @@ export default function AdminDashboardPage() {
     }
     verifyAuth();
   }, [router]);
+
+  useEffect(() => {
+    if (!campusFilterStorageKey) return;
+    window.localStorage.setItem(campusFilterStorageKey, campusFilter);
+  }, [campusFilter, campusFilterStorageKey]);
 
   // 2. 학생 데이터 로드
   const loadStudents = async () => {
@@ -138,11 +155,15 @@ export default function AdminDashboardPage() {
     window.setTimeout(() => searchEl.focus(), 250);
   };
 
+  const handleCampusFilterChange = (campus: string) => {
+    if (!isCampusFilterValue(campus)) return;
+    setCampusFilter(campus);
+  };
+
   const handleShowAllStudents = () => {
     setQuickFilter('all');
     setDashboardTab('cards');
     setSearchTerm('');
-    setCampusFilter('all');
     window.setTimeout(() => document.getElementById('student-list-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   };
 
@@ -297,20 +318,22 @@ export default function AdminDashboardPage() {
   };
 
   // 데이터 가공 및 통계 계산
-  const totalStudentsCount = students.length;
+  const campusScopedStudents = students.filter(s => campusFilter === 'all' || s.campus === campusFilter);
+  const totalStudentsCount = campusScopedStudents.length;
+  const selectedCampusLabel = campusFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(campusFilter);
   
   // 오늘 상담이 예정되었거나 지난 학생들
   const todayStr = new Date().toISOString().split('T')[0];
-  const pendingConsultationStudents = students.filter(s => {
+  const pendingConsultationStudents = campusScopedStudents.filter(s => {
     if (!s.nextConsultationDate) return false;
     return s.nextConsultationDate <= todayStr;
   });
 
   // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
-  const weeklyGradeMissingStudents = students.filter(s => isWeeklyGradeMissing(s));
+  const weeklyGradeMissingStudents = campusScopedStudents.filter(s => isWeeklyGradeMissing(s));
 
   // 진도 관리 항목 단일 소스 (과목 기반). 평균/필터/테이블이 모두 이 값을 공유한다.
-  const allProgressItems = getManagedProgressItems(students);
+  const allProgressItems = getManagedProgressItems(campusScopedStudents);
 
   // 전체 교재/인강 완강 평균 진도율 — 진도표와 동일한 소스로 계산 (수치 불일치 방지)
   const calculateAverageProgress = () => {
@@ -328,13 +351,76 @@ export default function AdminDashboardPage() {
   };
 
   const averageProgress = calculateAverageProgress();
+  const activeProgressItems = allProgressItems.filter(item => item.total > 0 && item.current < item.total);
+
+  type PopularStudyRank = {
+    key: string;
+    label: string;
+    meta?: string;
+    studentCount: number;
+    itemCount: number;
+    averageProgress: number;
+  };
+
+  const buildPopularRanks = (
+    items: typeof activeProgressItems,
+    keyOf: (item: typeof activeProgressItems[number]) => string,
+    labelOf: (item: typeof activeProgressItems[number]) => string,
+    metaOf?: (item: typeof activeProgressItems[number]) => string
+  ): PopularStudyRank[] => {
+    const groups = new Map<string, {
+      label: string;
+      meta?: string;
+      students: Set<string>;
+      itemCount: number;
+      progressTotal: number;
+    }>();
+
+    items.forEach((item) => {
+      const key = keyOf(item).trim() || '기타';
+      const existing = groups.get(key) || {
+        label: labelOf(item).trim() || '기타',
+        meta: metaOf?.(item),
+        students: new Set<string>(),
+        itemCount: 0,
+        progressTotal: 0,
+      };
+      existing.students.add(item.studentId);
+      existing.itemCount += 1;
+      existing.progressTotal += Math.round((item.current / item.total) * 100);
+      groups.set(key, existing);
+    });
+
+    return Array.from(groups.entries())
+      .map(([key, group]) => ({
+        key,
+        label: group.label,
+        meta: group.meta,
+        studentCount: group.students.size,
+        itemCount: group.itemCount,
+        averageProgress: group.itemCount > 0 ? Math.round(group.progressTotal / group.itemCount) : 0,
+      }))
+      .sort((a, b) => b.studentCount - a.studentCount || b.itemCount - a.itemCount || b.averageProgress - a.averageProgress || a.label.localeCompare(b.label, 'ko'))
+      .slice(0, 5);
+  };
+
+  const popularSubjectRanks = buildPopularRanks(
+    activeProgressItems,
+    (item) => item.subjectName,
+    (item) => item.subjectName
+  );
+  const popularBookRanks = buildPopularRanks(
+    activeProgressItems.filter(item => item.type === 'book'),
+    (item) => item.title,
+    (item) => item.title,
+    (item) => item.subjectName
+  );
 
   // 검색 및 필터링된 학생 목록
-  const filteredStudents = students.filter(s => {
+  const filteredStudents = campusScopedStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCampus = campusFilter === 'all' || s.campus === campusFilter;
     const matchesQuickFilter = quickFilter !== 'consultation' || pendingConsultationStudents.some(target => target.id === s.id);
-    return matchesSearch && matchesCampus && matchesQuickFilter;
+    return matchesSearch && matchesQuickFilter;
   });
 
   // 상태 우선순위 (부족 → 진행중 → 충족 → 계획없음)
@@ -345,9 +431,8 @@ export default function AdminDashboardPage() {
     .filter(item => {
       const matchesSearch = item.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             item.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCampus = campusFilter === 'all' || item.campus === campusFilter;
       const matchesQuickFilter = quickFilter !== 'behind' || item.status === 'behind';
-      return matchesSearch && matchesCampus && matchesQuickFilter;
+      return matchesSearch && matchesQuickFilter;
     })
     .sort((a, b) => {
       if (progressSort === 'name') {
@@ -384,14 +469,14 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const getCampusLabel = (val: string) => {
+  function getCampusLabel(val: string) {
     switch(val) {
       case 'wonju': return '원주';
       case 'chuncheon': return '춘천';
       case 'chungju': return '충주';
       default: return '기타';
     }
-  };
+  }
 
   const getCampusBadgeColor = (val: string) => {
     switch(val) {
@@ -488,6 +573,24 @@ export default function AdminDashboardPage() {
           </Button>
           <span className="font-extrabold text-sm tracking-tight text-white bg-[#1D1D1F] px-2.5 py-1.5 rounded-lg mr-2">SSC</span>
           <h1 className="admin-fit-text text-sm font-bold tracking-tight">학습 및 진도 체계적 관리 대시보드</h1>
+        </div>
+        <div className="flex items-center gap-2 rounded-xl border border-black/[0.05] bg-[#F5F5F7] p-1 shrink-0">
+          <span className="hidden sm:inline px-2 text-[10px] font-black text-[#86868B]">센터</span>
+          <div className="flex min-w-0 overflow-hidden">
+            {CAMPUS_FILTERS.map((c) => (
+              <Button
+                key={c}
+                size="sm"
+                variant={campusFilter === c ? 'default' : 'ghost'}
+                onClick={() => handleCampusFilterChange(c)}
+                className={`admin-fit-button h-8 rounded-lg px-2.5 text-[11px] md:px-3 ${
+                  campusFilter === c ? 'bg-white hover:bg-white text-black shadow-sm font-bold' : 'text-[#86868B] hover:bg-white/60'
+                }`}
+              >
+                {c === 'all' ? '전체' : getCampusLabel(c)}
+              </Button>
+            ))}
+          </div>
         </div>
         <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
           <Button
@@ -622,7 +725,21 @@ export default function AdminDashboardPage() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
-        {/* 1. 알림 배너 (상담 필요 학생) */}
+        {/* 1. 출결 우선 카드 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <TodayAttendanceWidget
+            campusFilter={campusFilter}
+            refreshSignal={attendanceRefresh}
+            onSelectStudentId={handleOpenStudentById}
+          />
+          <AdminLeaderboard
+            campusFilter={campusFilter}
+            refreshSignal={attendanceRefresh}
+            onSelectStudentId={handleOpenStudentById}
+          />
+        </div>
+
+        {/* 2. 알림 배너 (상담 필요 학생) */}
         {pendingConsultationStudents.length > 0 && (
           <div className="admin-fit-box bg-amber-50 border border-amber-200 rounded-2xl p-4.5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 animate-pulse-slow shadow-sm">
             <div className="admin-fit-row flex items-start gap-3">
@@ -654,7 +771,7 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* 1-2. 알림 배너 (이번 주 성적 미입력) */}
+        {/* 2-2. 알림 배너 (이번 주 성적 미입력) */}
         {weeklyGradeMissingStudents.length > 0 && (
           <div className="admin-fit-box bg-blue-50 border border-blue-200 rounded-2xl p-4.5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-sm">
             <div className="admin-fit-row flex items-start gap-3">
@@ -686,48 +803,22 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* 2. 대시보드 통계 카드 */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-          <Card
-            onClick={handleShowAllStudents}
-            className="admin-fit-box border border-black/[0.05] rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer focus-within:ring-2 focus-within:ring-[#0071E3]/30"
-          >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardDescription className="admin-fit-text admin-fit-label font-bold tracking-wider text-[#86868B] uppercase">총 수강 원생</CardDescription>
-              <Users className="admin-fit-icon w-4 h-4 text-[#0071E3]" />
-            </CardHeader>
-            <CardContent>
-              <div className="admin-fit-number font-bold">{totalStudentsCount} 명</div>
-              <p className="admin-fit-caption text-[#86868B] mt-1">
-                원주 / 춘천 / 충주 통합 관리 중인 원생 수
-              </p>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleShowAllStudents();
-                }}
-                className="admin-fit-caption text-[#0071E3] mt-2 font-bold hover:underline text-left"
-              >
-                전체 원생 보기
-              </button>
-            </CardContent>
-          </Card>
-
+        {/* 3. 상담/관리 요약 카드 */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
           <Card
             onClick={handleShowConsultationStudents}
-            className={`admin-fit-box border rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+            className={`admin-fit-box gap-1.5 border rounded-xl bg-white py-3.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
               quickFilter === 'consultation' ? 'border-[#0071E3] bg-blue-50/50 ring-2 ring-[#0071E3]/20' : 'border-black/[0.05]'
             }`}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardDescription className="admin-fit-text admin-fit-label font-bold tracking-wider text-[#86868B] uppercase">금주 상담 필요</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-0">
+              <CardDescription className="text-[10px] font-bold tracking-wider text-[#86868B] uppercase">금주 상담 필요</CardDescription>
               <Calendar className="admin-fit-icon w-4 h-4 text-[#F56300]" />
             </CardHeader>
-            <CardContent>
-              <div className="admin-fit-number font-bold text-amber-600">{pendingConsultationStudents.length} 명</div>
-              <p className="admin-fit-caption text-[#86868B] mt-1">
-                상담 일지가 작성되어야 할 밀착 통제 대상자
+            <CardContent className="px-4">
+              <div className="text-2xl font-black text-amber-600">{pendingConsultationStudents.length} 명</div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-0.5 leading-snug">
+                {selectedCampusLabel} 기준 상담 일지가 작성되어야 할 대상자
               </p>
               <button
                 type="button"
@@ -735,7 +826,7 @@ export default function AdminDashboardPage() {
                   e.stopPropagation();
                   handleShowConsultationStudents();
                 }}
-                className="admin-fit-caption text-amber-700 mt-2 font-bold hover:underline text-left"
+                className="text-[10px] text-amber-700 mt-1.5 font-bold hover:underline text-left"
               >
                 대상 원생 보기
               </button>
@@ -743,19 +834,69 @@ export default function AdminDashboardPage() {
           </Card>
 
           <Card
+            onClick={handleShowAllStudents}
+            className="admin-fit-box gap-1.5 border border-black/[0.05] rounded-xl bg-white py-3.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer focus-within:ring-2 focus-within:ring-[#0071E3]/30"
+          >
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-0">
+              <CardDescription className="text-[10px] font-bold tracking-wider text-[#86868B] uppercase">총 수강 원생</CardDescription>
+              <Users className="admin-fit-icon w-4 h-4 text-[#0071E3]" />
+            </CardHeader>
+            <CardContent className="px-4">
+              <div className="text-2xl font-black">{totalStudentsCount} 명</div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-0.5 leading-snug">
+                {selectedCampusLabel} 기준 관리 중인 원생 수
+              </p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleShowAllStudents();
+                }}
+                className="text-[10px] text-[#0071E3] mt-1.5 font-bold hover:underline text-left"
+              >
+                전체 원생 보기
+              </button>
+            </CardContent>
+          </Card>
+
+          <Card
+            className="admin-fit-box gap-1.5 border border-black/[0.05] rounded-xl bg-white py-3.5 shadow-sm"
+            onClick={() => {
+              if (weeklyGradeMissingStudents[0]) {
+                setSelectedStudent(weeklyGradeMissingStudents[0]);
+                setIsDetailOpen(true);
+              }
+            }}
+          >
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-0">
+              <CardDescription className="text-[10px] font-bold tracking-wider text-[#86868B] uppercase">성적 미입력</CardDescription>
+              <ClipboardList className="admin-fit-icon w-4 h-4 text-[#0071E3]" />
+            </CardHeader>
+            <CardContent className="px-4">
+              <div className="text-2xl font-black text-[#0071E3]">{weeklyGradeMissingStudents.length} 명</div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-0.5 leading-snug">
+                이번 주 성적 입력 대상 중 미등록 원생
+              </p>
+              <span className="text-[10px] text-[#0071E3] mt-1.5 inline-block font-bold">
+                {weeklyGradeMissingStudents.length > 0 ? '첫 원생 열기' : '미입력 없음'}
+              </span>
+            </CardContent>
+          </Card>
+
+          <Card
             onClick={handleShowBehindMaterials}
-            className={`admin-fit-box border rounded-2xl bg-white shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
+            className={`admin-fit-box gap-1.5 border rounded-xl bg-white py-3.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer ${
               quickFilter === 'behind' ? 'border-[#862bf7] bg-purple-50/40 ring-2 ring-[#862bf7]/20' : 'border-black/[0.05]'
             }`}
           >
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardDescription className="admin-fit-text admin-fit-label font-bold tracking-wider text-[#86868B] uppercase">평균 학습 진도율</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-0">
+              <CardDescription className="text-[10px] font-bold tracking-wider text-[#86868B] uppercase">평균 학습 진도율</CardDescription>
               <BarChart3 className="admin-fit-icon w-4 h-4 text-[#862bf7]" />
             </CardHeader>
-            <CardContent>
-              <div className="admin-fit-number font-bold text-[#862bf7]">{averageProgress}%</div>
-              <p className="admin-fit-caption text-[#86868B] mt-1">
-                전체 교재 및 인강 완독/완강 진행도 평균
+            <CardContent className="px-4">
+              <div className="text-2xl font-black text-[#862bf7]">{averageProgress}%</div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-0.5 leading-snug">
+                {selectedCampusLabel} 기준 교재 및 인강 진행도 평균
               </p>
               <button
                 type="button"
@@ -763,7 +904,7 @@ export default function AdminDashboardPage() {
                   e.stopPropagation();
                   handleShowBehindMaterials();
                 }}
-                className="admin-fit-caption text-[#862bf7] mt-2 font-bold hover:underline text-left"
+                className="text-[10px] text-[#862bf7] mt-1.5 font-bold hover:underline text-left"
               >
                 부족 진도 보기
               </button>
@@ -771,28 +912,57 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
 
-        {/* 2-1. 오늘 출결 현황 + 주간 순공 랭킹(전체) */}
-        <div className="flex justify-start sm:justify-end mt-2 mb-2">
-          <button
-            onClick={() => router.push('/admin/attendance')}
-            className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-left text-[0px] font-bold leading-snug text-[#0071E3] shadow-sm ring-1 ring-black/[0.05] hover:bg-[#F5F5F7]"
-          >
-            <span className="break-keep text-xs">출결 상세 표 (등·하원 시간 / 지각 정렬)</span>
-            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-            출결 상세 표 (등·하원 시간 / 지각 정렬) →
-          </button>
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <TodayAttendanceWidget
-            campusFilter={campusFilter}
-            refreshSignal={attendanceRefresh}
-            onSelectStudentId={handleOpenStudentById}
-          />
-          <AdminLeaderboard
-            campusFilter={campusFilter}
-            refreshSignal={attendanceRefresh}
-            onSelectStudentId={handleOpenStudentById}
-          />
+        {/* 4. 과목/교재 랭킹 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-3">
+          <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-xl bg-white py-3.5 shadow-sm xl:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-0">
+              <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 과목</CardTitle>
+              <BookOpen className="w-4 h-4 text-[#0071E3]" />
+            </CardHeader>
+            <CardContent className="px-4">
+              {popularSubjectRanks.length === 0 ? (
+                <p className="text-[11px] font-semibold text-[#86868B] py-4 text-center">표시할 과목 데이터가 없습니다.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {popularSubjectRanks.map((rank, index) => (
+                    <div key={rank.key} className="flex items-center gap-2.5 rounded-lg bg-[#F5F5F7] px-2.5 py-2">
+                      <span className="w-4 shrink-0 text-center text-[11px] font-black text-[#86868B]">{index + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
+                        <p className="text-[10px] font-bold text-[#86868B]">진행 항목 {rank.itemCount}개 · 평균 {rank.averageProgress}%</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black text-[#0071E3]">{rank.studentCount}명</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-xl bg-white py-3.5 shadow-sm xl:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pb-0">
+              <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 책</CardTitle>
+              <ClipboardList className="w-4 h-4 text-[#862bf7]" />
+            </CardHeader>
+            <CardContent className="px-4">
+              {popularBookRanks.length === 0 ? (
+                <p className="text-[11px] font-semibold text-[#86868B] py-4 text-center">표시할 책 데이터가 없습니다.</p>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {popularBookRanks.map((rank, index) => (
+                    <div key={rank.key} className="flex items-center gap-2.5 rounded-lg bg-[#F5F5F7] px-2.5 py-2">
+                      <span className="w-4 shrink-0 text-center text-[11px] font-black text-[#86868B]">{index + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-[10px] font-bold text-[#86868B]">{rank.meta || '기타'} · 평균 {rank.averageProgress}%</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-black text-[#862bf7]">{rank.studentCount}명</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
         {/* 3. 필터 및 검색 바 */}
@@ -807,19 +977,6 @@ export default function AdminDashboardPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 rounded-xl border-black/[0.08] text-xs h-10 bg-[#F5F5F7]"
               />
-            </div>
-            <div className="flex border border-black/[0.05] bg-[#F5F5F7] p-0.5 rounded-xl min-w-0 overflow-hidden">
-              {['all', 'wonju', 'chuncheon', 'chungju'].map((c) => (
-                <Button
-                  key={c}
-                  size="sm"
-                  variant={campusFilter === c ? 'default' : 'ghost'}
-                  onClick={() => setCampusFilter(c)}
-                  className={`admin-fit-button text-[11px] h-8.5 rounded-lg px-2.5 md:px-3 ${campusFilter === c ? 'bg-white hover:bg-white text-black shadow-sm font-bold' : 'text-[#86868B]'}`}
-                >
-                  {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
-                </Button>
-              ))}
             </div>
           </div>
 

@@ -56,32 +56,35 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
     return <div className={`${wrap} flex items-center gap-3`}><Clock className="w-4 h-4 text-[#86868B] shrink-0" /><p className="text-[11px] text-[#86868B] font-semibold">출결 연동(Supabase) 미설정 — 순공 랭킹을 표시할 수 없습니다.</p></div>;
   }
 
-  const rows = (data?.rows || []).filter((r) => campusFilter === 'all' || r.campus === campusFilter);
-  const s = data?.summary;
+  const scopedRows = (data?.rows || []).filter((r) => campusFilter === 'all' || r.campus === campusFilter);
+  const rows = scopedRows.map((r, index) => ({ ...r, rank: index + 1 }));
+  const studiedCount = rows.filter((r) => r.weekMinutes > 0).length;
+  const notStudiedCount = rows.filter((r) => r.weekMinutes === 0).length;
+  const avgWeekMin = rows.length > 0 ? Math.round(rows.reduce((sum, r) => sum + r.weekMinutes, 0) / rows.length) : 0;
+  const liveCount = rows.filter((r) => r.isOpen).length;
+  const selectedCampusLabel = campusFilter === 'all' ? '전체' : campusLabel(campusFilter);
 
   return (
     <div className={wrap}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <Trophy className="w-4 h-4 text-[#F56300]" />
-          <h3 className="admin-fit-text text-sm font-bold text-[#1D1D1F]">주간 순공 랭킹 <span className="text-[#86868B] font-semibold">(전체)</span></h3>
+          <h3 className="admin-fit-text text-sm font-bold text-[#1D1D1F]">주간 순공 랭킹 <span className="text-[#86868B] font-semibold">({selectedCampusLabel})</span></h3>
           {campusFilter !== 'all' && <span className="text-[10px] font-bold text-[#0071E3] bg-blue-50 px-1.5 py-0.5 rounded-full">{campusLabel(campusFilter)}</span>}
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {typeof data?.liveCount === 'number' && data.liveCount > 0 && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full"><Flame className="w-3 h-3 text-emerald-600" />{data.liveCount} 몰입</span>
+          {liveCount > 0 && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full"><Flame className="w-3 h-3 text-emerald-600" />{liveCount} 몰입</span>
           )}
           <button onClick={load} disabled={loading} className="text-[#86868B] hover:text-[#1D1D1F] disabled:opacity-50" title="랭킹 새로고침"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /></button>
         </div>
       </div>
 
-      {s && (
-        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-[10px] font-bold text-[#86868B]">
-          <span>학습 <span className="text-emerald-600">{rows.filter((r) => r.weekMinutes > 0).length}</span></span>
-          <span>미학습 <span className="text-[#F56300]">{rows.filter((r) => r.weekMinutes === 0).length}</span></span>
-          {campusFilter === 'all' && <span>평균 순공 {fmt(s.avgWeekMin)}</span>}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-3 text-[10px] font-bold text-[#86868B]">
+        <span>학습 <span className="text-emerald-600">{studiedCount}</span></span>
+        <span>미학습 <span className="text-[#F56300]">{notStudiedCount}</span></span>
+        <span>평균 순공 {fmt(avgWeekMin)}</span>
+      </div>
 
       <div className="max-h-96 overflow-y-auto -mx-1 px-1 space-y-0.5">
         {rows.length === 0 ? (
