@@ -20,6 +20,46 @@ import { StudyStatsCard } from '@/components/report/study-stats-card';
 import { LeaderboardCard } from '@/components/report/leaderboard-card';
 import { AttendanceStatusCard } from '@/components/report/attendance-status-card';
 
+// 히어로 서브 문구 풀 — 상황(공부중/자율/시간대)별로 다양한 멘트를 결정적으로 선택
+const BRIEFING_MESSAGES: Record<string, string[]> = {
+  studying: [
+    '지금 이 한 과목이 합격을 만듭니다.',
+    '딱 25분만 깊게 몰입해볼까요? 💪',
+    '집중은 시작하는 순간 만들어져요.',
+    '지금 흐름을 놓치지 말고 끝까지 가봐요.',
+    '오늘의 이 시간이 내일의 점수예요.',
+  ],
+  selfStudy: [
+    '오늘 부족했던 과목을 채울 시간이에요.',
+    '스스로 정한 목표가 진짜 실력이 됩니다.',
+    '자율 시간일수록 계획표가 길잡이예요.',
+    '약점 한 가지만 정해서 공략해볼까요?',
+  ],
+  morning: [
+    '오늘의 첫 페이지를 열어볼까요?',
+    '아침 컨디션이 하루를 좌우해요.',
+    '가벼운 복습으로 시동을 걸어봐요.',
+    '오늘 목표 한 가지만 정하고 시작해요.',
+  ],
+  afternoon: [
+    '잠깐의 휴식도 공부의 일부예요.',
+    '물 한 잔 마시고 다시 가볼까요?',
+    '오후의 집중력, 짧고 굵게 채워봐요.',
+    '여기까지 온 것도 충분히 잘하고 있어요.',
+  ],
+  evening: [
+    '오늘 하루 정말 고생 많았어요.',
+    '마무리 정리가 내일을 가볍게 해요.',
+    '오늘 푼 문제들이 내일의 자신감이 돼요.',
+    '하루를 돌아보며 가볍게 정리해볼까요?',
+  ],
+  night: [
+    '무리하지 말고 충분히 쉬어요. 🌙',
+    '잠도 공부의 일부예요. 푹 자요.',
+    '오늘의 노력은 이미 충분했어요.',
+  ],
+};
+
 export default function StudentReportPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -416,6 +456,23 @@ export default function StudentReportPage() {
     : currentStudyTimeKey
       ? `지금은 ${studyTimeLabels[currentStudyTimeKey]} 자율 학습 시간이에요`
       : offHoursPhrase;
+  // 상황별 다양한 서브 멘트 (시간·요일·학생 기반 결정적 선택 → 매 시간 자연스레 바뀜)
+  const briefingContext = hasCurrentSubjects
+    ? 'studying'
+    : currentStudyTimeKey
+      ? 'selfStudy'
+      : kstNow.hour < 6
+        ? 'night'
+        : kstNow.hour < 12
+          ? 'morning'
+          : kstNow.hour < 18
+            ? 'afternoon'
+            : 'evening';
+  const briefingPool = BRIEFING_MESSAGES[briefingContext];
+  const briefingSeed = `${todayDayKey}-${kstNow.hour}-${studentId}`
+    .split('')
+    .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const briefingSubMessage = briefingPool[briefingSeed % briefingPool.length];
   const currentStudyLabel = currentStudyTimeKey
     ? studyTimeLabels[currentStudyTimeKey]
     : nonStudyPeriodLabel || '운영 시간 외';
@@ -853,7 +910,7 @@ export default function StudentReportPage() {
                       </h1>
                     </div>
                     <p className="max-w-2xl text-sm font-semibold leading-7 text-slate-500">
-                      오늘 배정된 학습 흐름과 현재 집중해야 할 과목을 먼저 확인하세요.
+                      {briefingSubMessage}
                     </p>
                   </div>
 
