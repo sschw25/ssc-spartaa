@@ -403,11 +403,19 @@ export default function StudentReportPage() {
     : currentStudyTimeKey
       ? '자율 학습'
       : nonStudyPeriodLabel || '운영 시간 외';
+  // 수업/자율 시간이 아닌 '운영 시간 외'에는 시간대에 맞춰 문구를 분기
+  const offHoursPhrase = kstNow.hour < 6
+    ? '오늘도 푹 쉬고 내일 또 만나요'
+    : kstNow.hour < 12
+      ? '오늘 하루도 힘차게 시작해봐요'
+      : kstNow.hour < 18
+        ? '잠깐 쉬어가는 시간이에요'
+        : '오늘도 충분히 잘했어요';
   const currentBriefingPhrase = hasCurrentSubjects
     ? `지금은 ${currentSubjectText} 시간이에요`
     : currentStudyTimeKey
       ? `지금은 ${studyTimeLabels[currentStudyTimeKey]} 자율 학습 시간이에요`
-      : '오늘도 충분히 잘했어요';
+      : offHoursPhrase;
   const currentStudyLabel = currentStudyTimeKey
     ? studyTimeLabels[currentStudyTimeKey]
     : nonStudyPeriodLabel || '운영 시간 외';
