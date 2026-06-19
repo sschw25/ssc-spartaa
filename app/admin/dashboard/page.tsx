@@ -579,7 +579,7 @@ export default function AdminDashboardPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
         <p className="text-sm text-[#86868B]">세션 권한 확인 중...</p>
       </div>
@@ -922,7 +922,7 @@ export default function AdminDashboardPage() {
             className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#F6F7FA] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
           >
             <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <ClipboardList className="w-16 h-16 text-indigo-650" />
+              <ClipboardList className="w-16 h-16 text-indigo-600" />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">성적 미입력</span>
@@ -952,7 +952,7 @@ export default function AdminDashboardPage() {
             className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FAF6FF] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
           >
             <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <BarChart3 className="w-16 h-16 text-purple-650" />
+              <BarChart3 className="w-16 h-16 text-purple-600" />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">평균 학습 진도율</span>
@@ -1157,7 +1157,7 @@ export default function AdminDashboardPage() {
                   <div className="text-xl font-black text-[#0071E3] mt-2">{analysisData.avgProgress}%</div>
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-purple-500/[0.02] to-purple-500/[0.06] border border-purple-500/10 p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-extrabold text-purple-650 uppercase">평균 학습 소요</span>
+                  <span className="text-[10px] font-extrabold text-purple-600 uppercase">평균 학습 소요</span>
                   <div className="text-xl font-black text-purple-750 mt-2">
                     {analysisData.avgDays > 0 ? `${analysisData.avgDays}일` : '-'}
                   </div>

@@ -26,7 +26,7 @@ const isCampusFilterValue = (value: string | null): value is string => !!value &
 export default function AdminConsultationPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F5F5F7] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
         <p className="text-sm text-[#86868B]">상담일지 로드 중...</p>
       </div>
@@ -591,7 +591,7 @@ function ConsultationContent() {
             size="sm"
             variant="ghost"
             onClick={handleLogout}
-            className="admin-fit-button text-red-650 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs h-9.5 px-3 transition-premium"
+            className="admin-fit-button text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl text-xs h-9.5 px-3 transition-premium"
             title="로그아웃"
           >
             <LogOut className="w-4 h-4 mr-1.5 text-red-500" />

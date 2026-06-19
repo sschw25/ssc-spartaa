@@ -184,40 +184,40 @@ function AttendInner() {
             <div className="mt-6 grid grid-cols-2 gap-2.5">
               <button
                 onClick={() => submitAction('check-in')}
-                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold text-white transition active:scale-[0.98] ${
-                  checkedIn 
-                    ? 'bg-emerald-600/40 text-white/70 border border-emerald-600/20' 
-                    : 'bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
+                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold transition active:scale-[0.98] ${
+                  checkedIn
+                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-md shadow-emerald-600/20'
                 }`}
               >
                 등원하기
               </button>
               <button
                 onClick={() => submitAction('check-out')}
-                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold text-white transition active:scale-[0.98] ${
-                  !checkedIn 
-                    ? 'bg-sky-600/40 text-white/70 border border-sky-600/20' 
-                    : 'bg-sky-600 hover:bg-sky-700 shadow-md shadow-sky-600/20'
+                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold transition active:scale-[0.98] ${
+                  !checkedIn
+                    ? 'bg-sky-50 text-sky-700 border border-sky-200'
+                    : 'bg-sky-600 text-white hover:bg-sky-700 shadow-md shadow-sky-600/20'
                 }`}
               >
                 하원하기
               </button>
               <button
                 onClick={() => submitAction('outing')}
-                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold text-white transition active:scale-[0.98] ${
-                  !checkedIn 
-                    ? 'bg-amber-600/40 text-white/70 border border-amber-600/20' 
-                    : 'bg-amber-600 hover:bg-amber-700 shadow-md shadow-amber-600/20'
+                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold transition active:scale-[0.98] ${
+                  !checkedIn
+                    ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                    : 'bg-amber-600 text-white hover:bg-amber-700 shadow-md shadow-amber-600/20'
                 }`}
               >
                 외출하기
               </button>
               <button
                 onClick={() => submitAction('return')}
-                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold text-white transition active:scale-[0.98] ${
-                  checkedIn 
-                    ? 'bg-indigo-600/40 text-white/70 border border-indigo-600/20' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-600/20'
+                className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold transition active:scale-[0.98] ${
+                  checkedIn
+                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20'
                 }`}
               >
                 복귀하기

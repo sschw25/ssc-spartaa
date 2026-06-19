@@ -240,6 +240,21 @@
   transform: translateY(0);
 }
 
+/* Premium hover/state transition (Apple easing) — shared admin micro-interaction */
+.transition-premium {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Entrance animation — used by admin app shells (dashboard/consultation/leaderboard) */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 /* Stagger delays */
 .delay-100 { transition-delay: 0.1s; }
 .delay-200 { transition-delay: 0.2s; }

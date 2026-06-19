@@ -59,7 +59,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
   if (error) {
     return (
       <div className={`${wrap} flex items-center justify-between gap-3 py-6`}>
-        <p className="text-xs text-red-650 font-semibold">{error}</p>
+        <p className="text-xs text-red-600 font-semibold">{error}</p>
         <button onClick={load} className="text-xs font-bold text-[#0071E3] hover:underline shrink-0">다시 시도</button>
       </div>
     );
@@ -90,7 +90,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
       case 2:
         return 'bg-slate-100 text-slate-800 border border-slate-200 font-black shadow-sm';
       case 3:
-        return 'bg-orange-100 text-orange-850 border border-orange-200 font-black shadow-sm';
+        return 'bg-orange-100 text-orange-800 border border-orange-200 font-black shadow-sm';
       default:
         return 'bg-[#F5F5F7] text-[#434345] font-bold border border-black/[0.02]';
     }

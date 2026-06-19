@@ -80,7 +80,7 @@ function shiftDate(date: string, delta: number) {
 
 export default function AdminAttendancePage() {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F5F5F7]"><Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" /></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]"><Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" /></div>}>
       <AdminAttendanceContent />
     </Suspense>
   );
@@ -249,13 +249,13 @@ function AdminAttendanceContent() {
   );
 
   if (checkingAuth) {
-    return <div className="min-h-screen flex items-center justify-center bg-[#F5F5F7]"><Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" /></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#F8F9FA]"><Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" /></div>;
   }
 
   const s = data?.summary;
 
   return (
-    <div className="min-h-screen bg-[#F5F5F7] font-sans text-[#1D1D1F]">
+    <div className="min-h-screen bg-[#F8F9FA] font-sans text-[#1D1D1F]">
       <nav className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-black/[0.05] px-4 md:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <button onClick={() => router.back()} className="flex items-center gap-1.5 text-xs font-bold text-[#86868B] hover:text-[#1D1D1F]">

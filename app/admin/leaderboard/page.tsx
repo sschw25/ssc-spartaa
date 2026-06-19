@@ -67,7 +67,7 @@ export default function WeeklyLeaderboardPage() {
   if (error) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans p-4 text-center">
-        <p className="text-sm text-red-650 font-bold mb-4">{error}</p>
+        <p className="text-sm text-red-600 font-bold mb-4">{error}</p>
         <Button onClick={load} className="rounded-xl font-bold bg-[#1D1D1F] text-white">다시 시도</Button>
       </div>
     );
@@ -97,7 +97,7 @@ export default function WeeklyLeaderboardPage() {
       case 2:
         return 'bg-slate-100/80 text-slate-800 border border-slate-200/50 font-black shadow-sm';
       case 3:
-        return 'bg-orange-100/80 text-orange-850 border border-orange-200/50 font-black shadow-sm';
+        return 'bg-orange-100/80 text-orange-800 border border-orange-200/50 font-black shadow-sm';
       default:
         return 'bg-[#F5F5F7] text-[#434345] font-bold border border-black/[0.02]';
     }
@@ -158,7 +158,7 @@ export default function WeeklyLeaderboardPage() {
               )}
             </div>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-emerald-650">{studiedCount}</span>
+              <span className="text-3xl font-black tracking-tight text-emerald-600">{studiedCount}</span>
               <span className="text-xs font-bold text-emerald-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
@@ -172,7 +172,7 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">미학습 인원</span>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-amber-650">{notStudiedCount}</span>
+              <span className="text-3xl font-black tracking-tight text-amber-600">{notStudiedCount}</span>
               <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
@@ -186,7 +186,7 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">평균 학습 시간</span>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-blue-650">{Math.floor(avgWeekMin / 60)}</span>
+              <span className="text-3xl font-black tracking-tight text-blue-600">{Math.floor(avgWeekMin / 60)}</span>
               <span className="text-xs font-bold text-blue-600/80 ml-1">시간 {avgWeekMin % 60}분</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
@@ -200,7 +200,7 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">실시간 몰입 인원</span>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-purple-650">{liveCount}</span>
+              <span className="text-3xl font-black tracking-tight text-purple-600">{liveCount}</span>
               <span className="text-xs font-bold text-purple-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
@@ -224,7 +224,7 @@ export default function WeeklyLeaderboardPage() {
                   placeholder="이름으로 검색..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-8.5 pr-4 py-2 rounded-xl text-xs border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] bg-[#F5F5F7]/50 w-full"
+                  className="pl-9 pr-4 py-2 rounded-xl text-xs border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] bg-[#F5F5F7]/50 w-full"
                 />
               </div>
               <Button onClick={load} size="sm" variant="outline" className="rounded-xl border-black/[0.06] hover:bg-[#F5F5F7] h-8 shadow-sm">
