@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
   Users, User, Calendar, BarChart3, Search, Plus, Minus, LogOut, Loader2, 
   MapPin, AlertTriangle, ChevronRight, SlidersHorizontal, BookOpen, Tv, Settings,
-  ArrowLeft, LayoutDashboard, LayoutGrid, Table
+  ArrowLeft, LayoutDashboard, LayoutGrid, Table, Menu, ClipboardList, ScanLine
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
@@ -25,6 +26,7 @@ export default function AdminDashboardPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // 검색 & 필터 상태
   const [searchTerm, setSearchTerm] = useState('');
@@ -96,7 +98,10 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setAttendanceRefresh((n) => n + 1);
     try {
-      const res = await fetch('/api/admin/students');
+      const res = await fetch('/api/admin/students', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+      });
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -152,6 +157,28 @@ export default function AdminDashboardPage() {
     setDashboardTab('db');
     setSearchTerm('');
     window.setTimeout(() => document.getElementById('progress-table-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
+
+  useEffect(() => {
+    if (checkingAuth) return;
+
+    const reloadVisibleDashboard = () => {
+      if (document.visibilityState === 'visible') {
+        loadStudents();
+      }
+    };
+
+    window.addEventListener('focus', loadStudents);
+    document.addEventListener('visibilitychange', reloadVisibleDashboard);
+    return () => {
+      window.removeEventListener('focus', loadStudents);
+      document.removeEventListener('visibilitychange', reloadVisibleDashboard);
+    };
+  }, [checkingAuth]);
+
+  const navigateFromMenu = (href: string) => {
+    setIsMenuOpen(false);
+    router.push(href);
   };
 
   const getProgressDraftKey = (studentId: string, itemId: string) => `${studentId}_${itemId}`;
@@ -445,6 +472,16 @@ export default function AdminDashboardPage() {
       {/* Navbar */}
       <nav className="border-b border-black/[0.05] bg-white/95 backdrop-blur-md sticky top-0 z-30 px-4 md:px-6 py-3 flex justify-between items-center gap-3 admin-mobile-wrap">
         <div className="flex items-center gap-2 min-w-0">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setIsMenuOpen(true)}
+            className="h-9 w-9 shrink-0 rounded-lg hover:bg-[#F5F5F7]"
+            title="메뉴"
+          >
+            <Menu className="w-5 h-5" />
+            <span className="sr-only">메뉴 열기</span>
+          </Button>
           <span className="font-extrabold text-sm tracking-tight text-white bg-[#1D1D1F] px-2.5 py-1.5 rounded-lg mr-2">SSC</span>
           <h1 className="admin-fit-text text-sm font-bold tracking-tight">학습 및 진도 체계적 관리 대시보드</h1>
         </div>
@@ -501,6 +538,83 @@ export default function AdminDashboardPage() {
           </Button>
         </div>
       </nav>
+
+      <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <SheetContent side="left" className="w-[300px] bg-white p-0">
+          <SheetHeader className="border-b border-black/[0.05] p-5 text-left">
+            <SheetTitle className="flex items-center gap-2 text-base font-black text-[#1D1D1F]">
+              <span className="rounded-lg bg-[#1D1D1F] px-2.5 py-1.5 text-sm font-extrabold text-white">SSC</span>
+              관리자 메뉴
+            </SheetTitle>
+            <SheetDescription className="text-xs font-semibold text-[#86868B]">
+              자주 쓰는 관리자 화면으로 이동합니다.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="flex flex-col gap-1 p-3">
+            <button
+              type="button"
+              onClick={() => navigateFromMenu('/admin/dashboard')}
+              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+            >
+              <LayoutDashboard className="w-4 h-4 text-[#0071E3]" />
+              대시보드
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateFromMenu('/admin/attendance')}
+              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+            >
+              <ClipboardList className="w-4 h-4 text-[#0071E3]" />
+              출결 상세
+            </button>
+            <button
+              type="button"
+              onClick={() => navigateFromMenu('/attend/kiosk')}
+              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+            >
+              <ScanLine className="w-4 h-4 text-[#0071E3]" />
+              등하원 체크
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                handleFocusSearch();
+              }}
+              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+            >
+              <Search className="w-4 h-4 text-[#0071E3]" />
+              학생 검색
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                setIsAddModalOpen(true);
+              }}
+              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+            >
+              <Plus className="w-4 h-4 text-[#0071E3]" />
+              학생 추가
+            </button>
+          </div>
+
+          <div className="mt-auto border-t border-black/[0.05] p-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+                handleLogout();
+              }}
+              className="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-red-600 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4" />
+              로그아웃
+            </button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
@@ -622,11 +736,13 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* 2-1. 오늘 출결 현황 + 주간 순공 랭킹(전체) */}
-        <div className="flex justify-end -mb-1">
+        <div className="flex justify-start sm:justify-end mt-2 mb-2">
           <button
             onClick={() => router.push('/admin/attendance')}
-            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0071E3] hover:underline"
+            className="inline-flex max-w-full items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-left text-[0px] font-bold leading-snug text-[#0071E3] shadow-sm ring-1 ring-black/[0.05] hover:bg-[#F5F5F7]"
           >
+            <span className="break-keep text-xs">출결 상세 표 (등·하원 시간 / 지각 정렬)</span>
+            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
             출결 상세 표 (등·하원 시간 / 지각 정렬) →
           </button>
         </div>

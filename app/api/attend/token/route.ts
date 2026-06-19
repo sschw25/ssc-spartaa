@@ -2,10 +2,8 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { createAttendToken, verifyKioskKey, ATTEND_WINDOW_MS } from '@/lib/attendance-token';
 
-// 키오스크 전용: 짧은 만료 QR 토큰 발급.
-// 인증 경로 둘 중 하나면 허용:
-//   1) 관리자 세션 (관리자 기기에서 띄울 때)
-//   2) 전용 키오스크 키 (?key= 또는 x-kiosk-key 헤더) — 상시 디스플레이를 로그인 없이 운영
+// 키오스크용 짧은 만료 QR 토큰 발급.
+// 관리자 세션 또는 ATTEND_KIOSK_KEY가 있는 전용 키오스크에서만 발급한다.
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const key = url.searchParams.get('key') || request.headers.get('x-kiosk-key');
@@ -17,5 +15,6 @@ export async function GET(request: Request) {
       { status: 401 }
     );
   }
+
   return NextResponse.json({ success: true, token: createAttendToken(), windowMs: ATTEND_WINDOW_MS });
 }
