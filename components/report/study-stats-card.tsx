@@ -58,41 +58,68 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
               </div>
               <div className="text-xl font-bold text-[#1D1D1F] mt-1">{fmt(stats.monthTotalMin)}</div>
             </div>
-            <div className="rounded-2xl bg-[#0071E3]/[0.06] border border-[#0071E3]/15 p-4">
-              <div className="text-[11px] text-[#0071E3] font-semibold flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" /> 이번 주 상위
+            <div className="rounded-2xl bg-[#0071E3]/[0.06] border border-[#0071E3]/15 p-4 flex items-center gap-3">
+              <div className="relative h-16 w-16 shrink-0">
+                <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
+                  <circle cx="32" cy="32" r="26" fill="none" stroke="#0071E3" strokeOpacity="0.12" strokeWidth="6" />
+                  <circle
+                    cx="32" cy="32" r="26" fill="none" stroke="#0071E3" strokeWidth="6" strokeLinecap="round"
+                    strokeDasharray={2 * Math.PI * 26}
+                    strokeDashoffset={(2 * Math.PI * 26) * (stats.weekPercent != null ? Math.min(1, Math.max(0, stats.weekPercent / 100)) : 1)}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-sm font-black leading-none text-[#0071E3]">
+                    {stats.weekPercent != null ? `${stats.weekPercent}%` : '—'}
+                  </span>
+                </div>
               </div>
-              <div className="text-xl font-bold text-[#0071E3] mt-1">
-                {stats.weekPercent != null ? `상위 ${stats.weekPercent}%` : '—'}
+              <div className="min-w-0">
+                <div className="text-[11px] font-semibold text-[#0071E3] flex items-center gap-1">
+                  <Trophy className="w-3.5 h-3.5" /> 이번 주 상위
+                </div>
+                <div className="mt-0.5 text-[10px] font-bold leading-tight text-[#0071E3]/70">
+                  상위권에 가까울수록<br />링이 가득 차요
+                </div>
               </div>
             </div>
           </div>
 
           {/* 이번 주 출석 현황 */}
           {typeof stats.weekExpectedDays === 'number' && stats.weekExpectedDays > 0 && (
-            <div className="flex items-center justify-between rounded-2xl border border-black/[0.05] bg-[#F5F5F7] px-4 py-3">
-              <span className="text-[11px] font-semibold text-[#86868B] flex items-center gap-1.5">
-                <CalendarDays className="w-3.5 h-3.5" /> 이번 주 출석
-              </span>
-              <span className="flex items-center gap-2">
-                {(stats.currentStreak ?? 0) > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
-                    <Flame className="w-3 h-3" /> {stats.currentStreak}일 연속
-                  </span>
-                )}
-                <span className="text-sm font-bold text-[#1D1D1F]">
-                  {stats.weekAttendedDays ?? 0} / {stats.weekExpectedDays}일
+            <div className="rounded-2xl border border-black/[0.05] bg-[#F5F5F7] px-4 py-3 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-[#86868B] flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5" /> 이번 주 출석
                 </span>
-                {(stats.weekAbsentDays ?? 0) > 0 ? (
-                  <span className="text-[10px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
-                    결석 {stats.weekAbsentDays}일
+                <span className="flex items-center gap-2">
+                  {(stats.currentStreak ?? 0) > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
+                      <Flame className="w-3 h-3" /> {stats.currentStreak}일 연속
+                    </span>
+                  )}
+                  <span className="text-sm font-bold text-[#1D1D1F]">
+                    {stats.weekAttendedDays ?? 0} / {stats.weekExpectedDays}일
                   </span>
-                ) : (
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    개근
-                  </span>
-                )}
-              </span>
+                  {(stats.weekAbsentDays ?? 0) > 0 ? (
+                    <span className="text-[10px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
+                      결석 {stats.weekAbsentDays}일
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                      개근
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {Array.from({ length: stats.weekExpectedDays }).map((_, i) => (
+                  <span
+                    key={i}
+                    className={`h-2 flex-1 rounded-full transition-colors ${i < (stats.weekAttendedDays ?? 0) ? 'bg-emerald-500' : 'bg-black/[0.08]'}`}
+                  />
+                ))}
+              </div>
             </div>
           )}
 
