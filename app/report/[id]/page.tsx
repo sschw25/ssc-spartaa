@@ -78,11 +78,25 @@ export default function StudentReportPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('report-overview');
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const paperRef = useRef<HTMLDivElement>(null);
+  const slideDirRef = useRef(1);
+  const firstTabRender = useRef(true);
 
-  // 탭 전환 시 활성 탭을 가로 스크롤 영역 안으로 보이게(특히 메뉴로 먼 탭 선택 시)
+  // 탭 전환 시: 활성 탭을 가로 스크롤로 보이게 + 방향에 맞춘 콘텐츠 슬라이드 전환
   useEffect(() => {
     const el = document.querySelector('[data-tab-active="true"]');
     el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    if (firstTabRender.current) {
+      firstTabRender.current = false;
+      return;
+    }
+    paperRef.current?.animate(
+      [
+        { opacity: 0.3, transform: `translateX(${slideDirRef.current * 22}px)` },
+        { opacity: 1, transform: 'translateX(0)' },
+      ],
+      { duration: 240, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' },
+    );
   }, [activeTab]);
 
   useEffect(() => {
@@ -586,6 +600,7 @@ export default function StudentReportPage() {
     if (idx === -1) return;
     const next = Math.min(tabIds.length - 1, Math.max(0, idx + dir));
     if (next !== idx) {
+      slideDirRef.current = dir;
       setActiveTab(tabIds[next]);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -804,7 +819,7 @@ export default function StudentReportPage() {
                       <a
                         key={item.href}
                         href={item.href}
-                        onClick={(e) => { e.preventDefault(); setActiveTab(item.href.slice(1)); setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        onClick={(e) => { e.preventDefault(); const id = item.href.slice(1); slideDirRef.current = tabIds.indexOf(id) >= tabIds.indexOf(activeTab) ? 1 : -1; setActiveTab(id); setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                         className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-white'}`}
                       >
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
@@ -864,7 +879,7 @@ export default function StudentReportPage() {
                     key={item.href}
                     type="button"
                     data-tab-active={active ? 'true' : undefined}
-                    onClick={() => { setActiveTab(tabId); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    onClick={() => { slideDirRef.current = tabIds.indexOf(tabId) >= tabIds.indexOf(activeTab) ? 1 : -1; setActiveTab(tabId); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[11px] font-black whitespace-nowrap transition-all active:scale-95 ${
                       active
                         ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_6px_16px_rgba(0,113,227,0.25)]'
@@ -882,6 +897,7 @@ export default function StudentReportPage() {
 
         {/* 결과 리포트 종이 영역 */}
         <div
+          ref={paperRef}
           className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10"
           onTouchStart={isStudentReport ? handleSwipeStart : undefined}
           onTouchEnd={isStudentReport ? handleSwipeEnd : undefined}
