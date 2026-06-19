@@ -72,7 +72,13 @@ export async function saveSharedMaterial(material: SharedMaterial): Promise<Shar
 export async function getStudentAuthRecords(): Promise<StudentAuthRecord[]> {
   if (isSupabaseConfigured()) return getStudentAuthRecordsSupabase();
   // 로컬 폴백: 비밀번호 미지원
-  return getStudentsLocal().map((s) => ({ id: s.id, name: s.name, contact: s.contact || null, password_hash: null }));
+  return getStudentsLocal().map((s) => ({
+    id: s.id,
+    name: s.name,
+    login_id: s.loginId || null,
+    contact: s.contact || null,
+    password_hash: null
+  }));
 }
 
 export async function setStudentPasswordHash(studentId: string, hash: string): Promise<void> {

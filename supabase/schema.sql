@@ -42,6 +42,9 @@ create index if not exists idx_shared_materials_subject on shared_materials (sub
 -- 학생 포털 비밀번호(해시만 저장 — 평문 금지)
 alter table students add column if not exists password_hash text;
 
+-- 학생 포털 로그인용 아이디 (고유값)
+alter table students add column if not exists login_id text unique;
+
 -- 출결 알림 문자 수신 정보 (PII — 리포트엔 노출 안 함)
 alter table students add column if not exists parent_phone text;
 alter table students add column if not exists student_phone text;

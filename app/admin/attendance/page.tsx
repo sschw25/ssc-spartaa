@@ -372,7 +372,7 @@ function AdminAttendanceContent() {
                               type="time"
                               value={edit.checkIn}
                               onChange={(e) => setEdits((prev) => ({ ...prev, [r.id]: { ...edit, checkIn: e.target.value } }))}
-                              className="w-24 rounded-lg border border-black/[0.08] bg-white px-2 py-1 text-[11px] font-bold outline-none focus:border-[#0071E3]"
+                              className="w-28 rounded-lg border border-black/[0.08] bg-white px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
                             />
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -380,7 +380,7 @@ function AdminAttendanceContent() {
                               type="time"
                               value={edit.checkOut}
                               onChange={(e) => setEdits((prev) => ({ ...prev, [r.id]: { ...edit, checkOut: e.target.value } }))}
-                              className="w-24 rounded-lg border border-black/[0.08] bg-white px-2 py-1 text-[11px] font-bold outline-none focus:border-[#0071E3]"
+                              className="w-28 rounded-lg border border-black/[0.08] bg-white px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
                             />
                           </td>
                           <td className="px-4 py-3 text-[#86868B] hidden sm:table-cell whitespace-nowrap">{r.isAbsent ? '-' : fmtMin(r.minutes)}</td>

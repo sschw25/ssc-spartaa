@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
-import { canViewStudent } from '@/lib/auth';
+import { canViewStudent, getStudentSessionId, isAdmin } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
 
 // 학부모/학생용 결과 리포트 조회 API
@@ -14,11 +14,20 @@ export async function GET(
   const audience = searchParams.get('audience') === 'student' ? 'student' : 'parent';
 
   // 학생용 결과지는 본인 학생 또는 관리자만 열람 가능.
-  // 학부모용 공유 링크는 기존 운영 방식대로 비로그인 열람을 유지한다.
   if (audience === 'student' && !(await canViewStudent(id))) {
     return NextResponse.json(
       { success: false, message: '열람 권한이 없습니다. 학생 본인으로 로그인해 주세요.' },
       { status: 401 }
+    );
+  }
+
+  // 학부모용 결과지도 만약 학생 세션이 활성화되어 있다면, 타인 리포트 조회를 차단 (IDOR 방지)
+  // (세션이 없는 비로그인 상태의 학부모 접근은 허용)
+  const studentSessionId = await getStudentSessionId();
+  if (studentSessionId && studentSessionId !== id && !(await isAdmin())) {
+    return NextResponse.json(
+      { success: false, message: '열람 권한이 없습니다. 다른 학생의 결과지입니다.' },
+      { status: 403 }
     );
   }
 

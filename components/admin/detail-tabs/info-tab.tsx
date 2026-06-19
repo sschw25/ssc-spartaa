@@ -31,6 +31,8 @@ const hintTone: Record<'ok' | 'warn' | 'expired', string> = {
 interface InfoTabProps {
   name: string;
   setName: (v: string) => void;
+  loginId: string;
+  setLoginId: (v: string) => void;
   campus: string;
   setCampus: (v: string) => void;
   manager: string;
@@ -61,6 +63,7 @@ interface InfoTabProps {
 // 학생 기본정보 탭 (프레젠테이셔널). 상태·핸들러는 부모가 소유하고 props 로 전달.
 export function InfoTab({
   name, setName,
+  loginId, setLoginId,
   campus, setCampus,
   manager, setManager,
   contact, setContact,
@@ -107,6 +110,19 @@ export function InfoTab({
             id="edit-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-login-id" className="text-xs font-semibold text-[#1D1D1F]">
+            로그인 ID (학생용 포털)
+          </Label>
+          <Input
+            id="edit-login-id"
+            value={loginId}
+            onChange={(e) => setLoginId(e.target.value.trim().toLowerCase())}
+            placeholder="영어/숫자 조합"
             className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
           />
         </div>

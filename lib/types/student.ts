@@ -95,6 +95,7 @@ export interface SharedMaterial {
 export interface Student {
   id: string;
   name: string;
+  loginId?: string;   // 로그인용 아이디
   campus: 'wonju' | 'chuncheon' | 'chungju' | 'etc' | string;
   manager: string;    // 상담자/담당 코치
   contact?: string;   // 목표시험 (구 연락처)

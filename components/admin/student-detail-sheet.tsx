@@ -178,6 +178,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 기본 정보 상태
   const [name, setName] = useState('');
+  const [loginId, setLoginId] = useState('');
   const [campus, setCampus] = useState('');
   const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
@@ -362,6 +363,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       const shouldResetConsultationDraft = true;
 
       setName(student.name || '');
+      setLoginId(student.loginId || '');
       setCampus(student.campus || 'wonju');
       setManager(student.manager || '');
       setContact(student.contact || '');
@@ -751,6 +753,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const updatedStudent: Student = {
       ...student,
       name,
+      loginId,
       campus,
       manager,
       contact,
@@ -3052,6 +3055,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const resetLocalDrafts = () => {
     if (!student) return;
     setName(student.name || '');
+    setLoginId(student.loginId || '');
     setCampus(student.campus || 'wonju');
     setManager(student.manager || '');
     setContact(student.contact || '');
@@ -3646,6 +3650,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <InfoTab
                 name={name}
                 setName={setName}
+                loginId={loginId}
+                setLoginId={setLoginId}
                 campus={campus}
                 setCampus={setCampus}
                 manager={manager}

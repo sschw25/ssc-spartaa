@@ -21,31 +21,37 @@ export async function POST(request: Request) {
     );
   }
   try {
-    const { name, authCode, phoneLast4, password } = await request.json();
-    const normalizedName = normalizeName(name);
+    const body = await request.json();
+    const { loginId, password, name, authCode, phoneLast4 } = body;
 
-    if (!normalizedName) {
-      return NextResponse.json({ success: false, message: '이름을 입력해 주세요.' }, { status: 400 });
-    }
-
-    // 비밀번호 로그인 (권장) — 해시 비교
-    if (password) {
+    // 1. 아이디/비밀번호 로그인
+    if (loginId && password) {
+      const normalizedId = String(loginId).trim().toLowerCase();
       const records = await getStudentAuthRecords();
       const verified = [];
+
       for (const r of records) {
-        if (normalizeName(r.name) === normalizedName && r.password_hash) {
-          if (await bcrypt.compare(String(password), r.password_hash)) verified.push(r);
+        if (r.login_id && r.login_id.toLowerCase() === normalizedId && r.password_hash) {
+          if (await bcrypt.compare(String(password), r.password_hash)) {
+            verified.push(r);
+          }
         }
       }
+
       if (verified.length === 0) {
         return NextResponse.json(
-          { success: false, message: '이름 또는 비밀번호가 올바르지 않습니다. (비밀번호 미설정 시 관리자에게 문의)' },
+          { success: false, message: '아이디 또는 비밀번호가 올바르지 않습니다.' },
           { status: 401 }
         );
       }
+
       if (verified.length > 1) {
-        return NextResponse.json({ success: false, message: '동명이인이 있어 관리자 확인이 필요합니다.' }, { status: 409 });
+        return NextResponse.json(
+          { success: false, message: '중복된 로그인 ID가 발견되었습니다. 관리자에게 문의하세요.' },
+          { status: 409 }
+        );
       }
+
       const me = verified[0];
       const cookieStore = await cookies();
       cookieStore.set('student-session', me.id, {
@@ -58,54 +64,72 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
     }
 
-    // 확인코드(전화 뒷자리/학생코드) 로그인 — 비밀번호 미설정 학생용 폴백
-    const normalizedCode = normalizeCode(authCode || phoneLast4);
-    if (normalizedCode.length !== 4) {
-      return NextResponse.json(
-        { success: false, message: '비밀번호 또는 확인코드 4자리를 입력해 주세요.' },
-        { status: 400 }
-      );
+    // 2. 하위 호환 폴백: 이름 + 비밀번호/확인코드 로그인
+    const normalizedName = normalizeName(name);
+    if (normalizedName) {
+      if (password) {
+        const records = await getStudentAuthRecords();
+        const verified = [];
+        for (const r of records) {
+          if (normalizeName(r.name) === normalizedName && r.password_hash) {
+            if (await bcrypt.compare(String(password), r.password_hash)) verified.push(r);
+          }
+        }
+        if (verified.length > 0) {
+          if (verified.length > 1) {
+            return NextResponse.json({ success: false, message: '동명이인이 있어 관리자 확인이 필요합니다.' }, { status: 409 });
+          }
+          const me = verified[0];
+          const cookieStore = await cookies();
+          cookieStore.set('student-session', me.id, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30,
+            path: '/',
+          });
+          return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
+        }
+      }
+
+      const normalizedCode = normalizeCode(authCode || phoneLast4);
+      if (normalizedCode.length === 4) {
+        const students = await getStudents();
+        const matches = students.filter((student) => {
+          const studentName = normalizeName(student.name);
+          const contactDigits = onlyDigits(student.contact);
+          const studentCode = normalizeCode(student.id).slice(-4);
+          const matchesPhone = /^\d{4}$/.test(normalizedCode) && contactDigits.endsWith(normalizedCode);
+          const matchesStudentCode = studentCode === normalizedCode;
+          return studentName === normalizedName && (matchesPhone || matchesStudentCode);
+        });
+
+        if (matches.length > 0) {
+          if (matches.length > 1) {
+            return NextResponse.json({ success: false, message: '동명이인이 있어 관리자 확인이 필요합니다.' }, { status: 409 });
+          }
+          const student = matches[0];
+          const cookieStore = await cookies();
+          cookieStore.set('student-session', student.id, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 60 * 60 * 24 * 30,
+            path: '/',
+          });
+          return NextResponse.json({
+            success: true,
+            studentName: student.name,
+            reportUrl: `/report/${student.id}?audience=student`,
+          });
+        }
+      }
     }
 
-    const students = await getStudents();
-    const matches = students.filter((student) => {
-      const studentName = normalizeName(student.name);
-      const contactDigits = onlyDigits(student.contact);
-      const studentCode = normalizeCode(student.id).slice(-4);
-      const matchesPhone = /^\d{4}$/.test(normalizedCode) && contactDigits.endsWith(normalizedCode);
-      const matchesStudentCode = studentCode === normalizedCode;
-      return studentName === normalizedName && (matchesPhone || matchesStudentCode);
-    });
-
-    if (matches.length === 0) {
-      return NextResponse.json(
-        { success: false, message: '일치하는 학생 정보를 찾을 수 없습니다.' },
-        { status: 401 }
-      );
-    }
-
-    if (matches.length > 1) {
-      return NextResponse.json(
-        { success: false, message: '동명이인이 있어 관리자 확인이 필요합니다.' },
-        { status: 409 }
-      );
-    }
-
-    const student = matches[0];
-    const cookieStore = await cookies();
-    cookieStore.set('student-session', student.id, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 30,
-      path: '/',
-    });
-
-    return NextResponse.json({
-      success: true,
-      studentName: student.name,
-      reportUrl: `/report/${student.id}?audience=student`,
-    });
+    return NextResponse.json(
+      { success: false, message: '아이디와 비밀번호를 올바르게 입력해 주세요.' },
+      { status: 400 }
+    );
   } catch (error) {
     console.error('Student login error:', error);
     return NextResponse.json(

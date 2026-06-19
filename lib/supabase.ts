@@ -37,6 +37,7 @@ function rowToStudent(r: any): Student {
   return {
     id: r.id,
     name: r.name,
+    loginId: r.login_id || undefined,
     campus: r.campus,
     manager: r.manager || '',
     contact: r.contact || '',
@@ -72,6 +73,7 @@ function studentToRow(student: Student, nowIso: string) {
   return {
     id: student.id,
     name: student.name,
+    login_id: student.loginId || null,
     campus: student.campus,
     manager: student.manager || '',
     contact: student.contact || '',
@@ -157,6 +159,7 @@ export async function readSharedMaterialsSupabase(): Promise<SharedMaterial[]> {
 export interface StudentAuthRecord {
   id: string;
   name: string;
+  login_id: string | null;
   contact: string | null;
   password_hash: string | null;
 }
@@ -164,7 +167,7 @@ export interface StudentAuthRecord {
 export async function getStudentAuthRecordsSupabase(): Promise<StudentAuthRecord[]> {
   const { data, error } = await getClient()
     .from('students')
-    .select('id, name, contact, password_hash');
+    .select('id, name, login_id, contact, password_hash');
   if (error) throw error;
   return (data || []) as StudentAuthRecord[];
 }
