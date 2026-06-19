@@ -36,6 +36,7 @@ export default function StudentReportPage() {
   const [mounted, setMounted] = useState(false);
   const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('report-overview');
 
   useEffect(() => {
     setMounted(true);
@@ -382,14 +383,24 @@ export default function StudentReportPage() {
     return subjectDays.length === 0 || subjectDays.includes(todayDayKey);
   });
   const nonStudyPeriodLabel = currentPeriod && !currentPeriod.studyTime ? currentPeriod.label : '';
-  const currentSubjectText = currentSubjects.length > 0
+  const timeGreeting = kstNow.hour < 6
+    ? '늦은 밤까지 애쓰고 있네요'
+    : kstNow.hour < 12
+      ? '좋은 아침이에요'
+      : kstNow.hour < 18
+        ? '좋은 오후예요'
+        : '좋은 저녁이에요';
+  const hasCurrentSubjects = currentSubjects.length > 0;
+  const currentSubjectText = hasCurrentSubjects
     ? currentSubjects.map((subject) => subject.name).join(' · ')
     : currentStudyTimeKey
-      ? '배정 과목 확인 중'
+      ? '자율 학습'
       : nonStudyPeriodLabel || '운영 시간 외';
-  const currentBriefingPhrase = currentSubjects.length > 0
-    ? `지금은 ${currentSubjectText} 시간입니다`
-    : `지금은 ${currentSubjectText}입니다`;
+  const currentBriefingPhrase = hasCurrentSubjects
+    ? `지금은 ${currentSubjectText} 시간이에요`
+    : currentStudyTimeKey
+      ? `지금은 ${studyTimeLabels[currentStudyTimeKey]} 자율 학습 시간이에요`
+      : '오늘도 충분히 잘했어요';
   const currentStudyLabel = currentStudyTimeKey
     ? studyTimeLabels[currentStudyTimeKey]
     : nonStudyPeriodLabel || '운영 시간 외';
@@ -612,7 +623,7 @@ export default function StudentReportPage() {
         }
       `}</style>
 
-      <div className={`${isStudentReport ? 'max-w-5xl' : 'max-w-[1320px] xl:grid xl:grid-cols-[250px_minmax(0,1fr)] xl:items-start xl:gap-6'} mx-auto print-container`}>
+      <div className={`${isStudentReport ? 'max-w-5xl lg:max-w-6xl xl:max-w-7xl' : 'max-w-[1320px] xl:grid xl:grid-cols-[250px_minmax(0,1fr)] xl:items-start xl:gap-6'} mx-auto print-container`}>
         {isParentReport && (
           <aside className="no-print sticky top-6 hidden xl:block">
             <nav className="rounded-[28px] border border-slate-200/80 bg-white/90 p-4 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl">
@@ -685,8 +696,8 @@ export default function StudentReportPage() {
                       <a
                         key={item.href}
                         href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10"
+                        onClick={(e) => { e.preventDefault(); setActiveTab(item.href.slice(1)); setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-white'}`}
                       >
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
                           <Icon className="h-4 w-4" />
@@ -732,11 +743,39 @@ export default function StudentReportPage() {
           </div>
         )}
 
+        {/* 앱형 가로 탭 네비게이션 (학생 전용, 인쇄 제외) */}
+        {isStudentReport && (
+          <div className="no-print sticky top-0 z-40 mb-4 bg-gradient-to-b from-[#F8FAFC] via-[#F8FAFC]/95 to-[#F8FAFC]/0 pt-2 pb-3">
+            <div className="flex gap-1.5 overflow-x-auto pl-16 pr-2 md:justify-center md:pl-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {reportNavItems.map((item) => {
+                const Icon = item.icon;
+                const tabId = item.href.slice(1);
+                const active = activeTab === tabId;
+                return (
+                  <button
+                    key={item.href}
+                    type="button"
+                    onClick={() => { setActiveTab(tabId); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[11px] font-black whitespace-nowrap transition-all active:scale-95 ${
+                      active
+                        ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_6px_16px_rgba(0,113,227,0.25)]'
+                        : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-800'
+                    }`}
+                  >
+                    <Icon className="h-3.5 w-3.5" />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* 결과 리포트 종이 영역 */}
         <div className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10">
           
           {/* 1. 리포트 헤더 */}
-          <div id="report-overview" className="scroll-mt-24 border-b border-slate-100 pb-8 flex flex-col md:flex-row justify-between md:items-start gap-6">
+          <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
             {isStudentReport ? (
               <div className="w-full space-y-6">
                 <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
@@ -748,9 +787,9 @@ export default function StudentReportPage() {
                     <div>
                       <p className="text-sm font-black text-[#0071E3]">오늘의 학습 브리핑</p>
                       <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl md:leading-tight">
-                        {student.name}님,
+                        {student.name}님, {timeGreeting} 👋
                         <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">
-                          {currentBriefingPhrase} 👋
+                          {currentBriefingPhrase}
                         </span>
                       </h1>
                     </div>
@@ -811,7 +850,7 @@ export default function StudentReportPage() {
           </div>
 
           {/* 원생 메타 격자 프로필 카드 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print-card">
+          <div className={`grid-cols-2 md:grid-cols-4 gap-4 print-card ${!isStudentReport || activeTab === 'report-overview' ? 'grid' : 'hidden print:grid'}`}>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0071E3]/15 to-[#0071E3]/5 text-[#0071E3] flex items-center justify-center shrink-0 shadow-sm">
                 <Award className="w-4.5 h-4.5" />
@@ -852,7 +891,7 @@ export default function StudentReportPage() {
 
           {/* 1-1. 학생용 다음 상담일자 안내 배너 */}
           {isStudentReport && finishDateStr && (
-            <div className="p-4.5 rounded-2xl bg-gradient-to-r from-[#0071E3]/[0.04] via-transparent to-[#862BF7]/[0.04] border border-[#0071E3]/15 flex items-center justify-between gap-4 shadow-sm print:shadow-none break-inside-avoid">
+            <div className={`p-4.5 rounded-2xl bg-gradient-to-r from-[#0071E3]/[0.04] via-transparent to-[#862BF7]/[0.04] border border-[#0071E3]/15 items-center justify-between gap-4 shadow-sm print:shadow-none break-inside-avoid ${activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[#0071E3]/10 text-[#0071E3] flex items-center justify-center shrink-0">
                   <Calendar className="w-4.5 h-4.5" />
@@ -872,13 +911,13 @@ export default function StudentReportPage() {
 
           {/* 학생 본인 등하원 상태 */}
           {isStudentReport && (
-            <div id="attendance-status" className="scroll-mt-24">
+            <div id="attendance-status" className={`scroll-mt-24 ${!isStudentReport || activeTab === 'attendance-status' ? '' : 'hidden print:block'}`}>
               <AttendanceStatusCard />
             </div>
           )}
 
           {/* 순공 시간 / 등하원 통계 */}
-          <div id="study-stats" className="scroll-mt-24">
+          <div id="study-stats" className={`scroll-mt-24 ${!isStudentReport || activeTab === 'study-stats' ? '' : 'hidden print:block'}`}>
             <StudyStatsCard stats={studyStats} />
           </div>
 
@@ -886,7 +925,7 @@ export default function StudentReportPage() {
           {isStudentReport && <LeaderboardCard studentId={studentId} />}
 
           {/* 2. 최근 생활 및 종합 피드백 */}
-          <div id="coach-feedback" className="scroll-mt-24 space-y-4 print-card">
+          <div id="coach-feedback" className={`scroll-mt-24 space-y-4 print-card ${!isStudentReport || activeTab === 'coach-feedback' ? '' : 'hidden print:block'}`}>
             <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-[#0071E3]" />
               학습 코칭 및 관리 위원회 최종 소견
@@ -935,7 +974,7 @@ export default function StudentReportPage() {
 
           {/* 2-1. 과목별 학습 시간표 */}
           {isStudentReport && (
-            <div id="timetable" className="scroll-mt-24 space-y-5 print-card">
+            <div id="timetable" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'timetable' ? '' : 'hidden print:block'}`}>
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#0071E3]" />
@@ -1040,7 +1079,7 @@ export default function StudentReportPage() {
           )}
 
           {isStudentReport && (
-            <div id="execution-plan" className="scroll-mt-24 space-y-5 print-card">
+            <div id="execution-plan" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'execution-plan' ? '' : 'hidden print:block'}`}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
@@ -1122,7 +1161,7 @@ export default function StudentReportPage() {
 
           {/* 2-2. 이번 주 / 이번 달 학습 계획 */}
           {isStudentReport && (
-            <div id="period-plan" className="scroll-mt-24 grid grid-cols-1 md:grid-cols-2 gap-6 print-card">
+            <div id="period-plan" className={`scroll-mt-24 grid-cols-1 md:grid-cols-2 gap-6 print-card ${!isStudentReport || activeTab === 'period-plan' ? 'grid' : 'hidden print:grid'}`}>
               <div className="p-6 rounded-3xl border border-slate-100 bg-white space-y-4.5 shadow-sm transition-all hover:shadow-md">
                 <h3 className="text-xs font-black text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-2">
                   <span>📅</span> 이번 주 핵심 주간 학습 계획
@@ -1183,7 +1222,7 @@ export default function StudentReportPage() {
           )}
 
           {/* 3. 과목별 진도율 및 학습 진척도 */}
-          <div id="subject-progress" className="scroll-mt-24 space-y-5 print-card">
+          <div id="subject-progress" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'subject-progress' ? '' : 'hidden print:block'}`}>
             <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
               <FileText className="w-4 h-4 text-[#0071E3]" />
               {isStudentReport ? '과목별 상세 학습 목표 및 주간 달성 스케줄러' : '과목별 학습 진도율 요약'}
@@ -1486,7 +1525,7 @@ export default function StudentReportPage() {
           </div>
 
           {/* 4. 성적 및 모의고사 분석 결과 */}
-          <div id="grade-analysis" className="scroll-mt-24 space-y-5 print-card">
+          <div id="grade-analysis" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'grade-analysis' ? '' : 'hidden print:block'}`}>
             <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
               <Calendar className="w-4 h-4 text-emerald-600" />
               모의고사 성적 추이 및 주간 테스트 분석 결과
