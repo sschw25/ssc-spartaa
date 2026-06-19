@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Trophy, Flame, RefreshCw, Loader2, Clock } from 'lucide-react';
 
 interface Row { rank: number; id: string; name: string; campus: string; weekMinutes: number; dayMinutes: number; isOpen: boolean }
@@ -27,6 +28,7 @@ const fmt = (m: number) => {
 const medal = (rank: number) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`);
 
 export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentId }: Props) {
+  const router = useRouter();
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -104,9 +106,9 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
             <span className="text-[10px] font-extrabold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
           )}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           {liveCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-[9px] font-black text-emerald-800 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-black text-emerald-800 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full mr-1">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
@@ -114,6 +116,12 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
               {liveCount}명 몰입 중
             </span>
           )}
+          <button
+            onClick={() => router.push('/admin/leaderboard')}
+            className="text-[11px] font-bold text-[#86868B] hover:text-[#1D1D1F] transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F5F7]"
+          >
+            자세히
+          </button>
           <button onClick={load} disabled={loading} className="text-[#86868B] hover:text-[#1D1D1F] transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7]" title="랭킹 새로고침">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
@@ -128,7 +136,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
         <span>평균 순공 <span className="text-[#1D1D1F]">{fmt(avgWeekMin)}</span></span>
       </div>
 
-      <div className="max-h-[250px] overflow-y-auto -mx-1 px-1 space-y-1">
+      <div className="max-h-[250px] overflow-y-auto custom-scrollbar -mx-1 px-1 space-y-1">
         {rows.length === 0 ? (
           <p className="text-[11px] text-[#86868B] font-semibold text-center py-8">표시할 학생이 없습니다.</p>
         ) : rows.map((r) => (

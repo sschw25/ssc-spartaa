@@ -258,8 +258,8 @@ function AdminAttendanceContent() {
     <div className="min-h-screen bg-[#F5F5F7] font-sans text-[#1D1D1F]">
       <nav className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-black/[0.05] px-4 md:px-8 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <button onClick={() => router.push('/admin/dashboard')} className="flex items-center gap-1.5 text-xs font-bold text-[#86868B] hover:text-[#1D1D1F]">
-            <ArrowLeft className="w-4 h-4" /> 대시보드
+          <button onClick={() => router.back()} className="flex items-center gap-1.5 text-xs font-bold text-[#86868B] hover:text-[#1D1D1F]">
+            <ArrowLeft className="w-4 h-4" /> 뒤로가기
           </button>
           <h1 className="text-sm font-bold">출결 상세 표</h1>
         </div>

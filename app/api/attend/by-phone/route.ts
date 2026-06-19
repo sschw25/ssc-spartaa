@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyAttendToken } from '@/lib/attendance-token';
 import { getStudents } from '@/lib/store';
-import { toggleAttendance } from '@/lib/attendance-service';
+import { toggleAttendance, processAttendance, type AttendanceAction } from '@/lib/attendance-service';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import type { Student } from '@/lib/types/student';
 
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { token, phone, studentId } = await request.json();
+    const { token, phone, studentId, action } = await request.json();
     if (!verifyAttendToken(token || '')) {
       return NextResponse.json(
         { success: false, message: '인증 시간이 만료되었습니다. 화면을 새로고침해 주세요.' },
@@ -68,6 +68,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const targetAction = (action as AttendanceAction) || 'check-in';
+
     if (studentId) {
       const selected = matches.find((match) => match.id === studentId);
       if (!selected) {
@@ -77,7 +79,9 @@ export async function POST(request: Request) {
         );
       }
 
-      const result = await toggleAttendance(selected.id, 'phone');
+      const result = action
+        ? await processAttendance(selected.id, targetAction, 'phone')
+        : await toggleAttendance(selected.id, 'phone');
       return NextResponse.json({ success: true, ...result });
     }
 
@@ -85,7 +89,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, needsSelection: true, matches });
     }
 
-    const result = await toggleAttendance(matches[0].id, 'phone');
+    const result = action
+      ? await processAttendance(matches[0].id, targetAction, 'phone')
+      : await toggleAttendance(matches[0].id, 'phone');
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '번호 출결 처리 실패';

@@ -2,7 +2,7 @@ import { checkIn, checkOut, getOpenSession, getStudentById, type StudySession } 
 import { notifyAttendance } from '@/lib/sms';
 import { enrollmentDaysLeft, isWeeklyGradeMissing } from '@/lib/student-flags';
 
-export type AttendanceAction = 'check-in' | 'check-out';
+export type AttendanceAction = 'check-in' | 'check-out' | 'outing' | 'return';
 
 export interface AttendanceToggleResult {
   action: AttendanceAction;
@@ -23,7 +23,7 @@ function seoulTime(): string {
   }).format(new Date());
 }
 
-async function sendAttendSms(studentId: string, action: 'in' | 'out', minutes?: number | null) {
+async function sendAttendSms(studentId: string, action: 'in' | 'out' | 'outing' | 'return', minutes?: number | null) {
   try {
     const student = await getStudentById(studentId);
     if (!student) return;
@@ -42,7 +42,11 @@ async function sendAttendSms(studentId: string, action: 'in' | 'out', minutes?: 
   }
 }
 
-export async function toggleAttendance(studentId: string, source = 'qr'): Promise<AttendanceToggleResult> {
+export async function processAttendance(
+  studentId: string,
+  action: AttendanceAction,
+  source = 'qr'
+): Promise<AttendanceToggleResult> {
   const student = await getStudentById(studentId);
   if (!student) throw new Error('학생을 찾을 수 없습니다.');
 
@@ -52,11 +56,30 @@ export async function toggleAttendance(studentId: string, source = 'qr'): Promis
   const gradeReminder = isWeeklyGradeMissing(student);
 
   const openSession: StudySession | null = await getOpenSession(studentId);
-  if (openSession) {
-    const closedSession = await checkOut(openSession);
-    await sendAttendSms(studentId, 'out', closedSession.minutes);
+
+  if (action === 'check-in' || action === 'return') {
+    if (openSession) {
+      throw new Error(action === 'check-in' ? '이미 등원한 상태입니다.' : '이미 복귀했거나 공부 중인 상태입니다.');
+    }
+    const startedSession = await checkIn(studentId, source);
+    await sendAttendSms(studentId, action === 'check-in' ? 'in' : 'return');
     return {
-      action: 'check-out',
+      action,
+      studentId,
+      studentName: student.name,
+      since: startedSession.check_in,
+      enrollmentDaysLeft: enrollmentNotice,
+      gradeReminder,
+    };
+  } else {
+    // check-out || outing
+    if (!openSession) {
+      throw new Error('진행 중인 등원 기록이 없습니다. 먼저 등원 처리를 해주세요.');
+    }
+    const closedSession = await checkOut(openSession);
+    await sendAttendSms(studentId, action === 'check-out' ? 'out' : 'outing', closedSession.minutes);
+    return {
+      action,
       studentId,
       studentName: student.name,
       minutes: closedSession.minutes,
@@ -64,15 +87,10 @@ export async function toggleAttendance(studentId: string, source = 'qr'): Promis
       gradeReminder,
     };
   }
+}
 
-  const startedSession = await checkIn(studentId, source);
-  await sendAttendSms(studentId, 'in');
-  return {
-    action: 'check-in',
-    studentId,
-    studentName: student.name,
-    since: startedSession.check_in,
-    enrollmentDaysLeft: enrollmentNotice,
-    gradeReminder,
-  };
+export async function toggleAttendance(studentId: string, source = 'qr'): Promise<AttendanceToggleResult> {
+  const openSession: StudySession | null = await getOpenSession(studentId);
+  const action: AttendanceAction = openSession ? 'check-out' : 'check-in';
+  return processAttendance(studentId, action, source);
 }

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, RefreshCw, Clock, Flame, ChevronDown } from 'lucide-react';
+import { Loader2, RefreshCw, Clock, Flame, ChevronDown, UserCheck, Home, UserX } from 'lucide-react';
 
 type PresentRow = { id: string; name: string; campus: string; checkInAt: string; minutesSoFar: number; weekMinutes: number };
 type LeftRow = { id: string; name: string; campus: string; checkInAt: string; checkOutAt: string; minutes: number; weekMinutes: number };
@@ -104,29 +104,58 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
 
 
   const Tile = ({
-    label, count, color, section,
-  }: { label: string; count: number; color: string; section: 'present' | 'left' | 'absent' }) => (
-    <button
-      type="button"
-      onClick={() => {
-        setOpenSection(section);
-      }}
-      className={`flex-1 min-h-[104px] flex flex-col justify-between rounded-2xl border p-3 text-left transition-premium hover:-translate-y-0.5 hover:shadow-md ${
-        detailsOpen && openSection === section
-          ? 'border-black/[0.15] ring-2 ring-inset ring-black/[0.06] shadow-sm'
-          : 'border-black/[0.04]'
-      } ${color}`}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="admin-fit-label text-[10px] font-extrabold uppercase tracking-wider opacity-85">{label}</span>
-      </div>
-      <div className="mt-2 flex items-end justify-between">
-        <div className="admin-fit-number text-xl font-extrabold tracking-tight text-[#1D1D1F]">
-          {count}<span className="text-[10px] font-bold opacity-75 ml-0.5">명</span>
+    label, count, section, activeColor, inactiveColor, icon: Icon, dotColor
+  }: {
+    label: string;
+    count: number;
+    section: 'present' | 'left' | 'absent';
+    activeColor: string;
+    inactiveColor: string;
+    icon: React.ComponentType<{ className?: string }>;
+    dotColor: string;
+  }) => {
+    const isActive = detailsOpen && openSection === section;
+    return (
+      <button
+        type="button"
+        onClick={() => setOpenSection(section)}
+        className={`flex-1 min-h-[104px] flex flex-col justify-between rounded-2xl p-4 text-left transition-all duration-300 relative overflow-hidden border ${
+          isActive 
+            ? `${activeColor} shadow-[0_6px_16px_-4px_rgba(0,0,0,0.06)] scale-[1.01] z-10` 
+            : `${inactiveColor} hover:bg-black/[0.01] hover:scale-[1.005] hover:border-black/[0.08]`
+        }`}
+      >
+        {/* Decorative background icon */}
+        <div className={`absolute right-2 bottom-1 opacity-[0.06] transition-transform duration-500 pointer-events-none ${isActive ? 'scale-105 opacity-[0.09]' : 'scale-95'}`}>
+          <Icon className="w-14 h-14" />
         </div>
-      </div>
-    </button>
-  );
+
+        {/* Top area: Label & status indicator */}
+        <div className="flex items-center gap-1.5">
+          <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${section === 'present' ? 'animate-pulse' : ''}`} />
+          <span className={`text-[11px] font-extrabold tracking-wide uppercase transition-colors duration-300 ${
+            isActive ? 'text-[#1D1D1F]' : 'text-[#86868B]'
+          }`}>
+            {label}
+          </span>
+        </div>
+
+        {/* Bottom area: Count */}
+        <div className="mt-2.5 flex items-baseline">
+          <span className={`text-2xl sm:text-3xl font-black tracking-tight transition-colors duration-300 ${
+            isActive ? 'text-[#1D1D1F]' : 'text-[#3A3A3C]'
+          }`}>
+            {count}
+          </span>
+          <span className={`text-xs font-bold ml-1 transition-colors duration-300 ${
+            isActive ? 'text-[#1D1D1F]/70' : 'text-[#86868B]'
+          }`}>
+            명
+          </span>
+        </div>
+      </button>
+    );
+  };
 
   const Row = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <button
@@ -175,16 +204,37 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
       </div>
 
       <div className="flex gap-3">
-        <Tile label="등원 중" count={present.length} section="present"
-          color="border-emerald-100/80 bg-gradient-to-br from-emerald-50/80 to-emerald-100/40 text-emerald-800" />
-        <Tile label="하원" count={left.length} section="left"
-          color="border-blue-100/80 bg-gradient-to-br from-blue-50/80 to-blue-100/40 text-blue-800" />
-        <Tile label="미등원" count={absent.length} section="absent"
-          color="border-slate-200/80 bg-gradient-to-br from-slate-50/80 to-slate-100/40 text-slate-700" />
+        <Tile
+          label="등원 중"
+          count={present.length}
+          section="present"
+          activeColor="border-emerald-200/80 bg-gradient-to-br from-emerald-50/70 to-emerald-100/30 text-emerald-900"
+          inactiveColor="border-black/[0.04] bg-white text-slate-500"
+          icon={UserCheck}
+          dotColor="bg-emerald-500"
+        />
+        <Tile
+          label="하원"
+          count={left.length}
+          section="left"
+          activeColor="border-blue-200/80 bg-gradient-to-br from-blue-50/70 to-blue-100/30 text-blue-900"
+          inactiveColor="border-black/[0.04] bg-white text-slate-500"
+          icon={Home}
+          dotColor="bg-blue-500"
+        />
+        <Tile
+          label="미등원"
+          count={absent.length}
+          section="absent"
+          activeColor="border-slate-300/80 bg-gradient-to-br from-slate-100/70 to-slate-200/30 text-slate-900"
+          inactiveColor="border-black/[0.04] bg-white text-slate-500"
+          icon={UserX}
+          dotColor="bg-slate-400"
+        />
       </div>
 
       {detailsOpen && (
-        <div className="mt-3 max-h-72 overflow-y-auto border-t border-black/[0.05] px-1 pt-3">
+        <div className="mt-3 max-h-72 overflow-y-auto custom-scrollbar border-t border-black/[0.05] px-1 pt-3">
           {openSection === 'present' && (
             present.length === 0 ? <Empty text="현재 등원 중인 원생이 없습니다." /> :
             present.map((r) => (

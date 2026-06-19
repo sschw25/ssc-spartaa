@@ -205,20 +205,10 @@ function ConsultationContent() {
 
   const handleQuickFilterChange = (filter: 'all' | 'consultation' | 'behind') => {
     setQuickFilter(filter);
-    if (filter === 'consultation') {
-      setDashboardTab('cards');
-    } else if (filter === 'behind') {
-      setDashboardTab('db');
-    }
   };
 
   const handleDashboardTabChange = (tab: string) => {
     setDashboardTab(tab);
-    if (tab === 'cards' && quickFilter === 'behind') {
-      setQuickFilter('all');
-    } else if (tab === 'db' && quickFilter === 'consultation') {
-      setQuickFilter('all');
-    }
   };
 
   useEffect(() => {
@@ -450,7 +440,15 @@ function ConsultationContent() {
   // 검색 및 필터링된 학생 목록
   const filteredStudents = campusScopedStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesQuickFilter = quickFilter !== 'consultation' || pendingConsultationStudents.some(target => target.id === s.id);
+    
+    let matchesQuickFilter = true;
+    if (quickFilter === 'consultation') {
+      matchesQuickFilter = pendingConsultationStudents.some(target => target.id === s.id);
+    } else if (quickFilter === 'behind') {
+      const studentProgressItems = allProgressItems.filter(item => item.studentId === s.id);
+      matchesQuickFilter = studentProgressItems.some(item => item.status === 'behind');
+    }
+    
     return matchesSearch && matchesQuickFilter;
   });
 
@@ -462,7 +460,14 @@ function ConsultationContent() {
     .filter(item => {
       const matchesSearch = item.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             item.title.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesQuickFilter = quickFilter !== 'behind' || item.status === 'behind';
+      
+      let matchesQuickFilter = true;
+      if (quickFilter === 'behind') {
+        matchesQuickFilter = item.status === 'behind';
+      } else if (quickFilter === 'consultation') {
+        matchesQuickFilter = pendingConsultationStudents.some(target => target.id === item.studentId);
+      }
+      
       return matchesSearch && matchesQuickFilter;
     })
     .sort((a, b) => {
@@ -514,7 +519,12 @@ function ConsultationContent() {
             <Menu className="w-5 h-5" />
             <span className="sr-only">메뉴 열기</span>
           </Button>
-          <span className="font-black text-sm tracking-tight text-white bg-[#1D1D1F] px-3 py-1.5 rounded-xl mr-1.5 shadow-sm">SSC</span>
+          <span 
+            onClick={() => router.push('/admin/dashboard')} 
+            className="font-black text-sm tracking-tight text-white bg-[#1D1D1F] px-3 py-1.5 rounded-xl mr-1.5 shadow-sm cursor-pointer hover:opacity-80 transition-opacity"
+          >
+            SSC
+          </span>
           <h1 className="admin-fit-text text-xs sm:text-sm font-black tracking-tight text-[#1D1D1F] opacity-90">상담일지 및 진도 관리</h1>
         </div>
         
@@ -622,7 +632,10 @@ function ConsultationContent() {
             </button>
             <button
               type="button"
-              onClick={() => navigateFromMenu('/attend/kiosk')}
+              onClick={() => {
+                setIsMenuOpen(false);
+                window.open('/attend/kiosk', '_blank');
+              }}
               className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
             >
               <ScanLine className="w-4 h-4 text-[#0071E3]" />
@@ -679,9 +692,9 @@ function ConsultationContent() {
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
         
         {/* 필터 및 검색 바 */}
-        <div className="admin-fit-box flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4 bg-white p-4.5 rounded-2xl border border-black/[0.05] shadow-sm">
-          <div className="admin-fit-row flex flex-1 flex-wrap items-center gap-3 admin-mobile-wrap">
-            <div className="relative flex-1 max-w-md min-w-[14rem] admin-mobile-full">
+        <div className="admin-fit-box flex flex-col gap-3.5 bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
+          <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+            <div className="relative flex-1 max-w-md admin-mobile-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B]" />
               <Input
                 ref={searchInputRef}
@@ -692,48 +705,78 @@ function ConsultationContent() {
               />
             </div>
 
-            {/* 퀵 필터 토글 그룹 */}
-            <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
-              <Button
-                variant={quickFilter === 'all' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleQuickFilterChange('all')}
-                className={`h-8 rounded-lg px-3 text-[11px] font-bold transition-premium ${
-                  quickFilter === 'all' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
-                }`}
-              >
-                전체
-              </Button>
-              <Button
-                variant={quickFilter === 'consultation' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleQuickFilterChange('consultation')}
-                className={`h-8 rounded-lg px-3 text-[11px] font-bold transition-premium ${
-                  quickFilter === 'consultation' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
-                }`}
-              >
-                상담 대상
-              </Button>
-              <Button
-                variant={quickFilter === 'behind' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => handleQuickFilterChange('behind')}
-                className={`h-8 rounded-lg px-3 text-[11px] font-bold transition-premium ${
-                  quickFilter === 'behind' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
-                }`}
-              >
-                진도 부족
-              </Button>
-            </div>
+            <Button
+              onClick={() => setIsAddModalOpen(true)}
+              className="admin-fit-button rounded-xl bg-[#1D1D1F] hover:bg-[#323236] text-white text-xs h-10 px-4 md:px-5 font-bold shadow-sm flex items-center justify-center shrink-0"
+            >
+              <Plus className="w-4 h-4 mr-1.5" />
+              신규 원생 등록
+            </Button>
           </div>
 
-          <Button
-            onClick={() => setIsAddModalOpen(true)}
-            className="admin-fit-button rounded-xl bg-[#1D1D1F] hover:bg-[#323236] text-white text-xs h-10 px-4 md:px-5 font-bold shadow-sm flex items-center justify-center shrink-0"
-          >
-            <Plus className="w-4 h-4 mr-1.5" />
-            신규 원생 등록
-          </Button>
+          <div className="h-px bg-black/[0.04] my-0.5" />
+
+          {/* 필터 선택 영역 (캠퍼스 필터 + 퀵 필터) */}
+          <div className="flex flex-wrap items-center gap-5 text-xs">
+            {/* 캠퍼스(센터) 필터 */}
+            <div className="flex items-center gap-2.5">
+              <span className="font-extrabold text-[#86868B] shrink-0">캠퍼스</span>
+              <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
+                {CAMPUS_FILTERS.map((c) => (
+                  <Button
+                    key={c}
+                    size="sm"
+                    variant={campusFilter === c ? 'default' : 'ghost'}
+                    onClick={() => handleCampusFilterChange(c)}
+                    className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                      campusFilter === c 
+                        ? 'bg-white hover:bg-white text-black shadow-sm' 
+                        : 'text-[#86868B] hover:text-black'
+                    }`}
+                  >
+                    {c === 'all' ? '전체' : getCampusLabel(c)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* 퀵 필터 (상담/진도) */}
+            <div className="flex items-center gap-2.5">
+              <span className="font-extrabold text-[#86868B] shrink-0">상태 필터</span>
+              <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
+                <Button
+                  variant={quickFilter === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleQuickFilterChange('all')}
+                  className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'all' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                  }`}
+                >
+                  전체
+                </Button>
+                <Button
+                  variant={quickFilter === 'consultation' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleQuickFilterChange('consultation')}
+                  className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'consultation' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                  }`}
+                >
+                  상담 대상
+                </Button>
+                <Button
+                  variant={quickFilter === 'behind' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleQuickFilterChange('behind')}
+                  className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'behind' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                  }`}
+                >
+                  진도 부족
+                </Button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* 메인 대시보드 탭 분기 */}

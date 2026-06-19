@@ -56,7 +56,8 @@ export default function AttendKioskPage() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [message, setMessage] = useState('');
-  const [action, setAction] = useState<'check-in' | 'check-out' | null>(null);
+  const [action, setAction] = useState<'check-in' | 'check-out' | 'outing' | 'return' | null>(null);
+  const [selectedAction, setSelectedAction] = useState<'check-in' | 'check-out' | 'outing' | 'return'>('check-in');
   const [minutes, setMinutes] = useState<number | null>(null);
   const [enrollmentDaysLeft, setEnrollmentDaysLeft] = useState<number | null>(null);
   const [gradeReminder, setGradeReminder] = useState(false);
@@ -155,13 +156,14 @@ export default function AttendKioskPage() {
     setMessage('');
   };
 
-  const submitPhone = async (selectedStudentId?: string) => {
+  const submitPhone = async (selectedStudentId?: string, actionToUse?: 'check-in' | 'check-out' | 'outing' | 'return') => {
     if (!token) {
       setSubmitState('error');
       setMessage('출결 토큰을 불러오는 중입니다.');
       return;
     }
 
+    const currentAction = actionToUse || selectedAction;
     setSubmitState('submitting');
     setMessage('');
 
@@ -169,7 +171,7 @@ export default function AttendKioskPage() {
       const response = await fetch('/api/attend/by-phone', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, phone, studentId: selectedStudentId }),
+        body: JSON.stringify({ token, phone, studentId: selectedStudentId, action: currentAction }),
       });
       const json = await response.json();
 
@@ -199,6 +201,8 @@ export default function AttendKioskPage() {
       setMessage('네트워크 오류가 발생했습니다.');
     }
   };
+
+  const showResult = submitState === 'done' || submitState === 'error' || matches.length > 0;
 
   return (
     <main className="min-h-screen bg-[#111827] text-white font-sans">
@@ -236,8 +240,9 @@ export default function AttendKioskPage() {
         </header>
 
         <section className="grid flex-1 place-items-center py-8">
-            <div className="grid w-full max-w-4xl gap-5 lg:grid-cols-[420px_1fr]">
-              <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl">
+          <div className="w-full max-w-[420px] transition-all duration-300">
+            {!showResult ? (
+              <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
                 <div className="flex items-center justify-between px-1 pb-3">
                   <p className="text-sm font-black text-slate-900">번호로 등·하원</p>
                   <p className="text-xs font-bold text-slate-400">전화번호 끝 4자리</p>
@@ -265,41 +270,97 @@ export default function AttendKioskPage() {
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => submitPhone()}
-                  disabled={phone.length < 4 || submitState === 'submitting'}
-                  className="mt-4 h-14 w-full rounded-xl bg-[#0071E3] text-base font-black text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  {submitState === 'submitting' ? (
-                    <Loader2 className="mx-auto size-5 animate-spin" />
-                  ) : (
-                    '확인'
-                  )}
-                </button>
-              </div>
-
-              <div className="min-h-[360px] rounded-[24px] bg-white/10 p-5">
-                {submitState === 'done' ? (
-                  <div className="flex h-full flex-col items-center justify-center text-center animate-in fade-in zoom-in-95 duration-500">
-                    <span
-                      className={`mb-4 grid size-24 place-items-center rounded-full ${action === 'check-out' ? 'bg-sky-400/15' : 'bg-emerald-400/15'}`}
+                {submitState === 'submitting' ? (
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-slate-700 text-base font-black text-white transition"
+                  >
+                    <Loader2 className="animate-spin size-6" />
+                  </button>
+                ) : (
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAction('check-in');
+                        submitPhone(undefined, 'check-in');
+                      }}
+                      disabled={phone.length < 4}
+                      className="flex h-14 items-center justify-center rounded-xl bg-emerald-600 text-base font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
                     >
-                      {action === 'check-out' ? (
-                        <LogOut className="size-12 text-sky-300 animate-in zoom-in-50 duration-700" />
+                      등원
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAction('check-out');
+                        submitPhone(undefined, 'check-out');
+                      }}
+                      disabled={phone.length < 4}
+                      className="flex h-14 items-center justify-center rounded-xl bg-sky-600 text-base font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                    >
+                      하원
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAction('outing');
+                        submitPhone(undefined, 'outing');
+                      }}
+                      disabled={phone.length < 4}
+                      className="flex h-14 items-center justify-center rounded-xl bg-amber-600 text-base font-black text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                    >
+                      외출
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedAction('return');
+                        submitPhone(undefined, 'return');
+                      }}
+                      disabled={phone.length < 4}
+                      className="flex h-14 items-center justify-center rounded-xl bg-indigo-600 text-base font-black text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                    >
+                      복귀
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="min-h-[480px] rounded-[24px] bg-slate-900 border border-white/10 p-6 text-white shadow-2xl flex flex-col justify-center animate-in fade-in zoom-in-95 duration-300">
+                {submitState === 'done' ? (
+                  <div className="flex h-full flex-col items-center justify-center text-center">
+                    <span
+                      className={`mb-4 grid size-20 place-items-center rounded-full ${
+                        action === 'check-in' ? 'bg-emerald-500/10 text-emerald-400' :
+                        action === 'return' ? 'bg-indigo-500/10 text-indigo-400' :
+                        action === 'check-out' ? 'bg-sky-500/10 text-sky-400' : 'bg-amber-500/10 text-amber-400'
+                      }`}
+                    >
+                      {action === 'check-out' || action === 'outing' ? (
+                        <LogOut className={`size-10 ${action === 'outing' ? 'text-amber-400' : 'text-sky-400'}`} />
                       ) : (
-                        <CheckCircle2 className="size-12 text-emerald-300 animate-in zoom-in-50 duration-700" />
+                        <CheckCircle2 className={`size-10 ${action === 'return' ? 'text-indigo-400' : 'text-emerald-400'}`} />
                       )}
                     </span>
-                    <h2 className="text-3xl font-black tracking-tight">
-                      {action === 'check-out' ? '하원 완료' : '등원 완료'}
+                    <h2 className="text-2xl font-black tracking-tight">
+                      {action === 'check-in' && '등원 완료'}
+                      {action === 'return' && '복귀 완료'}
+                      {action === 'check-out' && '하원 완료'}
+                      {action === 'outing' && '외출 완료'}
                     </h2>
                     <p className="mt-1.5 text-base font-bold text-slate-200">{message}</p>
 
                     <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3.5 py-1.5 text-sm font-bold">
-                      <span className="text-slate-400">{action === 'check-out' ? '하원' : '등원'}</span>
+                      <span className="text-slate-400">
+                        {action === 'check-in' && '등원'}
+                        {action === 'return' && '복귀'}
+                        {action === 'check-out' && '하원'}
+                        {action === 'outing' && '외출'}
+                      </span>
                       <span className="text-white">{doneTime}</span>
-                      {action === 'check-out' && minutes != null && (
+                      {(action === 'check-out' || action === 'outing') && minutes != null && (
                         <>
                           <span className="text-slate-500">·</span>
                           <span className="text-white">체류 {formatMinutes(minutes)}</span>
@@ -310,13 +371,13 @@ export default function AttendKioskPage() {
                     {(enrollmentDaysLeft != null || gradeReminder) && (
                       <div className="mt-4 w-full max-w-xs space-y-2">
                         {enrollmentDaysLeft != null && (
-                          <div className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold ${enrollmentDaysLeft < 0 ? 'bg-red-500/20 text-red-200' : 'bg-amber-500/20 text-amber-100'}`}>
+                          <div className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold bg-white/5 border border-white/10 ${enrollmentDaysLeft < 0 ? 'text-red-400' : 'text-amber-400'}`}>
                             <CalendarClock className="size-4 shrink-0" />
                             {enrollmentText(enrollmentDaysLeft)}
                           </div>
                         )}
                         {gradeReminder && (
-                          <div className="flex items-center justify-center gap-2 rounded-xl bg-sky-500/20 px-3 py-2.5 text-sm font-bold text-sky-100">
+                          <div className="flex items-center justify-center gap-2 rounded-xl bg-sky-500/10 border border-sky-500/20 px-3 py-2.5 text-sm font-bold text-sky-400">
                             <ClipboardList className="size-4 shrink-0" />
                             이번 주 성적 미입력 · 선생님께 전달
                           </div>
@@ -326,51 +387,61 @@ export default function AttendKioskPage() {
                     <button
                       type="button"
                       onClick={resetPhoneFlow}
-                      className="mt-6 h-12 rounded-xl bg-white px-6 text-sm font-black text-slate-950 transition active:scale-[0.98]"
+                      className="mt-6 h-12 rounded-xl bg-white px-6 text-sm font-black text-slate-950 transition hover:bg-slate-100 active:scale-[0.98]"
                     >
                       다음 학생{autoResetIn != null ? ` (${autoResetIn})` : ''}
                     </button>
                   </div>
                 ) : submitState === 'error' ? (
                   <div className="flex h-full flex-col items-center justify-center text-center">
-                    <AlertCircle className="mb-4 size-12 text-red-300" />
+                    <AlertCircle className="mb-4 size-12 text-red-400" />
                     <h2 className="text-xl font-black">처리 실패</h2>
                     <p className="mt-2 max-w-sm text-sm font-semibold text-slate-300">{message}</p>
+                    <button
+                      type="button"
+                      onClick={resetPhoneFlow}
+                      className="mt-6 h-12 rounded-xl bg-white/10 border border-white/10 px-6 text-sm font-black text-white transition hover:bg-white/20 active:scale-[0.98]"
+                    >
+                      다시 시도
+                    </button>
                   </div>
                 ) : matches.length > 0 ? (
                   <div>
-                    <h2 className="text-lg font-black">학생 선택</h2>
-                    <div className="mt-4 grid gap-2">
+                    <h2 className="text-lg font-black text-white px-1">학생 선택</h2>
+                    <p className="text-xs text-slate-400 px-1 mt-1">동일한 번호의 학생이 여러 명 있습니다.</p>
+                    <div className="mt-4 grid gap-2 max-h-[300px] overflow-y-auto pr-1">
                       {matches.map((match) => (
                         <button
                           key={match.id}
                           type="button"
-                          onClick={() => submitPhone(match.id)}
-                          className="flex h-16 items-center justify-between rounded-xl bg-white px-4 text-left text-slate-950 transition hover:bg-slate-100"
+                          onClick={() => submitPhone(match.id, selectedAction)}
+                          className="flex h-16 items-center justify-between rounded-xl bg-white/[0.06] border border-white/5 hover:border-white/15 px-4 text-left text-white transition hover:bg-white/10 active:scale-[0.99]"
                         >
                           <span className="flex items-center gap-3">
-                            <UserRound className="size-5 text-slate-500" />
+                            <UserRound className="size-5 text-slate-400" />
                             <span>
                               <span className="block text-base font-black">{match.name}</span>
-                              <span className="block text-xs font-bold text-slate-500">
+                              <span className="block text-xs font-bold text-slate-400">
                                 {campusLabels[match.campus] || match.campus || '캠퍼스 미지정'}
                               </span>
                             </span>
                           </span>
-                          <span className="text-sm font-black text-[#0071E3]">선택</span>
+                          <span className="text-sm font-black text-emerald-400">선택</span>
                         </button>
                       ))}
                     </div>
+                    <button
+                      type="button"
+                      onClick={resetPhoneFlow}
+                      className="mt-4 h-12 w-full rounded-xl bg-white/5 border border-white/10 text-sm font-black text-white transition hover:bg-white/10 active:scale-[0.98]"
+                    >
+                      취소
+                    </button>
                   </div>
-                ) : (
-                  <div className="flex h-full flex-col items-center justify-center text-center">
-                    <Phone className="mb-4 size-12 text-slate-400" />
-                    <h2 className="text-xl font-black">전화번호 끝 4자리</h2>
-                    <p className="mt-2 text-sm font-semibold text-slate-400">동명이거나 번호가 겹치면 학생을 선택합니다.</p>
-                  </div>
-                )}
+                ) : null}
               </div>
-            </div>
+            )}
+          </div>
         </section>
       </div>
     </main>

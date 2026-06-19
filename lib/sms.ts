@@ -11,7 +11,7 @@ const SENDER = (process.env.SOLAPI_SENDER || '').replace(/\D/g, '');
 const TEST_MODE = process.env.SOLAPI_TEST_MODE === 'Y';
 const SOLAPI_ENDPOINT = 'https://api.solapi.com/messages/v4/send-many/detail';
 
-export type AttendAction = 'in' | 'out';
+export type AttendAction = 'in' | 'out' | 'outing' | 'return';
 
 export interface AttendNotifyInput {
   studentName: string;
@@ -28,6 +28,12 @@ const onlyDigits = (value?: string) => (value || '').replace(/\D/g, '');
 function buildMessage(name: string, action: AttendAction, time: string, minutes?: number | null): string {
   if (action === 'in') {
     return `[SSC스파르타] ${name} 학생이 ${time}에 등원했습니다.`;
+  }
+  if (action === 'outing') {
+    return `[SSC스파르타] ${name} 학생이 ${time}에 외출했습니다.`;
+  }
+  if (action === 'return') {
+    return `[SSC스파르타] ${name} 학생이 ${time}에 복귀했습니다.`;
   }
 
   let studyText = '';
