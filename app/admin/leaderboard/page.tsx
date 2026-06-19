@@ -196,12 +196,12 @@ export default function WeeklyLeaderboardPage() {
 
           <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
             <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
-              <Award className="w-16 h-16 text-purple-500" />
+              <Award className="w-16 h-16 text-blue-500" />
             </div>
             <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">실시간 몰입 인원</span>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-purple-600">{liveCount}</span>
-              <span className="text-xs font-bold text-purple-600/80 ml-1">명</span>
+              <span className="text-3xl font-black tracking-tight text-blue-600">{liveCount}</span>
+              <span className="text-xs font-bold text-blue-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
               현재 등원 중인 실시간 학습자 수

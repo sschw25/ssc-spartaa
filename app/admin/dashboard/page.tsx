@@ -919,27 +919,27 @@ export default function AdminDashboardPage() {
                 router.push('/admin/consultation');
               }
             }}
-            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#F6F7FA] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
+            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FFF8F2] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
           >
             <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <ClipboardList className="w-16 h-16 text-indigo-600" />
+              <ClipboardList className="w-16 h-16 text-amber-600" />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">성적 미입력</span>
               {shouldShowDot('grades', lastGradeUpdate) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
               )}
             </div>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-indigo-600">
+              <span className="text-3xl font-black tracking-tight text-amber-600">
                 {weeklyGradeMissingStudents.length}
               </span>
-              <span className="text-xs font-bold text-indigo-600/80 ml-1">명</span>
+              <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
               이번 주 성적 입력 대상 중 미등록 원생
             </p>
-            <div className="mt-3 text-[10px] text-indigo-700 font-extrabold group-hover:underline flex items-center gap-0.5">
+            <div className="mt-3 text-[10px] text-amber-700 font-extrabold group-hover:underline flex items-center gap-0.5">
               {weeklyGradeMissingStudents.length > 0 ? '첫 원생 열기' : '미입력 없음'} &rarr;
             </div>
           </Card>
@@ -949,27 +949,27 @@ export default function AdminDashboardPage() {
               handleCardClick('progress');
               handleShowBehindMaterials();
             }}
-            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FAF6FF] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
+            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FC] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
           >
             <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <BarChart3 className="w-16 h-16 text-purple-600" />
+              <BarChart3 className="w-16 h-16 text-blue-600" />
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">평균 학습 진도율</span>
               {shouldShowDot('progress', lastProgressUpdate) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
               )}
             </div>
             <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-purple-600">
+              <span className="text-3xl font-black tracking-tight text-blue-600">
                 {averageProgress}
               </span>
-              <span className="text-xs font-bold text-purple-600/80 ml-1">%</span>
+              <span className="text-xs font-bold text-blue-600/80 ml-1">%</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
               {selectedCampusLabel} 기준 교재 및 인강 진행도 평균
             </p>
-            <div className="mt-3 text-[10px] text-purple-700 font-extrabold group-hover:underline flex items-center gap-0.5">
+            <div className="mt-3 text-[10px] text-blue-700 font-extrabold group-hover:underline flex items-center gap-0.5">
               부족 진도 보기 &rarr;
             </div>
           </Card>
@@ -996,7 +996,6 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        index === 2 ? 'bg-purple-50 border-purple-200/50 text-purple-600' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
@@ -1014,7 +1013,7 @@ export default function AdminDashboardPage() {
           <Card className="admin-fit-box gap-2 border border-black/[0.04] rounded-2xl bg-white p-4.5 shadow-sm xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
               <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 책</CardTitle>
-              <ClipboardList className="w-4 h-4 text-[#862bf7]" />
+              <ClipboardList className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
               {popularBookRanks.length === 0 ? (
@@ -1030,14 +1029,13 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        index === 2 ? 'bg-purple-50 border-purple-200/50 text-purple-600' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
                         <p className="truncate text-[10px] font-bold text-[#86868B]">{rank.meta || '기타'} · 평균 {rank.averageProgress}%</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#862bf7] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
+                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
                   ))}
                 </div>
@@ -1064,7 +1062,6 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        index === 2 ? 'bg-purple-50 border-purple-200/50 text-purple-600' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
@@ -1082,7 +1079,7 @@ export default function AdminDashboardPage() {
           <Card className="admin-fit-box gap-2 border border-black/[0.04] rounded-2xl bg-white p-4.5 shadow-sm xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
               <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 듣고 있는 강의</CardTitle>
-              <Play className="w-4 h-4 text-[#862bf7]" />
+              <Play className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
               {popularLectureRanks.length === 0 ? (
@@ -1098,14 +1095,13 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        index === 2 ? 'bg-purple-50 border-purple-200/50 text-purple-600' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
                         <p className="truncate text-[10px] font-bold text-[#86868B]">{rank.meta || '기타'} · 평균 {rank.averageProgress}%</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#862bf7] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
+                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
                   ))}
                 </div>
@@ -1156,9 +1152,9 @@ export default function AdminDashboardPage() {
                   <span className="text-[10px] font-extrabold text-[#0071E3] uppercase">평균 진도율</span>
                   <div className="text-xl font-black text-[#0071E3] mt-2">{analysisData.avgProgress}%</div>
                 </div>
-                <div className="rounded-2xl bg-gradient-to-br from-purple-500/[0.02] to-purple-500/[0.06] border border-purple-500/10 p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-extrabold text-purple-600 uppercase">평균 학습 소요</span>
-                  <div className="text-xl font-black text-purple-750 mt-2">
+                <div className="rounded-2xl bg-black/[0.02] border border-black/[0.04] p-4 flex flex-col justify-between min-h-[90px]">
+                  <span className="text-[10px] font-extrabold text-[#86868B] uppercase">평균 학습 소요</span>
+                  <div className="text-xl font-black text-[#1D1D1F] mt-2">
                     {analysisData.avgDays > 0 ? `${analysisData.avgDays}일` : '-'}
                   </div>
                 </div>
