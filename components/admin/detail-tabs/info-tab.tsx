@@ -23,6 +23,10 @@ interface InfoTabProps {
   setSpeedMultiplier: (v: number) => void;
   nextConsultationDate: string;
   setNextConsultationDate: (v: string) => void;
+  enrollmentEndDate: string;
+  setEnrollmentEndDate: (v: string) => void;
+  weeklyGradeCheck: boolean;
+  setWeeklyGradeCheck: (v: boolean) => void;
   specialNote: string;
   setSpecialNote: (v: string) => void;
   uniqueExams: string[];
@@ -44,6 +48,8 @@ export function InfoTab({
   contact, setContact,
   speedMultiplier, setSpeedMultiplier,
   nextConsultationDate, setNextConsultationDate,
+  enrollmentEndDate, setEnrollmentEndDate,
+  weeklyGradeCheck, setWeeklyGradeCheck,
   specialNote, setSpecialNote,
   uniqueExams,
   loading,
@@ -153,7 +159,7 @@ export function InfoTab({
           </Select>
         </div>
 
-        <div className="col-span-2 space-y-1.5">
+        <div className="space-y-1.5">
           <Label htmlFor="edit-next" className="text-xs font-semibold text-[#1D1D1F]">
             다음 상담 예정일
           </Label>
@@ -164,6 +170,38 @@ export function InfoTab({
             onChange={(e) => setNextConsultationDate(e.target.value)}
             className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-enrollment-end" className="text-xs font-semibold text-[#1D1D1F]">
+            등록 종료일
+          </Label>
+          <Input
+            id="edit-enrollment-end"
+            type="date"
+            value={enrollmentEndDate}
+            onChange={(e) => setEnrollmentEndDate(e.target.value)}
+            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+          />
+          <p className="text-[10px] text-[#86868B]">
+            종료 3일 전(D-3)부터 학생 출결 화면에 재등록 안내가 표시됩니다.
+          </p>
+        </div>
+
+        <div className="col-span-2 flex items-start gap-2 rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-3 py-2.5">
+          <input
+            id="edit-weekly-grade"
+            type="checkbox"
+            checked={weeklyGradeCheck}
+            onChange={(e) => setWeeklyGradeCheck(e.target.checked)}
+            className="mt-0.5 accent-[#0071E3] w-3.5 h-3.5"
+          />
+          <Label htmlFor="edit-weekly-grade" className="cursor-pointer text-xs font-semibold text-[#1D1D1F]">
+            매주 성적 입력 대상
+            <span className="mt-0.5 block text-[10px] font-normal text-[#86868B]">
+              체크 시 이번 주(월~일) 성적 미입력이면 관리자 대시보드와 학생 출결 화면에 알림이 표시됩니다.
+            </span>
+          </Label>
         </div>
 
         <div className="col-span-2 space-y-1.5">

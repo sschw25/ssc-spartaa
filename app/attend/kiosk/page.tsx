@@ -4,7 +4,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   AlertCircle,
+  CalendarClock,
   CheckCircle2,
+  ClipboardList,
   Delete,
   Loader2,
   LogOut,
@@ -32,6 +34,12 @@ function formatMinutes(minutes?: number | null) {
   return `${hours > 0 ? `${hours}시간 ` : ''}${mins}분`;
 }
 
+function enrollmentText(daysLeft: number) {
+  if (daysLeft < 0) return '등록 기간 만료 · 재등록 문의';
+  if (daysLeft === 0) return '오늘이 등록 마지막 날 · 재등록 문의';
+  return `등록 종료 D-${daysLeft} · 재등록 문의`;
+}
+
 export default function AttendKioskPage() {
   const [mode, setMode] = useState<Mode>('qr');
   const [token, setToken] = useState('');
@@ -45,6 +53,8 @@ export default function AttendKioskPage() {
   const [message, setMessage] = useState('');
   const [action, setAction] = useState<'check-in' | 'check-out' | null>(null);
   const [minutes, setMinutes] = useState<number | null>(null);
+  const [enrollmentDaysLeft, setEnrollmentDaysLeft] = useState<number | null>(null);
+  const [gradeReminder, setGradeReminder] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -89,6 +99,8 @@ export default function AttendKioskPage() {
     setMessage('');
     setAction(null);
     setMinutes(null);
+    setEnrollmentDaysLeft(null);
+    setGradeReminder(false);
   };
 
   const pressKey = (key: string) => {
@@ -143,6 +155,8 @@ export default function AttendKioskPage() {
       setMatches([]);
       setAction(json.action);
       setMinutes(json.minutes ?? null);
+      setEnrollmentDaysLeft(json.enrollmentDaysLeft ?? null);
+      setGradeReminder(Boolean(json.gradeReminder));
       setMessage(json.studentName ? `${json.studentName} 학생` : '처리되었습니다.');
       setSubmitState('done');
     } catch {
@@ -252,6 +266,22 @@ export default function AttendKioskPage() {
                     <p className="mt-2 text-sm font-bold text-slate-300">{message}</p>
                     {action === 'check-out' && (
                       <p className="mt-2 text-lg font-black text-white">{formatMinutes(minutes)}</p>
+                    )}
+                    {(enrollmentDaysLeft != null || gradeReminder) && (
+                      <div className="mt-4 w-full max-w-xs space-y-2">
+                        {enrollmentDaysLeft != null && (
+                          <div className={`flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-sm font-bold ${enrollmentDaysLeft < 0 ? 'bg-red-500/20 text-red-200' : 'bg-amber-500/20 text-amber-200'}`}>
+                            <CalendarClock className="size-4 shrink-0" />
+                            {enrollmentText(enrollmentDaysLeft)}
+                          </div>
+                        )}
+                        {gradeReminder && (
+                          <div className="flex items-center justify-center gap-2 rounded-xl bg-sky-500/20 px-3 py-2 text-sm font-bold text-sky-200">
+                            <ClipboardList className="size-4 shrink-0" />
+                            이번 주 성적 미입력 · 선생님께 전달
+                          </div>
+                        )}
+                      </div>
                     )}
                     <button
                       type="button"

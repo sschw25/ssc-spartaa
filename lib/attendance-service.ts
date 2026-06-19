@@ -1,5 +1,6 @@
 import { checkIn, checkOut, getOpenSession, getStudentById, type StudySession } from '@/lib/store';
 import { notifyAttendance } from '@/lib/sms';
+import { enrollmentDaysLeft, isWeeklyGradeMissing } from '@/lib/student-flags';
 
 export type AttendanceAction = 'check-in' | 'check-out';
 
@@ -9,6 +10,8 @@ export interface AttendanceToggleResult {
   studentName: string;
   since?: string;
   minutes?: number | null;
+  enrollmentDaysLeft?: number | null; // 등록 종료까지 남은 일수 (0=오늘 마지막, 음수=만료)
+  gradeReminder?: boolean;            // 이번 주 성적 미입력(대상 학생) 안내 필요 여부
 }
 
 function seoulTime(): string {
@@ -43,6 +46,11 @@ export async function toggleAttendance(studentId: string, source = 'qr'): Promis
   const student = await getStudentById(studentId);
   if (!student) throw new Error('학생을 찾을 수 없습니다.');
 
+  // 출결 화면에 함께 노출할 학생 플래그 (등록 D-day · 주간 성적 미입력)
+  const daysLeft = enrollmentDaysLeft(student.enrollmentEndDate);
+  const enrollmentNotice = daysLeft != null && daysLeft <= 3 ? daysLeft : null;
+  const gradeReminder = isWeeklyGradeMissing(student);
+
   const openSession: StudySession | null = await getOpenSession(studentId);
   if (openSession) {
     const closedSession = await checkOut(openSession);
@@ -52,6 +60,8 @@ export async function toggleAttendance(studentId: string, source = 'qr'): Promis
       studentId,
       studentName: student.name,
       minutes: closedSession.minutes,
+      enrollmentDaysLeft: enrollmentNotice,
+      gradeReminder,
     };
   }
 
@@ -62,5 +72,7 @@ export async function toggleAttendance(studentId: string, source = 'qr'): Promis
     studentId,
     studentName: student.name,
     since: startedSession.check_in,
+    enrollmentDaysLeft: enrollmentNotice,
+    gradeReminder,
   };
 }

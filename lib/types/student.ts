@@ -107,6 +107,8 @@ export interface Student {
   studentPhone?: string;
   smsTargets?: Array<'parent' | 'student'>;
   expectedArrival?: '08:20' | '09:00'; // 지각 기준(등원 마감) — 학생별 그룹, 기본 08:20
+  enrollmentEndDate?: string; // 등록(수강) 종료일 (YYYY-MM-DD) — 출결 시 D-3부터 학생에게 안내
+  weeklyGradeCheck?: boolean; // 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
   createdAt: string;
   updatedAt: string;
   

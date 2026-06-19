@@ -186,6 +186,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [studentLifeComment, setStudentLifeComment] = useState('');
   const [specialNote, setSpecialNote] = useState('');
   const [nextConsultationDate, setNextConsultationDate] = useState('');
+  const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
+  const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
 
   // 등록된 기존 원생들의 목표시험 목록 중복제거 추출
   const uniqueExams = Array.from(
@@ -368,6 +370,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setStudentLifeComment(student.studentLifeComment || '');
       setSpecialNote(student.specialNote || '');
       setNextConsultationDate(student.nextConsultationDate || '');
+      setEnrollmentEndDate(student.enrollmentEndDate || '');
+      setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
       setSubjectsState(student.subjects || []);
       setCollapsedSubjects(Object.fromEntries((student.subjects || []).map((sub) => [sub.id, true])));
       if (student.customCategories && student.customCategories.length > 0) {
@@ -437,17 +441,18 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
     const snap = (
       name: string, campus: string, manager: string, contact: string,
-      speed: number, note: string, nextDate: string, subjects: SubjectProgress[]
-    ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects });
+      speed: number, note: string, nextDate: string, subjects: SubjectProgress[],
+      enrollEnd: string, weeklyGrade: boolean
+    ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade });
 
     const localSnap = snap(
       name, campus, manager, contact, Number(speedMultiplier), specialNote,
-      nextConsultationDate || '', subjectsState
+      nextConsultationDate || '', subjectsState, enrollmentEndDate || '', weeklyGradeCheck
     );
     const sourceSnap = snap(
       student.name || '', student.campus || 'wonju', student.manager || '', student.contact || '',
       Number(student.speedMultiplier ?? 1.0), student.specialNote || '',
-      student.nextConsultationDate || '', student.subjects || []
+      student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck)
     );
 
     if (localSnap === sourceSnap) return; // 변경 없음 → 저장 불필요
@@ -466,6 +471,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           speedMultiplier: Number(speedMultiplier),
           specialNote,
           nextConsultationDate: nextConsultationDate || undefined,
+          enrollmentEndDate: enrollmentEndDate || undefined,
+          weeklyGradeCheck,
           subjects: subjectsState,
           updatedAt: new Date().toISOString(),
         };
@@ -491,7 +498,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [student, name, campus, manager, contact, speedMultiplier, specialNote, nextConsultationDate, subjectsState, loading, onUpdate]);
+  }, [student, name, campus, manager, contact, speedMultiplier, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate]);
 
   useEffect(() => {
     cslContentRef.current = cslContent;
@@ -645,6 +652,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       studentLifeComment,
       specialNote,
       nextConsultationDate: cslNextDate || nextConsultationDate || undefined,
+      enrollmentEndDate: enrollmentEndDate || undefined,
+      weeklyGradeCheck,
       subjects: latestSubjects,
       consultationLogs: updatedLogs,
       updatedAt: nowStr
@@ -750,6 +759,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       studentLifeComment,
       specialNote,
       nextConsultationDate: nextConsultationDate || undefined,
+      enrollmentEndDate: enrollmentEndDate || undefined,
+      weeklyGradeCheck,
       subjects: subjectsState,
       updatedAt: new Date().toISOString()
     };
@@ -3049,6 +3060,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setStudentLifeComment(student.studentLifeComment || '');
     setSpecialNote(student.specialNote || '');
     setNextConsultationDate(student.nextConsultationDate || '');
+    setEnrollmentEndDate(student.enrollmentEndDate || '');
+    setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
     setSubjectsState(student.subjects || []);
     setProgressDrafts({});
     setCslContent('');
@@ -3643,6 +3656,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setSpeedMultiplier={setSpeedMultiplier}
                 nextConsultationDate={nextConsultationDate}
                 setNextConsultationDate={setNextConsultationDate}
+                enrollmentEndDate={enrollmentEndDate}
+                setEnrollmentEndDate={setEnrollmentEndDate}
+                weeklyGradeCheck={weeklyGradeCheck}
+                setWeeklyGradeCheck={setWeeklyGradeCheck}
                 specialNote={specialNote}
                 setSpecialNote={setSpecialNote}
                 uniqueExams={uniqueExams}

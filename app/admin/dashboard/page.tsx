@@ -16,6 +16,7 @@ import {
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 import { getManagedProgressItems, getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
+import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AddStudentModal } from '@/components/admin/add-student-modal';
 import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
@@ -304,6 +305,9 @@ export default function AdminDashboardPage() {
     if (!s.nextConsultationDate) return false;
     return s.nextConsultationDate <= todayStr;
   });
+
+  // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
+  const weeklyGradeMissingStudents = students.filter(s => isWeeklyGradeMissing(s));
 
   // 진도 관리 항목 단일 소스 (과목 기반). 평균/필터/테이블이 모두 이 값을 공유한다.
   const allProgressItems = getManagedProgressItems(students);
@@ -645,6 +649,38 @@ export default function AdminDashboardPage() {
               ))}
               {pendingConsultationStudents.length > 4 && (
                 <span className="text-[10px] text-amber-700 font-bold self-center">외 {pendingConsultationStudents.length - 4}명 더 있음</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 1-2. 알림 배너 (이번 주 성적 미입력) */}
+        {weeklyGradeMissingStudents.length > 0 && (
+          <div className="admin-fit-box bg-blue-50 border border-blue-200 rounded-2xl p-4.5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-sm">
+            <div className="admin-fit-row flex items-start gap-3">
+              <ClipboardList className="admin-fit-icon w-5 h-5 text-[#0071E3] shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <h4 className="admin-fit-text admin-fit-label font-bold text-blue-900">이번 주 성적 미입력 원생이 존재합니다 ({weeklyGradeMissingStudents.length}명)</h4>
+                <p className="admin-fit-caption text-blue-700 mt-1 leading-relaxed">
+                  매주 성적 입력 대상이지만 이번 주(월~일) 성적이 아직 등록되지 않았습니다. 원생명을 클릭해 성적을 입력해 주세요.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 shrink-0">
+              {weeklyGradeMissingStudents.slice(0, 4).map(s => (
+                <Badge
+                  key={s.id}
+                  onClick={() => {
+                    setSelectedStudent(s);
+                    setIsDetailOpen(true);
+                  }}
+                  className="admin-fit-button bg-blue-100 hover:bg-blue-200 text-blue-900 border border-blue-200 cursor-pointer rounded-lg px-2.5 py-1 text-[10px] font-bold max-w-[9rem]"
+                >
+                  {s.name} ({getCampusLabel(s.campus)})
+                </Badge>
+              ))}
+              {weeklyGradeMissingStudents.length > 4 && (
+                <span className="text-[10px] text-blue-700 font-bold self-center">외 {weeklyGradeMissingStudents.length - 4}명 더 있음</span>
               )}
             </div>
           </div>

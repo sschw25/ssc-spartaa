@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AlertCircle, CheckCircle2, Loader2, LogIn, LogOut } from 'lucide-react';
+import { AlertCircle, CalendarClock, CheckCircle2, ClipboardList, Loader2, LogIn, LogOut } from 'lucide-react';
 
 type Phase = 'loading' | 'need-login' | 'processing' | 'checked-in' | 'checked-out' | 'error';
 
@@ -11,12 +11,41 @@ function formatMinutes(minutes: number | null) {
   return `${Math.floor(minutes / 60)}시간 ${minutes % 60}분`;
 }
 
+function enrollmentText(daysLeft: number) {
+  if (daysLeft < 0) return '등록 기간이 만료되었어요. 재등록을 문의해 주세요.';
+  if (daysLeft === 0) return '오늘이 등록 마지막 날이에요. 재등록을 문의해 주세요.';
+  return `등록 종료까지 D-${daysLeft} · 재등록을 문의해 주세요.`;
+}
+
+function AttendNotices({ enrollmentDaysLeft, gradeReminder }: { enrollmentDaysLeft: number | null; gradeReminder: boolean }) {
+  if (enrollmentDaysLeft == null && !gradeReminder) return null;
+  const expired = enrollmentDaysLeft != null && enrollmentDaysLeft < 0;
+  return (
+    <div className="mt-5 space-y-2 text-left">
+      {enrollmentDaysLeft != null && (
+        <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 ${expired ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
+          <CalendarClock className="mt-0.5 size-4 shrink-0" />
+          <p className="text-xs font-semibold leading-5">{enrollmentText(enrollmentDaysLeft)}</p>
+        </div>
+      )}
+      {gradeReminder && (
+        <div className="flex items-start gap-2 rounded-xl bg-[#EEF4FF] px-3 py-2.5 text-[#1D4ED8]">
+          <ClipboardList className="mt-0.5 size-4 shrink-0" />
+          <p className="text-xs font-semibold leading-5">이번 주 성적이 아직 등록되지 않았어요. 담당 선생님께 성적을 전달해 주세요.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AttendInner() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
   const [phase, setPhase] = useState<Phase>('loading');
   const [message, setMessage] = useState('');
   const [minutes, setMinutes] = useState<number | null>(null);
+  const [enrollmentDaysLeft, setEnrollmentDaysLeft] = useState<number | null>(null);
+  const [gradeReminder, setGradeReminder] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -41,6 +70,8 @@ function AttendInner() {
         if (!active) return;
 
         if (response.ok && json.success) {
+          setEnrollmentDaysLeft(json.enrollmentDaysLeft ?? null);
+          setGradeReminder(Boolean(json.gradeReminder));
           if (json.action === 'check-in') {
             setPhase('checked-in');
           } else {
@@ -88,6 +119,7 @@ function AttendInner() {
             <CheckCircle2 className="mx-auto mb-4 size-12 text-emerald-500" />
             <h1 className="mb-1 text-xl font-bold">등원 완료</h1>
             <p className="text-xs text-[#86868B]">오늘의 순공 시간이 측정됩니다.</p>
+            <AttendNotices enrollmentDaysLeft={enrollmentDaysLeft} gradeReminder={gradeReminder} />
           </>
         ) : phase === 'checked-out' ? (
           <>
@@ -96,6 +128,7 @@ function AttendInner() {
             <p className="mt-2 text-sm text-[#1D1D1F]">
               오늘 체류 <strong className="text-[#0071E3]">{formatMinutes(minutes)}</strong>
             </p>
+            <AttendNotices enrollmentDaysLeft={enrollmentDaysLeft} gradeReminder={gradeReminder} />
           </>
         ) : (
           <>

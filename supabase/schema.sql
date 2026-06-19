@@ -51,6 +51,11 @@ alter table students add column if not exists sms_targets jsonb not null default
 -- 지각 기준(등원 마감): '08:20' 또는 '09:00' 그룹
 alter table students add column if not exists expected_arrival text not null default '08:20';
 
+-- 등록(수강) 종료일 — 출결 시 D-3부터 학생에게 재등록 안내
+alter table students add column if not exists enrollment_end_date date;
+-- 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
+alter table students add column if not exists weekly_grade_check boolean not null default false;
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,
