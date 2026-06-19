@@ -38,6 +38,12 @@ export default function StudentReportPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('report-overview');
 
+  // 탭 전환 시 활성 탭을 가로 스크롤 영역 안으로 보이게(특히 메뉴로 먼 탭 선택 시)
+  useEffect(() => {
+    const el = document.querySelector('[data-tab-active="true"]');
+    el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }, [activeTab]);
+
   useEffect(() => {
     setMounted(true);
     async function loadReport() {
@@ -755,6 +761,7 @@ export default function StudentReportPage() {
                   <button
                     key={item.href}
                     type="button"
+                    data-tab-active={active ? 'true' : undefined}
                     onClick={() => { setActiveTab(tabId); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                     className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[11px] font-black whitespace-nowrap transition-all active:scale-95 ${
                       active
@@ -983,22 +990,26 @@ export default function StudentReportPage() {
                 {weekDaySlots.map(day => {
                   const subjectsInDay = (student.subjects || []).filter(subject => (subject.studyDays || []).includes(day.key));
                   const isWeekend = day.key === 'sat' || day.key === 'sun';
-                  
+                  const isToday = day.key === todayDayKey;
+
                   return (
                     <div 
                       key={day.key} 
                       className={`p-3.5 rounded-2xl border transition-all duration-300 min-h-[105px] flex flex-col shadow-sm ${
-                        isWeekend 
-                          ? 'bg-slate-50/80 border-slate-100' 
-                          : subjectsInDay.length > 0 
-                            ? 'bg-white border-blue-100 hover:border-blue-200 hover:shadow-md' 
-                            : 'bg-slate-50/30 border-slate-100'
+                        isToday
+                          ? 'bg-[#0071E3]/[0.04] border-[#0071E3] ring-1 ring-[#0071E3]/30 shadow-[0_4px_16px_rgba(0,113,227,0.12)]'
+                          : isWeekend
+                            ? 'bg-slate-50/80 border-slate-100'
+                            : subjectsInDay.length > 0
+                              ? 'bg-white border-blue-100 hover:border-blue-200 hover:shadow-md'
+                              : 'bg-slate-50/30 border-slate-100'
                       }`}
                     >
-                      <h4 className={`text-[10px] font-bold tracking-tight mb-2.5 ${
-                        isWeekend ? 'text-slate-400' : 'text-slate-700'
+                      <h4 className={`text-[10px] font-bold tracking-tight mb-2.5 flex items-center gap-1 ${
+                        isToday ? 'text-[#0071E3]' : isWeekend ? 'text-slate-400' : 'text-slate-700'
                       }`}>
                         {day.label}
+                        {isToday && <span className="rounded-full bg-[#0071E3] px-1.5 py-[1px] text-[7px] font-black text-white">오늘</span>}
                       </h4>
                       {subjectsInDay.length === 0 ? (
                         <p className="text-[9px] text-slate-300 font-bold mt-auto mb-1">휴식</p>
