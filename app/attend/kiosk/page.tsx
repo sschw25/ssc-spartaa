@@ -16,7 +16,6 @@ import {
   UserRound,
 } from 'lucide-react';
 
-type Mode = 'qr' | 'phone';
 type SubmitState = 'idle' | 'submitting' | 'done' | 'error';
 type Match = { id: string; name: string; campus: string };
 
@@ -49,11 +48,9 @@ function nowLabelKST() {
 const AUTO_RESET_SEC = 6;
 
 export default function AttendKioskPage() {
-  const [mode, setMode] = useState<Mode>('qr');
   const [token, setToken] = useState('');
   const [url, setUrl] = useState('');
   const [tokenError, setTokenError] = useState('');
-  const [refreshedAt, setRefreshedAt] = useState(0);
 
   const [phone, setPhone] = useState('');
   const [matches, setMatches] = useState<Match[]>([]);
@@ -98,7 +95,6 @@ export default function AttendKioskPage() {
           setToken(json.token);
           setUrl(`${window.location.origin}/attend?token=${encodeURIComponent(json.token)}`);
           setTokenError('');
-          setRefreshedAt(Date.now());
         } else {
           setTokenError(json.message || '키오스크 권한이 필요합니다.');
         }
@@ -115,18 +111,6 @@ export default function AttendKioskPage() {
     };
   }, []);
 
-  // 완료 화면 자동 초기화 카운트다운 (입구 키오스크 회전율 ↑)
-  useEffect(() => {
-    if (submitState !== 'done') return;
-    if (autoResetIn == null) return;
-    if (autoResetIn <= 0) {
-      resetPhoneFlow();
-      return;
-    }
-    const t = setTimeout(() => setAutoResetIn((n) => (n == null ? null : n - 1)), 1000);
-    return () => clearTimeout(t);
-  }, [submitState, autoResetIn]);
-
   const keypad = useMemo(() => ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'], []);
 
   const resetPhoneFlow = () => {
@@ -141,6 +125,16 @@ export default function AttendKioskPage() {
     setDoneTime('');
     setAutoResetIn(null);
   };
+
+  // 완료 화면 자동 초기화 카운트다운 (입구 키오스크 회전율 ↑)
+  useEffect(() => {
+    if (submitState !== 'done' || autoResetIn == null) return;
+    const t = setTimeout(() => {
+      if (autoResetIn <= 1) resetPhoneFlow();
+      else setAutoResetIn(autoResetIn - 1);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [submitState, autoResetIn]);
 
   const pressKey = (key: string) => {
     if (submitState === 'submitting') return;
@@ -215,95 +209,39 @@ export default function AttendKioskPage() {
             <h1 className="mt-1 text-3xl font-black tracking-tight">등하원 체크</h1>
             {clock && <p className="mt-1 text-xs font-semibold text-slate-500">{clock}</p>}
           </div>
-          <div className="relative inline-flex rounded-full bg-white/[0.07] p-1 ring-1 ring-white/10">
-            {([
-              { key: 'qr' as const, label: 'QR', Icon: ScanLine },
-              { key: 'phone' as const, label: '번호', Icon: Phone },
-            ]).map(({ key, label, Icon }) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setMode(key)}
-                className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition ${
-                  mode === key ? 'bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.25)]' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <Icon className="size-4" />
-                {label}
-              </button>
-            ))}
+          {/* 번호 입력 대신 스캔할 수 있는 작은 QR (상시 노출) */}
+          <div className="flex items-center gap-3 rounded-2xl bg-white/[0.06] p-2.5 ring-1 ring-white/10">
+            <div className="grid size-[108px] place-items-center rounded-xl bg-white p-2.5">
+              {tokenError ? (
+                <ScanLine className="size-8 text-red-400" />
+              ) : url ? (
+                <QRCodeSVG value={url} size={88} level="M" includeMargin={false} />
+              ) : (
+                <Loader2 className="size-6 animate-spin text-slate-400" />
+              )}
+            </div>
+            <div className="hidden pr-1 sm:block">
+              <p className="flex items-center gap-1.5 text-sm font-black text-white">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+                </span>
+                QR 스캔
+              </p>
+              <p className="mt-1 text-[11px] leading-4 text-slate-400">
+                번호 입력 대신<br />휴대폰으로 스캔해도 돼요
+              </p>
+            </div>
           </div>
         </header>
 
         <section className="grid flex-1 place-items-center py-8">
-          {mode === 'qr' ? (
-            <div className="grid w-full max-w-4xl items-center gap-10 lg:grid-cols-[auto_1fr]">
-              {/* QR + 스캐너 프레임 */}
-              <div className="mx-auto w-full max-w-[360px] text-center">
-                <div className="relative mx-auto aspect-square w-full max-w-[360px]">
-                  <div className="grid h-full w-full place-items-center rounded-[28px] bg-white p-9 shadow-2xl">
-                    {tokenError ? (
-                      <div className="flex h-full items-center justify-center px-4 text-center text-sm font-bold text-red-600">
-                        {tokenError}
-                      </div>
-                    ) : url ? (
-                      <QRCodeSVG value={url} size={272} level="M" includeMargin={false} />
-                    ) : (
-                      <Loader2 className="size-10 animate-spin text-slate-400" />
-                    )}
-                  </div>
-                  {/* 코너 브래킷 (스캐너 타겟 느낌) */}
-                  {!tokenError && (
-                    <>
-                      <span className="pointer-events-none absolute left-2 top-2 size-9 rounded-tl-2xl border-l-4 border-t-4 border-[#0071E3]" />
-                      <span className="pointer-events-none absolute right-2 top-2 size-9 rounded-tr-2xl border-r-4 border-t-4 border-[#0071E3]" />
-                      <span className="pointer-events-none absolute bottom-2 left-2 size-9 rounded-bl-2xl border-b-4 border-l-4 border-[#0071E3]" />
-                      <span className="pointer-events-none absolute bottom-2 right-2 size-9 rounded-br-2xl border-b-4 border-r-4 border-[#0071E3]" />
-                    </>
-                  )}
-                </div>
-
-                <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-xs font-semibold text-slate-300 ring-1 ring-white/10">
-                  <span className="relative flex size-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                    <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-                  </span>
-                  실시간 자동 갱신{refreshedAt ? ` · ${new Date(refreshedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
-                </div>
-              </div>
-
-              {/* 학생 안내 (3단계) */}
-              <div className="mx-auto w-full max-w-sm text-left">
-                <h2 className="text-2xl font-black tracking-tight">휴대폰으로 스캔하세요</h2>
-                <p className="mt-1.5 text-sm font-medium text-slate-400">카메라를 QR에 비추면 등·하원이 처리됩니다.</p>
-                <ol className="mt-6 space-y-3">
-                  {[
-                    { t: '카메라로 QR 스캔', d: '휴대폰 기본 카메라를 QR에 비춰 주세요.' },
-                    { t: '본인 로그인', d: '처음 한 번만 학생 본인 확인이 필요해요.' },
-                    { t: '등·하원 자동 처리', d: '등원/하원이 한 번에 토글되고 순공 시간이 측정돼요.' },
-                  ].map((s, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#0071E3] text-sm font-black text-white">
-                        {i + 1}
-                      </span>
-                      <div>
-                        <p className="text-sm font-bold text-white">{s.t}</p>
-                        <p className="text-xs leading-5 text-slate-400">{s.d}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ol>
-                <div className="mt-6 flex items-start gap-2 rounded-2xl bg-white/[0.05] px-3.5 py-3 ring-1 ring-white/10">
-                  <ScanLine className="mt-0.5 size-4 shrink-0 text-slate-400" />
-                  <p className="text-[11px] leading-5 text-slate-400">
-                    QR은 보안을 위해 수 초마다 자동 갱신됩니다. 캡처한 화면으로는 출결되지 않으니 현장에서 스캔해 주세요.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid w-full max-w-4xl gap-5 lg:grid-cols-[380px_1fr]">
+            <div className="grid w-full max-w-4xl gap-5 lg:grid-cols-[420px_1fr]">
               <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl">
+                <div className="flex items-center justify-between px-1 pb-3">
+                  <p className="text-sm font-black text-slate-900">번호로 등·하원</p>
+                  <p className="text-xs font-bold text-slate-400">전화번호 끝 4자리</p>
+                </div>
                 <div className="flex h-16 items-center justify-center rounded-xl bg-slate-100 text-3xl font-black tracking-[0.18em]">
                   {phone || '----'}
                 </div>
@@ -433,7 +371,6 @@ export default function AttendKioskPage() {
                 )}
               </div>
             </div>
-          )}
         </section>
       </div>
     </main>
