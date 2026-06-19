@@ -785,7 +785,10 @@ export default function StudentReportPage() {
                       SSC SPARTA DAILY BRIEFING
                     </div>
                     <div>
-                      <p className="text-sm font-black text-[#0071E3]">오늘의 학습 브리핑</p>
+                      <p className="text-sm font-black text-[#0071E3]">
+                        오늘의 학습 브리핑
+                        <span className="ml-1.5 text-[11px] font-bold text-slate-400">· {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 발행</span>
+                      </p>
                       <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl md:leading-tight">
                         {student.name}님, {timeGreeting} 👋
                         <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">
@@ -805,7 +808,7 @@ export default function StudentReportPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">오늘 과목</p>
                     <p className="mt-2 text-sm font-black text-slate-800">
@@ -819,13 +822,6 @@ export default function StudentReportPage() {
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">현재 집중</p>
                     <p className="mt-2 text-sm font-black text-slate-800">{currentSubjectText}</p>
                     <p className="mt-1 text-[10px] font-bold text-slate-400">{currentStudyLabel}</p>
-                  </div>
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">발행 일자</p>
-                    <p className="mt-2 text-sm font-black text-slate-800">
-                      {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
-                    <p className="mt-1 text-[10px] font-bold text-slate-400">실시간 학생용 화면</p>
                   </div>
                 </div>
               </div>
@@ -852,7 +848,7 @@ export default function StudentReportPage() {
           {/* 원생 메타 격자 프로필 카드 */}
           <div className={`grid-cols-2 md:grid-cols-4 gap-4 print-card ${!isStudentReport || activeTab === 'report-overview' ? 'grid' : 'hidden print:grid'}`}>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0071E3]/15 to-[#0071E3]/5 text-[#0071E3] flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 shadow-sm">
                 <Award className="w-4.5 h-4.5" />
               </div>
               <div>
@@ -861,7 +857,7 @@ export default function StudentReportPage() {
               </div>
             </div>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#862BF7]/15 to-[#862BF7]/5 text-[#862BF7] flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 shadow-sm">
                 <User className="w-4.5 h-4.5" />
               </div>
               <div>
@@ -870,7 +866,7 @@ export default function StudentReportPage() {
               </div>
             </div>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B00]/15 to-[#FF6B00]/5 text-[#FF6B00] flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 shadow-sm">
                 <Target className="w-4.5 h-4.5" />
               </div>
               <div className="min-w-0">
@@ -879,7 +875,7 @@ export default function StudentReportPage() {
               </div>
             </div>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#10B981]/15 to-[#10B981]/5 text-[#10B981] flex items-center justify-center shrink-0 shadow-sm">
+              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 shadow-sm">
                 <Clock className="w-4.5 h-4.5" />
               </div>
               <div>
