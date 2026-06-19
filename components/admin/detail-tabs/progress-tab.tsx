@@ -622,7 +622,7 @@ export function ProgressTab() {
                             isActive
                               ? newMaterialType === 'book'
                                 ? 'bg-[#0071E3] text-white border-[#0071E3]'
-                                : 'bg-[#862bf7] text-white border-[#862bf7]'
+                                : 'bg-[#0071E3] text-white border-[#0071E3]'
                               : 'bg-white text-[#86868B] border-black/[0.08] hover:bg-black/[0.02]'
                           }`}
                         >
@@ -652,7 +652,7 @@ export function ProgressTab() {
                     className={`rounded-lg text-xs h-9 px-5 font-bold text-white transition-all shadow-sm flex items-center justify-center ${
                       newMaterialType === 'book' 
                         ? 'bg-[#1D1D1F] hover:bg-[#323236]' 
-                        : 'bg-[#862bf7] hover:bg-[#973df8]'
+                        : 'bg-[#0071E3] hover:bg-[#973df8]'
                     }`}
                   >
                     {loading || isAutoSaving ? (
@@ -1215,7 +1215,7 @@ export function ProgressTab() {
                         {/* 2. 인터넷 강의 관리 */}
                         <div className="space-y-3.5 pt-3 border-t border-black/[0.04]">
                           <h4 className="text-xs font-bold text-[#1D1D1F] flex items-center border-b border-black/[0.04] pb-1.5">
-                            <Tv className="w-3.5 h-3.5 mr-1.5 text-[#862bf7]" />
+                            <Tv className="w-3.5 h-3.5 mr-1.5 text-[#0071E3]" />
                             인강 진도 및 목표일 설정
                           </h4>
 
@@ -1291,7 +1291,7 @@ export function ProgressTab() {
                                               });
                                               setEditingMaterialId(null);
                                             }}
-                                            className="h-7 text-[10px] bg-[#862bf7] hover:bg-[#973df8] text-white rounded-md font-bold save-edit-btn-lecture"
+                                            className="h-7 text-[10px] bg-[#0071E3] hover:bg-[#973df8] text-white rounded-md font-bold save-edit-btn-lecture"
                                           >
                                             저장
                                           </Button>
@@ -1302,7 +1302,7 @@ export function ProgressTab() {
                                         <div>
                                           <h5 className="text-xs font-bold text-[#1D1D1F]">{lec.name}</h5>
                                           {lectureBenchmarkSummary && (
-                                            <p className="mt-1 text-[10px] font-semibold leading-relaxed text-[#862bf7]">
+                                            <p className="mt-1 text-[10px] font-semibold leading-relaxed text-[#0071E3]">
                                               {lectureBenchmarkSummary}
                                             </p>
                                           )}
@@ -1362,7 +1362,7 @@ export function ProgressTab() {
                                         <span className="font-semibold text-[#86868B]">
                                           진도: {completedLectureValue} / {lec.totalLectures} 강의
                                         </span>
-                                        <span className="font-bold text-[#862bf7]">{percent}%</span>
+                                        <span className="font-bold text-[#0071E3]">{percent}%</span>
                                       </div>
                                       <div className="flex items-center gap-3">
                                         <div className="flex-1 space-y-2">
@@ -1508,7 +1508,7 @@ export function ProgressTab() {
                                               aria-label={loading ? '생성 중' : '계획 생성'}
                                               onClick={() => generateAndSavePlans(sub.id, lec.id, 'lecture')}
                                               disabled={loading}
-                                              className="admin-fit-button w-full h-8 text-[10px] bg-[#862bf7] hover:bg-[#973df8] text-white rounded-lg font-bold generate-plan-btn-lecture flex items-center justify-center gap-1.5"
+                                              className="admin-fit-button w-full h-8 text-[10px] bg-[#0071E3] hover:bg-[#973df8] text-white rounded-lg font-bold generate-plan-btn-lecture flex items-center justify-center gap-1.5"
                                             >
                                               {loading ? (
                                                 <>
@@ -1565,7 +1565,7 @@ export function ProgressTab() {
                                                             rangeText: e.target.value
                                                           });
                                                         }}
-                                                        className="w-full border-b border-dashed border-black/[0.1] hover:border-black/30 focus:border-[#862bf7] focus:outline-none bg-transparent py-0.5 plan-range-input-lecture"
+                                                        className="w-full border-b border-dashed border-black/[0.1] hover:border-black/30 focus:border-[#0071E3] focus:outline-none bg-transparent py-0.5 plan-range-input-lecture"
                                                       />
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center font-semibold text-[#434345]">
@@ -1581,7 +1581,7 @@ export function ProgressTab() {
                                                             isCompleted: e.target.checked
                                                           });
                                                         }}
-                                                        className="w-3.5 h-3.5 accent-[#862bf7] cursor-pointer plan-complete-check-lecture"
+                                                        className="w-3.5 h-3.5 accent-[#0071E3] cursor-pointer plan-complete-check-lecture"
                                                       />
                                                     </td>
                                                   </tr>
@@ -1627,7 +1627,7 @@ export function ProgressTab() {
                       type="button"
                       variant="ghost"
                       onClick={loadEtcStudyTemplate}
-                      className="text-[10px] text-[#862bf7] font-bold p-0 h-auto hover:bg-transparent"
+                      className="text-[10px] text-[#0071E3] font-bold p-0 h-auto hover:bg-transparent"
                     >
                       기타 학습상담
                     </Button>

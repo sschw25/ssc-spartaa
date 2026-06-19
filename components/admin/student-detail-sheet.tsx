@@ -3128,7 +3128,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             type="button"
             variant="ghost"
             onClick={loadEtcStudyTemplate}
-            className="text-[10px] text-[#862bf7] font-bold p-0 h-auto hover:bg-transparent"
+            className="text-[10px] text-[#0071E3] font-bold p-0 h-auto hover:bg-transparent"
           >
             기타 학습상담
           </Button>

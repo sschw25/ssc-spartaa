@@ -80,12 +80,12 @@ export function GradesTab({
                   .map((subject, idx) => {
                     const colors: Record<string, string> = {
                       '국어': '#0071E3',
-                      '수학': '#862bf7',
+                      '수학': '#0071E3',
                       '영어': '#F56300',
                       '한국사': '#10B981',
                       '기타': '#EF4444'
                     };
-                    const defaultColors = ['#0071E3', '#862bf7', '#F56300', '#10B981', '#EC4899', '#3B82F6', '#EF4444'];
+                    const defaultColors = ['#0071E3', '#0071E3', '#F56300', '#10B981', '#EC4899', '#3B82F6', '#EF4444'];
                     return (
                       <Line
                         key={subject}

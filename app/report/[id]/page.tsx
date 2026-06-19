@@ -938,7 +938,7 @@ export default function StudentReportPage() {
             <div id="timetable" className="scroll-mt-24 space-y-5 print-card">
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#862BF7]" />
+                  <Calendar className="w-4 h-4 text-[#0071E3]" />
                   요일별 과목 배치 시간표
                 </h3>
                 <span className="text-[9px] font-bold text-slate-400">주 6일 스파르타 플래닝</span>
@@ -995,7 +995,7 @@ export default function StudentReportPage() {
                     switch(key) {
                       case 'morning': return 'border-amber-100 bg-amber-50/10 hover:shadow-[0_8px_30px_rgba(245,158,11,0.04)]';
                       case 'afternoon': return 'border-blue-100 bg-blue-50/10 hover:shadow-[0_8px_30px_rgba(59,130,246,0.04)]';
-                      case 'night': return 'border-indigo-100 bg-indigo-50/10 hover:shadow-[0_8px_30px_rgba(99,102,241,0.04)]';
+                      case 'night': return 'border-slate-200 bg-slate-50/20 hover:shadow-[0_8px_30px_rgba(100,116,139,0.05)]';
                       default: return 'border-slate-100 bg-slate-50/10';
                     }
                   };
@@ -1163,9 +1163,9 @@ export default function StudentReportPage() {
                               {summary.type}
                             </span>
                           </span>
-                          <span className="shrink-0 rounded-2xl border border-[#862BF7]/10 bg-[#862BF7]/5 px-3 py-1.5 text-right">
-                            <span className="block text-[8px] font-black text-[#862BF7]/70">월 총량</span>
-                            <span className="block text-sm font-black text-[#862BF7]">
+                          <span className="shrink-0 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/5 px-3 py-1.5 text-right">
+                            <span className="block text-[8px] font-black text-[#0071E3]/70">월 총량</span>
+                            <span className="block text-sm font-black text-[#0071E3]">
                               {summary.totalAmount}
                               {summary.unit}
                             </span>
@@ -1185,7 +1185,7 @@ export default function StudentReportPage() {
           {/* 3. 과목별 진도율 및 학습 진척도 */}
           <div id="subject-progress" className="scroll-mt-24 space-y-5 print-card">
             <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
-              <FileText className="w-4 h-4 text-[#862BF7]" />
+              <FileText className="w-4 h-4 text-[#0071E3]" />
               {isStudentReport ? '과목별 상세 학습 목표 및 주간 달성 스케줄러' : '과목별 학습 진도율 요약'}
             </h3>
 
@@ -1239,7 +1239,7 @@ export default function StudentReportPage() {
                   {/* 인강 진도 */}
                   <div className="space-y-4.5 p-6 rounded-3xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md">
                     <h4 className="text-xs font-black text-slate-700 flex items-center border-b border-slate-100 pb-3">
-                      <Tv className="w-4 h-4 mr-2 text-[#862bf7]" />
+                      <Tv className="w-4 h-4 mr-2 text-[#0071E3]" />
                       인터넷 강의 수강 현황
                     </h4>
                     <div className="space-y-5">
@@ -1257,12 +1257,12 @@ export default function StudentReportPage() {
                                   </span>
                                 )}
                               </span>
-                              <span className="text-[#862bf7] font-extrabold">{l.completedLectures} / {l.totalLectures}강</span>
+                              <span className="text-[#0071E3] font-extrabold">{l.completedLectures} / {l.totalLectures}강</span>
                             </div>
                             <div className="flex items-center gap-3">
                               <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                                 <div 
-                                  className="bg-gradient-to-r from-[#862bf7] to-[#FF6B00] h-full rounded-full transition-all duration-500" 
+                                  className="bg-gradient-to-r from-[#0071E3] to-[#FF6B00] h-full rounded-full transition-all duration-500" 
                                   style={{ width: `${percent}%` }}
                                 />
                               </div>
@@ -1390,7 +1390,7 @@ export default function StudentReportPage() {
                     {sub.lectures.length > 0 && (
                       <div className="space-y-4 mt-6">
                         <h4 className="text-xs font-black text-slate-700 flex items-center">
-                          <Tv className="w-4 h-4 mr-2 text-[#862BF7]" />
+                          <Tv className="w-4 h-4 mr-2 text-[#0071E3]" />
                           {isStudentReport ? '인강별 수강 스케줄 및 달성 지표' : '인강 진도 현황'}
                         </h4>
 
@@ -1413,7 +1413,7 @@ export default function StudentReportPage() {
                                   <div>
                                     <h5 className="text-xs font-black text-slate-700">{l.name}</h5>
                                     {l.goalDescription && (
-                                      <p className="text-[10px] text-[#862BF7] font-bold mt-1.5 flex items-center gap-1">
+                                      <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
                                         <span>🏁</span> 수강 목표: {l.goalDescription}
                                       </p>
                                     )}
@@ -1430,13 +1430,13 @@ export default function StudentReportPage() {
                                       </span>
                                     )}
                                     <span className="text-xs font-bold text-slate-500">{l.completedLectures} <span className="text-slate-300 font-normal">/</span> {l.totalLectures}강</span>
-                                    <span className="text-[9px] font-black text-white bg-gradient-to-r from-[#862BF7] to-[#A855F7] px-2 py-0.5 rounded-lg shadow-sm">{percent}%</span>
+                                    <span className="text-[9px] font-black text-white bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-2 py-0.5 rounded-lg shadow-sm">{percent}%</span>
                                   </div>
                                 </div>
 
                                 {/* 진도 프로그레스 바 (인강 그라데이션) */}
                                 <div className="bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-                                  <div className="bg-gradient-to-r from-[#862BF7] to-[#FF6B00] h-full rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
+                                  <div className="bg-gradient-to-r from-[#0071E3] to-[#FF6B00] h-full rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
                                 </div>
 
                                 {/* 세부 계획 타임라인 */}
@@ -1516,12 +1516,12 @@ export default function StudentReportPage() {
                           {gradeSubjects.map((subject, idx) => {
                             const colors: Record<string, string> = {
                               '국어': '#0071E3',
-                              '수학': '#862bf7',
+                              '수학': '#0071E3',
                               '영어': '#F56300',
                               '한국사': '#10B981',
                               '기타': '#EF4444'
                             };
-                            const defaultColors = ['#0071E3', '#862bf7', '#F56300', '#10B981', '#EC4899', '#3B82F6', '#EF4444'];
+                            const defaultColors = ['#0071E3', '#0071E3', '#F56300', '#10B981', '#EC4899', '#3B82F6', '#EF4444'];
                             return (
                               <Line 
                                 key={subject}

@@ -369,14 +369,9 @@ function ConsultationContent() {
     }
   }
 
-  const getCampusBadgeColor = (val: string) => {
-    switch(val) {
-      case 'wonju': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'chuncheon': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'chungju': return 'bg-purple-50 text-purple-700 border-purple-100';
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
+  // 캠퍼스는 분류(식별)용이라 의미색(초록=양호/파랑=정보)과 분리해 중립 스타일로 통일.
+  // 식별은 뱃지 텍스트(원주/춘천/충주)가 담당하며, 앱 전반의 캠퍼스 표기(회색)와도 일치.
+  const getCampusBadgeColor = (_val: string) => 'bg-[#F5F5F7] text-[#86868B] border-black/[0.06]';
 
   const getStudentSubjectSummaries = (student: Student) => {
     const subjects = student.subjects && student.subjects.length > 0
@@ -933,13 +928,13 @@ function ConsultationContent() {
                                               <span className="admin-fit-text admin-fit-caption font-semibold text-[#434345]">
                                                 {item.type === 'book' ? '📚' : '💻'} {item.title}
                                               </span>
-                                              <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#862bf7]'}`}>
+                                              <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 현재 {item.current}/{item.total}{item.unit}
                                               </span>
                                             </div>
                                             <div className="h-1.5 rounded-full bg-white overflow-hidden border border-black/[0.03]">
                                               <div
-                                                className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#862bf7]'}`}
+                                                className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#0071E3]'}`}
                                                 style={{ width: `${Math.min(100, Math.max(0, item.percent))}%` }}
                                               />
                                             </div>
@@ -948,7 +943,7 @@ function ConsultationContent() {
                                                 {item.startDate ? `${item.startDate.substring(5, 10)}~` : '기간 미정'}
                                                 {item.targetDate ? item.targetDate.substring(5, 10) : '진행중'}
                                               </span>
-                                              <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#862bf7]'}`}>
+                                              <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 {item.percent}%
                                               </span>
                                             </div>
@@ -1057,7 +1052,7 @@ function ConsultationContent() {
                                               {idx > 0 && <span className="text-black/10">|</span>}
                                               <span className="text-[10px]">{item.type === 'book' ? '📚' : '💻'}</span>
                                               <span>{item.title}</span>
-                                              <span className={`font-bold ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#862bf7]'}`}>
+                                              <span className={`font-bold ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 ({item.current}/{item.total}{item.unit}, {item.percent}%)
                                               </span>
                                             </span>
@@ -1374,7 +1369,7 @@ function ConsultationContent() {
                             </div>
                             <div className="h-1.5 rounded-full bg-white overflow-hidden border border-black/[0.03]">
                               <div
-                                className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#862bf7]'}`}
+                                className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#0071E3]'}`}
                                 style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
                               />
                             </div>
