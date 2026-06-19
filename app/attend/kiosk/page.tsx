@@ -65,6 +65,21 @@ export default function AttendKioskPage() {
   const [gradeReminder, setGradeReminder] = useState(false);
   const [doneTime, setDoneTime] = useState('');
   const [autoResetIn, setAutoResetIn] = useState<number | null>(null);
+  const [clock, setClock] = useState('');
+
+  // 헤더 라이브 시계 (KST)
+  useEffect(() => {
+    const tick = () =>
+      setClock(
+        new Intl.DateTimeFormat('ko-KR', {
+          timeZone: 'Asia/Seoul', month: 'long', day: 'numeric', weekday: 'short',
+          hour: '2-digit', minute: '2-digit', hour12: false,
+        }).format(new Date())
+      );
+    tick();
+    const id = setInterval(tick, 15_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -196,47 +211,95 @@ export default function AttendKioskPage() {
       <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6">
         <header className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-bold tracking-[0.28em] text-slate-400">SSC SPARTA</p>
-            <h1 className="mt-1 text-3xl font-black tracking-normal">등하원 체크</h1>
+            <p className="text-[11px] font-bold tracking-[0.3em] text-slate-400">SSC SPARTA</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight">등하원 체크</h1>
+            {clock && <p className="mt-1 text-xs font-semibold text-slate-500">{clock}</p>}
           </div>
-          <div className="inline-grid grid-cols-2 rounded-lg bg-white/10 p-1">
-            <button
-              type="button"
-              onClick={() => setMode('qr')}
-              className={`h-11 rounded-md px-4 text-sm font-bold transition ${mode === 'qr' ? 'bg-white text-slate-950' : 'text-slate-300'}`}
-            >
-              <ScanLine className="mr-2 inline size-4" />
-              QR
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode('phone')}
-              className={`h-11 rounded-md px-4 text-sm font-bold transition ${mode === 'phone' ? 'bg-white text-slate-950' : 'text-slate-300'}`}
-            >
-              <Phone className="mr-2 inline size-4" />
-              번호
-            </button>
+          <div className="relative inline-flex rounded-full bg-white/[0.07] p-1 ring-1 ring-white/10">
+            {([
+              { key: 'qr' as const, label: 'QR', Icon: ScanLine },
+              { key: 'phone' as const, label: '번호', Icon: Phone },
+            ]).map(({ key, label, Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setMode(key)}
+                className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-sm font-bold transition ${
+                  mode === key ? 'bg-white text-slate-900 shadow-[0_2px_10px_rgba(0,0,0,0.25)]' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <Icon className="size-4" />
+                {label}
+              </button>
+            ))}
           </div>
         </header>
 
         <section className="grid flex-1 place-items-center py-8">
           {mode === 'qr' ? (
-            <div className="w-full max-w-[420px] text-center">
-              <div className="mx-auto grid aspect-square w-full max-w-[360px] place-items-center rounded-[24px] bg-white p-8 shadow-2xl">
-                {tokenError ? (
-                  <div className="flex h-full items-center justify-center px-4 text-center text-sm font-bold text-red-600">
-                    {tokenError}
+            <div className="grid w-full max-w-4xl items-center gap-10 lg:grid-cols-[auto_1fr]">
+              {/* QR + 스캐너 프레임 */}
+              <div className="mx-auto w-full max-w-[360px] text-center">
+                <div className="relative mx-auto aspect-square w-full max-w-[360px]">
+                  <div className="grid h-full w-full place-items-center rounded-[28px] bg-white p-9 shadow-2xl">
+                    {tokenError ? (
+                      <div className="flex h-full items-center justify-center px-4 text-center text-sm font-bold text-red-600">
+                        {tokenError}
+                      </div>
+                    ) : url ? (
+                      <QRCodeSVG value={url} size={272} level="M" includeMargin={false} />
+                    ) : (
+                      <Loader2 className="size-10 animate-spin text-slate-400" />
+                    )}
                   </div>
-                ) : url ? (
-                  <QRCodeSVG value={url} size={280} level="M" includeMargin={false} />
-                ) : (
-                  <Loader2 className="size-10 animate-spin text-slate-400" />
-                )}
+                  {/* 코너 브래킷 (스캐너 타겟 느낌) */}
+                  {!tokenError && (
+                    <>
+                      <span className="pointer-events-none absolute left-2 top-2 size-9 rounded-tl-2xl border-l-4 border-t-4 border-[#0071E3]" />
+                      <span className="pointer-events-none absolute right-2 top-2 size-9 rounded-tr-2xl border-r-4 border-t-4 border-[#0071E3]" />
+                      <span className="pointer-events-none absolute bottom-2 left-2 size-9 rounded-bl-2xl border-b-4 border-l-4 border-[#0071E3]" />
+                      <span className="pointer-events-none absolute bottom-2 right-2 size-9 rounded-br-2xl border-b-4 border-r-4 border-[#0071E3]" />
+                    </>
+                  )}
+                </div>
+
+                <div className="mt-5 inline-flex items-center gap-2 rounded-full bg-white/[0.07] px-3.5 py-1.5 text-xs font-semibold text-slate-300 ring-1 ring-white/10">
+                  <span className="relative flex size-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
+                  </span>
+                  실시간 자동 갱신{refreshedAt ? ` · ${new Date(refreshedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}` : ''}
+                </div>
               </div>
-              <p className="mt-5 text-sm font-semibold text-slate-300">학생 휴대폰으로 QR을 스캔하세요.</p>
-              <p className="mt-2 text-xs text-slate-500">
-                {refreshedAt ? `최근 갱신 ${new Date(refreshedAt).toLocaleTimeString('ko-KR')}` : 'QR 생성 중'}
-              </p>
+
+              {/* 학생 안내 (3단계) */}
+              <div className="mx-auto w-full max-w-sm text-left">
+                <h2 className="text-2xl font-black tracking-tight">휴대폰으로 스캔하세요</h2>
+                <p className="mt-1.5 text-sm font-medium text-slate-400">카메라를 QR에 비추면 등·하원이 처리됩니다.</p>
+                <ol className="mt-6 space-y-3">
+                  {[
+                    { t: '카메라로 QR 스캔', d: '휴대폰 기본 카메라를 QR에 비춰 주세요.' },
+                    { t: '본인 로그인', d: '처음 한 번만 학생 본인 확인이 필요해요.' },
+                    { t: '등·하원 자동 처리', d: '등원/하원이 한 번에 토글되고 순공 시간이 측정돼요.' },
+                  ].map((s, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#0071E3] text-sm font-black text-white">
+                        {i + 1}
+                      </span>
+                      <div>
+                        <p className="text-sm font-bold text-white">{s.t}</p>
+                        <p className="text-xs leading-5 text-slate-400">{s.d}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+                <div className="mt-6 flex items-start gap-2 rounded-2xl bg-white/[0.05] px-3.5 py-3 ring-1 ring-white/10">
+                  <ScanLine className="mt-0.5 size-4 shrink-0 text-slate-400" />
+                  <p className="text-[11px] leading-5 text-slate-400">
+                    QR은 보안을 위해 수 초마다 자동 갱신됩니다. 캡처한 화면으로는 출결되지 않으니 현장에서 스캔해 주세요.
+                  </p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="grid w-full max-w-4xl gap-5 lg:grid-cols-[380px_1fr]">
