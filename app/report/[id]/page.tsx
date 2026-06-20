@@ -1902,8 +1902,8 @@ export default function StudentReportPage() {
             )}
           </div>
 
-          {/* 5. 하단 격려 메세지 배너 */}
-          <div className="bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white p-7 rounded-[24px] text-center space-y-2 relative overflow-hidden shadow-lg border border-slate-800/40">
+          {/* 5. 하단 격려 메세지 배너 (탭 레이아웃에선 개요 탭에만 노출, 인쇄 시 전체 노출) */}
+          <div className={`bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white p-7 rounded-[24px] text-center space-y-2 relative overflow-hidden shadow-lg border border-slate-800/40 ${!isStudentReport || activeTab === 'report-overview' ? '' : 'hidden print:block'}`}>
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0071E3] via-[#862BF7] to-[#FF6B00]" />
             <p className="text-[10px] font-black tracking-[0.2em] text-[#3894FF] uppercase">Supreme Spartan Control System</p>
             <p className="text-xs font-semibold leading-relaxed opacity-95 text-balance tracking-tight">
