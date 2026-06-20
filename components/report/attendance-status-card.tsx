@@ -1,9 +1,20 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { ScanLine, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { ScanLine, LogIn, LogOut, Loader2, Flame } from 'lucide-react';
 
-type Status = { loading: boolean; checkedIn: boolean; since: string | null };
+interface TodaySession {
+  checkIn: string;
+  checkOut: string | null;
+}
+type Status = {
+  loading: boolean;
+  checkedIn: boolean;
+  since: string | null;
+  sinceToday: boolean;
+  todayMinutes: number;
+  todaySessions: TodaySession[];
+};
 
 function timeKST(iso: string | null): string {
   if (!iso) return '';
@@ -12,9 +23,17 @@ function timeKST(iso: string | null): string {
   }).format(new Date(iso));
 }
 
-// 학생 본인 결과지에서만 사용: 현재 등원 상태(라이브) + QR 출결 안내.
+function fmtMin(min: number): string {
+  if (!min || min <= 0) return '0분';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+}
+
+// 학생 본인 결과지에서만 사용: 현재 등원 상태(라이브) + 오늘 등하원 타임라인 + QR 안내.
 export function AttendanceStatusCard() {
-  const [status, setStatus] = useState<Status>({ loading: true, checkedIn: false, since: null });
+  const [status, setStatus] = useState<Status>({ loading: true, checkedIn: false, since: null, sinceToday: false, todayMinutes: 0, todaySessions: [] });
+  const [now, setNow] = useState(0); // 라이브 경과 시간 틱 (마운트 후에만 동작 → SSR 불일치 없음)
 
   useEffect(() => {
     let active = true;
@@ -24,17 +43,28 @@ export function AttendanceStatusCard() {
         const json = await res.json();
         if (!active) return;
         if (res.ok && json.success) {
-          setStatus({ loading: false, checkedIn: !!json.checkedIn, since: json.since || null });
+          setStatus({
+            loading: false,
+            checkedIn: !!json.checkedIn,
+            since: json.since || null,
+            sinceToday: !!json.sinceToday,
+            todayMinutes: json.todayMinutes || 0,
+            todaySessions: Array.isArray(json.todaySessions) ? json.todaySessions : [],
+          });
         } else {
-          setStatus({ loading: false, checkedIn: false, since: null });
+          setStatus({ loading: false, checkedIn: false, since: null, sinceToday: false, todayMinutes: 0, todaySessions: [] });
         }
       } catch {
-        if (active) setStatus({ loading: false, checkedIn: false, since: null });
+        if (active) setStatus((s) => ({ ...s, loading: false }));
       }
     };
     load();
-    // 등하원이 키오스크에서 처리되면 반영되도록 가볍게 폴링
-    const id = setInterval(load, 30_000);
+    setNow(Date.now());
+    // 등하원이 키오스크에서 처리되면 반영 + 경과 시간 갱신
+    const id = setInterval(() => {
+      load();
+      setNow(Date.now());
+    }, 30_000);
     return () => {
       active = false;
       clearInterval(id);
@@ -42,9 +72,12 @@ export function AttendanceStatusCard() {
   }, []);
 
   const checkedIn = status.checkedIn;
+  const elapsedMin = checkedIn && status.sinceToday && status.since && now > 0
+    ? Math.max(0, Math.floor((now - new Date(status.since).getTime()) / 60000))
+    : 0;
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm">
+    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-5">
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3.5">
           <span
@@ -59,10 +92,17 @@ export function AttendanceStatusCard() {
             {status.loading ? (
               <p className="mt-0.5 text-lg font-black text-slate-400">확인 중…</p>
             ) : checkedIn ? (
-              <p className="mt-0.5 text-lg font-black text-[#1D1D1F]">
-                등원 중
-                {status.since && <span className="ml-2 text-sm font-bold text-[#0071E3]">{timeKST(status.since)}부터</span>}
-              </p>
+              <>
+                <p className="mt-0.5 text-lg font-black text-[#1D1D1F]">
+                  등원 중
+                  {status.since && <span className="ml-2 text-sm font-bold text-[#0071E3]">{timeKST(status.since)}부터</span>}
+                </p>
+                {elapsedMin > 0 && (
+                  <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
+                    <Flame className="size-3.5" /> {fmtMin(elapsedMin)}째 집중 중
+                  </p>
+                )}
+              </>
             ) : (
               <p className="mt-0.5 text-lg font-black text-[#1D1D1F]">하원 상태</p>
             )}
@@ -77,6 +117,39 @@ export function AttendanceStatusCard() {
           </p>
         </div>
       </div>
+
+      {/* 오늘 등하원 타임라인 + 오늘 순공 */}
+      {!status.loading && (
+        <div className="rounded-2xl bg-[#F5F5F7] p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-[#86868B]">오늘 학습 시간</span>
+            <span className="text-sm font-black text-[#0071E3]">{fmtMin(status.todayMinutes)}</span>
+          </div>
+          {status.todaySessions.length > 0 ? (
+            <div className="space-y-2">
+              {status.todaySessions.map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-[11px]">
+                  <span className="inline-flex shrink-0 items-center gap-1 font-bold text-emerald-600">
+                    <LogIn className="size-3" /> {timeKST(s.checkIn)}
+                  </span>
+                  <span className="h-px flex-1 border-t border-dashed border-slate-300" />
+                  {s.checkOut ? (
+                    <span className="inline-flex shrink-0 items-center gap-1 font-bold text-slate-500">
+                      <LogOut className="size-3" /> {timeKST(s.checkOut)}
+                    </span>
+                  ) : (
+                    <span className="inline-flex shrink-0 items-center gap-1 font-bold text-[#0071E3]">
+                      <span className="size-1.5 rounded-full bg-[#0071E3] animate-pulse" /> 진행 중
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-[11px] font-semibold text-slate-400">오늘 등하원 기록이 아직 없어요. QR로 등원하면 여기에 기록돼요.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
