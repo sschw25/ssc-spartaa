@@ -5,7 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu } from 'lucide-react';
+import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu, Plus, Trash2 } from 'lucide-react';
 import { Student, DetailedPlan } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
@@ -81,6 +81,9 @@ export default function StudentReportPage() {
   const paperRef = useRef<HTMLDivElement>(null);
   const slideDirRef = useRef(1);
   const firstTabRender = useRef(true);
+  const [gradeForm, setGradeForm] = useState({ testName: '', subject: '', score: '', date: '' });
+  const [gradeSubmitting, setGradeSubmitting] = useState(false);
+  const [gradeError, setGradeError] = useState('');
 
   // 탭 전환 시: 활성 탭을 가로 스크롤로 보이게 + 방향에 맞춘 콘텐츠 슬라이드 전환
   useEffect(() => {
@@ -630,6 +633,54 @@ export default function StudentReportPage() {
     }
   };
 
+  // 학생 본인 성적 추가/삭제
+  const submitGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setGradeError('');
+    const testName = gradeForm.testName.trim();
+    const subject = gradeForm.subject.trim();
+    const score = Number(gradeForm.score);
+    const date = gradeForm.date;
+    if (!testName || !subject || !gradeForm.score || !date) {
+      setGradeError('모든 항목을 입력해 주세요.');
+      return;
+    }
+    if (!Number.isFinite(score) || score < 0 || score > 1000) {
+      setGradeError('점수를 0~1000 사이로 입력해 주세요.');
+      return;
+    }
+    setGradeSubmitting(true);
+    try {
+      const res = await fetch('/api/student/grades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ testName, subject, score, date }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, grades: [...(prev.grades || []), json.grade] } : prev));
+        setGradeForm({ testName: '', subject: '', score: '', date: '' });
+      } else {
+        setGradeError(json.message || '저장에 실패했습니다.');
+      }
+    } catch {
+      setGradeError('네트워크 오류가 발생했습니다.');
+    } finally {
+      setGradeSubmitting(false);
+    }
+  };
+  const deleteGrade = async (id: string) => {
+    try {
+      const res = await fetch(`/api/student/grades?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, grades: (prev.grades || []).filter((g) => g.id !== id) } : prev));
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
   return (
     <div className="report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] py-8 md:py-16 px-4 font-sans text-[#1E293B] antialiased transition-all">
       
@@ -1047,7 +1098,11 @@ export default function StudentReportPage() {
           </div>
 
           {/* 주간 순공 랭킹 (열품타식 — 학생 본인 화면에서만) */}
-          {isStudentReport && <LeaderboardCard studentId={studentId} />}
+          {isStudentReport && (
+            <div className={activeTab === 'study-stats' ? '' : 'hidden print:block'}>
+              <LeaderboardCard studentId={studentId} />
+            </div>
+          )}
 
           {/* 2. 최근 생활 및 종합 피드백 */}
           <div id="coach-feedback" className={`scroll-mt-24 space-y-4 print-card ${!isStudentReport || activeTab === 'coach-feedback' ? '' : 'hidden print:block'}`}>
@@ -1660,11 +1715,55 @@ export default function StudentReportPage() {
               모의고사 성적 추이 및 주간 테스트 분석 결과
             </h3>
 
+            {isStudentReport && (
+              <form onSubmit={submitGrade} className="no-print p-4 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] space-y-3">
+                <div className="flex items-center gap-1.5 text-[11px] font-black text-[#0071E3]">
+                  <Plus className="w-3.5 h-3.5" /> 성적 직접 입력
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    value={gradeForm.subject}
+                    onChange={(e) => setGradeForm((f) => ({ ...f, subject: e.target.value }))}
+                    placeholder="과목 (예: 국어)"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                  />
+                  <input
+                    value={gradeForm.testName}
+                    onChange={(e) => setGradeForm((f) => ({ ...f, testName: e.target.value }))}
+                    placeholder="시험명 (예: 6월 모평)"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                  />
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={gradeForm.score}
+                    onChange={(e) => setGradeForm((f) => ({ ...f, score: e.target.value }))}
+                    placeholder="점수"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                  />
+                  <input
+                    type="date"
+                    value={gradeForm.date}
+                    onChange={(e) => setGradeForm((f) => ({ ...f, date: e.target.value }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
+                  />
+                </div>
+                {gradeError && <p className="text-[10px] font-bold text-red-500">{gradeError}</p>}
+                <button
+                  type="submit"
+                  disabled={gradeSubmitting}
+                  className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                >
+                  {gradeSubmitting ? '저장 중...' : '성적 추가하기'}
+                </button>
+              </form>
+            )}
+
             {student.grades.length === 0 ? (
               <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
                 <Calendar className="w-7 h-7 text-slate-300" />
-                <p className="text-xs font-bold text-slate-400">아직 주간 모의고사 및 성적 테스트 데이터가 등록되지 않았습니다.</p>
-                <p className="text-[10px] text-slate-400/80 font-semibold">테스트 진행 후 대시보드에서 점수가 기입되면 실시간 성적 추이 그래프가 나타납니다.</p>
+                <p className="text-xs font-bold text-slate-400">아직 성적 기록이 없어요.</p>
+                <p className="text-[10px] text-slate-400/80 font-semibold">위 입력란에서 직접 추가하거나, 테스트 후 관리자가 입력하면 추이 그래프가 나타나요.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
@@ -1720,11 +1819,19 @@ export default function StudentReportPage() {
                       <div className="space-y-3 mt-3 overflow-y-auto max-h-[160px] pr-1 print:max-h-none print:overflow-visible print:pr-0">
                         {[...student.grades].reverse().map(g => (
                           <div key={g.id} className="flex justify-between items-center text-[10px] border-b border-slate-100/50 pb-2">
-                            <div className="min-w-0">
-                              <span className="font-extrabold text-slate-700 mr-2 bg-slate-100 px-1.5 py-0.5 rounded-md">{g.subject}</span>
-                              <span className="text-slate-500 font-semibold truncate max-w-[95px] inline-block align-bottom">{g.testName}</span>
+                            <div className="min-w-0 flex items-center gap-1.5">
+                              <span className="font-extrabold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0">{g.subject}</span>
+                              <span className="text-slate-500 font-semibold truncate max-w-[80px]">{g.testName}</span>
+                              {g.source === 'student' && <span className="shrink-0 text-[7px] font-black text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.5 rounded-full">직접</span>}
                             </div>
-                            <span className="font-black text-[#0071E3] shrink-0">{g.score}점</span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="font-black text-[#0071E3]">{g.score}점</span>
+                              {g.source === 'student' && (
+                                <button type="button" onClick={() => deleteGrade(g.id)} className="no-print text-slate-300 hover:text-red-500 transition-colors" aria-label="성적 삭제">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>

@@ -67,6 +67,7 @@ export interface GradeItem {
   subject: string;    // 과목 (예: 국어, 영어, 수학)
   score: number;      // 점수
   date: string;       // 시험일 (YYYY-MM-DD)
+  source?: 'student' | 'admin'; // 입력 주체 (학생 직접 입력 여부 — 미지정은 관리자 입력으로 간주)
 }
 
 export interface SubjectProgress {
