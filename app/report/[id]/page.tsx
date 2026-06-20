@@ -81,7 +81,12 @@ export default function StudentReportPage() {
   const paperRef = useRef<HTMLDivElement>(null);
   const slideDirRef = useRef(1);
   const firstTabRender = useRef(true);
-  const [gradeForm, setGradeForm] = useState({ testName: '', subject: '', score: '', date: '' });
+  const [gradeForm, setGradeForm] = useState(() => ({
+    testName: '',
+    subject: '',
+    score: '',
+    date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()),
+  }));
   const [gradeSubmitting, setGradeSubmitting] = useState(false);
   const [gradeError, setGradeError] = useState('');
 
@@ -659,7 +664,12 @@ export default function StudentReportPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, grades: [...(prev.grades || []), json.grade] } : prev));
-        setGradeForm({ testName: '', subject: '', score: '', date: '' });
+        setGradeForm({
+          testName: '',
+          subject: '',
+          score: '',
+          date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()),
+        });
       } else {
         setGradeError(json.message || '저장에 실패했습니다.');
       }
@@ -1781,8 +1791,14 @@ export default function StudentReportPage() {
                     value={gradeForm.subject}
                     onChange={(e) => setGradeForm((f) => ({ ...f, subject: e.target.value }))}
                     placeholder="과목 (예: 국어)"
+                    list="grade-subject-options"
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
                   />
+                  <datalist id="grade-subject-options">
+                    {[...new Set((student.subjects || []).map((s) => s.name).filter(Boolean))].map((name) => (
+                      <option key={name} value={name} />
+                    ))}
+                  </datalist>
                   <input
                     value={gradeForm.testName}
                     onChange={(e) => setGradeForm((f) => ({ ...f, testName: e.target.value }))}
@@ -1873,7 +1889,7 @@ export default function StudentReportPage() {
                     <div>
                       <h4 className="text-[10px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 pb-2">최근 실시한 시험 목록</h4>
                       <div className="space-y-3 mt-3 overflow-y-auto max-h-[160px] pr-1 print:max-h-none print:overflow-visible print:pr-0">
-                        {[...student.grades].reverse().map(g => (
+                        {[...student.grades].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(g => (
                           <div key={g.id} className="flex justify-between items-center text-[10px] border-b border-slate-100/50 pb-2">
                             <div className="min-w-0 flex items-center gap-1.5">
                               <span className="font-extrabold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0">{g.subject}</span>
