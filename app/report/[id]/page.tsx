@@ -1155,6 +1155,62 @@ export default function StudentReportPage() {
           {/* 2-1. 과목별 학습 시간표 */}
           {isStudentReport && (
             <div id="timetable" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'timetable' ? '' : 'hidden print:block'}`}>
+              {/* 오늘 할 일 — 오늘 배정 과목의 남은 분량 */}
+              {isStudentReport && (() => {
+                const todayLabel = weekDaySlots.find((d) => d.key === todayDayKey)?.label || '오늘';
+                return (
+                  <div className="rounded-3xl border border-[#0071E3]/15 bg-gradient-to-br from-[#0071E3]/[0.05] to-[#0071E3]/[0.01] p-5 md:p-6 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
+                        <Target className="w-4 h-4" /> 오늘 할 일
+                      </h3>
+                      <span className="rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-black text-[#0071E3]/70">{todayLabel}</span>
+                    </div>
+                    {todaySubjects.length === 0 ? (
+                      <p className="py-4 text-center text-xs font-bold text-slate-400">오늘은 휴식일이에요 🌙 푹 쉬고 내일 계획을 확인해요.</p>
+                    ) : (
+                      <div className="space-y-2.5">
+                        {todaySubjects.map((subject) => {
+                          const slot = subject.studyTime ? studyTimeLabels[subject.studyTime] : '';
+                          const pendingBooks = (subject.books || []).filter((b) => (b.currentPage || 0) < (b.totalPages || 0));
+                          const pendingLectures = (subject.lectures || []).filter((l) => (l.completedLectures || 0) < (l.totalLectures || 0));
+                          const hasMaterials = (subject.books || []).length + (subject.lectures || []).length > 0;
+                          const pendingCount = pendingBooks.length + pendingLectures.length;
+                          return (
+                            <div key={subject.id} className="rounded-2xl border border-slate-100 bg-white p-3.5 shadow-sm">
+                              <div className="mb-2 flex items-center justify-between gap-2">
+                                <span className="text-xs font-black text-slate-800">{subject.name}</span>
+                                {slot && <span className="shrink-0 rounded-full bg-[#0071E3]/10 px-2 py-0.5 text-[9px] font-bold text-[#0071E3]">{slot}</span>}
+                              </div>
+                              {!hasMaterials ? (
+                                <p className="text-[10px] font-semibold text-slate-300">등록된 학습 자료가 없어요.</p>
+                              ) : pendingCount === 0 ? (
+                                <p className="text-[10px] font-bold text-emerald-600">오늘 분량 자료를 모두 마쳤어요 ✅</p>
+                              ) : (
+                                <div className="space-y-1.5">
+                                  {pendingBooks.map((b) => (
+                                    <div key={b.id} className="flex items-center justify-between gap-2 text-[10px]">
+                                      <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-600"><span>📚</span><span className="truncate">{b.title}</span></span>
+                                      <span className="shrink-0 font-bold text-slate-400">{b.currentPage}/{b.totalPages}{b.unit || 'p'}</span>
+                                    </div>
+                                  ))}
+                                  {pendingLectures.map((l) => (
+                                    <div key={l.id} className="flex items-center justify-between gap-2 text-[10px]">
+                                      <span className="flex min-w-0 items-center gap-1.5 font-semibold text-slate-600"><span>💻</span><span className="truncate">{l.name}</span></span>
+                                      <span className="shrink-0 font-bold text-slate-400">{l.completedLectures}/{l.totalLectures}강</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#0071E3]" />
