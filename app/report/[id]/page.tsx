@@ -691,6 +691,34 @@ export default function StudentReportPage() {
     }
   };
 
+  // 학생 본인 교재/인강 진도 직접 갱신 (즉시 반영, 서버 클램프값 적용)
+  const updateProgress = async (materialType: 'book' | 'lecture', materialId: string, value: number) => {
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, value }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) =>
+          prev
+            ? {
+                ...prev,
+                subjects: (prev.subjects || []).map((s) => ({
+                  ...s,
+                  books: (s.books || []).map((b) => (materialType === 'book' && b.id === materialId ? { ...b, currentPage: json.value } : b)),
+                  lectures: (s.lectures || []).map((l) => (materialType === 'lecture' && l.id === materialId ? { ...l, completedLectures: json.value } : l)),
+                })),
+              }
+            : prev,
+        );
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
   return (
     <div className="report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] py-8 md:py-16 px-4 font-sans text-[#1E293B] antialiased transition-all">
       
@@ -1653,7 +1681,25 @@ export default function StudentReportPage() {
                                         {status}
                                       </span>
                                     )}
-                                    <span className="text-xs font-bold text-slate-500">{b.currentPage} <span className="text-slate-300 font-normal">/</span> {b.totalPages}p</span>
+                                    {isStudentReport ? (
+                                      <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
+                                        <input
+                                          key={b.currentPage}
+                                          type="number"
+                                          inputMode="numeric"
+                                          min={0}
+                                          max={b.totalPages || undefined}
+                                          defaultValue={b.currentPage}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                          onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== b.currentPage) updateProgress('book', b.id, v); }}
+                                          className="w-12 rounded-md border border-slate-200 bg-white px-1 py-0.5 text-center font-extrabold text-[#0071E3] focus:border-[#0071E3] focus:outline-none"
+                                          aria-label="현재 페이지 입력"
+                                        />
+                                        <span className="font-normal text-slate-300">/</span> {b.totalPages}p
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs font-bold text-slate-500">{b.currentPage} <span className="text-slate-300 font-normal">/</span> {b.totalPages}p</span>
+                                    )}
                                     <span className="text-[9px] font-black text-white bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-2 py-0.5 rounded-lg shadow-sm">{percent}%</span>
                                   </div>
                                 </div>
@@ -1747,7 +1793,25 @@ export default function StudentReportPage() {
                                         {status}
                                       </span>
                                     )}
-                                    <span className="text-xs font-bold text-slate-500">{l.completedLectures} <span className="text-slate-300 font-normal">/</span> {l.totalLectures}강</span>
+                                    {isStudentReport ? (
+                                      <span className="flex items-center gap-1 text-xs font-bold text-slate-500">
+                                        <input
+                                          key={l.completedLectures}
+                                          type="number"
+                                          inputMode="numeric"
+                                          min={0}
+                                          max={l.totalLectures || undefined}
+                                          defaultValue={l.completedLectures}
+                                          onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                          onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== l.completedLectures) updateProgress('lecture', l.id, v); }}
+                                          className="w-12 rounded-md border border-slate-200 bg-white px-1 py-0.5 text-center font-extrabold text-[#0071E3] focus:border-[#0071E3] focus:outline-none"
+                                          aria-label="수강 강수 입력"
+                                        />
+                                        <span className="font-normal text-slate-300">/</span> {l.totalLectures}강
+                                      </span>
+                                    ) : (
+                                      <span className="text-xs font-bold text-slate-500">{l.completedLectures} <span className="text-slate-300 font-normal">/</span> {l.totalLectures}강</span>
+                                    )}
                                     <span className="text-[9px] font-black text-white bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-2 py-0.5 rounded-lg shadow-sm">{percent}%</span>
                                   </div>
                                 </div>
