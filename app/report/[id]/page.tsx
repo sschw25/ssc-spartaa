@@ -1478,6 +1478,33 @@ export default function StudentReportPage() {
               {isStudentReport ? '과목별 상세 학습 목표 및 주간 달성 스케줄러' : '과목별 학습 진도율 요약'}
             </h3>
 
+            {isStudentReport && (() => {
+              const allBooks = (student.subjects || []).flatMap((s) => s.books || []);
+              const allLectures = (student.subjects || []).flatMap((s) => s.lectures || []);
+              const pcts = [
+                ...allBooks.map((b) => (b.totalPages > 0 ? Math.min(1, (b.currentPage || 0) / b.totalPages) : 0)),
+                ...allLectures.map((l) => (l.totalLectures > 0 ? Math.min(1, (l.completedLectures || 0) / l.totalLectures) : 0)),
+              ];
+              const total = pcts.length;
+              if (total === 0) return null;
+              const overall = Math.round((pcts.reduce((a, b) => a + b, 0) / total) * 100);
+              const done = pcts.filter((p) => p >= 1).length;
+              return (
+                <div className="rounded-3xl border border-slate-100 bg-slate-50/70 p-5 md:p-6 shadow-sm space-y-3">
+                  <div className="flex items-end justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">전체 학습 진도</p>
+                      <p className="mt-1 text-2xl font-black text-[#0071E3]">{overall}<span className="text-sm font-bold">%</span></p>
+                    </div>
+                    <p className="text-[10px] font-bold text-slate-400">교재·인강 {total}개 중 <span className="font-black text-emerald-600">{done}개</span> 완료</p>
+                  </div>
+                  <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+                    <div className="h-full rounded-full bg-gradient-to-r from-[#0071E3] to-[#00C7FF] transition-all duration-500" style={{ width: `${overall}%` }} />
+                  </div>
+                </div>
+              );
+            })()}
+
             {!student.subjects || student.subjects.length === 0 ? (
               // 과목 정보가 없는 기존 데이터 Fallback 뷰
               (student.books.length === 0 && student.lectures.length === 0 ? (
