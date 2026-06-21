@@ -175,6 +175,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [isLearningInputOpen, setIsLearningInputOpen] = useState(false);
   const [learningInputMode, setLearningInputMode] = useState<'quick' | 'material' | null>(null);
   const [activeTab, setActiveTab] = useState('progress');
+  const [resolvedReqIds, setResolvedReqIds] = useState<string[]>([]);
+  const [resolvingReqId, setResolvingReqId] = useState('');
 
   // 기본 정보 상태
   const [name, setName] = useState('');
@@ -557,6 +559,32 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const learningLogs = student.consultationLogs.filter(log => !log.type || log.type === 'learning');
   const lifeLogs = student.consultationLogs.filter(log => log.type === 'life');
+  // 학생 변경 신청(대기중) — consultation_logs 중 type==='request'
+  const pendingRequests = student.consultationLogs.filter(
+    log => log.type === 'request' && log.status !== 'resolved' && !resolvedReqIds.includes(log.id)
+  );
+  const REQUEST_TYPE_LABEL: Record<string, string> = { progress: '진도 정정', subject: '과목 변경', plan: '학습계획', etc: '기타' };
+  const resolveRequest = async (reqId: string) => {
+    setResolvingReqId(reqId);
+    try {
+      const res = await fetch(`/api/admin/students/${student.id}/requests`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId: reqId, status: 'resolved' }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setResolvedReqIds(prev => [...prev, reqId]);
+        toast.success('변경 신청을 처리완료로 표시했습니다.');
+      } else {
+        toast.error(json.message || '처리에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    } finally {
+      setResolvingReqId('');
+    }
+  };
 
   // 0. 학생 데이터 서버 저장 공통 헬퍼
   const saveStudentData = async (updatedStudent: Student): Promise<boolean> => {
@@ -3483,6 +3511,35 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         </div>
 
         <div className="p-6">
+          {pendingRequests.length > 0 && (
+            <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-black text-white">{pendingRequests.length}</span>
+                <h4 className="text-xs font-black text-amber-800">학생 변경 신청 (대기중)</h4>
+              </div>
+              <div className="space-y-2">
+                {pendingRequests.map(req => (
+                  <div key={req.id} className="rounded-xl border border-amber-100 bg-white p-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-1.5 text-[10px]">
+                        <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">{REQUEST_TYPE_LABEL[req.requestType || 'etc']}</span>
+                        <span className="font-semibold text-slate-400">{req.date}</span>
+                      </span>
+                      <Button
+                        size="sm"
+                        onClick={() => resolveRequest(req.id)}
+                        disabled={resolvingReqId === req.id}
+                        className="h-7 rounded-lg bg-emerald-600 px-3 text-[11px] font-bold text-white hover:bg-emerald-700"
+                      >
+                        {resolvingReqId === req.id ? '처리 중...' : '처리완료'}
+                      </Button>
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
