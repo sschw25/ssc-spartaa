@@ -58,7 +58,12 @@ export interface ConsultationLog {
   date: string;       // 상담일 (YYYY-MM-DD)
   manager: string;    // 상담자
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
-  type?: 'learning' | 'life'; // 학습 상담(learning) 또는 생활 면담(life)
+  type?: 'learning' | 'life' | 'request'; // 학습 상담 / 생활 면담 / 학생 변경 신청
+  // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
+  requestType?: 'progress' | 'subject' | 'plan' | 'etc'; // 신청 분류
+  status?: 'pending' | 'resolved';                       // 처리 상태
+  createdAt?: string;                                     // 신청 시각 (ISO)
+  resolvedAt?: string;                                    // 처리 시각 (ISO)
 }
 
 export interface GradeItem {
@@ -120,7 +125,9 @@ export interface Student {
   lectures: LectureProgress[];
   consultationLogs: ConsultationLog[];
   grades: GradeItem[];
-  
+  // 학생 본인 변경 신청 내역 (리포트 API가 consultation_logs 중 type==='request'만 추려서 전달)
+  changeRequests?: ConsultationLog[];
+
   // 학생별 과목 설정 및 계획
   subjects?: SubjectProgress[];
   customCategories?: string[];

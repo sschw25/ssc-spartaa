@@ -54,8 +54,12 @@ export async function GET(
       speedMultiplier: student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0,
       books: student.books,
       lectures: student.lectures,
-      // 부모님 공개용으로는 가장 최근 상담 일지 2건 정도만 전달 (전부 보이고 싶으면 전체 전달)
-      consultationLogs: student.consultationLogs.slice(0, 3), 
+      // 부모님 공개용으로는 가장 최근 상담 일지 2건 정도만 전달 (변경 신청은 별도 분리)
+      consultationLogs: (student.consultationLogs || []).filter((l) => l.type !== 'request').slice(0, 3),
+      // 학생 본인 변경 신청 내역 (consultation_logs 중 type==='request'만 추려서 전달)
+      changeRequests: (student.consultationLogs || [])
+        .filter((l) => l.type === 'request')
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
       grades: student.grades,
       subjects: student.subjects || []
     };
