@@ -13,7 +13,7 @@ export async function PATCH(
 
   const { id } = await params;
 
-  let body: { requestId?: unknown; status?: unknown };
+  let body: { requestId?: unknown; status?: unknown; reply?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -22,8 +22,12 @@ export async function PATCH(
 
   const requestId = typeof body?.requestId === 'string' ? body.requestId : '';
   const status = body?.status === 'pending' ? 'pending' : body?.status === 'resolved' ? 'resolved' : null;
-  if (!requestId || !status) {
-    return NextResponse.json({ success: false, message: '처리 정보가 올바르지 않습니다.' }, { status: 400 });
+  const reply = typeof body?.reply === 'string' ? body.reply.trim() : null;
+  if (!requestId) {
+    return NextResponse.json({ success: false, message: '처리 대상이 올바르지 않습니다.' }, { status: 400 });
+  }
+  if (!status && reply === null) {
+    return NextResponse.json({ success: false, message: '처리 상태 또는 답변이 필요합니다.' }, { status: 400 });
   }
 
   const student = await getStudentById(id);
@@ -36,8 +40,15 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  target.status = status;
-  target.resolvedAt = status === 'resolved' ? new Date().toISOString() : undefined;
+  const nowIso = new Date().toISOString();
+  if (reply !== null) {
+    target.adminReply = reply;
+    target.repliedAt = nowIso;
+  }
+  if (status) {
+    target.status = status;
+    target.resolvedAt = status === 'resolved' ? nowIso : undefined;
+  }
   await saveStudent(student);
 
   return NextResponse.json({ success: true });

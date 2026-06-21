@@ -2021,6 +2021,11 @@ export default function StudentReportPage() {
                           )}
                         </div>
                         <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
+                        {r.adminReply && (
+                          <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                            💬 코치 답변: {r.adminReply}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

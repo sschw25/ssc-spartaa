@@ -64,6 +64,8 @@ export interface ConsultationLog {
   status?: 'pending' | 'resolved';                       // 처리 상태
   createdAt?: string;                                     // 신청 시각 (ISO)
   resolvedAt?: string;                                    // 처리 시각 (ISO)
+  adminReply?: string;                                    // 관리자 코멘트 답변 (학생에게 노출)
+  repliedAt?: string;                                     // 답변 시각 (ISO)
 }
 
 export interface GradeItem {
