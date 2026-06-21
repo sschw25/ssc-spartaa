@@ -67,6 +67,16 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
   etc: '기타',
 };
 
+// 원탭 빠른 신청 (학생이 타이핑 없이 버튼으로 신청)
+const QUICK_REQUESTS: { type: string; label: string; icon: string; message: string }[] = [
+  { type: 'etc', label: '상담 신청할래요', icon: '💬', message: '상담을 신청합니다.' },
+  { type: 'progress', label: '진도가 너무 빨라요', icon: '🏃', message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.' },
+  { type: 'progress', label: '진도가 너무 느려요', icon: '🐢', message: '진도가 너무 느려요. 계획을 조정하고 싶어요.' },
+  { type: 'subject', label: '과목 추가/변경', icon: '📚', message: '과목 추가 또는 변경을 신청합니다.' },
+  { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: '🗓️', message: '학습계획 조정을 신청합니다.' },
+  { type: 'progress', label: '진도 숫자 정정', icon: '✏️', message: '진도 숫자 정정이 필요해요.' },
+];
+
 export default function StudentReportPage() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -99,6 +109,7 @@ export default function StudentReportPage() {
   const [requestForm, setRequestForm] = useState({ requestType: 'progress', message: '' });
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState('');
+  const [requestCustomOpen, setRequestCustomOpen] = useState(false);
 
   // 탭 전환 시: 활성 탭을 가로 스크롤로 보이게 + 방향에 맞춘 콘텐츠 슬라이드 전환
   useEffect(() => {
@@ -730,25 +741,25 @@ export default function StudentReportPage() {
   };
 
   // 학생 변경 신청 (관리자에게)
-  const submitRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setRequestError('');
-    const message = requestForm.message.trim();
+  const sendRequest = async (requestType: string, rawMessage: string) => {
+    const message = (rawMessage || '').trim();
     if (!message) {
       setRequestError('신청 내용을 입력해 주세요.');
       return;
     }
+    setRequestError('');
     setRequestSubmitting(true);
     try {
       const res = await fetch('/api/student/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestType: requestForm.requestType, message }),
+        body: JSON.stringify({ requestType, message }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, changeRequests: [json.request, ...(prev.changeRequests || [])] } : prev));
         setRequestForm({ requestType: 'progress', message: '' });
+        setRequestCustomOpen(false);
       } else {
         setRequestError(json.message || '신청에 실패했습니다.');
       }
@@ -1926,35 +1937,69 @@ export default function StudentReportPage() {
                   </h4>
                   <p className="mt-1 text-[10px] font-semibold text-slate-400">진도 정정·과목 추가/변경·학습계획 조정 등을 신청하면 담당 코치가 확인해요.</p>
                 </div>
-                <form onSubmit={submitRequest} className="space-y-2.5">
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(REQUEST_TYPE_LABEL).map(([v, label]) => (
+                <div className="space-y-2.5">
+                  {/* 원탭 빠른 신청 — 타이핑 없이 버튼으로 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {QUICK_REQUESTS.map((q) => (
                       <button
-                        key={v}
+                        key={q.label}
                         type="button"
-                        onClick={() => setRequestForm((f) => ({ ...f, requestType: v }))}
-                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${requestForm.requestType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
+                        disabled={requestSubmitting}
+                        onClick={() => sendRequest(q.type, q.message)}
+                        className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] active:scale-[0.97] disabled:opacity-50"
                       >
-                        {label}
+                        <span className="text-base leading-none">{q.icon}</span>
+                        <span className="min-w-0 leading-tight">{q.label}</span>
                       </button>
                     ))}
                   </div>
-                  <textarea
-                    value={requestForm.message}
-                    onChange={(e) => setRequestForm((f) => ({ ...f, message: e.target.value }))}
-                    placeholder="신청 내용을 적어 주세요. 예) 수학I 진도를 주 3회로 늘리고 싶어요"
-                    rows={3}
-                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
-                  />
-                  {requestError && <p className="text-[10px] font-bold text-red-500">{requestError}</p>}
+
+                  {/* 직접 작성 토글 */}
                   <button
-                    type="submit"
-                    disabled={requestSubmitting}
-                    className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                    type="button"
+                    onClick={() => setRequestCustomOpen((o) => !o)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 bg-white/60 py-2 text-[11px] font-bold text-slate-500 transition hover:text-slate-700"
                   >
-                    {requestSubmitting ? '신청 중...' : '변경 신청하기'}
+                    <Plus className={`w-3.5 h-3.5 transition-transform ${requestCustomOpen ? 'rotate-45' : ''}`} />
+                    {requestCustomOpen ? '직접 작성 닫기' : '직접 작성하기'}
                   </button>
-                </form>
+
+                  {requestCustomOpen && (
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); sendRequest(requestForm.requestType, requestForm.message); }}
+                      className="space-y-2 rounded-2xl border border-slate-100 bg-white/70 p-3"
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(REQUEST_TYPE_LABEL).map(([v, label]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setRequestForm((f) => ({ ...f, requestType: v }))}
+                            className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${requestForm.requestType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={requestForm.message}
+                        onChange={(e) => setRequestForm((f) => ({ ...f, message: e.target.value }))}
+                        placeholder="신청 내용을 적어 주세요. 예) 수학I 진도를 주 3회로 늘리고 싶어요"
+                        rows={2}
+                        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={requestSubmitting}
+                        className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {requestSubmitting ? '신청 중...' : '신청하기'}
+                      </button>
+                    </form>
+                  )}
+
+                  {requestError && <p className="text-[10px] font-bold text-red-500">{requestError}</p>}
+                </div>
                 {(student.changeRequests || []).length > 0 && (
                   <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 신청 내역</p>
