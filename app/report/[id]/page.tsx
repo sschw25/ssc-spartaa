@@ -1134,9 +1134,10 @@ export default function StudentReportPage() {
                   </pre>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
-                  <MessageSquare className="w-6 h-6 text-slate-300" />
-                  <p className="text-xs font-bold text-slate-400">표시할 학부모 공유 생활 코멘트가 아직 등록되지 않았습니다.</p>
+                <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-1.5">
+                  <MessageSquare className="w-6 h-6 text-slate-300 mb-1" />
+                  <p className="text-xs font-bold text-slate-500">아직 학부모 공유 코멘트가 등록되지 않았어요.</p>
+                  <p className="text-[10px] font-semibold text-slate-400">이번 주 상담 후 종합 소견이 여기에 도착해요 ✍️</p>
                 </div>
               )
             )}
@@ -1154,9 +1155,10 @@ export default function StudentReportPage() {
                   </pre>
                 </div>
               ) : (
-                <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
-                  <MessageSquare className="w-6 h-6 text-slate-300" />
-                  <p className="text-xs font-bold text-slate-400">표시할 학생 공유 생활 코멘트가 아직 등록되지 않았습니다.</p>
+                <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-1.5">
+                  <MessageSquare className="w-6 h-6 text-slate-300 mb-1" />
+                  <p className="text-xs font-bold text-slate-500">아직 코치 선생님의 소견이 등록되지 않았어요.</p>
+                  <p className="text-[10px] font-semibold text-slate-400">상담 후 맞춤 피드백이 여기에 도착해요 ✍️</p>
                 </div>
               )
             )}
