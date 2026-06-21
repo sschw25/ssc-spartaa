@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet';
 import {
   AlertDialog,
@@ -26,7 +27,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting } from '@/lib/types/student';
+import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest } from '@/lib/types/student';
 import { getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
@@ -35,7 +36,7 @@ import { toast } from 'sonner';
 import { 
   Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, 
   BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save,
-  ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp
+  ArrowLeft, Home, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
@@ -168,6 +169,7 @@ const ConsultationContentEditor = React.memo(function ConsultationContentEditor(
 });
 
 export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [] }: StudentDetailSheetProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
   const [isApplyingQuickPlan, setIsApplyingQuickPlan] = useState(false);
@@ -179,6 +181,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [resolvingReqId, setResolvingReqId] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [sentReplies, setSentReplies] = useState<Record<string, string>>({});
+  // 출결/순공 통계 + 휴가 신청 관련 상태
+  const [studyStats, setStudyStats] = useState<any>(null);
+  const [leaveRequestsLocal, setLeaveRequestsLocal] = useState<LeaveRequest[]>([]);
+  const [leaveCouponsLocal, setLeaveCouponsLocal] = useState(0);
+  const [leaveActionBusy, setLeaveActionBusy] = useState<Record<string, boolean>>({});
+  const [leaveReplyDrafts, setLeaveReplyDrafts] = useState<Record<string, string>>({});
 
   // 기본 정보 상태
   const [name, setName] = useState('');
@@ -311,6 +319,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [debouncedQuickPlanText, setDebouncedQuickPlanText] = useState('');
   const initializedConsultationStudentIdRef = useRef<string | null>(null);
   const cslContentRef = useRef('');
+  const afterCloseActionRef = useRef<(() => void) | null>(null);
   // 자동 저장(프로필/과목 구조) 타이머 & 중복 실행 방지 플래그
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoSaveInFlightRef = useRef(false);
@@ -434,6 +443,18 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setGradeTestName('');
       setGradeScore(80);
       setIsLearningInputOpen(false);
+
+      // 휴가 신청 상태 초기화
+      setLeaveRequestsLocal(student.leaveRequests || []);
+      setLeaveCouponsLocal(student.leaveCoupons ?? 0);
+      setLeaveActionBusy({});
+      setLeaveReplyDrafts({});
+      setStudyStats(null);
+      // 출결/순공 통계 fetch (실패해도 무시)
+      fetch(`/api/report/${student.id}`, { cache: 'no-store' })
+        .then(r => r.json())
+        .then(json => { if (json?.studyStats) setStudyStats(json.studyStats); })
+        .catch(() => {});
     }
   }, [student]);
 
@@ -565,7 +586,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const pendingRequests = student.consultationLogs.filter(
     log => log.type === 'request' && log.status !== 'resolved' && !resolvedReqIds.includes(log.id)
   );
-  const REQUEST_TYPE_LABEL: Record<string, string> = { progress: '진도 정정', subject: '과목 변경', plan: '학습계획', etc: '기타' };
+  const REQUEST_TYPE_LABEL: Record<string, string> = {
+    progress: '진도 정정',
+    subject: '과목 변경',
+    plan: '학습계획',
+    halfDay: '반차 신청',
+    restPass: '휴식권 신청',
+    etc: '기타',
+  };
   const QUICK_REPLIES = ['상담 신청 바랍니다 🙏', '확인했어요, 반영할게요 👍', '조금만 더 분발해요 💪', '계획대로 잘하고 있어요 ✅'];
   const actOnRequest = async (reqId: string, opts: { status?: 'resolved'; reply?: string }) => {
     setResolvingReqId(reqId);
@@ -2098,6 +2126,67 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     toast.info('현재 학습상황 요약을 상담 기록에 불러왔습니다.');
   };
 
+  const handleLeaveAction = async (
+    requestId: string,
+    payload: { status?: 'approved' | 'rejected' | 'pending'; reply?: string }
+  ) => {
+    setLeaveActionBusy(prev => ({ ...prev, [requestId]: true }));
+    try {
+      const res = await fetch(`/api/admin/students/${student!.id}/leave`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestId, ...payload }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const updated = leaveRequestsLocal.map(r =>
+          r.id === requestId
+            ? {
+                ...r,
+                ...(payload.status ? { status: payload.status as LeaveRequest['status'], reviewedAt: new Date().toISOString() } : {}),
+                ...(payload.reply !== undefined ? { adminReply: payload.reply || undefined } : {}),
+              }
+            : r
+        );
+        setLeaveRequestsLocal(updated);
+        onUpdate({ ...student!, leaveRequests: updated });
+        if (payload.reply !== undefined) {
+          setLeaveReplyDrafts(d => ({ ...d, [requestId]: '' }));
+        }
+        if (payload.status === 'approved') toast.success('승인했습니다.');
+        else if (payload.status === 'rejected') toast.success('반려했습니다.');
+        else if (payload.status === 'pending') toast.success('대기중으로 되돌렸습니다.');
+        else if (payload.reply !== undefined) toast.success('답변을 보냈습니다.');
+      } else {
+        toast.error(json.message || '처리에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    } finally {
+      setLeaveActionBusy(prev => ({ ...prev, [requestId]: false }));
+    }
+  };
+
+  const handleCouponAdjust = async (delta: number) => {
+    try {
+      const res = await fetch(`/api/admin/students/${student!.id}/leave`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ couponDelta: delta }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setLeaveCouponsLocal(json.leaveCoupons);
+        onUpdate({ ...student!, leaveCoupons: json.leaveCoupons });
+        toast.success(`쿠폰 ${delta > 0 ? '+' : ''}${delta}개 처리됐습니다.`);
+      } else {
+        toast.error(json.message || '처리에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    }
+  };
+
   const findSubjectByMaterialId = (materialId: string) => {
     return subjectsState.find((subject) => {
       const hasBook = subject.books?.some((book) => book.id === materialId);
@@ -3116,26 +3205,36 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setIsAutoSaving(false);
   };
 
-  const requestClose = () => {
+  const requestClose = (afterClose?: () => void) => {
     if (loading) return;
+    afterCloseActionRef.current = afterClose || null;
     if (hasPendingSaveChanges) {
       setIsCloseConfirmOpen(true);
       return;
     }
+    const closeAction = afterCloseActionRef.current;
+    afterCloseActionRef.current = null;
     onClose();
+    closeAction?.();
   };
 
   const handleDiscardAndClose = () => {
+    const afterClose = afterCloseActionRef.current;
+    afterCloseActionRef.current = null;
     resetLocalDrafts();
     setIsCloseConfirmOpen(false);
     onClose();
+    afterClose?.();
   };
 
   const handleSaveAndClose = async () => {
     const saved = await handleManualSave();
     if (saved) {
+      const afterClose = afterCloseActionRef.current;
+      afterCloseActionRef.current = null;
       setIsCloseConfirmOpen(false);
       onClose();
+      afterClose?.();
     }
   };
 
@@ -3472,7 +3571,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <Button
               size="sm"
               variant="outline"
-              onClick={requestClose}
+              onClick={() => requestClose()}
               className="bg-transparent border-white/20 hover:bg-white/10 text-white rounded-lg text-xs h-8.5 px-3 shrink-0"
             >
               <ArrowLeft className="w-3.5 h-3.5 mr-1" />
@@ -3482,11 +3581,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <Button
               size="sm"
               variant="outline"
-              onClick={requestClose}
+              onClick={() => requestClose(() => router.push('/admin/dashboard'))}
               className="bg-transparent border-white/20 hover:bg-white/10 text-white rounded-lg text-xs h-8.5 px-3 shrink-0"
             >
-              <LayoutDashboard className="w-3.5 h-3.5 mr-1" />
-              대시보드
+              <Home className="w-3.5 h-3.5 mr-1" />
+              홈
             </Button>
             
             <Button
@@ -3532,7 +3631,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 {pendingRequests.map(req => (
                   <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
                     <div className="flex items-center gap-1.5 text-[10px]">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">{REQUEST_TYPE_LABEL[req.requestType || 'etc']}</span>
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">{REQUEST_TYPE_LABEL[req.requestType || 'etc'] || '기타 신청'}</span>
                       <span className="font-semibold text-slate-400">{req.date}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
@@ -3726,6 +3825,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 studentLifeComment={studentLifeComment}
                 setStudentLifeComment={setStudentLifeComment}
                 lifeLogs={lifeLogs}
+                studyStats={studyStats}
+                leaveRequests={leaveRequestsLocal}
+                leaveCoupons={leaveCouponsLocal}
+                leaveActionBusy={leaveActionBusy}
+                leaveReplyDrafts={leaveReplyDrafts}
+                setLeaveReplyDrafts={setLeaveReplyDrafts}
+                onLeaveAction={handleLeaveAction}
+                onCouponAdjust={handleCouponAdjust}
               />
             </TabsContent>
 
@@ -3790,7 +3897,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       </div>
     </SheetContent>
     </Sheet>
-    <AlertDialog open={isCloseConfirmOpen} onOpenChange={setIsCloseConfirmOpen}>
+    <AlertDialog
+      open={isCloseConfirmOpen}
+      onOpenChange={(open) => {
+        setIsCloseConfirmOpen(open);
+        if (!open) afterCloseActionRef.current = null;
+      }}
+    >
       <AlertDialogContent className="bg-white">
         <AlertDialogHeader>
           <AlertDialogTitle className="text-base text-[#1D1D1F]">변경사항을 저장할까요?</AlertDialogTitle>

@@ -2,11 +2,12 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Trophy, Flame, ArrowLeft, RefreshCw, Loader2, Clock, Search, Award, Activity } from 'lucide-react';
+import { Trophy, Flame, RefreshCw, Loader2, Clock, Search, Award, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { AdminTopNav } from '@/components/admin/admin-top-nav';
 
 interface Row { rank: number; id: string; name: string; campus: string; weekMinutes: number; dayMinutes: number; isOpen: boolean }
 interface Data {
@@ -105,44 +106,25 @@ export default function WeeklyLeaderboardPage() {
 
   return (
     <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10 transition-all animate-fade-in-up">
-      {/* Navbar */}
-      <nav className="border-b border-black/[0.03] bg-white/80 backdrop-blur-xl sticky top-0 z-30 px-4 md:px-6 py-3 flex justify-between items-center gap-3 shadow-sm">
-        <div className="flex items-center gap-2 min-w-0">
+      <AdminTopNav
+        title="주간 순공 시간 상세 분석"
+        titleIcon={<Trophy className="w-4 h-4 text-[#F56300]" />}
+        campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}
+        campusValue={campusFilter}
+        onCampusChange={setCampusFilter}
+        actions={
           <Button
             size="sm"
-            variant="ghost"
-            onClick={() => router.back()}
-            className="rounded-2xl text-xs h-9 px-3 hover:bg-[#F5F5F7] transition-premium"
+            variant="outline"
+            onClick={load}
+            className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+            title="새로고침"
           >
-            <ArrowLeft className="w-4 h-4 mr-1.5" />
-            <span className="font-bold">뒤로가기</span>
+            <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline font-bold">새로고침</span>
           </Button>
-          <span className="w-px h-4 bg-black/[0.08]" />
-          <h1 className="text-sm font-black tracking-tight text-[#1D1D1F] flex items-center gap-1.5">
-            <Trophy className="w-4 h-4 text-[#F56300]" />
-            주간 순공 시간 상세 분석
-          </h1>
-        </div>
-
-        <div className="flex items-center gap-2 rounded-full border border-black/[0.04] bg-[#F5F5F7]/80 p-0.5 shrink-0">
-          <span className="hidden sm:inline pl-3.5 pr-1 text-[10px] font-black text-[#86868B] uppercase tracking-wider">센터</span>
-          <div className="flex min-w-0 overflow-hidden gap-0.5">
-            {['all', 'wonju', 'chuncheon', 'chungju'].map((c) => (
-              <Button
-                key={c}
-                size="sm"
-                variant={campusFilter === c ? 'default' : 'ghost'}
-                onClick={() => setCampusFilter(c)}
-                className={`h-7 rounded-full px-3 text-[11px] transition-premium ${
-                  campusFilter === c ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-black border border-black/[0.02]' : 'text-[#86868B] hover:bg-white/60 hover:text-black'
-                }`}
-              >
-                {c === 'all' ? '전체' : campusLabel(c)}
-              </Button>
-            ))}
-          </div>
-        </div>
-      </nav>
+        }
+      />
 
       <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
         {/* KPI 메트릭 요약 카드 */}

@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { 
-  Users, User, Calendar, BarChart3, Search, Plus, LogOut, Loader2,
-  AlertTriangle, BookOpen, ArrowLeft, LayoutDashboard, Menu, ClipboardList, ScanLine, X, Play, RefreshCw
+  Users, User, Calendar, BarChart3, Search, LogOut, Loader2,
+  AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
@@ -16,6 +15,7 @@ import { getManagedProgressItems } from '@/lib/progress-plan';
 import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
+import { AdminTopNav } from '@/components/admin/admin-top-nav';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const isCampusFilterValue = (value: string | null): value is string => !!value && CAMPUS_FILTERS.includes(value);
@@ -25,7 +25,6 @@ export default function AdminDashboardPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // 캠퍼스 필터 상태
   const [campusFilter, setCampusFilter] = useState('all');
@@ -174,11 +173,6 @@ export default function AdminDashboardPage() {
     };
   }, [checkingAuth]);
 
-  const navigateFromMenu = (href: string) => {
-    setIsMenuOpen(false);
-    router.push(href);
-  };
-
   // 데이터 가공 및 통계 계산
   const campusScopedStudents = students.filter(s => campusFilter === 'all' || s.campus === campusFilter);
   const totalStudentsCount = campusScopedStudents.length;
@@ -193,6 +187,10 @@ export default function AdminDashboardPage() {
 
   // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
   const weeklyGradeMissingStudents = campusScopedStudents.filter(s => isWeeklyGradeMissing(s));
+
+  // 휴가/반차/휴식권/병가 — 처리 대기중 신청 (학생별로 1명 1뱃지, 총 건수는 합산)
+  const pendingLeaveStudents = campusScopedStudents.filter(s => (s.leaveRequests || []).some(r => r.status === 'pending'));
+  const pendingLeaveCount = campusScopedStudents.reduce((n, s) => n + (s.leaveRequests || []).filter(r => r.status === 'pending').length, 0);
 
   // 각 카드 데이터 최종 업데이트 시각 계산
   const lastConsultationUpdate = pendingConsultationStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
@@ -589,186 +587,49 @@ export default function AdminDashboardPage() {
   return (
     <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10 transition-all animate-fade-in-up">
       
-      {/* Navbar */}
-      <nav className="border-b border-black/[0.03] bg-white/80 backdrop-blur-xl sticky top-0 z-30 px-4 md:px-6 py-3 flex justify-between items-center gap-3 admin-mobile-wrap shadow-sm">
-        <div className="flex items-center gap-2 min-w-0">
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={() => setIsMenuOpen(true)}
-            className="h-9.5 w-9.5 shrink-0 rounded-2xl hover:bg-[#F5F5F7] transition-premium"
-            title="메뉴"
-          >
-            <Menu className="w-5 h-5" />
-            <span className="sr-only">메뉴 열기</span>
-          </Button>
-          <span 
-            onClick={() => router.push('/admin/dashboard')} 
-            className="font-black text-sm tracking-tight text-white bg-gradient-to-tr from-[#1D1D1F] to-[#3D3D42] px-3.5 py-1.5 rounded-2xl mr-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.15)] cursor-pointer hover:scale-[1.03] active:scale-[0.98] transition-all"
-          >
-            SSC
-          </span>
-          <h1 className="admin-fit-text text-xs sm:text-sm font-black tracking-tight text-[#1D1D1F] opacity-90">학습 및 진도 체계적 관리 대시보드</h1>
-        </div>
-        <div className="flex items-center gap-2 rounded-full border border-black/[0.04] bg-[#F5F5F7]/80 p-0.5 shrink-0 shadow-inner">
-          <span className="hidden sm:inline pl-3.5 pr-1 text-[10px] font-black text-[#86868B] uppercase tracking-wider">센터</span>
-          <div className="flex min-w-0 overflow-hidden gap-0.5">
-            {CAMPUS_FILTERS.map((c) => (
-              <Button
-                key={c}
-                size="sm"
-                variant={campusFilter === c ? 'default' : 'ghost'}
-                onClick={() => handleCampusFilterChange(c)}
-                className={`admin-fit-button h-7 rounded-full px-3 text-[11px] transition-premium ${
-                  campusFilter === c ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-black border border-black/[0.02]' : 'text-[#86868B] hover:bg-white/60 hover:text-black'
-                }`}
-              >
-                {c === 'all' ? '전체' : getCampusLabel(c)}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => router.back()}
-            className="admin-fit-button rounded-2xl text-xs h-9.5 px-3 hover:bg-[#F5F5F7] transition-premium"
-            title="뒤로가기"
-          >
-            <ArrowLeft className="w-4 h-4 md:mr-1.5" />
-            <span className="hidden md:inline font-bold">뒤로</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => router.replace('/admin/dashboard')}
-            className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
-            title="대시보드"
-          >
-            <LayoutDashboard className="w-4 h-4 md:mr-1.5 text-[#0071E3]" />
-            <span className="hidden md:inline font-bold">대시보드</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleFocusSearch}
-            className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
-            title="검색"
-          >
-            <Search className="w-4 h-4 md:mr-1.5 text-[#86868B]" />
-            <span className="hidden md:inline font-bold">검색</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={loadStudents}
-            className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
-            title="새로고침"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline font-bold">새로고침</span>
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleLogout}
-            className="admin-fit-button text-red-600 hover:text-red-700 hover:bg-red-50 rounded-2xl text-xs h-9.5 px-3 transition-premium"
-            title="로그아웃"
-          >
-            <LogOut className="w-4 h-4 mr-1.5 text-red-500" />
-            <span className="hidden sm:inline font-bold">로그아웃</span>
-          </Button>
-        </div>
-      </nav>
-
-      <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <SheetContent side="left" className="w-[300px] bg-white p-0">
-          <SheetHeader className="border-b border-black/[0.05] p-5 text-left">
-            <SheetTitle className="flex items-center gap-2 text-base font-black text-[#1D1D1F]">
-              <span className="rounded-lg bg-[#1D1D1F] px-2.5 py-1.5 text-sm font-extrabold text-white">SSC</span>
-              관리자 메뉴
-            </SheetTitle>
-            <SheetDescription className="text-xs font-semibold text-[#86868B]">
-              자주 쓰는 관리자 화면으로 이동합니다.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex flex-col gap-1 p-3">
-            <button
-              type="button"
-              onClick={() => navigateFromMenu('/admin/dashboard')}
-              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+      <AdminTopNav
+        title="학습 및 진도 체계적 관리 대시보드"
+        campusOptions={CAMPUS_FILTERS.map((c) => ({ value: c, label: c === 'all' ? '전체' : getCampusLabel(c) }))}
+        campusValue={campusFilter}
+        onCampusChange={handleCampusFilterChange}
+        onStudentSearch={handleFocusSearch}
+        onStudentAdd={() => router.push('/admin/consultation?action=add')}
+        onLogout={handleLogout}
+        actions={
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleFocusSearch}
+              className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+              title="검색"
             >
-              <LayoutDashboard className="w-4 h-4 text-[#0071E3]" />
-              대시보드
-            </button>
-            <button
-              type="button"
-              onClick={() => navigateFromMenu('/admin/attendance')}
-              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+              <Search className="w-4 h-4 md:mr-1.5 text-[#86868B]" />
+              <span className="hidden md:inline font-bold">검색</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadStudents}
+              className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+              title="새로고침"
             >
-              <ClipboardList className="w-4 h-4 text-[#0071E3]" />
-              출결 상세
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                window.open('/attend/kiosk', '_blank');
-              }}
-              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
+              <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline font-bold">새로고침</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleLogout}
+              className="admin-fit-button text-red-600 hover:text-red-700 hover:bg-red-50 rounded-2xl text-xs h-9.5 px-3 transition-premium"
+              title="로그아웃"
             >
-              <ScanLine className="w-4 h-4 text-[#0071E3]" />
-              등하원 체크
-            </button>
-            <button
-              type="button"
-              onClick={() => navigateFromMenu('/admin/consultation')}
-              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
-            >
-              <BookOpen className="w-4 h-4 text-[#0071E3]" />
-              상담일지
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                router.push('/admin/consultation?focus=search');
-              }}
-              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
-            >
-              <Search className="w-4 h-4 text-[#0071E3]" />
-              학생 검색
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                router.push('/admin/consultation?action=add');
-              }}
-              className="flex h-12 items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
-            >
-              <Plus className="w-4 h-4 text-[#0071E3]" />
-              학생 추가
-            </button>
-          </div>
-
-          <div className="mt-auto border-t border-black/[0.05] p-3">
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-                handleLogout();
-              }}
-              className="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-4 h-4" />
-              로그아웃
-            </button>
-          </div>
-        </SheetContent>
-      </Sheet>
+              <LogOut className="w-4 h-4 mr-1.5 text-red-500" />
+              <span className="hidden sm:inline font-bold">로그아웃</span>
+            </Button>
+          </>
+        }
+      />
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
@@ -819,14 +680,14 @@ export default function AdminDashboardPage() {
 
         {/* 2-2. 알림 배너 (이번 주 성적 미입력) */}
         {weeklyGradeMissingStudents.length > 0 && (
-          <div className="admin-fit-box bg-gradient-to-br from-blue-500/[0.03] to-blue-500/[0.07] border border-blue-500/15 rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-[0_2px_8px_rgba(0,113,227,0.02)] backdrop-blur-sm transition-all duration-300 hover:border-blue-500/25">
+          <div className="admin-fit-box bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] border border-amber-500/15 rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-[0_2px_8px_rgba(245,99,0,0.02)] backdrop-blur-sm transition-all duration-300 hover:border-amber-500/25">
             <div className="admin-fit-row flex items-start gap-3.5">
-              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-700 shrink-0">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 shrink-0">
                 <ClipboardList className="admin-fit-icon w-5 h-5 shrink-0" />
               </div>
               <div className="min-w-0">
-                <h4 className="admin-fit-text text-sm font-black text-blue-900 tracking-tight">이번 주 성적 미입력 원생이 존재합니다 ({weeklyGradeMissingStudents.length}명)</h4>
-                <p className="admin-fit-caption text-xs font-semibold text-blue-700/90 mt-1 leading-relaxed">
+                <h4 className="admin-fit-text text-sm font-black text-amber-900 tracking-tight">이번 주 성적 미입력 원생이 존재합니다 ({weeklyGradeMissingStudents.length}명)</h4>
+                <p className="admin-fit-caption text-xs font-semibold text-amber-700/90 mt-1 leading-relaxed">
                   매주 성적 입력 대상이지만 이번 주(월~일) 성적이 아직 등록되지 않았습니다. 원생명을 클릭해 성적을 입력해 주세요.
                 </p>
               </div>
@@ -836,15 +697,36 @@ export default function AdminDashboardPage() {
                 <Badge
                   key={s.id}
                   onClick={() => router.push(`/admin/consultation?studentId=${s.id}`)}
-                  className="admin-fit-button bg-blue-100/80 hover:bg-blue-200 text-blue-900 border border-blue-200/50 cursor-pointer rounded-xl px-3 py-1.5 text-[10px] font-extrabold max-w-[9rem] shadow-sm hover:scale-[1.02] transition-transform"
+                  className="admin-fit-button bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-3 py-1.5 text-[10px] font-extrabold max-w-[9rem] shadow-sm hover:scale-[1.02] transition-transform"
                 >
                   {s.name} ({getCampusLabel(s.campus)})
                 </Badge>
               ))}
               {weeklyGradeMissingStudents.length > 4 && (
-                <span className="text-[10px] text-blue-700 font-extrabold self-center px-1">외 {weeklyGradeMissingStudents.length - 4}명 더 있음</span>
+                <span className="text-[10px] text-amber-700 font-extrabold self-center px-1">외 {weeklyGradeMissingStudents.length - 4}명 더 있음</span>
               )}
             </div>
+          </div>
+        )}
+
+        {/* 휴가/반차/휴식권 신청 대기 배너 */}
+        {pendingLeaveCount > 0 && (
+          <div
+            onClick={() => router.push('/admin/leave')}
+            className="admin-fit-box bg-gradient-to-br from-[#0071E3]/[0.03] to-[#0071E3]/[0.07] border border-[#0071E3]/15 rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-sm cursor-pointer transition-all duration-300 hover:border-[#0071E3]/25"
+          >
+            <div className="admin-fit-row flex items-start gap-3.5">
+              <div className="p-2 rounded-xl bg-[#0071E3]/10 text-[#0071E3] shrink-0">
+                <Calendar className="admin-fit-icon w-5 h-5 shrink-0" />
+              </div>
+              <div className="min-w-0">
+                <h4 className="admin-fit-text text-sm font-black text-[#1D1D1F] tracking-tight">휴가 · 반차 · 휴식권 신청 {pendingLeaveCount}건 대기 중</h4>
+                <p className="admin-fit-caption text-xs font-semibold text-[#86868B] mt-1 leading-relaxed">
+                  {selectedCampusLabel} 기준 학생 {pendingLeaveStudents.length}명이 검토를 기다리고 있습니다. 클릭하면 신청 관리 페이지로 이동합니다.
+                </p>
+              </div>
+            </div>
+            <div className="text-xs text-[#0071E3] font-extrabold shrink-0 self-center">신청 관리 &rarr;</div>
           </div>
         )}
 

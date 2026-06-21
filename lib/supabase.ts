@@ -58,6 +58,8 @@ function rowToStudent(r: any): Student {
     lectures,
     consultationLogs: r.consultation_logs || [],
     grades: r.grades || [],
+    leaveRequests: r.leave_requests || [],
+    leaveCoupons: Number(r.leave_coupons) || 0,
     subjects,
   };
 }
@@ -90,6 +92,8 @@ function studentToRow(student: Student, nowIso: string) {
     subjects,
     consultation_logs: student.consultationLogs || [],
     grades: student.grades || [],
+    leave_requests: student.leaveRequests || [],
+    leave_coupons: student.leaveCoupons ?? 0,
     updated_at: nowIso,
     created_at: student.createdAt || nowIso,
   };

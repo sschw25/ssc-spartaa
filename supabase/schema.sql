@@ -59,6 +59,11 @@ alter table students add column if not exists enrollment_end_date date;
 -- 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
 alter table students add column if not exists weekly_grade_check boolean not null default false;
 
+-- 휴가/반차/휴식권/병가 신청 내역 (LeaveRequest[])
+alter table students add column if not exists leave_requests jsonb not null default '[]'::jsonb;
+-- 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)
+alter table students add column if not exists leave_coupons integer not null default 0;
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,

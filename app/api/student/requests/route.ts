@@ -3,7 +3,7 @@ import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 import type { ConsultationLog } from '@/lib/types/student';
 
-const REQUEST_TYPES = ['progress', 'subject', 'plan', 'etc'] as const;
+const REQUEST_TYPES = ['progress', 'subject', 'plan', 'halfDay', 'restPass', 'etc'] as const;
 
 // 학생이 관리자에게 진도/과목/학습계획 변경 등을 신청 (consultation_logs 재사용, type==='request')
 export async function POST(req: NextRequest) {

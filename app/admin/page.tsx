@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const res = await fetch('/api/admin/auth/me');
+        const res = await fetch('/api/admin/auth/me', { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated) {

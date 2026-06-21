@@ -51,7 +51,10 @@ export async function GET(
       lifeComment: student.lifeComment || '',
       studentLifeComment: student.studentLifeComment || '',
       nextConsultationDate: student.nextConsultationDate,
+      enrollmentEndDate: student.enrollmentEndDate,
+      weeklyGradeCheck: Boolean(student.weeklyGradeCheck),
       speedMultiplier: student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0,
+      updatedAt: student.updatedAt,
       books: student.books,
       lectures: student.lectures,
       // 부모님 공개용으로는 가장 최근 상담 일지 2건 정도만 전달 (변경 신청은 별도 분리)
@@ -60,6 +63,11 @@ export async function GET(
       changeRequests: (student.consultationLogs || [])
         .filter((l) => l.type === 'request')
         .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+      // 휴가/반차/휴식권/병가 신청 내역 + 쿠폰 잔액 (학생 본인 화면용)
+      leaveRequests: (student.leaveRequests || [])
+        .slice()
+        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+      leaveCoupons: student.leaveCoupons ?? 0,
       grades: student.grades,
       subjects: student.subjects || []
     };

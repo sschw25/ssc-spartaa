@@ -5,8 +5,19 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu, Plus, Trash2 } from 'lucide-react';
-import { Student, DetailedPlan } from '@/lib/types/student';
+import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu, Plus, Trash2, Bell, X, Home } from 'lucide-react';
+import { Student, DetailedPlan, LeaveType } from '@/lib/types/student';
+import {
+  LEAVE_TYPES,
+  LEAVE_TYPE_ORDER,
+  getLeaveTypeLabel,
+  getMonthlyLeaveUsage,
+  MONTHLY_HALFDAY_QUOTA,
+  MONTHLY_FULLDAY_QUOTA,
+  COUPONS_PER_EXTRA_HALFDAY,
+  kstYearMonth,
+  yearMonthOf,
+} from '@/lib/leave';
 import {
   MaterialBenchmarkMap,
   formatPaceComparison,
@@ -64,7 +75,52 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
   progress: '진도 정정',
   subject: '과목 변경',
   plan: '학습계획',
+  halfDay: '반차 신청',
+  restPass: '휴식권 신청',
   etc: '기타',
+};
+
+const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
+
+type StudentNotificationTone = 'blue' | 'emerald' | 'amber' | 'red' | 'slate';
+
+type StudentNotification = {
+  id: string;
+  tone: StudentNotificationTone;
+  label: string;
+  title: string;
+  body: string;
+  meta?: string;
+  date?: string;
+  priority: number;
+};
+
+const NOTIFICATION_TONE_CLASS: Record<StudentNotificationTone, { item: string; icon: string; label: string }> = {
+  blue: {
+    item: 'border-[#0071E3]/15 bg-[#0071E3]/[0.04]',
+    icon: 'bg-[#0071E3] text-white',
+    label: 'bg-[#0071E3]/10 text-[#0071E3]',
+  },
+  emerald: {
+    item: 'border-emerald-200 bg-emerald-50/70',
+    icon: 'bg-emerald-600 text-white',
+    label: 'bg-emerald-100 text-emerald-700',
+  },
+  amber: {
+    item: 'border-amber-200 bg-amber-50/70',
+    icon: 'bg-amber-500 text-white',
+    label: 'bg-amber-100 text-amber-700',
+  },
+  red: {
+    item: 'border-red-200 bg-red-50/70',
+    icon: 'bg-red-500 text-white',
+    label: 'bg-red-100 text-red-700',
+  },
+  slate: {
+    item: 'border-slate-200 bg-slate-50/80',
+    icon: 'bg-slate-500 text-white',
+    label: 'bg-slate-200 text-slate-600',
+  },
 };
 
 // 원탭 빠른 신청 (학생이 타이핑 없이 버튼으로 신청)
@@ -93,7 +149,8 @@ export default function StudentReportPage() {
   const [mounted, setMounted] = useState(false);
   const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('report-overview');
+  const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('student-notifications');
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const paperRef = useRef<HTMLDivElement>(null);
   const slideDirRef = useRef(1);
@@ -110,6 +167,15 @@ export default function StudentReportPage() {
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState('');
   const [requestCustomOpen, setRequestCustomOpen] = useState(false);
+
+  // 휴가/반차/휴식권/병가 신청
+  const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; date: string; reason: string }>(() => ({
+    type: 'morning',
+    date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()),
+    reason: '',
+  }));
+  const [leaveSubmitting, setLeaveSubmitting] = useState(false);
+  const [leaveError, setLeaveError] = useState('');
 
   // 탭 전환 시: 활성 탭을 가로 스크롤로 보이게 + 방향에 맞춘 콘텐츠 슬라이드 전환
   useEffect(() => {
@@ -231,7 +297,7 @@ export default function StudentReportPage() {
       case '계획보다 느림':
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case '진도 정체':
-        return 'bg-rose-50 text-rose-700 border-rose-200';
+        return 'bg-red-50 text-red-700 border-red-200';
       default:
         return 'bg-slate-50 text-slate-500 border-slate-200';
     }
@@ -384,6 +450,15 @@ export default function StudentReportPage() {
     { key: 'sat', label: '토요일' },
     { key: 'sun', label: '일요일' },
   ] as const;
+  const weekDaySlotsByDate = [
+    { key: 'sun', label: '일요일' },
+    { key: 'mon', label: '월요일' },
+    { key: 'tue', label: '화요일' },
+    { key: 'wed', label: '수요일' },
+    { key: 'thu', label: '목요일' },
+    { key: 'fri', label: '금요일' },
+    { key: 'sat', label: '토요일' },
+  ] as const;
 
   // 요일별 은은한 캡슐 색상 헬퍼
   const planWeekOptions = [1, 2, 3, 4, 5, 6, 7, 8];
@@ -532,10 +607,11 @@ export default function StudentReportPage() {
     const end = new Date(start);
     end.setDate(start.getDate() + 6);
 
-    const days = weekDaySlots.map((day, dayIndex) => {
+    const days = Array.from({ length: 7 }, (_, dayIndex) => {
       const currentDate = new Date(start);
       currentDate.setDate(start.getDate() + dayIndex);
       const dateKey = formatDateKey(currentDate);
+      const day = weekDaySlotsByDate[currentDate.getDay()];
 
       const entries = (student.subjects || [])
         .filter((subject) => {
@@ -579,6 +655,7 @@ export default function StudentReportPage() {
       return {
         key: day.key,
         label: day.label,
+        dateKey,
         dateLabel: formatShortDate(currentDate),
         entries,
       };
@@ -590,22 +667,158 @@ export default function StudentReportPage() {
       days,
     };
   });
+  const todayDateKey = formatDateKey(today);
+  const todayDailyPlan = weeklyDailyPlans
+    .flatMap((week) => week.days)
+    .find((day) => day.dateKey === todayDateKey);
+  const todayPlanEntries = todayDailyPlan?.entries || [];
 
-  const getSubjectColorClass = (subjectName: string) => {
-    const hash = subjectName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const colors = [
-      'bg-[#E8F1FF] text-[#0071E3] border-[#B8D7FF]',
-      'bg-[#F2E8FF] text-[#862BF7] border-[#E2CBFF]',
-      'bg-[#E8FFF3] text-[#10B981] border-[#BFFFD9]',
-      'bg-[#FFF0E8] text-[#F56300] border-[#FFD5C2]',
-      'bg-[#FFFDE8] text-[#D9A700] border-[#FFF9C2]',
-      'bg-[#FFE8EC] text-[#EF4444] border-[#FFCCD4]',
-    ];
-    return colors[hash % colors.length];
+  const formatNotificationDate = (value?: string) => {
+    if (!value) return '오늘';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat('ko-KR', {
+      month: 'short',
+      day: 'numeric',
+      hour: value.includes('T') ? '2-digit' : undefined,
+      minute: value.includes('T') ? '2-digit' : undefined,
+    }).format(date);
+  };
+
+  const truncateNotificationText = (value: string, max = 120) => {
+    const normalized = value.replace(/\s+/g, ' ').trim();
+    return normalized.length > max ? `${normalized.slice(0, max)}...` : normalized;
+  };
+
+  const parseDateOnly = (value?: string) => {
+    if (!value) return null;
+    const [year, month, day] = value.split('-').map(Number);
+    if (!year || !month || !day) return null;
+    const parsed = new Date(year, month - 1, day);
+    parsed.setHours(0, 0, 0, 0);
+    return parsed;
+  };
+
+  const weekStartKey = formatDateKey(weekStart);
+  const weekEndKey = formatDateKey(weekEnd);
+  const hasGradeThisWeek = (student.grades || []).some((grade) => {
+    const date = grade.date || '';
+    return weekStartKey <= date && date <= weekEndKey;
+  });
+  const enrollmentEndDate = parseDateOnly(student.enrollmentEndDate);
+  const daysUntilEnrollmentEnd = enrollmentEndDate
+    ? Math.ceil((enrollmentEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
+
+  const requestNotifications: StudentNotification[] = (student.changeRequests || []).map((request) => {
+    const requestLabel = getRequestTypeLabel(request.requestType);
+    const notificationDate = request.repliedAt || request.resolvedAt || request.createdAt || request.date;
+
+    if (request.adminReply) {
+      return {
+        id: `request-reply-${request.id}`,
+        tone: 'blue',
+        label: '답변 도착',
+        title: `${requestLabel}에 답변이 도착했어요`,
+        body: request.adminReply,
+        meta: truncateNotificationText(request.content || ''),
+        date: notificationDate,
+        priority: 1,
+      };
+    }
+
+    if (request.status === 'resolved') {
+      return {
+        id: `request-resolved-${request.id}`,
+        tone: 'emerald',
+        label: '처리완료',
+        title: `${requestLabel}이 처리완료됐어요`,
+        body: '담당 코치가 신청을 확인하고 처리했습니다.',
+        meta: truncateNotificationText(request.content || ''),
+        date: notificationDate,
+        priority: 3,
+      };
+    }
+
+    return {
+      id: `request-pending-${request.id}`,
+      tone: 'amber',
+      label: '확인 대기',
+      title: `${requestLabel} 확인을 기다리고 있어요`,
+      body: '담당 코치가 확인하면 이 알림 영역에서 바로 볼 수 있어요.',
+      meta: truncateNotificationText(request.content || ''),
+      date: notificationDate,
+      priority: 4,
+    };
+  });
+
+  const systemNotifications: StudentNotification[] = [
+    ...(student.weeklyGradeCheck && !hasGradeThisWeek
+      ? [{
+          id: 'weekly-grade-check',
+          tone: 'amber' as const,
+          label: '성적 입력',
+          title: '이번 주 성적 입력이 필요해요',
+          body: '주간 테스트나 모의고사 성적을 입력하면 담당 코치가 이번 주 학습 흐름을 더 정확히 확인할 수 있어요.',
+          date: todayDateKey,
+          priority: 2,
+        }]
+      : []),
+    ...(daysUntilEnrollmentEnd !== null && daysUntilEnrollmentEnd <= 3
+      ? [{
+          id: 'enrollment-end',
+          tone: daysUntilEnrollmentEnd < 0 ? 'red' as const : 'amber' as const,
+          label: daysUntilEnrollmentEnd < 0 ? '등록 만료' : '등록 안내',
+          title: daysUntilEnrollmentEnd < 0 ? '등록 기간이 만료됐어요' : `등록 종료까지 D-${daysUntilEnrollmentEnd}`,
+          body: daysUntilEnrollmentEnd < 0
+            ? '데스크 또는 담당 코치에게 등록 상태를 확인해 주세요.'
+            : `${student.enrollmentEndDate}까지 등록 기간이 예정되어 있어요.`,
+          date: student.enrollmentEndDate,
+          priority: daysUntilEnrollmentEnd < 0 ? 1 : 2,
+        }]
+      : []),
+    ...(student.studentLifeComment
+      ? [{
+          id: 'student-life-comment',
+          tone: 'blue' as const,
+          label: '코치 소견',
+          title: '코치 선생님의 피드백이 도착했어요',
+          body: truncateNotificationText(student.studentLifeComment, 160),
+          date: student.updatedAt,
+          priority: 5,
+        }]
+      : []),
+    ...(finishDateStr
+      ? [{
+          id: 'next-consultation-window',
+          tone: 'slate' as const,
+          label: '상담 예정',
+          title: '다음 클리닉 상담 예정 기간',
+          body: nextConsultationText,
+          date: finishDateStr,
+          priority: 6,
+        }]
+      : []),
+  ];
+
+  const studentNotifications = [...requestNotifications, ...systemNotifications].sort((a, b) => {
+    const priorityDiff = a.priority - b.priority;
+    if (priorityDiff !== 0) return priorityDiff;
+    return (b.date || '').localeCompare(a.date || '');
+  });
+  const notificationCount = studentNotifications.length;
+  const notificationPreview = studentNotifications.slice(0, 5);
+
+  const getSubjectColorClass = (subjectName?: string) => {
+    void subjectName;
+    return 'bg-slate-50 text-slate-600 border-slate-200';
   };
 
   const reportNavItems = [
-    { href: '#report-overview', label: '리포트 개요', meta: getCampusLabel(student.campus), icon: User },
+    ...(isStudentReport
+      ? [{ href: '#student-notifications', label: '알림', meta: `${notificationCount}개`, icon: Bell }]
+      : []),
+    { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
     ...(isStudentReport
       ? [{ href: '#attendance-status', label: '등하원 상태', meta: '실시간 출결', icon: Clock }]
       : []),
@@ -657,6 +870,14 @@ export default function StudentReportPage() {
     if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.6) {
       goAdjacentTab(dx < 0 ? 1 : -1);
     }
+  };
+
+  const openNotificationTab = () => {
+    slideDirRef.current = tabIds.indexOf('student-notifications') >= tabIds.indexOf(activeTab) ? 1 : -1;
+    setActiveTab('student-notifications');
+    setMobileMenuOpen(false);
+    setNotificationPanelOpen(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // 학생 본인 성적 추가/삭제
@@ -775,6 +996,46 @@ export default function StudentReportPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, changeRequests: (prev.changeRequests || []).filter((r) => r.id !== id) } : prev));
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  // 휴가/반차/휴식권/병가 신청
+  const submitLeave = async () => {
+    if (leaveSubmitting) return;
+    if (!leaveForm.date) {
+      setLeaveError('사용 희망일을 선택해 주세요.');
+      return;
+    }
+    setLeaveError('');
+    setLeaveSubmitting(true);
+    try {
+      const res = await fetch('/api/student/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: leaveForm.type, date: leaveForm.date, reason: leaveForm.reason }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, leaveRequests: [json.request, ...(prev.leaveRequests || [])] } : prev));
+        setLeaveForm((f) => ({ ...f, reason: '' }));
+      } else {
+        setLeaveError(json.message || '신청에 실패했습니다.');
+      }
+    } catch {
+      setLeaveError('네트워크 오류가 발생했습니다.');
+    } finally {
+      setLeaveSubmitting(false);
+    }
+  };
+  const cancelLeave = async (id: string) => {
+    try {
+      const res = await fetch(`/api/student/leave?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, leaveRequests: (prev.leaveRequests || []).filter((r) => r.id !== id) } : prev));
       }
     } catch {
       /* noop */
@@ -935,58 +1196,139 @@ export default function StudentReportPage() {
         
         {/* 상단 컨트롤러 (인쇄 제외) */}
         {isStudentReport ? (
-          <div className="no-print fixed left-4 top-4 z-50">
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen((open) => !open)}
-              className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 bg-white/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
-              aria-expanded={mobileMenuOpen}
-              aria-label="학습 메뉴 열기"
-            >
-              <Menu className="h-5 w-5" />
-            </button>
+          <>
+            <div className="no-print fixed left-4 top-4 z-50">
+              <button
+                type="button"
+                onClick={() => { setMobileMenuOpen((open) => !open); setNotificationPanelOpen(false); }}
+                className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 bg-white/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+                aria-expanded={mobileMenuOpen}
+                aria-label="학습 메뉴 열기"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
 
-            {mobileMenuOpen && (
-              <div className="mt-2 w-[min(82vw,320px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
-                <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Menu</p>
-                    <p className="mt-0.5 text-sm font-black text-slate-900">학습 메뉴</p>
+              {mobileMenuOpen && (
+                <div className="mt-2 w-[min(82vw,320px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                  <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Menu</p>
+                      <p className="mt-0.5 text-sm font-black text-slate-900">학습 메뉴</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm"
+                    >
+                      <LogOut className="h-3.5 w-3.5 text-slate-400" />
+                      로그아웃
+                    </button>
                   </div>
+
+                  <div className="grid grid-cols-1 gap-1.5">
+                    {reportNavItems.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          onClick={(e) => { e.preventDefault(); const id = item.href.slice(1); slideDirRef.current = tabIds.indexOf(id) >= tabIds.indexOf(activeTab) ? 1 : -1; setActiveTab(id); setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                          className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-white'}`}
+                        >
+                          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
+                            <Icon className="h-4 w-4" />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-[11px] font-black text-slate-800">{item.label}</span>
+                            <span className="block truncate text-[9px] font-bold text-slate-400">{item.meta}</span>
+                          </span>
+                        </a>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="no-print fixed right-4 top-4 z-50">
+              <button
+                type="button"
+                onClick={() => { setNotificationPanelOpen((open) => !open); setMobileMenuOpen(false); }}
+                className="relative grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 bg-white/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+                aria-expanded={notificationPanelOpen}
+                aria-label={`알림 열기, 현재 ${notificationCount}개`}
+              >
+                <Bell className="h-5 w-5" />
+                {notificationCount > 0 && (
+                  <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white shadow-sm">
+                    {notificationCount > 9 ? '9+' : notificationCount}
+                  </span>
+                )}
+              </button>
+
+              {notificationPanelOpen && (
+                <div className="mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                  <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Notifications</p>
+                      <p className="mt-0.5 text-sm font-black text-slate-900">학생 알림</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNotificationPanelOpen(false)}
+                      className="grid h-8 w-8 place-items-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm"
+                      aria-label="알림 닫기"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  {notificationPreview.length > 0 ? (
+                    <div className="space-y-2">
+                      {notificationPreview.map((notification) => {
+                        const toneClass = NOTIFICATION_TONE_CLASS[notification.tone];
+                        return (
+                          <button
+                            key={notification.id}
+                            type="button"
+                            onClick={openNotificationTab}
+                            className={`w-full rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${toneClass.item}`}
+                          >
+                            <div className="flex items-start gap-2.5">
+                              <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-xl ${toneClass.icon}`}>
+                                <Bell className="h-3.5 w-3.5" />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="flex items-center justify-between gap-2">
+                                  <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${toneClass.label}`}>{notification.label}</span>
+                                  <span className="shrink-0 text-[9px] font-bold text-slate-400">{formatNotificationDate(notification.date)}</span>
+                                </span>
+                                <span className="mt-1.5 block text-xs font-black leading-4 text-slate-900">{notification.title}</span>
+                                <span className="mt-1 block text-[10px] font-semibold leading-4 text-slate-500">{truncateNotificationText(notification.body, 70)}</span>
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-center">
+                      <p className="text-xs font-black text-slate-700">새 알림이 없습니다.</p>
+                      <p className="mt-1 text-[10px] font-semibold text-slate-400">코치 답변과 신청 처리 상태가 여기에 표시돼요.</p>
+                    </div>
+                  )}
+
                   <button
                     type="button"
-                    onClick={handleLogout}
-                    className="inline-flex h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2.5 text-[10px] font-bold text-slate-600 shadow-sm"
+                    onClick={openNotificationTab}
+                    className="mt-3 w-full rounded-2xl bg-[#0071E3] py-2.5 text-xs font-black text-white shadow-[0_8px_20px_rgba(0,113,227,0.18)] transition active:scale-[0.98]"
                   >
-                    <LogOut className="h-3.5 w-3.5 text-slate-400" />
-                    로그아웃
+                    전체 알림 보기
                   </button>
                 </div>
-
-                <div className="grid grid-cols-1 gap-1.5">
-                  {reportNavItems.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <a
-                        key={item.href}
-                        href={item.href}
-                        onClick={(e) => { e.preventDefault(); const id = item.href.slice(1); slideDirRef.current = tabIds.indexOf(id) >= tabIds.indexOf(activeTab) ? 1 : -1; setActiveTab(id); setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-                        className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-white'}`}
-                      >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
-                          <Icon className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-black text-slate-800">{item.label}</span>
-                          <span className="block truncate text-[9px] font-bold text-slate-400">{item.meta}</span>
-                        </span>
-                      </a>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          </>
         ) : (
           <div className="no-print flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl transition-all sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div className="flex min-w-0 items-center gap-3">
@@ -1008,7 +1350,7 @@ export default function StudentReportPage() {
               <Button
                 onClick={handlePrint}
                 size="sm"
-                className="flex h-10 items-center gap-2 rounded-2xl border-0 bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-5 text-xs font-semibold text-white shadow-[0_4px_14px_rgba(0,113,227,0.3)] transition-all hover:from-[#005DB9] hover:to-[#00A3FF]"
+                className="flex h-10 items-center gap-2 rounded-2xl border-0 bg-[#0071E3] px-5 text-xs font-semibold text-white shadow-[0_4px_14px_rgba(0,113,227,0.3)] transition-all hover:bg-[#005DB9]"
               >
                 <Printer className="h-4 w-4" />
                 PDF 저장 / 리포트 출력
@@ -1053,7 +1395,73 @@ export default function StudentReportPage() {
           onTouchStart={isStudentReport ? handleSwipeStart : undefined}
           onTouchEnd={isStudentReport ? handleSwipeEnd : undefined}
         >
-          
+
+          {/* 0. 학생 대시보드 최우선 알림 */}
+          {isStudentReport && (
+            <section id="student-notifications" className={`scroll-mt-24 space-y-5 ${activeTab === 'student-notifications' ? '' : 'hidden print:block'}`}>
+              <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 shadow-sm md:p-6">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="min-w-0">
+                    <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
+                      <Bell className="h-3.5 w-3.5" />
+                      Student Notifications
+                    </div>
+                    <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
+                      {notificationCount > 0 ? `${student.name}님에게 온 알림 ${notificationCount}개` : `${student.name}님, 새 알림이 없습니다`}
+                    </h2>
+                    <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+                      코치 답변, 신청 처리 상태, 성적 입력 안내처럼 지금 먼저 확인해야 할 내용을 한곳에 모았습니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { slideDirRef.current = 1; setActiveTab('report-overview'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl border border-[#0071E3]/20 bg-white px-4 text-xs font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98]"
+                  >
+                    오늘 브리핑 보기
+                  </button>
+                </div>
+              </div>
+
+              {studentNotifications.length > 0 ? (
+                <div className="grid grid-cols-1 gap-3">
+                  {studentNotifications.map((notification) => {
+                    const toneClass = NOTIFICATION_TONE_CLASS[notification.tone];
+                    return (
+                      <article key={notification.id} className={`rounded-3xl border p-4 shadow-sm md:p-5 ${toneClass.item}`}>
+                        <div className="flex items-start gap-3">
+                          <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${toneClass.icon}`}>
+                            <Bell className="h-4.5 w-4.5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${toneClass.label}`}>
+                                {notification.label}
+                              </span>
+                              <span className="text-[10px] font-bold text-slate-400">{formatNotificationDate(notification.date)}</span>
+                            </div>
+                            <h3 className="mt-2 text-sm font-black leading-5 text-slate-900">{notification.title}</h3>
+                            <p className="mt-1.5 whitespace-pre-wrap break-words text-xs font-semibold leading-5 text-slate-600">{notification.body}</p>
+                            {notification.meta && (
+                              <p className="mt-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500">
+                                신청 내용: {notification.meta}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
+                  <Bell className="mx-auto h-8 w-8 text-slate-300" />
+                  <p className="mt-3 text-sm font-black text-slate-700">확인할 알림이 없습니다.</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-400">신청 답변이나 코치 안내가 도착하면 이 화면 맨 위에 표시됩니다.</p>
+                </div>
+              )}
+            </section>
+          )}
           {/* 1. 리포트 헤더 */}
           <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
             {isStudentReport ? (
@@ -1071,7 +1479,7 @@ export default function StudentReportPage() {
                       </p>
                       <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl md:leading-tight">
                         {student.name}님, {timeGreeting} 👋
-                        <span className="block text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">
+                        <span className="block text-[#0071E3]">
                           {currentBriefingPhrase}
                         </span>
                       </h1>
@@ -1086,6 +1494,57 @@ export default function StudentReportPage() {
                     <span className="mt-1 block text-sm font-black text-slate-800">{currentStudyLabel}</span>
                     <span className="mt-1 block text-[10px] font-bold text-slate-400">{currentStudyRange}</span>
                   </div>
+                </div>
+
+                <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-4 shadow-sm md:p-5">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]">오늘 바로 할 일</p>
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        {todayDailyPlan ? `${todayDailyPlan.label} ${todayDailyPlan.dateLabel}` : '오늘 기준 실행 항목'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        slideDirRef.current = tabIds.indexOf('execution-plan') >= tabIds.indexOf(activeTab) ? 1 : -1;
+                        setActiveTab('execution-plan');
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="w-full rounded-full border border-[#0071E3]/20 bg-white px-3 py-2 text-[11px] font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 sm:w-auto"
+                    >
+                      전체 계획 보기
+                    </button>
+                  </div>
+
+                  {todayPlanEntries.length > 0 ? (
+                    <div className="mt-4 grid gap-2 md:grid-cols-3">
+                      {todayPlanEntries.slice(0, 3).map((entry, index) => (
+                        <div key={entry.id} className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 shadow-[0_6px_18px_rgba(0,113,227,0.04)]">
+                          <div className="flex items-start gap-2.5">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-[10px] font-black text-white">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-black text-slate-900">{entry.subject} · {entry.title}</p>
+                              <p className="mt-1 truncate text-[10px] font-bold text-slate-500">
+                                {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-4 rounded-2xl border border-dashed border-[#0071E3]/20 bg-white/70 px-4 py-5 text-center text-xs font-bold text-slate-500">
+                      오늘 배정된 실행 항목이 없습니다. 자율 학습 계획을 확인해 주세요.
+                    </p>
+                  )}
+                  {todayPlanEntries.length > 3 && (
+                    <p className="mt-3 text-[10px] font-bold text-[#0071E3]">
+                      외 {todayPlanEntries.length - 3}개 항목은 실행 계획표에서 이어서 확인할 수 있습니다.
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -1113,7 +1572,7 @@ export default function StudentReportPage() {
                     SSC SPARTA STUDY REPORT
                   </div>
                   <h1 className="text-3xl font-black tracking-tight text-slate-900 md:leading-tight">
-                    {student.name} 원생 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0071E3] to-[#862BF7]">학부모용</span> 학습 결과지
+                    {student.name} 원생 <span className="text-[#0071E3]">학부모용</span> 학습 결과지
                   </h1>
                 </div>
 
@@ -1167,7 +1626,7 @@ export default function StudentReportPage() {
 
           {/* 1-1. 학생용 다음 상담일자 안내 배너 */}
           {isStudentReport && finishDateStr && (
-            <div className={`p-4.5 rounded-2xl bg-gradient-to-r from-[#0071E3]/[0.04] via-transparent to-[#862BF7]/[0.04] border border-[#0071E3]/15 items-center justify-between gap-4 shadow-sm print:shadow-none break-inside-avoid ${activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
+            <div className={`p-4.5 rounded-2xl bg-[#0071E3]/[0.04] border border-[#0071E3]/15 items-center justify-between gap-4 shadow-sm print:shadow-none break-inside-avoid ${activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-[#0071E3]/10 text-[#0071E3] flex items-center justify-center shrink-0">
                   <Calendar className="w-4.5 h-4.5" />
@@ -1591,11 +2050,34 @@ export default function StudentReportPage() {
                     <p className="text-[10px] font-bold text-slate-400">교재·인강 {total}개 중 <span className="font-black text-emerald-600">{done}개</span> 완료</p>
                   </div>
                   <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
-                    <div className="h-full rounded-full bg-gradient-to-r from-[#0071E3] to-[#00C7FF] transition-all duration-500" style={{ width: `${overall}%` }} />
+                    <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${overall}%` }} />
                   </div>
                 </div>
               );
             })()}
+
+            {isStudentReport && (
+              <div className="no-print rounded-3xl border border-amber-500/15 bg-amber-500/[0.04] p-4 shadow-sm md:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-black text-amber-900">
+                      <MessageSquare className="h-4 w-4 text-amber-700" />
+                      진도나 계획이 맞지 않나요?
+                    </h4>
+                    <p className="mt-1 text-[10px] font-semibold leading-5 text-amber-700/90">
+                      숫자 정정, 속도 조절, 상담 요청은 담당 코치에게 바로 신청할 수 있습니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('student-request-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    className="w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-xs font-black text-amber-900 shadow-sm transition hover:bg-amber-50 sm:w-auto"
+                  >
+                    변경 신청 바로가기
+                  </button>
+                </div>
+              </div>
+            )}
 
             {!student.subjects || student.subjects.length === 0 ? (
               // 과목 정보가 없는 기존 데이터 Fallback 뷰
@@ -1632,7 +2114,7 @@ export default function StudentReportPage() {
                             <div className="flex items-center gap-3">
                               <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                                 <div 
-                                  className="bg-gradient-to-r from-[#0071E3] to-[#00C7FF] h-full rounded-full transition-all duration-500" 
+                                  className="h-full rounded-full bg-[#0071E3] transition-all duration-500"
                                   style={{ width: `${percent}%` }}
                                 />
                               </div>
@@ -1670,7 +2152,7 @@ export default function StudentReportPage() {
                             <div className="flex items-center gap-3">
                               <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                                 <div 
-                                  className="bg-gradient-to-r from-[#0071E3] to-[#FF6B00] h-full rounded-full transition-all duration-500" 
+                                  className="h-full rounded-full bg-[#F56300] transition-all duration-500"
                                   style={{ width: `${percent}%` }}
                                 />
                               </div>
@@ -1762,13 +2244,13 @@ export default function StudentReportPage() {
                                     ) : (
                                       <span className="text-xs font-bold text-slate-500">{b.currentPage} <span className="text-slate-300 font-normal">/</span> {b.totalPages}p</span>
                                     )}
-                                    <span className="text-[9px] font-black text-white bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-2 py-0.5 rounded-lg shadow-sm">{percent}%</span>
+                                    <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[9px] font-black text-white shadow-sm">{percent}%</span>
                                   </div>
                                 </div>
 
                                 {/* 진도 프로그레스 바 (그라데이션 입체화) */}
                                 <div className="bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-                                  <div className="bg-gradient-to-r from-[#0071E3] to-[#00C7FF] h-full rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
+                                  <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
                                 </div>
 
                                 {/* 세부 계획 타임라인 */}
@@ -1874,13 +2356,13 @@ export default function StudentReportPage() {
                                     ) : (
                                       <span className="text-xs font-bold text-slate-500">{l.completedLectures} <span className="text-slate-300 font-normal">/</span> {l.totalLectures}강</span>
                                     )}
-                                    <span className="text-[9px] font-black text-white bg-gradient-to-r from-[#0071E3] to-[#00C7FF] px-2 py-0.5 rounded-lg shadow-sm">{percent}%</span>
+                                    <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[9px] font-black text-white shadow-sm">{percent}%</span>
                                   </div>
                                 </div>
 
                                 {/* 진도 프로그레스 바 (인강 그라데이션) */}
                                 <div className="bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-                                  <div className="bg-gradient-to-r from-[#0071E3] to-[#FF6B00] h-full rounded-full transition-all duration-500" style={{ width: `${percent}%` }} />
+                                  <div className="h-full rounded-full bg-[#F56300] transition-all duration-500" style={{ width: `${percent}%` }} />
                                 </div>
 
                                 {/* 세부 계획 타임라인 */}
@@ -1930,7 +2412,7 @@ export default function StudentReportPage() {
 
             {/* 학생 변경 신청 (관리자에게) */}
             {isStudentReport && (
-              <div className="no-print rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+              <div id="student-request-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
                 <div>
                   <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
                     <MessageSquare className="w-4 h-4" /> 관리자에게 변경 신청
@@ -2007,7 +2489,7 @@ export default function StudentReportPage() {
                       <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
                         <div className="flex items-center justify-between gap-2">
                           <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">{REQUEST_TYPE_LABEL[r.requestType || 'etc']}</span>
+                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">{getRequestTypeLabel(r.requestType)}</span>
                             {r.status === 'resolved' ? (
                               <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">처리완료</span>
                             ) : (
@@ -2032,6 +2514,204 @@ export default function StudentReportPage() {
                 )}
               </div>
             )}
+
+            {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
+            {isStudentReport && (() => {
+              const leaveRequests = student.leaveRequests || [];
+              const leaveCoupons = student.leaveCoupons ?? 0;
+              const selMonth = yearMonthOf(leaveForm.date) || kstYearMonth();
+              const usage = getMonthlyLeaveUsage(leaveRequests, selMonth);
+              const halfLeft = Math.max(0, MONTHLY_HALFDAY_QUOTA - usage.halfday);
+              const fullLeft = Math.max(0, MONTHLY_FULLDAY_QUOTA - usage.fullday);
+              const selCat = LEAVE_TYPES[leaveForm.type].category;
+              const overQuota = (selCat === 'halfday' && halfLeft <= 0) || (selCat === 'fullday' && fullLeft <= 0);
+              const isSick = selCat === 'sick';
+              const monthLabel = selMonth.replace('-', '. ') + '월';
+              const leaveStatusBadge = (s: string) =>
+                s === 'approved'
+                  ? <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">승인</span>
+                  : s === 'rejected'
+                  ? <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-black text-red-600">반려</span>
+                  : <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>;
+              return (
+                <div id="student-leave-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+                  <div>
+                    <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
+                      <Calendar className="w-4 h-4" /> 휴가 · 반차 · 휴식권 신청
+                    </h4>
+                    <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                      신청하면 담당 코치가 검토 후 승인해요. 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.
+                    </p>
+                  </div>
+
+                  {/* 이번 달(선택일 기준) 잔여 한도 + 병가 사용 + 쿠폰 */}
+                  <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+                    <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">반차 잔여</p>
+                      <p className="mt-0.5 text-sm font-black text-[#0071E3]">{halfLeft}<span className="text-[10px] font-bold text-slate-400">/{MONTHLY_HALFDAY_QUOTA}</span></p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">휴식권 잔여</p>
+                      <p className="mt-0.5 text-sm font-black text-[#0071E3]">{fullLeft}<span className="text-[10px] font-bold text-slate-400">/{MONTHLY_FULLDAY_QUOTA}</span></p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">병가(이번달)</p>
+                      <p className="mt-0.5 text-sm font-black text-slate-700">🤒 {usage.sick}<span className="text-[10px] font-bold text-slate-400">건</span></p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">쿠폰</p>
+                      <p className="mt-0.5 text-sm font-black text-slate-700">🎟️ {leaveCoupons}</p>
+                    </div>
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도 무관(영수증 밴드 증빙) · 반차 추가는 쿠폰 {COUPONS_PER_EXTRA_HALFDAY}개 필요</p>
+
+                  {/* 종류 선택 */}
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {LEAVE_TYPE_ORDER.map((t) => {
+                      const info = LEAVE_TYPES[t];
+                      const active = leaveForm.type === t;
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setLeaveForm((f) => ({ ...f, type: t }))}
+                          className={`flex flex-col items-start gap-0.5 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] shadow-sm' : 'border-slate-200 bg-white hover:border-[#0071E3]/40'}`}
+                        >
+                          <span className="text-[12px] font-black text-slate-700">{info.icon} {info.label}</span>
+                          <span className="text-[9px] font-bold text-slate-400">{info.slot}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* 날짜 + 사유 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <label className="shrink-0 text-[11px] font-black text-slate-500">사용일</label>
+                      <input
+                        type="date"
+                        value={leaveForm.date}
+                        onChange={(e) => setLeaveForm((f) => ({ ...f, date: e.target.value }))}
+                        className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
+                      />
+                    </div>
+                    <textarea
+                      value={leaveForm.reason}
+                      onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))}
+                      placeholder={isSick ? '병가 사유를 적어 주세요. 영수증은 밴드 채팅으로 따로 보내 주세요.' : '사유 (선택) — 예) 병원 진료, 가족 행사'}
+                      rows={2}
+                      className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* 안내/경고 */}
+                  {isSick && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                      🤒 병가는 월 한도와 무관하지만, <b>영수증/진단서를 밴드 채팅으로 반드시 증빙</b>해 주세요.
+                    </div>
+                  )}
+                  {!isSick && overQuota && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                      이번 달 {selCat === 'halfday' ? '반차' : '휴식권'}를 모두 사용했어요.
+                      {selCat === 'halfday' ? ` 추가가 필요하면 쿠폰 ${COUPONS_PER_EXTRA_HALFDAY}개로 신청 가능합니다 — 밴드 채팅으로 문의 후 쿠폰을 제출해 주세요.` : ' 추가가 필요하면 밴드 채팅으로 문의해 주세요.'}
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={submitLeave}
+                    disabled={leaveSubmitting || (!isSick && overQuota)}
+                    className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {leaveSubmitting ? '신청 중...' : (!isSick && overQuota) ? '한도 초과 (밴드 채팅 문의)' : `${getLeaveTypeLabel(leaveForm.type)} 신청하기`}
+                  </button>
+                  {leaveError && <p className="text-[10px] font-bold text-red-500">{leaveError}</p>}
+
+                  {leaveRequests.length > 0 && (
+                    <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 휴가 신청 내역</p>
+                      {leaveRequests.map((r) => (
+                        <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
+                              <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
+                              {leaveStatusBadge(r.status)}
+                            </span>
+                            {r.status === 'pending' && (
+                              <button type="button" onClick={() => cancelLeave(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                                <Trash2 className="w-3 h-3" />
+                              </button>
+                            )}
+                          </div>
+                          {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.reason}</p>}
+                          {r.adminReply && (
+                            <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                              💬 코치 답변: {r.adminReply}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* 휴가/반차/휴식권/병가 사용 현황 (학부모 읽기 전용) */}
+            {isParentReport && (() => {
+              const leaveRequests = student.leaveRequests || [];
+              if (leaveRequests.length === 0) return null;
+              const month = kstYearMonth();
+              const usage = getMonthlyLeaveUsage(leaveRequests, month);
+              const monthLabel = month.replace('-', '. ') + '월';
+              const leaveStatusBadge = (s: string) =>
+                s === 'approved'
+                  ? <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">승인</span>
+                  : s === 'rejected'
+                  ? <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-black text-red-600">반려</span>
+                  : <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>;
+              return (
+                <div className="print-card rounded-3xl border border-slate-100 bg-white p-5 md:p-6 shadow-sm space-y-4">
+                  <h3 className="text-xs font-black text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#0071E3]" /> 휴가 · 반차 · 휴식권 사용 현황
+                  </h3>
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">반차 사용</p>
+                      <p className="mt-0.5 text-sm font-black text-[#0071E3]">{usage.halfday}<span className="text-[10px] font-bold text-slate-400">/{MONTHLY_HALFDAY_QUOTA}</span></p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">휴식권 사용</p>
+                      <p className="mt-0.5 text-sm font-black text-[#0071E3]">{usage.fullday}<span className="text-[10px] font-bold text-slate-400">/{MONTHLY_FULLDAY_QUOTA}</span></p>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/70 px-2 py-2.5">
+                      <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">병가</p>
+                      <p className="mt-0.5 text-sm font-black text-slate-700">🤒 {usage.sick}<span className="text-[10px] font-bold text-slate-400">건</span></p>
+                    </div>
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도와 무관하며 영수증을 밴드 채팅으로 증빙합니다.</p>
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">신청 내역</p>
+                    {leaveRequests.map((r) => (
+                      <div key={r.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[9px] font-black text-slate-500 ring-1 ring-slate-100">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
+                          <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
+                          {leaveStatusBadge(r.status)}
+                        </div>
+                        {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.reason}</p>}
+                        {r.adminReply && (
+                          <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                            💬 코치 답변: {r.adminReply}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* 4. 성적 및 모의고사 분석 결과 */}
@@ -2120,7 +2800,7 @@ export default function StudentReportPage() {
                               '한국사': '#10B981',
                               '기타': '#EF4444'
                             };
-                            const defaultColors = ['#0071E3', '#0071E3', '#F56300', '#10B981', '#EC4899', '#3B82F6', '#EF4444'];
+                            const defaultColors = ['#0071E3', '#0071E3', '#F56300', '#10B981', '#86868B', '#0071E3', '#EF4444'];
                             return (
                               <Line 
                                 key={subject}
@@ -2180,7 +2860,7 @@ export default function StudentReportPage() {
 
           {/* 5. 하단 격려 메세지 배너 (탭 레이아웃에선 개요 탭에만 노출, 인쇄 시 전체 노출) */}
           <div className={`bg-gradient-to-br from-[#0F172A] via-[#1E293B] to-[#0F172A] text-white p-7 rounded-[24px] text-center space-y-2 relative overflow-hidden shadow-lg border border-slate-800/40 ${!isStudentReport || activeTab === 'report-overview' ? '' : 'hidden print:block'}`}>
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0071E3] via-[#862BF7] to-[#FF6B00]" />
+            <div className="absolute top-0 left-0 h-1 w-full bg-[#0071E3]" />
             <p className="text-[10px] font-black tracking-[0.2em] text-[#3894FF] uppercase">Supreme Spartan Control System</p>
             <p className="text-xs font-semibold leading-relaxed opacity-95 text-balance tracking-tight">
               "타협 없는 철저한 관리만이 합격을 증명합니다. SSC 스파르타는 마지막 1분 1초까지 원생의 성공을 완벽하게 동행합니다."

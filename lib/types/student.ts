@@ -60,12 +60,27 @@ export interface ConsultationLog {
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
   type?: 'learning' | 'life' | 'request'; // 학습 상담 / 생활 면담 / 학생 변경 신청
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
-  requestType?: 'progress' | 'subject' | 'plan' | 'etc'; // 신청 분류
+  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
   createdAt?: string;                                     // 신청 시각 (ISO)
   resolvedAt?: string;                                    // 처리 시각 (ISO)
   adminReply?: string;                                    // 관리자 코멘트 답변 (학생에게 노출)
   repliedAt?: string;                                     // 답변 시각 (ISO)
+}
+
+// 휴가/반차/휴식권/병가 신청 (상담 변경신청과 별개의 전용 구조 — 월 한도/쿠폰 차원 존재)
+export type LeaveType = 'morning' | 'afternoon' | 'night' | 'fullday' | 'sick';
+
+export interface LeaveRequest {
+  id: string;
+  type: LeaveType;        // 오전/오후/야간 반차, 휴식권(하루종일), 병가
+  date: string;           // 사용 희망일 (YYYY-MM-DD) — 월 한도 집계 기준
+  reason?: string;        // 사유 (옵션 — 병가는 밴드채팅 영수증 증빙 안내)
+  status: 'pending' | 'approved' | 'rejected';
+  usedCoupon?: boolean;   // 쿠폰으로 추가 신청한 건 (관리자 표시용)
+  createdAt: string;      // 신청 시각 (ISO)
+  reviewedAt?: string;    // 처리(승인/반려) 시각 (ISO)
+  adminReply?: string;    // 관리자 코멘트 (학생에게 노출)
 }
 
 export interface GradeItem {
@@ -129,6 +144,10 @@ export interface Student {
   grades: GradeItem[];
   // 학생 본인 변경 신청 내역 (리포트 API가 consultation_logs 중 type==='request'만 추려서 전달)
   changeRequests?: ConsultationLog[];
+  // 휴가/반차/휴식권/병가 신청 내역 (전용 leave_requests jsonb)
+  leaveRequests?: LeaveRequest[];
+  // 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)
+  leaveCoupons?: number;
 
   // 학생별 과목 설정 및 계획
   subjects?: SubjectProgress[];

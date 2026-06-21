@@ -4,7 +4,6 @@ import React, { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
-  ArrowLeft,
   CalendarDays,
   ChevronDown,
   ChevronUp,
@@ -16,6 +15,8 @@ import {
   Trash2,
 } from 'lucide-react';
 import { WeeklyTardiness } from '@/components/admin/weekly-tardiness';
+import { Button } from '@/components/ui/button';
+import { AdminTopNav } from '@/components/admin/admin-top-nav';
 
 type Arrival = '08:20' | '09:00';
 type StatusFilter = 'all' | 'present' | 'left' | 'absent' | 'late';
@@ -236,14 +237,14 @@ function AdminAttendanceContent() {
     });
   }, [data, campusFilter, statusFilter, query, sortKey, sortDir]);
 
-  const SortIcon = ({ k }: { k: SortKey }) =>
+  const renderSortIcon = (k: SortKey) =>
     sortKey !== k ? <ChevronsUpDown className="w-3 h-3 text-[#C7C7CC]" />
       : sortDir === 'asc' ? <ChevronUp className="w-3 h-3 text-[#0071E3]" /> : <ChevronDown className="w-3 h-3 text-[#0071E3]" />;
 
-  const Th = ({ k, label, className = '' }: { k: SortKey; label: string; className?: string }) => (
+  const renderTh = (k: SortKey, label: string, className = '') => (
     <th className={`px-4 py-3 ${className}`}>
       <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 font-bold text-[#1D1D1F] hover:text-[#0071E3]">
-        {label} <SortIcon k={k} />
+        {label} {renderSortIcon(k)}
       </button>
     </th>
   );
@@ -255,18 +256,25 @@ function AdminAttendanceContent() {
   const s = data?.summary;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans text-[#1D1D1F]">
-      <nav className="sticky top-0 z-10 bg-white/80 backdrop-blur border-b border-black/[0.05] px-4 md:px-8 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => router.back()} className="flex items-center gap-1.5 text-xs font-bold text-[#86868B] hover:text-[#1D1D1F]">
-            <ArrowLeft className="w-4 h-4" /> 뒤로가기
-          </button>
-          <h1 className="text-sm font-bold">출결 상세 표</h1>
-        </div>
-        <button onClick={() => setReloadKey((k) => k + 1)} className="text-[#86868B] hover:text-[#1D1D1F]" title="새로고침">
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </nav>
+    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] font-sans text-[#1D1D1F]">
+      <AdminTopNav
+        title="출결 상세 표"
+        campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}
+        campusValue={campusFilter}
+        onCampusChange={setCampusFilter}
+        actions={
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setReloadKey((k) => k + 1)}
+            className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+            title="새로고침"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline font-bold">새로고침</span>
+          </Button>
+        }
+      />
 
       <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-5">
         <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm p-4 space-y-4">
@@ -288,13 +296,6 @@ function AdminAttendanceContent() {
                   <button onClick={() => setDate(todayKST())} className="px-2.5 py-1.5 rounded-lg bg-[#1D1D1F] text-white text-xs font-bold">오늘</button>
                 </>
               )}
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {['all', 'wonju', 'chuncheon', 'chungju'].map((c) => (
-                <button key={c} onClick={() => setCampusFilter(c)} className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold ${campusFilter === c ? 'bg-[#0071E3] text-white' : 'bg-[#F5F5F7] text-[#86868B]'}`}>
-                  {c === 'all' ? '전체' : campusLabel(c)}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -349,12 +350,12 @@ function AdminAttendanceContent() {
                 <table className="w-full text-xs">
                   <thead className="bg-[#F5F5F7] text-left border-b border-black/[0.05]">
                     <tr>
-                      <Th k="name" label="이름" />
-                      <Th k="checkIn" label="등원시간" />
-                      <Th k="checkOut" label="하원시간" />
-                      <Th k="minutes" label="체류" className="hidden sm:table-cell" />
-                      <Th k="arrival" label="지각기준" />
-                      <Th k="late" label="상태" />
+                      {renderTh('name', '이름')}
+                      {renderTh('checkIn', '등원시간')}
+                      {renderTh('checkOut', '하원시간')}
+                      {renderTh('minutes', '체류', 'hidden sm:table-cell')}
+                      {renderTh('arrival', '지각기준')}
+                      {renderTh('late', '상태')}
                       <th className="px-4 py-3 text-left font-bold text-[#1D1D1F]">수정</th>
                     </tr>
                   </thead>

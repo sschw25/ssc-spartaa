@@ -2,8 +2,17 @@
 
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import { Calendar } from 'lucide-react';
-import { ConsultationLog } from '@/lib/types/student';
+import { Button } from '@/components/ui/button';
+import { Calendar, Check, X, Ticket, Minus, Plus, Loader2 } from 'lucide-react';
+import { ConsultationLog, LeaveRequest } from '@/lib/types/student';
+import { StudyStatsCard } from '@/components/report/study-stats-card';
+import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
+
+function leaveStatusChip(status: LeaveRequest['status']) {
+  if (status === 'approved') return <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">승인</span>;
+  if (status === 'rejected') return <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-black text-red-600">반려</span>;
+  return <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>;
+}
 
 interface ConsultTabProps {
   lifeComment: string;
@@ -11,6 +20,16 @@ interface ConsultTabProps {
   studentLifeComment: string;
   setStudentLifeComment: (v: string) => void;
   lifeLogs: ConsultationLog[];
+  // 출결/순공 통계
+  studyStats?: any;
+  // 휴가 신청
+  leaveRequests?: LeaveRequest[];
+  leaveCoupons?: number;
+  leaveActionBusy?: Record<string, boolean>;
+  leaveReplyDrafts?: Record<string, string>;
+  setLeaveReplyDrafts?: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
+  onLeaveAction?: (requestId: string, payload: { status?: 'approved' | 'rejected' | 'pending'; reply?: string }) => Promise<void>;
+  onCouponAdjust?: (delta: number) => Promise<void>;
 }
 
 // 생활 관리 탭 (프레젠테이셔널). 코멘트 저장은 부모의 마스터 저장/자동저장 경로에서 처리.
@@ -18,9 +37,173 @@ export function ConsultTab({
   lifeComment, setLifeComment,
   studentLifeComment, setStudentLifeComment,
   lifeLogs,
+  studyStats,
+  leaveRequests = [],
+  leaveCoupons = 0,
+  leaveActionBusy = {},
+  leaveReplyDrafts = {},
+  setLeaveReplyDrafts,
+  onLeaveAction,
+  onCouponAdjust,
 }: ConsultTabProps) {
   return (
     <>
+      {/* 출결·순공 현황 */}
+      {studyStats && (
+        <div className="space-y-2">
+          <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-1.5">
+            <span className="inline-block w-2 h-2 rounded-full bg-[#0071E3]" />
+            출결·순공 현황
+          </h3>
+          <StudyStatsCard stats={studyStats} />
+        </div>
+      )}
+
+      {/* 휴가·반차·휴식권 신청 내역 */}
+      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h4 className="text-xs font-bold text-[#1D1D1F] flex items-center gap-1.5">
+            <Calendar className="w-3.5 h-3.5 text-[#0071E3]" />
+            휴가·반차 신청 내역
+          </h4>
+          {/* 쿠폰 잔액 및 조정 */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold text-slate-500">
+              <Ticket className="inline w-3 h-3 mr-0.5 text-amber-500" />
+              쿠폰 {leaveCoupons}개
+            </span>
+            {onCouponAdjust && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => onCouponAdjust(-1)}
+                  className="rounded-md border border-black/[0.08] bg-[#F5F5F7] px-1.5 py-0.5 text-[10px] font-bold hover:bg-slate-200"
+                >
+                  <Minus className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCouponAdjust(1)}
+                  className="rounded-md border border-black/[0.08] bg-[#F5F5F7] px-1.5 py-0.5 text-[10px] font-bold hover:bg-slate-200"
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onCouponAdjust(3)}
+                  className="rounded-md border border-[#0071E3]/20 bg-[#0071E3]/[0.06] px-2 py-0.5 text-[10px] font-bold text-[#0071E3] hover:bg-[#0071E3]/10"
+                >
+                  +3
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {leaveRequests.length === 0 ? (
+          <p className="text-center py-4 text-[11px] text-[#86868B]">신청 내역이 없습니다.</p>
+        ) : (
+          <div className="space-y-2.5">
+            {leaveRequests.map(req => {
+              const typeInfo = LEAVE_TYPES[req.type];
+              const busy = leaveActionBusy[req.id];
+              const replyDraft = leaveReplyDrafts[req.id] ?? '';
+              return (
+                <div key={req.id} className="rounded-xl border border-black/[0.06] bg-[#F9F9FB] p-3 space-y-2">
+                  {/* 상단: 종류·날짜·상태 */}
+                  <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
+                    <span className="rounded-full bg-white border border-black/[0.08] px-1.5 py-0.5 font-black text-slate-700">
+                      {typeInfo?.label ?? req.type}
+                    </span>
+                    <span className="font-semibold text-slate-500">{req.date}</span>
+                    {leaveStatusChip(req.status)}
+                    {req.usedCoupon && (
+                      <span className="rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 font-bold text-amber-700">
+                        🎟️ 쿠폰 사용
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 사유 */}
+                  {req.reason && (
+                    <p className="text-[11px] text-slate-600 font-semibold whitespace-pre-wrap">{req.reason}</p>
+                  )}
+
+                  {/* 기존 관리자 답변 */}
+                  {req.adminReply && (
+                    <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
+                      💬 답변: {req.adminReply}
+                    </div>
+                  )}
+
+                  {/* 답변 입력 */}
+                  {onLeaveAction && (
+                    <div className="flex gap-1.5 items-center">
+                      <input
+                        value={replyDraft}
+                        onChange={e =>
+                          setLeaveReplyDrafts &&
+                          setLeaveReplyDrafts(d => ({ ...d, [req.id]: e.target.value }))
+                        }
+                        placeholder="답변 메시지 (선택)"
+                        className="min-w-0 flex-1 rounded-lg border border-black/[0.08] bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={busy || !replyDraft.trim()}
+                        onClick={() => onLeaveAction(req.id, { reply: replyDraft.trim() })}
+                        className="h-7 shrink-0 rounded-lg px-2.5 text-[10px] font-bold"
+                      >
+                        답변
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* 승인/반려 액션 */}
+                  {onLeaveAction && (
+                    <div className="flex gap-1.5 flex-wrap">
+                      {req.status !== 'approved' && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onLeaveAction(req.id, { status: 'approved' })}
+                          className="flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1 text-[10px] font-bold text-white hover:bg-emerald-700 disabled:opacity-50"
+                        >
+                          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                          승인
+                        </button>
+                      )}
+                      {req.status !== 'rejected' && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onLeaveAction(req.id, { status: 'rejected' })}
+                          className="flex items-center gap-1 rounded-lg bg-red-50 border border-red-200 px-2.5 py-1 text-[10px] font-bold text-red-600 hover:bg-red-100 disabled:opacity-50"
+                        >
+                          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                          반려
+                        </button>
+                      )}
+                      {req.status !== 'pending' && (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => onLeaveAction(req.id, { status: 'pending' })}
+                          className="rounded-lg border border-black/[0.08] bg-[#F5F5F7] px-2.5 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-200 disabled:opacity-50"
+                        >
+                          대기중으로
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
       <div className="space-y-3.5 p-4 rounded-xl border border-black/[0.05] bg-white">
         <div className="flex items-center justify-between gap-3">
           <div>

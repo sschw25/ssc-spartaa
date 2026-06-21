@@ -97,7 +97,7 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
       </div>
 
       {/* 내 순공 (대표 숫자) */}
-      <div className="rounded-2xl bg-gradient-to-br from-[#0071E3]/[0.06] to-[#862BF7]/[0.05] border border-[#0071E3]/15 p-5">
+      <div className="rounded-2xl bg-[#0071E3]/[0.05] border border-[#0071E3]/15 p-5">
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold text-[#86868B]">{periodLabel} 나의 순공</p>
@@ -115,7 +115,7 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
           <div className="mt-4">
             <div className="h-2.5 rounded-full bg-black/[0.06] overflow-hidden">
               <div
-                className={`h-full rounded-full ${st.inTop10 ? 'bg-gradient-to-r from-[#F56300] to-[#F5A623]' : 'bg-gradient-to-r from-[#0071E3] to-[#862BF7]'}`}
+                className={`h-full rounded-full ${st.inTop10 ? 'bg-gradient-to-r from-[#F56300] to-amber-400' : 'bg-[#0071E3]'}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -150,7 +150,7 @@ function MotivationBanner({ st, periodLabel }: { st: Standing; periodLabel: stri
   // TOP 10 안
   if (st.inTop10) {
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#F56300]/[0.1] to-[#F5A623]/[0.06] border border-[#F56300]/15 px-4 py-3">
+      <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#F56300]/[0.1] to-amber-400/[0.08] border border-[#F56300]/15 px-4 py-3">
         <Sparkles className="w-4 h-4 text-[#F56300] shrink-0" />
         <span className="text-xs font-bold text-[#1D1D1F]">
           {st.rank === 1
@@ -164,7 +164,7 @@ function MotivationBanner({ st, periodLabel }: { st: Standing; periodLabel: stri
   }
   // TOP 10 밖
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#0071E3]/[0.08] to-[#862BF7]/[0.06] border border-[#0071E3]/15 px-4 py-3">
+    <div className="flex items-center gap-2.5 rounded-2xl bg-[#0071E3]/[0.05] border border-[#0071E3]/15 px-4 py-3">
       <TrendingUp className="w-4 h-4 text-[#0071E3] shrink-0" />
       <span className="text-xs font-bold text-[#1D1D1F]">
         {st.toTop10 > 0
