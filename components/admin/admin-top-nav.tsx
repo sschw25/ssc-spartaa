@@ -13,6 +13,7 @@ import {
   ScanLine,
   Search,
   Trophy,
+  Inbox,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -209,6 +210,14 @@ export function AdminTopNav({
             >
               <Calendar className="w-4 h-4 text-[#0071E3]" />
               휴가 · 반차 관리
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/inbox')}
+              className={menuButtonClass(pathname === '/admin/inbox')}
+            >
+              <Inbox className="w-4 h-4 text-[#0071E3]" />
+              통합 인박스
             </button>
             <button
               type="button"

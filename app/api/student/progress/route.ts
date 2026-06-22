@@ -10,7 +10,15 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { materialType?: unknown; materialId?: unknown; value?: unknown; planId?: unknown; isCompleted?: unknown };
+  let body: { 
+    materialType?: unknown; 
+    materialId?: unknown; 
+    value?: unknown; 
+    planId?: unknown; 
+    isCompleted?: unknown;
+    solvedQuestions?: unknown;
+    incorrectTags?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -23,12 +31,14 @@ export async function PATCH(req: NextRequest) {
   const rawValue = hasProgressValue ? Number(body.value) : 0;
   const planId = typeof body?.planId === 'string' ? body.planId : '';
   const hasPlanCompletion = planId.length > 0 && typeof body?.isCompleted === 'boolean';
+  const hasSolvedQuestions = body?.solvedQuestions !== undefined;
+  const hasIncorrectTags = body?.incorrectTags !== undefined;
 
   if (!materialType || !materialId) {
     return NextResponse.json({ success: false, message: '대상 자료 정보가 올바르지 않습니다.' }, { status: 400 });
   }
-  if (!hasProgressValue && !hasPlanCompletion) {
-    return NextResponse.json({ success: false, message: '진도 값 또는 완료 계획 정보가 필요합니다.' }, { status: 400 });
+  if (!hasProgressValue && !hasPlanCompletion && !hasSolvedQuestions && !hasIncorrectTags) {
+    return NextResponse.json({ success: false, message: '진도 값 또는 완료 계획 정보, 혹은 해결 문항수 등이 필요합니다.' }, { status: 400 });
   }
   if (hasProgressValue && (!Number.isFinite(rawValue) || rawValue < 0)) {
     return NextResponse.json({ success: false, message: '진도 값이 올바르지 않습니다.' }, { status: 400 });
@@ -43,7 +53,14 @@ export async function PATCH(req: NextRequest) {
   }
 
   const nowIso = new Date().toISOString();
-  let updated: { value: number; total: number; planId?: string; isCompleted?: boolean } | null = null;
+  let updated: { 
+    value: number; 
+    total: number; 
+    planId?: string; 
+    isCompleted?: boolean;
+    solvedQuestions?: number;
+    incorrectTags?: Record<string, number>;
+  } | null = null;
 
   const clampProgressValue = (value: number, total: number) => {
     const rounded = Math.max(0, Math.round(value));
@@ -75,9 +92,28 @@ export async function PATCH(req: NextRequest) {
           }
         }
 
+        if (hasSolvedQuestions) {
+          const solvedVal = Number(body.solvedQuestions);
+          if (Number.isFinite(solvedVal) && solvedVal >= 0) {
+            book.solvedQuestions = solvedVal;
+          }
+        }
+
+        if (hasIncorrectTags) {
+          if (typeof body.incorrectTags === 'object' && body.incorrectTags !== null) {
+            book.incorrectTags = body.incorrectTags as Record<string, number>;
+          }
+        }
+
         book.currentPage = nextValue;
         book.updatedAt = nowIso;
-        updated = { value: nextValue, total, ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}) };
+        updated = { 
+          value: nextValue, 
+          total, 
+          ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}),
+          solvedQuestions: book.solvedQuestions,
+          incorrectTags: book.incorrectTags
+        };
         break;
       }
     } else {
@@ -111,5 +147,13 @@ export async function PATCH(req: NextRequest) {
   }
 
   await saveStudent(student);
-  return NextResponse.json({ success: true, value: updated.value, total: updated.total, planId: updated.planId, isCompleted: updated.isCompleted });
+  return NextResponse.json({ 
+    success: true, 
+    value: updated.value, 
+    total: updated.total, 
+    planId: updated.planId, 
+    isCompleted: updated.isCompleted,
+    solvedQuestions: (updated as any).solvedQuestions,
+    incorrectTags: (updated as any).incorrectTags
+  });
 }

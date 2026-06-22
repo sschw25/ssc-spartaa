@@ -180,6 +180,67 @@ export default function StudentReportPage() {
   const [suggestionMessage, setSuggestionMessage] = useState('');
   const [suggestionSubmitting, setSuggestionSubmitting] = useState(false);
   const [suggestionError, setSuggestionError] = useState('');
+  // Phase 2 & 3: 아침 자가 점검표 및 뽀모도로 상태
+  const [checklistForm, setChecklistForm] = useState({ sleepHours: 7, phoneSubmitted: true });
+  const [checklistSubmitting, setChecklistSubmitting] = useState(false);
+  const [pomodoroSeconds, setPomodoroSeconds] = useState(3000); // 50분 집중 = 3000초
+  const [pomodoroActive, setPomodoroActive] = useState(false);
+  const [pomodoroMode, setPomodoroMode] = useState<'focus' | 'rest'>('focus');
+  const [rewardBanner, setRewardBanner] = useState<{ show: boolean; reasons: string[] }>({ show: false, reasons: [] });
+
+  // 뽀모도로 타이머 루프 및 30초마다 로컬 저장소 동기화
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (pomodoroActive && pomodoroSeconds > 0) {
+      interval = setInterval(() => {
+        setPomodoroSeconds((prev) => {
+          const next = prev - 1;
+          if (next % 30 === 0 && student) {
+            window.localStorage.setItem(`ssc-pomodoro-seconds:${student.id}`, String(next));
+          }
+          return next;
+        });
+      }, 1000);
+    } else if (pomodoroSeconds === 0 && student) {
+      if (pomodoroMode === 'focus') {
+        handlePomodoroComplete();
+      } else {
+        alert('휴식 시간이 완료되었습니다! 다시 집중해볼까요? 🔵');
+        setPomodoroMode('focus');
+        setPomodoroSeconds(3000);
+      }
+      setPomodoroActive(false);
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [pomodoroActive, pomodoroSeconds, pomodoroMode, student]);
+
+  useEffect(() => {
+    if (student) {
+      const saved = window.localStorage.getItem(`ssc-pomodoro-seconds:${student.id}`);
+      if (saved) {
+        const secs = Number(saved);
+        if (Number.isFinite(secs) && secs > 0) {
+          setPomodoroSeconds(secs);
+        }
+      }
+    }
+  }, [student]);
+
+  const [completedQuests, setCompletedQuests] = useState<Record<number, boolean>>({});
+
+  useEffect(() => {
+    if (!student) return;
+    const coachQuests = extractQuestsFromComment(student.studentLifeComment);
+    const initialDone: Record<number, boolean> = {};
+    coachQuests.forEach((quest, idx) => {
+      const saved = window.localStorage.getItem(`ssc-coach-quest-done:${student.id}:${quest}:${idx}`);
+      initialDone[idx] = saved === 'true';
+    });
+    setCompletedQuests(initialDone);
+  }, [student]);
 
   // 지난 요청 보기 토글 상태
   const [showRequestHistory, setShowRequestHistory] = useState(false);
@@ -220,6 +281,42 @@ export default function StudentReportPage() {
     const id = setInterval(() => { load(); setHomeAttendNow(Date.now()); }, 30_000);
     return () => { active = false; clearInterval(id); };
   }, [isStudentReport]);
+
+  // 서울 기준 YYYY-MM-DD 날짜 키 구하기
+  const getSeoulDateKey = () => {
+    const d = new Date();
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const parts = formatter.formatToParts(d);
+    const year = parts.find(part => part.type === 'year')?.value;
+    const month = parts.find(part => part.type === 'month')?.value;
+    const day = parts.find(part => part.type === 'day')?.value;
+    return `${year}-${month}-${day}`;
+  };
+
+  // specialNote 파싱 헬퍼
+  const getSpecialNoteObj = () => {
+    if (!student) return {};
+    try {
+      if (!student.specialNote) return {};
+      const obj = JSON.parse(student.specialNote);
+      if (typeof obj === 'object' && obj !== null) return obj;
+      return { noteText: student.specialNote };
+    } catch {
+      return { noteText: student.specialNote || '' };
+    }
+  };
+
+  // 뽀모도로 시간 포맷팅 헬퍼
+  const formatPomodoroTime = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
 
   // 성적 하락 감지 함수
   const detectScoreDrop = () => {
@@ -262,6 +359,68 @@ export default function StudentReportPage() {
     
     // 가장 최근에 발생한 하락을 반환 (날짜 기준 가장 최신)
     return drops.length > 0 ? drops[drops.length - 1] : null;
+  };
+
+  // 3단계 실시간 추적 타임라인 뱃지 헬퍼 (학생용)
+  const getTimelineStatusBadge = (status: string, adminReply?: string) => {
+    if (status === 'approved') {
+      return (
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+          승인
+        </span>
+      );
+    }
+    if (status === 'rejected') {
+      return (
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-black text-red-600">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+          반려
+        </span>
+      );
+    }
+    if (status === 'resolved' || status === 'completed') {
+      return (
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+          처리완료
+        </span>
+      );
+    }
+    if (adminReply && adminReply.trim()) {
+      return (
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 px-2.5 py-0.5 text-[10px] font-black text-[#0071E3]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-pulse" />
+          처리중
+        </span>
+      );
+    }
+    return (
+      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-black text-amber-700">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+        접수중
+      </span>
+    );
+  };
+
+  // 코멘트에서 퀘스트(할일) 추출 헬퍼 함수
+  const extractQuestsFromComment = (comment?: string) => {
+    if (!comment) return [];
+    const lines = comment.split('\n');
+    const quests: string[] = [];
+    
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      const match = trimmed.match(/^(?:(?:\d+[\.\)]\s*)|(?:[-\*]\s*)|(?:\[\s*\]\s*)|(?:[①-⑨]\s*))(.*)$/);
+      if (match && match[1]) {
+        const content = match[1].trim();
+        if (content) {
+          quests.push(content);
+        }
+      }
+    });
+
+    return quests;
   };
 
   // 탭 전환 시: 활성 탭을 가로 스크롤로 보이게 + 방향에 맞춘 콘텐츠 슬라이드 전환
@@ -1125,6 +1284,8 @@ export default function StudentReportPage() {
     value: number,
     planId?: string,
     isCompleted?: boolean,
+    solvedQuestions?: number,
+    incorrectTags?: Record<string, number>,
   ) => {
     setStudent((prev) =>
       prev
@@ -1137,6 +1298,8 @@ export default function StudentReportPage() {
                 return {
                   ...b,
                   currentPage: value,
+                  ...(solvedQuestions !== undefined ? { solvedQuestions } : {}),
+                  ...(incorrectTags !== undefined ? { incorrectTags } : {}),
                   ...(planId
                     ? {
                         detailedPlans: (b.detailedPlans || []).map((p) =>
@@ -1169,7 +1332,7 @@ export default function StudentReportPage() {
   const saveProgressPatch = async (
     materialType: ProgressMaterialType,
     materialId: string,
-    payload: { value?: number; planId?: string; isCompleted?: boolean },
+    payload: { value?: number; planId?: string; isCompleted?: boolean; solvedQuestions?: number; incorrectTags?: Record<string, number> },
   ) => {
     try {
       const res = await fetch('/api/student/progress', {
@@ -1179,7 +1342,15 @@ export default function StudentReportPage() {
       });
       const json = await res.json();
       if (res.ok && json.success && typeof json.value === 'number') {
-        applyProgressPatch(materialType, materialId, json.value, json.planId, json.isCompleted);
+        applyProgressPatch(
+          materialType, 
+          materialId, 
+          json.value, 
+          json.planId, 
+          json.isCompleted, 
+          json.solvedQuestions, 
+          json.incorrectTags
+        );
       }
     } catch {
       /* noop */
@@ -1190,6 +1361,11 @@ export default function StudentReportPage() {
   const updateProgress = (materialType: ProgressMaterialType, materialId: string, value: number) =>
     saveProgressPatch(materialType, materialId, { value });
 
+  // 학생 본인 교재 문항수 갱신 헬퍼
+  const updateBookSolvedQuestions = (materialId: string, solvedQuestions: number) => {
+    saveProgressPatch('book', materialId, { solvedQuestions });
+  };
+
   // 학습 계획 완료 처리 시 해당 계획 종료 범위까지 진도도 함께 반영
   const updatePlanCompletion = (
     materialType: ProgressMaterialType,
@@ -1197,6 +1373,65 @@ export default function StudentReportPage() {
     planId: string,
     isCompleted: boolean,
   ) => saveProgressPatch(materialType, materialId, { planId, isCompleted });
+
+  // 학생 본인 교재 오답 태그 누적 헬퍼
+  const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => {
+    const nextTags = { ...(currentTags || {}) };
+    nextTags[tagKey] = (nextTags[tagKey] || 0) + 1;
+    saveProgressPatch('book', materialId, { incorrectTags: nextTags });
+  };
+
+  // 아침 자가 점검표 제출 핸들러
+  const submitChecklist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChecklistSubmitting(true);
+    try {
+      const res = await fetch('/api/student/checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sleepHours: checklistForm.sleepHours,
+          phoneSubmitted: checklistForm.phoneSubmitted,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote, leaveCoupons: json.leaveCoupons } : prev));
+        if (json.rewardGranted) {
+          setRewardBanner({ show: true, reasons: json.rewardReasons });
+          setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 5000);
+        }
+      }
+    } catch {
+      /* noop */
+    } finally {
+      setChecklistSubmitting(false);
+    }
+  };
+
+  // 뽀모도로 세션 완료 시 백엔드 API 호출
+  const handlePomodoroComplete = async () => {
+    try {
+      const res = await fetch('/api/student/pomodoro', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote, leaveCoupons: json.leaveCoupons } : prev));
+        alert('🎉 50분 집중 뽀모도로 완료! 10분 휴식 모드로 전환됩니다.');
+        setPomodoroMode('rest');
+        setPomodoroSeconds(600); // 10분 휴식 = 600초
+        
+        if (json.rewardGranted) {
+          setRewardBanner({ show: true, reasons: json.rewardReasons });
+          setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 5000);
+        }
+      }
+    } catch {
+      alert('뽀모도로 완료 저장 중 문제가 발생했습니다.');
+    }
+  };
 
   // 학생 변경 신청 (관리자에게)
   const sendRequest = async (requestType: string, rawMessage: string) => {
@@ -1780,6 +2015,198 @@ export default function StudentReportPage() {
                   </div>
                 </div>
 
+                {/* 🔵 리워드 달성 배너 알림 */}
+                {rewardBanner.show && (
+                  <div className="no-print rounded-3xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-800 font-black text-xs flex items-center gap-3 animate-bounce shadow-sm">
+                    <span className="text-base">🎁</span>
+                    <div>
+                      <p>축하합니다! 미션을 달성하여 휴가/반차 쿠폰이 지급되었습니다!</p>
+                      <div className="flex gap-1.5 mt-1">
+                        {rewardBanner.reasons.map((r, idx) => (
+                          <span key={idx} className="bg-emerald-100 text-emerald-800 text-[9px] px-2 py-0.5 rounded-full border border-emerald-200/50">
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 🔵 뽀모도로 타이머 & 아침 자가 점검표 위젯 레이아웃 (가로 2열 그리드) */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* 1. 뽀모도로 타이머 */}
+                  <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-3.5 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-center">
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">실시간 집중 뽀모도로</p>
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
+                          pomodoroMode === 'focus' 
+                            ? 'bg-[#0071E3]/10 text-[#0071E3] border border-[#0071E3]/15'
+                            : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        }`}>
+                          {pomodoroMode === 'focus' ? '🎯 집중 50분' : '☕ 휴식 10분'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 font-bold mt-0.5">50분 동안 온전히 몰입하고 10분간 휴식하며 리듬을 조절하세요.</p>
+                    </div>
+
+                    <div className="flex items-center gap-6 my-2">
+                      <div className="text-4xl md:text-5xl font-black text-slate-800 font-mono tracking-tight shrink-0">
+                        {formatPomodoroTime(pomodoroSeconds)}
+                      </div>
+                      <div className="flex gap-1.5 w-full">
+                        <button
+                          type="button"
+                          onClick={() => setPomodoroActive(!pomodoroActive)}
+                          className={`flex-1 rounded-xl text-xs font-black py-2.5 shadow-sm transition active:scale-95 ${
+                            pomodoroActive 
+                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                              : 'bg-[#0071E3] hover:bg-[#0077ED] text-white'
+                          }`}
+                        >
+                          {pomodoroActive ? '일시 정지' : '집중 시작'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPomodoroActive(false);
+                            setPomodoroMode('focus');
+                            setPomodoroSeconds(3000);
+                            if (student) window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                          }}
+                          className="rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2.5 text-xs font-bold transition active:scale-95 shadow-sm"
+                        >
+                          리셋
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* 오늘 누적 뽀모도로 세션 현황 */}
+                    {(() => {
+                      const note = getSpecialNoteObj();
+                      const todayKey = getSeoulDateKey();
+                      const count = note.pomodoro_sessions?.[todayKey] || 0;
+                      return (
+                        <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-3">
+                          <span>오늘 성공한 세션수:</span>
+                          <span className="font-black text-[#0071E3] bg-[#0071E3]/5 border border-[#0071E3]/15 px-2 py-0.5 rounded-lg">
+                            {count} 세션 완료
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* 2. 아침 자가 점검표 & 코칭 팁 */}
+                  {(() => {
+                    const note = getSpecialNoteObj();
+                    const todayKey = getSeoulDateKey();
+                    const checklist = note.daily_checklist?.[todayKey];
+
+                    if (!checklist) {
+                      // 아침 설문 제출 폼 렌더링
+                      return (
+                        <form onSubmit={submitChecklist} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col justify-between gap-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침 자가 점검표 ☀️</p>
+                            <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">매일 아침 본인의 컨디션과 환경을 스스로 기록하세요.</p>
+                          </div>
+                          
+                          <div className="space-y-3 my-1">
+                            {/* 수면 시간 입력 */}
+                            <div className="flex justify-between items-center">
+                              <label htmlFor="sleepHoursInput" className="text-xs font-bold text-slate-600">어젯밤 수면 시간:</label>
+                              <div className="flex items-center gap-1">
+                                <select
+                                  id="sleepHoursInput"
+                                  value={checklistForm.sleepHours}
+                                  onChange={(e) => setChecklistForm(f => ({ ...f, sleepHours: Number(e.target.value) }))}
+                                  className="rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-black text-slate-700 focus:border-[#0071E3] focus:outline-none"
+                                >
+                                  {[4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map(h => (
+                                    <option key={h} value={h}>{h}시간</option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            {/* 휴대폰 제출 여부 */}
+                            <div className="flex justify-between items-center">
+                              <label htmlFor="phoneSubmittedInput" className="text-xs font-bold text-slate-600">등원 시 휴대폰 제출:</label>
+                              <button
+                                id="phoneSubmittedInput"
+                                type="button"
+                                onClick={() => setChecklistForm(f => ({ ...f, phoneSubmitted: !f.phoneSubmitted }))}
+                                className={`rounded-xl px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
+                                  checklistForm.phoneSubmitted
+                                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                    : 'bg-red-50 border-red-100 text-red-600'
+                                }`}
+                              >
+                                {checklistForm.phoneSubmitted ? '제출 완료 🟢' : '미제출 🔴'}
+                              </button>
+                            </div>
+                          </div>
+
+                          <button
+                            type="submit"
+                            disabled={checklistSubmitting}
+                            className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black py-2.5 transition active:scale-95 shadow-sm disabled:opacity-50"
+                          >
+                            {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
+                          </button>
+                        </form>
+                      );
+                    }
+
+                    // 설문을 이미 작성했을 때의 코칭 팁 배너 노출
+                    const isSleepShort = checklist.sleep_hours < 6;
+                    const isPhoneNotSubmitted = !checklist.phone_submitted;
+                    
+                    let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800';
+                    let bannerEmoji = '✅';
+                    let bannerTitle = '쾌조의 스타트! 아침 공부를 시작해 봅시다.';
+                    let bannerTips = '어젯밤 잠도 충분히 잤고 스마트폰 방해요인도 완벽하게 차단되었습니다. 오늘 플래너 달성률 100%에 도전해보세요!';
+
+                    if (isSleepShort || isPhoneNotSubmitted) {
+                      bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900';
+                      bannerEmoji = '⚠️';
+                      bannerTitle = '오전 효율 저하 요인이 감지되었습니다.';
+                      
+                      if (isSleepShort && isPhoneNotSubmitted) {
+                        bannerTips = '수면이 부족(6시간 미만)하고 스마트폰이 주변에 있어 쉽게 산만해질 수 있습니다. 가벼운 스트레칭 후 스마트폰은 즉시 제출하여 방해요인을 최소화하세요!';
+                      } else if (isSleepShort) {
+                        bannerTips = '어젯밤 수면 시간이 6시간 미만으로 조사되었습니다. 수면 부족 시 플래너 달성률이 25% 가량 하락하기 쉬우니, 주기적으로 찬물 세수를 하며 잠을 깨보세요!';
+                      } else {
+                        bannerTips = '스마트폰을 아직 수납함에 제출하지 않으셨습니다. 알림 하나가 몰입의 흐름을 통째로 깨뜨리니, 지금 바로 자습실 밖 수집함에 휴대폰을 제출해보세요!';
+                      }
+                    }
+
+                    return (
+                      <div className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
+                        <div>
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코칭 팁 ⚪</p>
+                            <span className="text-[8px] font-bold text-slate-400">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                          
+                          <div className="space-y-1 mt-2">
+                            <h4 className="text-xs font-black flex items-center gap-1">
+                              <span>{bannerEmoji}</span> {bannerTitle}
+                            </h4>
+                            <p className="text-[10px] font-bold leading-relaxed opacity-90">{bannerTips}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-4 text-[9px] font-black text-slate-500/80 border-t border-slate-100/50 pt-2.5">
+                          <span>어젯밤 수면: <strong className="text-slate-800">{checklist.sleep_hours}시간</strong></span>
+                          <span>폰 수납: <strong className="text-slate-800">{checklist.phone_submitted ? '제출 완료' : '미제출'}</strong></span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-4 shadow-sm md:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
@@ -2062,6 +2489,44 @@ export default function StudentReportPage() {
                       <p className="py-4 text-center text-xs font-bold text-slate-400">오늘은 휴식일이에요 🌙 푹 쉬고 내일 계획을 확인해요.</p>
                     ) : (
                       <div className="space-y-2.5">
+                        {(() => {
+                          const coachQuests = extractQuestsFromComment(student.studentLifeComment);
+                          if (coachQuests.length === 0) return null;
+                          return (
+                            <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.02] p-4.5 space-y-2.5 shadow-[inset_0_1px_2px_rgba(0,113,227,0.01)]">
+                              <div className="flex items-center justify-between">
+                                <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-[#0071E3]/10 px-2 py-0.5 text-[10px] font-black text-[#0071E3]">
+                                  🔵 코치 특별 퀘스트
+                                </span>
+                                <span className="text-[9px] text-[#0071E3]/80 font-bold">코치님의 지시사항을 확인하세요</span>
+                              </div>
+                              <div className="space-y-2 pl-0.5">
+                                {coachQuests.map((quest, idx) => {
+                                  const storageKey = `ssc-coach-quest-done:${student.id}:${quest}:${idx}`;
+                                  return (
+                                    <div key={idx} className="flex items-center gap-2.5 text-[11px] font-bold text-slate-600">
+                                      <input
+                                        type="checkbox"
+                                        checked={completedQuests[idx] || false}
+                                        onChange={(e) => {
+                                          setCompletedQuests(prev => {
+                                            const next = { ...prev, [idx]: e.target.checked };
+                                            window.localStorage.setItem(storageKey, e.target.checked ? 'true' : 'false');
+                                            return next;
+                                          });
+                                        }}
+                                        className="w-4 h-4 rounded border-slate-300 text-[#0071E3] focus:ring-[#0071E3]/20 focus:ring-offset-0"
+                                      />
+                                      <span className={completedQuests[idx] ? 'line-through text-slate-400 font-medium' : ''}>
+                                        {quest}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
                         {todaySubjects.map((subject) => {
                           const slot = subject.studyTime ? studyTimeLabels[subject.studyTime] : '';
                           const pendingBooks = (subject.books || []).filter((b) => (b.currentPage || 0) < (b.totalPages || 0));
@@ -2313,7 +2778,7 @@ export default function StudentReportPage() {
                             <div className="flex items-center justify-between gap-2">
                               <span className="flex min-w-0 items-center gap-1.5">
                                 <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{getRequestTypeLabel(r.requestType)}</span>
-                                <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 border border-amber-200">대기중</span>
+                                {getTimelineStatusBadge(r.status || 'pending', r.adminReply)}
                               </span>
                               <button type="button" onClick={() => cancelRequest(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
                                 <Trash2 className="w-3 h-3" />
@@ -2347,7 +2812,7 @@ export default function StudentReportPage() {
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="flex min-w-0 items-center gap-1.5">
                                         <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">{getRequestTypeLabel(r.requestType)}</span>
-                                        <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-black text-emerald-700 border border-emerald-200">처리완료</span>
+                                        {getTimelineStatusBadge(r.status || 'resolved', r.adminReply)}
                                         <span className="shrink-0 text-[10px] font-bold text-slate-400">{r.date}</span>
                                       </span>
                                     </div>
@@ -2855,29 +3320,85 @@ export default function StudentReportPage() {
                                       </span>
                                     )}
                                     {isStudentReport ? (
-                                      <span className="flex items-center gap-1 text-xs font-bold text-slate-500 group relative">
-                                        <div className="relative flex items-center">
+                                      <div className="flex flex-col items-end gap-1.5">
+                                        <span className="flex items-center gap-1 text-xs font-bold text-slate-500 group relative">
+                                          <div className="relative flex items-center">
+                                            <input
+                                              key={b.currentPage}
+                                              type="number"
+                                              inputMode="numeric"
+                                              min={0}
+                                              max={b.totalPages || undefined}
+                                              defaultValue={b.currentPage}
+                                              onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                                              onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== b.currentPage) updateProgress('book', b.id, v); }}
+                                              className="w-14 rounded-md border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                              aria-label="현재 페이지 입력"
+                                            />
+                                            <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
+                                          </div>
+                                          <span className="font-normal text-slate-300">/</span> {b.totalPages}p
+                                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
+                                            ✏️ 숫자를 수정하여 직접 진도를 기록하세요
+                                          </span>
+                                        </span>
+                                        <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 group relative">
+                                          <span>누적 해결:</span>
                                           <input
-                                            key={b.currentPage}
+                                            key={b.solvedQuestions || 0}
                                             type="number"
                                             inputMode="numeric"
                                             min={0}
-                                            max={b.totalPages || undefined}
-                                            defaultValue={b.currentPage}
+                                            defaultValue={b.solvedQuestions || 0}
                                             onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                                            onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== b.currentPage) updateProgress('book', b.id, v); }}
-                                            className="w-14 rounded-md border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
-                                            aria-label="현재 페이지 입력"
+                                            onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== (b.solvedQuestions || 0)) updateBookSolvedQuestions(b.id, v); }}
+                                            className="w-12 rounded-md border border-dashed border-slate-300 bg-white px-1 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                            aria-label="푼 문항 수 입력"
                                           />
-                                          <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
-                                        </div>
-                                        <span className="font-normal text-slate-300">/</span> {b.totalPages}p
-                                        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                          ✏️ 숫자를 수정하여 직접 진도를 기록하세요
+                                          <span>문항</span>
+                                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
+                                            ✏️ 해결한 누적 문항 수를 기록하세요
+                                          </span>
                                         </span>
-                                      </span>
+                                        
+                                        {/* 오답 유형 태깅 */}
+                                        <div className="flex flex-col gap-1 mt-1.5 text-[9px] font-semibold text-slate-400 max-w-[150px]">
+                                          <div className="flex flex-col gap-1 items-end">
+                                            <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">오답 사유 추가:</span>
+                                            <div className="flex flex-wrap gap-1 justify-end">
+                                              {[
+                                                { key: 'calculation_error', label: '연산' },
+                                                { key: 'time_limit', label: '시간' },
+                                                { key: 'misread_condition', label: '오독' },
+                                                { key: 'concept_leak', label: '개념' }
+                                              ].map(tag => (
+                                                <button
+                                                  key={tag.key}
+                                                  type="button"
+                                                  onClick={() => incrementBookIncorrectTag(b.id, tag.key, b.incorrectTags as any)}
+                                                  className="px-1 py-0.5 rounded bg-slate-100 hover:bg-red-50 hover:text-red-600 transition-all text-[8px] font-black text-slate-500 active:scale-95"
+                                                >
+                                                  {tag.label} +1
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                          {/* 등록된 오답 현황 */}
+                                          {b.incorrectTags && Object.values(b.incorrectTags).some(v => Number(v) > 0) && (
+                                            <div className="flex flex-wrap gap-1 mt-1 text-[7px] font-black justify-end">
+                                              {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-0.2 bg-red-50 text-red-600 rounded">연산:{b.incorrectTags.calculation_error}</span>}
+                                              {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-0.2 bg-amber-50 text-amber-600 rounded">시간:{b.incorrectTags.time_limit}</span>}
+                                              {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-0.2 bg-orange-50 text-orange-600 rounded">오독:{b.incorrectTags.misread_condition}</span>}
+                                              {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-0.2 bg-blue-50 text-[#0071E3] rounded">개념:{b.incorrectTags.concept_leak}</span>}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
                                     ) : (
-                                      <span className="text-xs font-bold text-slate-500">{b.currentPage} <span className="text-slate-300 font-normal">/</span> {b.totalPages}p</span>
+                                      <div className="flex flex-col items-end gap-0.5">
+                                        <span className="text-xs font-bold text-slate-500">{b.currentPage} <span className="text-slate-300 font-normal">/</span> {b.totalPages}p</span>
+                                        {(b.solvedQuestions || 0) > 0 && <span className="text-[9px] font-extrabold text-[#0071E3]">해결: {b.solvedQuestions}문항</span>}
+                                      </div>
                                     )}
                                     <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{percent}%</span>
                                   </div>
@@ -3103,12 +3624,7 @@ export default function StudentReportPage() {
               const overQuota = (selCat === 'halfday' && halfLeft <= 0) || (selCat === 'fullday' && fullLeft <= 0);
               const isSick = selCat === 'sick';
               const monthLabel = selMonth.replace('-', '. ') + '월';
-              const leaveStatusBadge = (s: string) =>
-                s === 'approved'
-                  ? <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-black text-emerald-700">승인</span>
-                  : s === 'rejected'
-                  ? <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-black text-red-600">반려</span>
-                  : <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700">대기중</span>;
+              const leaveStatusBadge = (s: string, reply?: string) => getTimelineStatusBadge(s, reply);
               return (
                 <div id="student-leave-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
                   <div>
@@ -3218,7 +3734,7 @@ export default function StudentReportPage() {
                                 <span className="flex min-w-0 items-center gap-1.5">
                                   <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
                                   <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
-                                  {leaveStatusBadge(r.status)}
+                                  {leaveStatusBadge(r.status, r.adminReply)}
                                 </span>
                                 <button type="button" onClick={() => cancelLeave(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
                                   <Trash2 className="w-3 h-3" />
@@ -3253,7 +3769,7 @@ export default function StudentReportPage() {
                                         <span className="flex min-w-0 items-center gap-1.5">
                                           <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
                                           <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
-                                          {leaveStatusBadge(r.status)}
+                                          {leaveStatusBadge(r.status, r.adminReply)}
                                         </span>
                                       </div>
                                       {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.reason}</p>}
@@ -3320,7 +3836,7 @@ export default function StudentReportPage() {
                             <div className="flex items-center justify-between gap-2">
                               <span className="flex min-w-0 items-center gap-1.5">
                                 <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">건의사항</span>
-                                <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700 border border-amber-200">대기중</span>
+                                {getTimelineStatusBadge(r.status || 'pending', r.adminReply)}
                               </span>
                               <button type="button" onClick={() => cancelSuggestion(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="건의사항 취소">
                                 <Trash2 className="w-3 h-3" />
@@ -3354,7 +3870,7 @@ export default function StudentReportPage() {
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="flex min-w-0 items-center gap-1.5">
                                         <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">건의사항</span>
-                                        <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-black text-emerald-700 border border-emerald-200">처리완료</span>
+                                        {getTimelineStatusBadge(r.status || 'resolved', r.adminReply)}
                                         <span className="shrink-0 text-[10px] font-bold text-slate-400">{r.date || (r.createdAt ? r.createdAt.split('T')[0] : '')}</span>
                                       </span>
                                     </div>
@@ -3385,12 +3901,7 @@ export default function StudentReportPage() {
               const month = kstYearMonth();
               const usage = getMonthlyLeaveUsage(leaveRequests, month);
               const monthLabel = month.replace('-', '. ') + '월';
-              const leaveStatusBadge = (s: string) =>
-                s === 'approved'
-                  ? <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[10px] font-black text-emerald-700">승인</span>
-                  : s === 'rejected'
-                  ? <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] font-black text-red-600">반려</span>
-                  : <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[10px] font-black text-amber-700">대기중</span>;
+              const leaveStatusBadge = (s: string, reply?: string) => getTimelineStatusBadge(s, reply);
               return (
                 <div className="print-card rounded-3xl border border-slate-100 bg-white p-5 md:p-6 shadow-sm space-y-4">
                   <h3 className="text-xs font-black text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -3418,7 +3929,7 @@ export default function StudentReportPage() {
                         <div className="flex items-center gap-1.5">
                           <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 ring-1 ring-slate-100">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
                           <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
-                          {leaveStatusBadge(r.status)}
+                          {leaveStatusBadge(r.status, r.adminReply)}
                         </div>
                         {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.reason}</p>}
                         {r.adminReply && (
@@ -3629,6 +4140,109 @@ export default function StudentReportPage() {
                       💬 밴드 톡 바로가기
                     </a>
                   </div>
+                </div>
+              );
+            })()}
+
+            {/* 오답 실수 유형 취약성 진단 차트 */}
+            {(() => {
+              const aggregatedTags = {
+                calculation_error: 0,
+                time_limit: 0,
+                misread_condition: 0,
+                concept_leak: 0
+              };
+
+              (student.subjects || []).forEach(s => {
+                (s.books || []).forEach(b => {
+                  if (b.incorrectTags) {
+                    aggregatedTags.calculation_error += Number(b.incorrectTags.calculation_error || 0);
+                    aggregatedTags.time_limit += Number(b.incorrectTags.time_limit || 0);
+                    aggregatedTags.misread_condition += Number(b.incorrectTags.misread_condition || 0);
+                    aggregatedTags.concept_leak += Number(b.incorrectTags.concept_leak || 0);
+                  }
+                });
+              });
+
+              const totalIncorrect = Object.values(aggregatedTags).reduce((a, b) => a + b, 0);
+
+              const pieData = [
+                { name: '연산실수', value: aggregatedTags.calculation_error },
+                { name: '시간부족', value: aggregatedTags.time_limit },
+                { name: '조건오독', value: aggregatedTags.misread_condition },
+                { name: '개념부족', value: aggregatedTags.concept_leak }
+              ].filter(d => d.value > 0);
+
+              const COLORS = {
+                '연산실수': '#EF4444',
+                '시간부족': '#F56300',
+                '조건오독': '#FBBF24',
+                '개념부족': '#0071E3'
+              };
+
+              return (
+                <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">오답 원인 분석 (취약성 진단)</h4>
+                      <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">교재 학습 과정에서 직접 등록된 실수 요인 비율</p>
+                    </div>
+                    {totalIncorrect > 0 && (
+                      <span className="text-[9px] font-extrabold text-[#0071E3] bg-[#0071E3]/5 px-2 py-0.5 rounded-lg border border-[#0071E3]/10">
+                        총 오답 기록: {totalIncorrect}건
+                      </span>
+                    )}
+                  </div>
+
+                  {totalIncorrect === 0 ? (
+                    <div className="py-8 px-4 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-1.5">
+                      <p className="text-xs font-bold text-slate-400">아직 오답 원인 분석 데이터가 부족합니다.</p>
+                      <p className="text-[10px] text-slate-400/80 font-semibold">학습 진도 영역의 교재 목록에서 푼 문항 수 아래에 있는 '오답 사유 추가' 단추들을 눌러서 실수의 원인을 등록해보세요!</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                      <div className="relative w-full h-[150px] flex items-center justify-center">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={pieData}
+                              cx="50%"
+                              cy="50%"
+                              innerRadius={40}
+                              outerRadius={60}
+                              paddingAngle={3}
+                              dataKey="value"
+                            >
+                              {pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#86868B'} />
+                              ))}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute text-center">
+                          <p className="text-sm font-black text-slate-800">{totalIncorrect}건</p>
+                          <p className="text-[8px] font-bold text-slate-400">오답 총합</p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {pieData.map((d) => {
+                          const pct = ((d.value / totalIncorrect) * 100).toFixed(1);
+                          return (
+                            <div key={d.name} className="flex justify-between items-center text-xs font-bold">
+                              <span className="flex items-center gap-1.5 text-slate-600">
+                                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLORS[d.name as keyof typeof COLORS] }} />
+                                {d.name}
+                              </span>
+                              <span className="text-slate-700">
+                                {d.value}건 <span className="text-[10px] font-semibold text-slate-400">({pct}%)</span>
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Users, User, Calendar, BarChart3, Search, LogOut, Loader2,
-  AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw
+  AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw, Clock
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';

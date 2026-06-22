@@ -31,6 +31,8 @@ export interface BookProgress {
   goalValue?: number;
   goalDescription?: string;
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
+  solvedQuestions?: number;
+  incorrectTags?: Record<string, number>;
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
   detailedPlans?: DetailedPlan[];
 }
