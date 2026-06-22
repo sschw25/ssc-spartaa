@@ -16,6 +16,7 @@ import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { PendingChangeRequestsPanel } from '@/components/admin/pending-change-requests-panel';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const isCampusFilterValue = (value: string | null): value is string => !!value && CAMPUS_FILTERS.includes(value);
@@ -187,10 +188,6 @@ export default function AdminDashboardPage() {
 
   // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
   const weeklyGradeMissingStudents = campusScopedStudents.filter(s => isWeeklyGradeMissing(s));
-
-  // 휴가/반차/휴식권/병가 — 처리 대기중 신청 (학생별로 1명 1뱃지, 총 건수는 합산)
-  const pendingLeaveStudents = campusScopedStudents.filter(s => (s.leaveRequests || []).some(r => r.status === 'pending'));
-  const pendingLeaveCount = campusScopedStudents.reduce((n, s) => n + (s.leaveRequests || []).filter(r => r.status === 'pending').length, 0);
 
   // 각 카드 데이터 최종 업데이트 시각 계산
   const lastConsultationUpdate = pendingConsultationStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
@@ -633,6 +630,14 @@ export default function AdminDashboardPage() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
 
+        <PendingChangeRequestsPanel
+          students={campusScopedStudents}
+          maxRows={4}
+          getCampusLabel={getCampusLabel}
+          onOpenStudent={handleOpenStudentById}
+          description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항을 기존 상세 시트에서 바로 확인하고 처리할 수 있습니다.`}
+        />
+
         {/* 1. 출결 우선 카드 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <TodayAttendanceWidget
@@ -706,27 +711,6 @@ export default function AdminDashboardPage() {
                 <span className="text-[10px] text-amber-700 font-extrabold self-center px-1">외 {weeklyGradeMissingStudents.length - 4}명 더 있음</span>
               )}
             </div>
-          </div>
-        )}
-
-        {/* 휴가/반차/휴식권 신청 대기 배너 */}
-        {pendingLeaveCount > 0 && (
-          <div
-            onClick={() => router.push('/admin/leave')}
-            className="admin-fit-box bg-gradient-to-br from-[#0071E3]/[0.03] to-[#0071E3]/[0.07] border border-[#0071E3]/15 rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-sm cursor-pointer transition-all duration-300 hover:border-[#0071E3]/25"
-          >
-            <div className="admin-fit-row flex items-start gap-3.5">
-              <div className="p-2 rounded-xl bg-[#0071E3]/10 text-[#0071E3] shrink-0">
-                <Calendar className="admin-fit-icon w-5 h-5 shrink-0" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="admin-fit-text text-sm font-black text-[#1D1D1F] tracking-tight">휴가 · 반차 · 휴식권 신청 {pendingLeaveCount}건 대기 중</h4>
-                <p className="admin-fit-caption text-xs font-semibold text-[#86868B] mt-1 leading-relaxed">
-                  {selectedCampusLabel} 기준 학생 {pendingLeaveStudents.length}명이 검토를 기다리고 있습니다. 클릭하면 신청 관리 페이지로 이동합니다.
-                </p>
-              </div>
-            </div>
-            <div className="text-xs text-[#0071E3] font-extrabold shrink-0 self-center">신청 관리 &rarr;</div>
           </div>
         )}
 

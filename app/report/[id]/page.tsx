@@ -6,7 +6,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu, Plus, Trash2, Bell, X, Home } from 'lucide-react';
-import { Student, DetailedPlan, LeaveType } from '@/lib/types/student';
+import { Student, DetailedPlan, LeaveType, ConsultationLog } from '@/lib/types/student';
 import {
   LEAVE_TYPES,
   LEAVE_TYPE_ORDER,
@@ -95,6 +95,8 @@ type StudentNotification = {
   priority: number;
 };
 
+type ProgressMaterialType = 'book' | 'lecture';
+
 const NOTIFICATION_TONE_CLASS: Record<StudentNotificationTone, { item: string; icon: string; label: string }> = {
   blue: {
     item: 'border-[#0071E3]/15 bg-[#0071E3]/[0.04]',
@@ -167,6 +169,9 @@ export default function StudentReportPage() {
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState('');
   const [requestCustomOpen, setRequestCustomOpen] = useState(false);
+  const [suggestionMessage, setSuggestionMessage] = useState('');
+  const [suggestionSubmitting, setSuggestionSubmitting] = useState(false);
+  const [suggestionError, setSuggestionError] = useState('');
 
   // 휴가/반차/휴식권/병가 신청
   const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; date: string; reason: string }>(() => ({
@@ -324,12 +329,12 @@ export default function StudentReportPage() {
       ...(subject.books || []).flatMap((book) =>
         (book.detailedPlans || [])
           .filter((plan) => doesPlanStartInRange(plan, start, end))
-          .map((plan) => ({ ...plan, subject: subject.name, title: book.title, type: '교재' }))
+          .map((plan) => ({ ...plan, subject: subject.name, title: book.title, type: '교재', materialType: 'book' as const, materialId: book.id }))
       ),
       ...(subject.lectures || []).flatMap((lecture) =>
         (lecture.detailedPlans || [])
           .filter((plan) => doesPlanStartInRange(plan, start, end))
-          .map((plan) => ({ ...plan, subject: subject.name, title: lecture.name, type: '인강' }))
+          .map((plan) => ({ ...plan, subject: subject.name, title: lecture.name, type: '인강', materialType: 'lecture' as const, materialId: lecture.id }))
       ),
     ]);
   };
@@ -631,6 +636,10 @@ export default function StudentReportPage() {
                 subject: subject.name,
                 title: lecture.name,
                 type: '강의',
+                materialType: 'lecture' as const,
+                materialId: lecture.id,
+                planId: plan.id,
+                isCompleted: plan.isCompleted,
                 studyTime: subject.studyTime || '',
                 rangeText: plan.rangeText,
                 dailyLabel: getDailyAmountLabel(plan),
@@ -644,6 +653,10 @@ export default function StudentReportPage() {
                 subject: subject.name,
                 title: book.title,
                 type: '교재',
+                materialType: 'book' as const,
+                materialId: book.id,
+                planId: plan.id,
+                isCompleted: plan.isCompleted,
                 studyTime: subject.studyTime || '',
                 rangeText: plan.rangeText,
                 dailyLabel: getDailyAmountLabel(plan),
@@ -752,6 +765,47 @@ export default function StudentReportPage() {
     };
   });
 
+  const suggestionNotifications: StudentNotification[] = (student.suggestionRequests || []).map((suggestion) => {
+    const notificationDate = suggestion.repliedAt || suggestion.resolvedAt || suggestion.createdAt || suggestion.date;
+
+    if (suggestion.adminReply) {
+      return {
+        id: `suggestion-reply-${suggestion.id}`,
+        tone: 'blue',
+        label: '건의 답변',
+        title: '건의사항에 답변이 도착했어요',
+        body: suggestion.adminReply,
+        meta: truncateNotificationText(suggestion.content || ''),
+        date: notificationDate,
+        priority: 1,
+      };
+    }
+
+    if (suggestion.status === 'resolved') {
+      return {
+        id: `suggestion-resolved-${suggestion.id}`,
+        tone: 'emerald',
+        label: '처리완료',
+        title: '건의사항이 처리완료됐어요',
+        body: '담당 코치가 건의사항을 확인하고 처리했습니다.',
+        meta: truncateNotificationText(suggestion.content || ''),
+        date: notificationDate,
+        priority: 3,
+      };
+    }
+
+    return {
+      id: `suggestion-pending-${suggestion.id}`,
+      tone: 'amber',
+      label: '확인 대기',
+      title: '건의사항 확인을 기다리고 있어요',
+      body: '담당 코치가 확인하면 이 알림 영역에서 바로 볼 수 있어요.',
+      meta: truncateNotificationText(suggestion.content || ''),
+      date: notificationDate,
+      priority: 4,
+    };
+  });
+
   const systemNotifications: StudentNotification[] = [
     ...(student.weeklyGradeCheck && !hasGradeThisWeek
       ? [{
@@ -801,7 +855,7 @@ export default function StudentReportPage() {
       : []),
   ];
 
-  const studentNotifications = [...requestNotifications, ...systemNotifications].sort((a, b) => {
+  const studentNotifications = [...requestNotifications, ...suggestionNotifications, ...systemNotifications].sort((a, b) => {
     const priorityDiff = a.priority - b.priority;
     if (priorityDiff !== 0) return priorityDiff;
     return (b.date || '').localeCompare(a.date || '');
@@ -820,6 +874,9 @@ export default function StudentReportPage() {
       : []),
     { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
     ...(isStudentReport
+      ? [{ href: '#execution-plan', label: '실행 계획표', meta: '학습 플래너', icon: Target }]
+      : []),
+    ...(isStudentReport
       ? [{ href: '#attendance-status', label: '등하원 상태', meta: '실시간 출결', icon: Clock }]
       : []),
     { href: '#study-stats', label: isStudentReport ? '순공/랭킹' : '학습 통계', meta: '학습 시간 비교', icon: Award },
@@ -827,11 +884,13 @@ export default function StudentReportPage() {
     ...(isStudentReport
       ? [
           { href: '#timetable', label: '요일 시간표', meta: `${student.subjects?.length || 0}개 과목`, icon: Calendar },
-          { href: '#execution-plan', label: '실행 계획표', meta: '학습 플래너', icon: Target },
           { href: '#period-plan', label: '주·월간 계획', meta: '핵심 범위', icon: Sparkles },
         ]
       : []),
     { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
+    ...(isStudentReport
+      ? [{ href: '#student-requests', label: '요청/건의', meta: '반차·건의', icon: MessageSquare }]
+      : []),
     { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
   ];
 
@@ -933,33 +992,84 @@ export default function StudentReportPage() {
     }
   };
 
-  // 학생 본인 교재/인강 진도 직접 갱신 (즉시 반영, 서버 클램프값 적용)
-  const updateProgress = async (materialType: 'book' | 'lecture', materialId: string, value: number) => {
+  const applyProgressPatch = (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    value: number,
+    planId?: string,
+    isCompleted?: boolean,
+  ) => {
+    setStudent((prev) =>
+      prev
+        ? {
+            ...prev,
+            subjects: (prev.subjects || []).map((s) => ({
+              ...s,
+              books: (s.books || []).map((b) => {
+                if (materialType !== 'book' || b.id !== materialId) return b;
+                return {
+                  ...b,
+                  currentPage: value,
+                  ...(planId
+                    ? {
+                        detailedPlans: (b.detailedPlans || []).map((p) =>
+                          p.id === planId ? { ...p, isCompleted: Boolean(isCompleted) } : p,
+                        ),
+                      }
+                    : {}),
+                };
+              }),
+              lectures: (s.lectures || []).map((l) => {
+                if (materialType !== 'lecture' || l.id !== materialId) return l;
+                return {
+                  ...l,
+                  completedLectures: value,
+                  ...(planId
+                    ? {
+                        detailedPlans: (l.detailedPlans || []).map((p) =>
+                          p.id === planId ? { ...p, isCompleted: Boolean(isCompleted) } : p,
+                        ),
+                      }
+                    : {}),
+                };
+              }),
+            })),
+          }
+        : prev,
+    );
+  };
+
+  const saveProgressPatch = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    payload: { value?: number; planId?: string; isCompleted?: boolean },
+  ) => {
     try {
       const res = await fetch('/api/student/progress', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ materialType, materialId, value }),
+        body: JSON.stringify({ materialType, materialId, ...payload }),
       });
       const json = await res.json();
-      if (res.ok && json.success) {
-        setStudent((prev) =>
-          prev
-            ? {
-                ...prev,
-                subjects: (prev.subjects || []).map((s) => ({
-                  ...s,
-                  books: (s.books || []).map((b) => (materialType === 'book' && b.id === materialId ? { ...b, currentPage: json.value } : b)),
-                  lectures: (s.lectures || []).map((l) => (materialType === 'lecture' && l.id === materialId ? { ...l, completedLectures: json.value } : l)),
-                })),
-              }
-            : prev,
-        );
+      if (res.ok && json.success && typeof json.value === 'number') {
+        applyProgressPatch(materialType, materialId, json.value, json.planId, json.isCompleted);
       }
     } catch {
       /* noop */
     }
   };
+
+  // 학생 본인 교재/인강 진도 직접 갱신 (즉시 반영, 서버 클램프값 적용)
+  const updateProgress = (materialType: ProgressMaterialType, materialId: string, value: number) =>
+    saveProgressPatch(materialType, materialId, { value });
+
+  // 학습 계획 완료 처리 시 해당 계획 종료 범위까지 진도도 함께 반영
+  const updatePlanCompletion = (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    planId: string,
+    isCompleted: boolean,
+  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted });
 
   // 학생 변경 신청 (관리자에게)
   const sendRequest = async (requestType: string, rawMessage: string) => {
@@ -1036,6 +1146,46 @@ export default function StudentReportPage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, leaveRequests: (prev.leaveRequests || []).filter((r) => r.id !== id) } : prev));
+      }
+    } catch {
+      /* noop */
+    }
+  };
+
+  const submitSuggestion = async () => {
+    const message = suggestionMessage.trim();
+    if (!message) {
+      setSuggestionError('건의 내용을 입력해 주세요.');
+      return;
+    }
+    setSuggestionError('');
+    setSuggestionSubmitting(true);
+    try {
+      const res = await fetch('/api/student/suggestions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, message }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, suggestionRequests: [json.suggestion as ConsultationLog, ...(prev.suggestionRequests || [])] } : prev));
+        setSuggestionMessage('');
+      } else {
+        setSuggestionError(json.message || '건의사항 등록에 실패했습니다.');
+      }
+    } catch {
+      setSuggestionError('네트워크 오류가 발생했습니다.');
+    } finally {
+      setSuggestionSubmitting(false);
+    }
+  };
+
+  const cancelSuggestion = async (id: string) => {
+    try {
+      const res = await fetch(`/api/student/suggestions?id=${encodeURIComponent(id)}&studentId=${encodeURIComponent(studentId)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent((prev) => (prev ? { ...prev, suggestionRequests: (prev.suggestionRequests || []).filter((r) => r.id !== id) } : prev));
       }
     } catch {
       /* noop */
@@ -1519,18 +1669,31 @@ export default function StudentReportPage() {
 
                   {todayPlanEntries.length > 0 ? (
                     <div className="mt-4 grid gap-2 md:grid-cols-3">
-                      {todayPlanEntries.slice(0, 3).map((entry, index) => (
+                      {todayPlanEntries.map((entry, index) => (
                         <div key={entry.id} className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 shadow-[0_6px_18px_rgba(0,113,227,0.04)]">
                           <div className="flex items-start gap-2.5">
                             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-[10px] font-black text-white">
                               {index + 1}
                             </span>
-                            <div className="min-w-0">
+                            <div className="min-w-0 flex-1">
                               <p className="truncate text-xs font-black text-slate-900">{entry.subject} · {entry.title}</p>
                               <p className="mt-1 truncate text-[10px] font-bold text-slate-500">
                                 {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
                               </p>
                             </div>
+                            <button
+                              type="button"
+                              onClick={() => updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, !entry.isCompleted)}
+                              aria-pressed={entry.isCompleted}
+                              className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border px-2 text-[9px] font-black transition active:scale-[0.96] ${
+                                entry.isCompleted
+                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                              }`}
+                            >
+                              <CheckCircle2 className="h-3 w-3" />
+                              완료
+                            </button>
                           </div>
                         </div>
                       ))}
@@ -1538,11 +1701,6 @@ export default function StudentReportPage() {
                   ) : (
                     <p className="mt-4 rounded-2xl border border-dashed border-[#0071E3]/20 bg-white/70 px-4 py-5 text-center text-xs font-bold text-slate-500">
                       오늘 배정된 실행 항목이 없습니다. 자율 학습 계획을 확인해 주세요.
-                    </p>
-                  )}
-                  {todayPlanEntries.length > 3 && (
-                    <p className="mt-3 text-[10px] font-bold text-[#0071E3]">
-                      외 {todayPlanEntries.length - 3}개 항목은 실행 계획표에서 이어서 확인할 수 있습니다.
                     </p>
                   )}
                 </div>
@@ -1896,6 +2054,109 @@ export default function StudentReportPage() {
                 </span>
               </div>
 
+              {/* 학생 변경 신청 (관리자에게) */}
+              <div id="student-request-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+                <div>
+                  <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
+                    <MessageSquare className="w-4 h-4" /> 학습 관련 요청
+                  </h4>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-400">진도 정정·과목 추가/변경·학습계획 조정 등을 신청하면 담당 코치가 확인해요.</p>
+                </div>
+                <div className="space-y-2.5">
+                  {/* 원탭 빠른 신청 — 타이핑 없이 버튼으로 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    {QUICK_REQUESTS.map((q) => (
+                      <button
+                        key={q.label}
+                        type="button"
+                        disabled={requestSubmitting}
+                        onClick={() => sendRequest(q.type, q.message)}
+                        className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] active:scale-[0.97] disabled:opacity-50"
+                      >
+                        <span className="text-base leading-none">{q.icon}</span>
+                        <span className="min-w-0 leading-tight">{q.label}</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 직접 작성 토글 */}
+                  <button
+                    type="button"
+                    onClick={() => setRequestCustomOpen((o) => !o)}
+                    className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 bg-white/60 py-2 text-[11px] font-bold text-slate-500 transition hover:text-slate-700"
+                  >
+                    <Plus className={`w-3.5 h-3.5 transition-transform ${requestCustomOpen ? 'rotate-45' : ''}`} />
+                    {requestCustomOpen ? '직접 작성 닫기' : '직접 작성하기'}
+                  </button>
+
+                  {requestCustomOpen && (
+                    <form
+                      onSubmit={(e) => { e.preventDefault(); sendRequest(requestForm.requestType, requestForm.message); }}
+                      className="space-y-2 rounded-2xl border border-slate-100 bg-white/70 p-3"
+                    >
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(REQUEST_TYPE_LABEL).map(([v, label]) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setRequestForm((f) => ({ ...f, requestType: v }))}
+                            className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${requestForm.requestType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                      <textarea
+                        value={requestForm.message}
+                        onChange={(e) => setRequestForm((f) => ({ ...f, message: e.target.value }))}
+                        placeholder="신청 내용을 적어 주세요. 예) 수학I 진도를 주 3회로 늘리고 싶어요"
+                        rows={2}
+                        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={requestSubmitting}
+                        className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {requestSubmitting ? '신청 중...' : '신청하기'}
+                      </button>
+                    </form>
+                  )}
+
+                  {requestError && <p className="text-[10px] font-bold text-red-500">{requestError}</p>}
+                </div>
+                {(student.changeRequests || []).length > 0 && (
+                  <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 학습 요청 내역</p>
+                    {(student.changeRequests || []).map((r) => (
+                      <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">{getRequestTypeLabel(r.requestType)}</span>
+                            {r.status === 'resolved' ? (
+                              <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">처리완료</span>
+                            ) : (
+                              <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>
+                            )}
+                          </span>
+                          {r.status !== 'resolved' && (
+                            <button type="button" onClick={() => cancelRequest(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
+                        {r.adminReply && (
+                          <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                            💬 코치 답변: {r.adminReply}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-5">
                 {weeklyDailyPlans.map((week) => (
                   <div key={week.weekNumber} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm break-inside-avoid">
@@ -1929,9 +2190,16 @@ export default function StudentReportPage() {
                           ) : (
                             <div className="space-y-2">
                               {day.entries.map((entry, index) => (
-                                <div key={`${entry.id}_${index}`} className="rounded-xl border border-white bg-white p-2 shadow-sm">
+                                <div
+                                  key={`${entry.id}_${index}`}
+                                  className={`rounded-xl border p-2 shadow-sm ${
+                                    entry.isCompleted
+                                      ? 'border-emerald-100 bg-emerald-50/45'
+                                      : 'border-white bg-white'
+                                  }`}
+                                >
                                   <div className="mb-1 flex items-center gap-1.5">
-                                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#111827] text-[8px] font-black text-white">
+                                    <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-[#111827]'}`}>
                                       {index + 1}
                                     </span>
                                     <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-500">
@@ -1947,6 +2215,19 @@ export default function StudentReportPage() {
                                   <p className="mt-1 rounded-lg bg-[#0071E3]/5 px-2 py-1 text-[8px] font-black text-[#0071E3]">
                                     {entry.dailyLabel}
                                   </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, !entry.isCompleted)}
+                                    aria-pressed={entry.isCompleted}
+                                    className={`mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border text-[9px] font-black transition active:scale-[0.97] ${
+                                      entry.isCompleted
+                                        ? 'border-emerald-200 bg-white/80 text-emerald-700'
+                                        : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                    }`}
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {entry.isCompleted ? '완료됨' : '완료'}
+                                  </button>
                                 </div>
                               ))}
                             </div>
@@ -1972,14 +2253,36 @@ export default function StudentReportPage() {
                 ) : (
                   <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1 print:max-h-none print:overflow-visible print:pr-0">
                     {weeklyPlans.map((plan) => (
-                      <div key={`${plan.materialId}_${plan.id}_week`} className="text-[10px] p-3.5 rounded-2xl bg-slate-50/70 border border-slate-100/50 hover:bg-slate-50 transition-colors">
-                        <div className="flex justify-between items-center font-bold text-slate-700 mb-1">
-                          <span className="truncate max-w-[190px]">{plan.subject} · {plan.title}</span>
+                      <div
+                        key={`${plan.materialId}_${plan.id}_week`}
+                        className={`text-[10px] p-3.5 rounded-2xl border transition-colors ${
+                          plan.isCompleted
+                            ? 'border-emerald-100 bg-emerald-50/45'
+                            : 'border-slate-100/50 bg-slate-50/70 hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex justify-between items-center gap-2 font-bold text-slate-700 mb-1">
+                          <span className="min-w-0 truncate">{plan.subject} · {plan.title}</span>
                           <span className="text-[#0071E3] shrink-0 font-extrabold bg-[#0071E3]/5 px-2 py-0.5 rounded-lg border border-[#0071E3]/10">{plan.rangeText}</span>
                         </div>
-                        <p className="text-slate-400 text-[9px] font-semibold">
-                          진행 기간: {plan.startDate} ~ {plan.endDate} · 일일 목표: {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}
-                        </p>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-slate-400 text-[9px] font-semibold">
+                            진행 기간: {plan.startDate} ~ {plan.endDate} · 일일 목표: {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => updatePlanCompletion(plan.materialType, plan.materialId, plan.id, !plan.isCompleted)}
+                            aria-pressed={plan.isCompleted}
+                            className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-lg border px-2 text-[9px] font-black transition active:scale-[0.97] ${
+                              plan.isCompleted
+                                ? 'border-emerald-200 bg-white/80 text-emerald-700'
+                                : 'border-[#0071E3]/20 bg-white text-[#0071E3] hover:bg-[#0071E3]/5'
+                            }`}
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            {plan.isCompleted ? '완료됨' : '완료'}
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -2070,7 +2373,11 @@ export default function StudentReportPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={() => document.getElementById('student-request-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                    onClick={() => {
+                      slideDirRef.current = tabIds.indexOf('execution-plan') >= tabIds.indexOf(activeTab) ? 1 : -1;
+                      setActiveTab('execution-plan');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
                     className="w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-xs font-black text-amber-900 shadow-sm transition hover:bg-amber-50 sm:w-auto"
                   >
                     변경 신청 바로가기
@@ -2263,12 +2570,15 @@ export default function StudentReportPage() {
 
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                                       {oneMonthPlans.map(plan => (
-                                        <div 
+                                        <button
                                           key={plan.id}
-                                          className={`p-3 rounded-xl border text-[9px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
-                                            plan.isCompleted 
-                                              ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50' 
-                                              : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
+                                          type="button"
+                                          onClick={() => updatePlanCompletion('book', b.id, plan.id, !plan.isCompleted)}
+                                          aria-pressed={plan.isCompleted}
+                                          className={`p-3 rounded-xl border text-left text-[9px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
+                                            plan.isCompleted
+                                              ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50'
+                                              : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
                                           }`}
                                         >
                                           <div className="flex justify-between items-center font-bold">
@@ -2282,7 +2592,14 @@ export default function StudentReportPage() {
                                           <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
                                           <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
                                           <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
-                                        </div>
+                                          <span className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-black ${
+                                            plan.isCompleted
+                                              ? 'border-emerald-200 bg-white/70 text-emerald-700'
+                                              : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
+                                          }`}>
+                                            {plan.isCompleted ? '완료됨' : '완료'}
+                                          </span>
+                                        </button>
                                       ))}
                                     </div>
                                   </div>
@@ -2375,12 +2692,15 @@ export default function StudentReportPage() {
 
                                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                                       {oneMonthPlans.map(plan => (
-                                        <div 
+                                        <button
                                           key={plan.id}
-                                          className={`p-3 rounded-xl border text-[9px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
-                                            plan.isCompleted 
-                                              ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50' 
-                                              : 'border-slate-100 bg-white text-slate-600 hover:border-slate-200'
+                                          type="button"
+                                          onClick={() => updatePlanCompletion('lecture', l.id, plan.id, !plan.isCompleted)}
+                                          aria-pressed={plan.isCompleted}
+                                          className={`p-3 rounded-xl border text-left text-[9px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
+                                            plan.isCompleted
+                                              ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50'
+                                              : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
                                           }`}
                                         >
                                           <div className="flex justify-between items-center font-bold">
@@ -2394,7 +2714,14 @@ export default function StudentReportPage() {
                                           <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
                                           <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
                                           <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
-                                        </div>
+                                          <span className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-black ${
+                                            plan.isCompleted
+                                              ? 'border-emerald-200 bg-white/70 text-emerald-700'
+                                              : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
+                                          }`}>
+                                            {plan.isCompleted ? '완료됨' : '완료'}
+                                          </span>
+                                        </button>
                                       ))}
                                     </div>
                                   </div>
@@ -2410,113 +2737,25 @@ export default function StudentReportPage() {
               </div>
             )}
 
-            {/* 학생 변경 신청 (관리자에게) */}
+          </div>
+
             {isStudentReport && (
-              <div id="student-request-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
-                <div>
-                  <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
-                    <MessageSquare className="w-4 h-4" /> 관리자에게 변경 신청
-                  </h4>
-                  <p className="mt-1 text-[10px] font-semibold text-slate-400">진도 정정·과목 추가/변경·학습계획 조정 등을 신청하면 담당 코치가 확인해요.</p>
-                </div>
-                <div className="space-y-2.5">
-                  {/* 원탭 빠른 신청 — 타이핑 없이 버튼으로 */}
-                  <div className="grid grid-cols-2 gap-2">
-                    {QUICK_REQUESTS.map((q) => (
-                      <button
-                        key={q.label}
-                        type="button"
-                        disabled={requestSubmitting}
-                        onClick={() => sendRequest(q.type, q.message)}
-                        className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] active:scale-[0.97] disabled:opacity-50"
-                      >
-                        <span className="text-base leading-none">{q.icon}</span>
-                        <span className="min-w-0 leading-tight">{q.label}</span>
-                      </button>
-                    ))}
+              <section id="student-requests" className={`scroll-mt-24 space-y-5 print-card ${activeTab === 'student-requests' ? '' : 'hidden print:block'}`}>
+                <div className="rounded-3xl border border-amber-500/15 bg-amber-500/[0.04] p-5 shadow-sm md:p-6">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="flex items-center gap-2 text-lg font-black text-amber-900">
+                        <MessageSquare className="h-5 w-5 text-amber-700" /> 요청/건의
+                      </h3>
+                      <p className="mt-1 text-[11px] font-semibold leading-5 text-amber-700/90">
+                        반차/휴가와 생활·운영 건의사항을 여기서 바로 남길 수 있습니다.
+                      </p>
+                    </div>
                   </div>
-
-                  {/* 직접 작성 토글 */}
-                  <button
-                    type="button"
-                    onClick={() => setRequestCustomOpen((o) => !o)}
-                    className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 bg-white/60 py-2 text-[11px] font-bold text-slate-500 transition hover:text-slate-700"
-                  >
-                    <Plus className={`w-3.5 h-3.5 transition-transform ${requestCustomOpen ? 'rotate-45' : ''}`} />
-                    {requestCustomOpen ? '직접 작성 닫기' : '직접 작성하기'}
-                  </button>
-
-                  {requestCustomOpen && (
-                    <form
-                      onSubmit={(e) => { e.preventDefault(); sendRequest(requestForm.requestType, requestForm.message); }}
-                      className="space-y-2 rounded-2xl border border-slate-100 bg-white/70 p-3"
-                    >
-                      <div className="flex flex-wrap gap-1.5">
-                        {Object.entries(REQUEST_TYPE_LABEL).map(([v, label]) => (
-                          <button
-                            key={v}
-                            type="button"
-                            onClick={() => setRequestForm((f) => ({ ...f, requestType: v }))}
-                            className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${requestForm.requestType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                      <textarea
-                        value={requestForm.message}
-                        onChange={(e) => setRequestForm((f) => ({ ...f, message: e.target.value }))}
-                        placeholder="신청 내용을 적어 주세요. 예) 수학I 진도를 주 3회로 늘리고 싶어요"
-                        rows={2}
-                        className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        disabled={requestSubmitting}
-                        className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
-                      >
-                        {requestSubmitting ? '신청 중...' : '신청하기'}
-                      </button>
-                    </form>
-                  )}
-
-                  {requestError && <p className="text-[10px] font-bold text-red-500">{requestError}</p>}
                 </div>
-                {(student.changeRequests || []).length > 0 && (
-                  <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 신청 내역</p>
-                    {(student.changeRequests || []).map((r) => (
-                      <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">{getRequestTypeLabel(r.requestType)}</span>
-                            {r.status === 'resolved' ? (
-                              <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">처리완료</span>
-                            ) : (
-                              <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>
-                            )}
-                          </span>
-                          {r.status !== 'resolved' && (
-                            <button type="button" onClick={() => cancelRequest(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          )}
-                        </div>
-                        <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
-                        {r.adminReply && (
-                          <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                            💬 코치 답변: {r.adminReply}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
-            {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
-            {isStudentReport && (() => {
+                {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
+                {(() => {
               const leaveRequests = student.leaveRequests || [];
               const leaveCoupons = student.leaveCoupons ?? 0;
               const selMonth = yearMonthOf(leaveForm.date) || kstYearMonth();
@@ -2656,7 +2895,70 @@ export default function StudentReportPage() {
                   )}
                 </div>
               );
-            })()}
+                })()}
+
+                {/* 건의사항 (관리자에게) */}
+                <div id="student-suggestion-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+                <div>
+                  <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
+                    <MessageSquare className="w-4 h-4" /> 건의사항
+                  </h4>
+                  <p className="mt-1 text-[10px] font-semibold text-slate-400">
+                    시설, 운영, 학습 환경에 대한 의견을 남기면 담당 코치가 확인해요.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <textarea
+                    value={suggestionMessage}
+                    onChange={(e) => setSuggestionMessage(e.target.value)}
+                    placeholder="건의 내용을 적어 주세요. 예) 자습실 조명이 조금 어두워요"
+                    rows={3}
+                    className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={submitSuggestion}
+                    disabled={suggestionSubmitting}
+                    className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {suggestionSubmitting ? '등록 중...' : '건의사항 등록'}
+                  </button>
+                  {suggestionError && <p className="text-[10px] font-bold text-red-500">{suggestionError}</p>}
+                </div>
+
+                {(student.suggestionRequests || []).length > 0 && (
+                  <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 건의사항 내역</p>
+                    {(student.suggestionRequests || []).map((r) => (
+                      <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">건의사항</span>
+                            {r.status === 'resolved' ? (
+                              <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">처리완료</span>
+                            ) : (
+                              <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>
+                            )}
+                          </span>
+                          {r.status !== 'resolved' && (
+                            <button type="button" onClick={() => cancelSuggestion(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="건의사항 취소">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
+                        {r.adminReply && (
+                          <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                            💬 코치 답변: {r.adminReply}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                </div>
+              </section>
+            )}
 
             {/* 휴가/반차/휴식권/병가 사용 현황 (학부모 읽기 전용) */}
             {isParentReport && (() => {
@@ -2712,8 +3014,6 @@ export default function StudentReportPage() {
                 </div>
               );
             })()}
-          </div>
-
           {/* 4. 성적 및 모의고사 분석 결과 */}
           <div id="grade-analysis" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'grade-analysis' ? '' : 'hidden print:block'}`}>
             <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">

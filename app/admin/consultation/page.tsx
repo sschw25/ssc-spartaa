@@ -19,6 +19,7 @@ import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AddStudentModal } from '@/components/admin/add-student-modal';
 import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { PendingChangeRequestsPanel } from '@/components/admin/pending-change-requests-panel';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const isCampusFilterValue = (value: string | null): value is string => !!value && CAMPUS_FILTERS.includes(value);
@@ -208,6 +209,13 @@ function ConsultationContent() {
 
   const handleDashboardTabChange = (tab: string) => {
     setDashboardTab(tab);
+  };
+
+  const handleOpenStudentDetail = (studentId: string) => {
+    const target = students.find((s) => s.id === studentId);
+    if (!target) return;
+    setSelectedStudent(target);
+    setIsDetailOpen(true);
   };
 
   useEffect(() => {
@@ -629,6 +637,13 @@ function ConsultationContent() {
             </div>
           </div>
         </div>
+
+        <PendingChangeRequestsPanel
+          students={campusScopedStudents}
+          getCampusLabel={getCampusLabel}
+          onOpenStudent={handleOpenStudentDetail}
+          description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항 대기 요청입니다. 바로 열면 기존 답변 UI가 있는 학생 상세 시트로 이동합니다.`}
+        />
 
         {/* 메인 대시보드 탭 분기 */}
         {loading ? (

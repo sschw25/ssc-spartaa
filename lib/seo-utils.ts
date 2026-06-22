@@ -168,3 +168,85 @@ export function getCampusSubpageMetadata(
     },
   }
 }
+
+export function getInterviewMetadata(campus: CampusKey): Metadata {
+  const campusName = CAMPUS_CONFIG[campus].name
+  const canonical = `${SITE_URL}/${campus}/interview`
+
+  let title = ''
+  let description = ''
+  let keywords: string[] = []
+
+  if (campus === 'wonju') {
+    title = '원주 강원 공무원 면접학원 | 2026 지방직·교행직 면접반 - SSC스파르타'
+    description = '원주, 강원, 삼척, 태백, 횡성, 경기 등 강원 및 인근 지역 지방직·교육행정직 필기합격자 대상! 면접 전문 강사진 직강 4회 및 1:1 코칭, 자율스터디로 면접 최종합격 대비.'
+    keywords = [
+      '원주 공무원 면접',
+      '강원 공무원 면접',
+      '경기 공무원 면접',
+      '삼척 공무원 면접',
+      '태백 공무원 면접',
+      '강릉 공무원 면접',
+      '횡성 공무원 면접',
+      '홍천 공무원 면접',
+      '강원 교육행정 면접',
+      '강원 교행 면접',
+      '원주 공무원 면접학원',
+      '원주 면접스터디',
+    ]
+  } else if (campus === 'chuncheon') {
+    title = '춘천 강원 공무원 면접학원 | 2026 지방직·교행직 면접반 - SSC스파르타'
+    description = '춘천, 강원, 홍천, 화천, 양구, 철원 등 강원 영서북부 지방직 및 교육행정직 필기합격자 대상! 면접 전문 강사진 직강 4회 및 1:1 코칭, 춘천 현지 자율스터디.'
+    keywords = [
+      '춘천 공무원 면접',
+      '강원 공무원 면접',
+      '홍천 공무원 면접',
+      '화천 공무원 면접',
+      '양구 공무원 면접',
+      '인제 공무원 면접',
+      '철원 공무원 면접',
+      '강원 교육행정 면접',
+      '강원 교행 면접',
+      '춘천 공무원 면접학원',
+      '춘천 면접스터디',
+    ]
+  } else if (campus === 'chungju') {
+    title = '충주 충북 공무원 면접학원 | 2026 지방직·교행직 면접반 - SSC스파르타'
+    description = '충주, 충북, 제천, 청주, 음성, 진천, 괴산 등 충북 전역 지방직 및 교육행정직 필기합격자 대상! 면접 전문 강사진 직강 4회 및 1:1 코칭, 합격선 맞춤 전략.'
+    keywords = [
+      '충주 공무원 면접',
+      '충북 공무원 면접',
+      '충북 교행직 면접',
+      '충북 교육행정 면접',
+      '제천 공무원 면접',
+      '단양 공무원 면접',
+      '괴산 공무원 면접',
+      '음성 공무원 면접',
+      '진천 공무원 면접',
+      '청주 공무원 면접',
+      '충주 공무원 면접학원',
+      '충주 면접스터디',
+    ]
+  }
+
+  return {
+    title,
+    description,
+    keywords,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      type: 'website',
+    },
+    icons: {
+      icon: '/icon.png',
+      shortcut: '/icon.png',
+      apple: '/icon.png',
+    },
+  }
+}
+

@@ -58,7 +58,7 @@ export interface ConsultationLog {
   date: string;       // 상담일 (YYYY-MM-DD)
   manager: string;    // 상담자
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
-  type?: 'learning' | 'life' | 'request'; // 학습 상담 / 생활 면담 / 학생 변경 신청
+  type?: 'learning' | 'life' | 'request' | 'suggestion'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
   requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
@@ -144,6 +144,8 @@ export interface Student {
   grades: GradeItem[];
   // 학생 본인 변경 신청 내역 (리포트 API가 consultation_logs 중 type==='request'만 추려서 전달)
   changeRequests?: ConsultationLog[];
+  // 학생 본인 건의사항 내역 (consultation_logs 중 type==='suggestion'만 추려서 전달)
+  suggestionRequests?: ConsultationLog[];
   // 휴가/반차/휴식권/병가 신청 내역 (전용 leave_requests jsonb)
   leaveRequests?: LeaveRequest[];
   // 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)

@@ -32,6 +32,7 @@ import { getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
+import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } from '@/lib/student-requests';
 import { toast } from 'sonner';
 import { 
   Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, 
@@ -583,17 +584,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const learningLogs = student.consultationLogs.filter(log => !log.type || log.type === 'learning');
   const lifeLogs = student.consultationLogs.filter(log => log.type === 'life');
   // 학생 변경 신청(대기중) — consultation_logs 중 type==='request'
-  const pendingRequests = student.consultationLogs.filter(
-    log => log.type === 'request' && log.status !== 'resolved' && !resolvedReqIds.includes(log.id)
+  const pendingRequests = getPendingChangeRequests(student).filter(
+    log => !resolvedReqIds.includes(log.id)
   );
-  const REQUEST_TYPE_LABEL: Record<string, string> = {
-    progress: '진도 정정',
-    subject: '과목 변경',
-    plan: '학습계획',
-    halfDay: '반차 신청',
-    restPass: '휴식권 신청',
-    etc: '기타',
-  };
+  const pendingSuggestions = getPendingSuggestions(student).filter(
+    log => !resolvedReqIds.includes(log.id)
+  );
   const QUICK_REPLIES = ['상담 신청 바랍니다 🙏', '확인했어요, 반영할게요 👍', '조금만 더 분발해요 💪', '계획대로 잘하고 있어요 ✅'];
   const actOnRequest = async (reqId: string, opts: { status?: 'resolved'; reply?: string }) => {
     setResolvingReqId(reqId);
@@ -605,6 +601,21 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       });
       const json = await res.json();
       if (res.ok && json.success) {
+        const nowIso = new Date().toISOString();
+        const updatedStudent: Student = {
+          ...student,
+          consultationLogs: (student.consultationLogs || []).map((log) => {
+            if (log.id !== reqId) return log;
+            return {
+              ...log,
+              ...(typeof opts.reply === 'string' ? { adminReply: opts.reply, repliedAt: nowIso } : {}),
+              ...(opts.status === 'resolved' ? { status: 'resolved' as const, resolvedAt: nowIso } : {}),
+            };
+          }),
+          updatedAt: nowIso,
+        };
+        onUpdate(updatedStudent);
+
         if (typeof opts.reply === 'string') {
           setSentReplies(prev => ({ ...prev, [reqId]: opts.reply as string }));
           setReplyDrafts(d => ({ ...d, [reqId]: '' }));
@@ -612,6 +623,50 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         if (opts.status === 'resolved') {
           setResolvedReqIds(prev => [...prev, reqId]);
           toast.success('변경 신청을 처리완료로 표시했습니다.');
+        } else if (typeof opts.reply === 'string') {
+          toast.success('답변을 보냈습니다.');
+        }
+      } else {
+        toast.error(json.message || '처리에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    } finally {
+      setResolvingReqId('');
+    }
+  };
+  const actOnSuggestion = async (suggestionId: string, opts: { status?: 'resolved'; reply?: string }) => {
+    setResolvingReqId(suggestionId);
+    try {
+      const res = await fetch(`/api/admin/students/${student.id}/suggestions`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ suggestionId, ...opts }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const nowIso = new Date().toISOString();
+        const updatedStudent: Student = {
+          ...student,
+          consultationLogs: (student.consultationLogs || []).map((log) => {
+            if (log.id !== suggestionId) return log;
+            return {
+              ...log,
+              ...(typeof opts.reply === 'string' ? { adminReply: opts.reply, repliedAt: nowIso } : {}),
+              ...(opts.status === 'resolved' ? { status: 'resolved' as const, resolvedAt: nowIso } : {}),
+            };
+          }),
+          updatedAt: nowIso,
+        };
+        onUpdate(updatedStudent);
+
+        if (typeof opts.reply === 'string') {
+          setSentReplies(prev => ({ ...prev, [suggestionId]: opts.reply as string }));
+          setReplyDrafts(d => ({ ...d, [suggestionId]: '' }));
+        }
+        if (opts.status === 'resolved') {
+          setResolvedReqIds(prev => [...prev, suggestionId]);
+          toast.success('건의사항을 처리완료로 표시했습니다.');
         } else if (typeof opts.reply === 'string') {
           toast.success('답변을 보냈습니다.');
         }
@@ -3631,7 +3686,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 {pendingRequests.map(req => (
                   <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
                     <div className="flex items-center gap-1.5 text-[10px]">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">{REQUEST_TYPE_LABEL[req.requestType || 'etc'] || '기타 신청'}</span>
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">{getRequestTypeLabel(req.requestType)}</span>
                       <span className="font-semibold text-slate-400">{req.date}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
@@ -3678,6 +3733,71 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         size="sm"
                         disabled={resolvingReqId === req.id}
                         onClick={() => actOnRequest(req.id, { status: 'resolved', reply: (replyDrafts[req.id] || '').trim() || undefined })}
+                        className="h-8 shrink-0 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700"
+                      >
+                        {resolvingReqId === req.id ? '처리 중' : '처리완료'}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {pendingSuggestions.length > 0 && (
+            <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-black text-white">{pendingSuggestions.length}</span>
+                <h4 className="text-xs font-black text-amber-800">건의사항 (대기중)</h4>
+              </div>
+              <div className="space-y-2">
+                {pendingSuggestions.map(req => (
+                  <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
+                    <div className="flex items-center gap-1.5 text-[10px]">
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">건의사항</span>
+                      <span className="font-semibold text-slate-400">{req.date}</span>
+                    </div>
+                    <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
+
+                    {(sentReplies[req.id] ?? req.adminReply) && (
+                      <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
+                        💬 내 답변: {sentReplies[req.id] ?? req.adminReply}
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-1.5">
+                      {QUICK_REPLIES.map((qr) => (
+                        <button
+                          key={qr}
+                          type="button"
+                          disabled={resolvingReqId === req.id}
+                          onClick={() => actOnSuggestion(req.id, { reply: qr })}
+                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
+                        >
+                          {qr}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        value={replyDrafts[req.id] ?? ''}
+                        onChange={(e) => setReplyDrafts((d) => ({ ...d, [req.id]: e.target.value }))}
+                        placeholder="답변 직접 입력..."
+                        className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={resolvingReqId === req.id || !(replyDrafts[req.id] || '').trim()}
+                        onClick={() => actOnSuggestion(req.id, { reply: (replyDrafts[req.id] || '').trim() })}
+                        className="h-8 shrink-0 rounded-lg px-2.5 text-[11px] font-bold"
+                      >
+                        답변
+                      </Button>
+                      <Button
+                        size="sm"
+                        disabled={resolvingReqId === req.id}
+                        onClick={() => actOnSuggestion(req.id, { status: 'resolved', reply: (replyDrafts[req.id] || '').trim() || undefined })}
                         className="h-8 shrink-0 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700"
                       >
                         {resolvingReqId === req.id ? '처리 중' : '처리완료'}
