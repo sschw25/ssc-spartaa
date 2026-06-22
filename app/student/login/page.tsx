@@ -57,10 +57,10 @@ function StudentLoginForm() {
   };
 
   return (
-    <main className="min-h-[calc(100vh-4rem)] bg-[#F5F7FA] px-4 py-10 text-[#1D1D1F] md:min-h-[calc(100vh-5rem)] md:py-16">
+    <main className="flex min-h-[calc(100vh-4rem)] flex-col justify-center bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] px-4 py-10 text-[#1D1D1F] md:min-h-[calc(100vh-5rem)] md:py-16">
       <section className="mx-auto grid w-full max-w-5xl items-center gap-8 md:grid-cols-[1fr_420px]">
-        <div className="space-y-5">
-          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#111827] text-white shadow-lg">
+        <div className="hidden space-y-5 md:block">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0071E3] text-white shadow-lg">
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
@@ -124,14 +124,14 @@ function StudentLoginForm() {
                   />
                 </div>
                 <p className="text-xs leading-5 text-[#64748B]">
-                  비밀번호가 미설정되었거나 분실한 경우, 담당 선생님/어드민에게 문의하시기 바랍니다.
+                  비밀번호를 모르거나 분실한 경우, 담당 코치 선생님께 말씀해 주세요.
                 </p>
               </div>
 
               <Button
                 type="submit"
                 disabled={loading}
-                className="h-12 w-full rounded-xl bg-[#111827] text-sm font-bold text-white hover:bg-[#0F172A]"
+                className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-bold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
               >
                 {loading ? (
                   <>
@@ -156,7 +156,7 @@ function StudentLoginForm() {
 export default function StudentLoginPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-[#F5F7FA]">
+      <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF]">
         <Loader2 className="h-8 w-8 animate-spin text-[#0071E3]" />
       </div>
     }>

@@ -308,7 +308,7 @@ export default function ChungjuInterviewPage() {
                 민주성, 공정성, 청렴성 등 공직 가치 이해와 실제 경험 매핑. 업무 중 발생할 수 있는 딜레마(상사와의 갈등, 악성 민원 등) 논리적 해결 프로세스 제시.
               </p>
               <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
-                💻 실강 + 5단 답변 템일릿
+                💻 실강 + 5단 답변 템플릿
               </span>
             </div>
           </div>
@@ -338,7 +338,7 @@ export default function ChungjuInterviewPage() {
                 실전 면접장과 동일한 분위기 속에서 복장, 시선, 말투, 제스처 등 다차원 피드백 진행. 개별 약점 분석 및 최종 보완 가이드 제공.
               </p>
               <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-50 text-[#34C759]">
-                🎯 1:1 프리미엄 코칭
+                🎯 1:1 프리미엄 코칭 (선택 시)
               </span>
             </div>
           </div>

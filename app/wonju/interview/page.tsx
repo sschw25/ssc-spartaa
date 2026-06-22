@@ -338,7 +338,7 @@ export default function WonjuInterviewPage() {
                 실전 면접장과 동일한 분위기 속에서 복장, 시선, 말투, 제스처 등 다차원 피드백 진행. 개별 약점 분석 및 최종 보완 가이드 제공.
               </p>
               <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-50 text-[#34C759]">
-                🎯 1:1 프리미엄 코칭
+                🎯 1:1 프리미엄 코칭 (선택 시)
               </span>
             </div>
           </div>
@@ -418,6 +418,12 @@ export default function WonjuInterviewPage() {
                   <td className="py-4 px-6 font-semibold">원주 통합반 2차시 본수업</td>
                   <td className="py-4 px-6 text-[#0071E3] font-semibold">오전 09:30~12:30</td>
                   <td className="py-4 px-6">공채 및 교육행정 통합 수업 (공직가치관/상황질문 답변 공식)</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 font-semibold">7/24(금)</td>
+                  <td className="py-4 px-6">원주 2차 자율스터디</td>
+                  <td className="py-4 px-6">오전 09:30~12:30</td>
+                  <td className="py-4 px-6">스터디원 교대 모의면접 피드백 훈련</td>
                 </tr>
                 <tr className="bg-blue-50/20">
                   <td className="py-4 px-6 font-semibold text-[#0071E3]">7/28(화)</td>

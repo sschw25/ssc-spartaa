@@ -33,11 +33,12 @@ import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } from '@/lib/student-requests';
+import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
 import { toast } from 'sonner';
 import { 
   Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, 
   BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save,
-  ArrowLeft, Home, ChevronDown, ChevronUp
+  ArrowLeft, Home, ChevronDown, ChevronUp, History
 } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend } from 'recharts';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
@@ -182,6 +183,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [resolvingReqId, setResolvingReqId] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
   const [sentReplies, setSentReplies] = useState<Record<string, string>>({});
+  const [showHistory, setShowHistory] = useState(false);
   // 출결/순공 통계 + 휴가 신청 관련 상태
   const [studyStats, setStudyStats] = useState<any>(null);
   const [leaveRequestsLocal, setLeaveRequestsLocal] = useState<LeaveRequest[]>([]);
@@ -3071,11 +3073,37 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       return;
     }
 
+    const scoreVal = Number(gradeScore) || 0;
+
+    // 시험 유형 및 과목별 적정 만점(최대 한계값) 동적 판별
+    let maxAllowedScore = 100;
+    const testNameLower = gradeTestName.toLowerCase();
+    const subjectTrimmed = gradeSubject.trim();
+
+    if (testNameLower.includes('모의고사') || testNameLower.includes('모평') || testNameLower.includes('학평') || testNameLower.includes('수능')) {
+      if (testNameLower.includes('표점') || testNameLower.includes('표준점수')) {
+        maxAllowedScore = 200;
+      } else if (subjectTrimmed.includes('사탐') || subjectTrimmed.includes('과탐') || subjectTrimmed.includes('탐구') || subjectTrimmed === '한국사') {
+        maxAllowedScore = 50;
+      } else {
+        maxAllowedScore = 100;
+      }
+    } else if (testNameLower.includes('주간테스트') || testNameLower.includes('단원평가') || testNameLower.includes('일일테스트') || testNameLower.includes('테스트')) {
+      maxAllowedScore = 100;
+    } else {
+      maxAllowedScore = 200;
+    }
+
+    if (!Number.isFinite(scoreVal) || scoreVal < 0 || scoreVal > maxAllowedScore) {
+      toast.error(`점수를 0~${maxAllowedScore} 사이로 입력해 주세요. (판별된 시험/과목 만점: ${maxAllowedScore}점)`);
+      return;
+    }
+
     const newGrade: GradeItem = {
       id: `grade_${Date.now()}`,
       testName: gradeTestName,
       subject: gradeSubject,
-      score: Number(gradeScore) || 0,
+      score: scoreVal,
       date: gradeDate
     };
 
@@ -3808,6 +3836,128 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               </div>
             </div>
           )}
+
+          {/* 지난 요청/처리 내역 보기 */}
+          {(() => {
+            const resolvedRequests = (student.consultationLogs || [])
+              .filter(log => log.type === 'request' && log.status === 'resolved');
+            const resolvedSuggestions = (student.consultationLogs || [])
+              .filter(log => log.type === 'suggestion' && log.status === 'resolved');
+            const completedLeaves = (leaveRequestsLocal || [])
+              .filter(req => req.status !== 'pending');
+
+            const totalHistoryCount = resolvedRequests.length + resolvedSuggestions.length + completedLeaves.length;
+
+            if (totalHistoryCount === 0) return null;
+
+            return (
+              <div className="mb-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:border-slate-300"
+                >
+                  <div className="flex items-center gap-2">
+                    <History className="w-4 h-4 text-slate-400" />
+                    <span>지난 요청/처리 내역 <span className="font-normal text-slate-400">({totalHistoryCount}건)</span></span>
+                  </div>
+                  {showHistory
+                    ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+                    : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+                </button>
+
+                {showHistory && (
+                  <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 max-h-96 overflow-y-auto">
+                    {[
+                      ...resolvedRequests.map(r => ({ ...r, category: 'request' as const })),
+                      ...resolvedSuggestions.map(r => ({ ...r, category: 'suggestion' as const })),
+                      ...completedLeaves.map(r => ({
+                        id: r.id,
+                        date: r.date,
+                        createdAt: r.createdAt,
+                        manager: '학생 신청',
+                        content: r.reason || '(사유 없음)',
+                        type: 'leave' as const,
+                        category: 'leave' as const,
+                        leaveType: r.type,
+                        status: r.status,
+                        adminReply: r.adminReply,
+                        resolvedAt: r.reviewedAt,
+                      }))
+                    ]
+                      .sort((a, b) => {
+                        const timeA = a.createdAt || a.date || '';
+                        const timeB = b.createdAt || b.date || '';
+                        return timeB.localeCompare(timeA);
+                      })
+                      .map(item => (
+                        <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3 text-[11px] space-y-1.5">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                              {item.category === 'request' && (
+                                <>
+                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                    <MessageSquare className="w-2.5 h-2.5" />{getRequestTypeLabel(item.requestType)}
+                                  </span>
+                                  <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                    처리완료
+                                  </span>
+                                </>
+                              )}
+                              {item.category === 'suggestion' && (
+                                <>
+                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                    <MessageSquare className="w-2.5 h-2.5" />건의사항
+                                  </span>
+                                  <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                    처리완료
+                                  </span>
+                                </>
+                              )}
+                              {item.category === 'leave' && (
+                                <>
+                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                    <Calendar className="w-2.5 h-2.5" />{LEAVE_TYPES[item.leaveType!]?.icon} {getLeaveTypeLabel(item.leaveType!)}
+                                  </span>
+                                  {item.status === 'approved' ? (
+                                    <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                      승인
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-bold text-red-600">
+                                      반려
+                                    </span>
+                                  )}
+                                </>
+                              )}
+                              <span className="shrink-0 text-[10px] font-semibold text-slate-400">{item.date}</span>
+                            </span>
+                            {item.resolvedAt && (
+                              <span className="shrink-0 text-[10px] font-semibold text-slate-400 whitespace-nowrap">
+                                {new Date(item.resolvedAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })} 처리
+                              </span>
+                            )}
+                          </div>
+                          {item.content && item.content !== '(사유 없음)' && (
+                            <p className="whitespace-pre-wrap break-words text-slate-600">{item.content}</p>
+                          )}
+                          {!item.content || item.content === '(사유 없음)' ? (
+                            <p className="text-slate-400 italic">(내용 없음)</p>
+                          ) : null}
+                          {item.adminReply && (
+                            <div className="flex items-start gap-1.5 rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                              <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                              <span>{item.adminReply}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">

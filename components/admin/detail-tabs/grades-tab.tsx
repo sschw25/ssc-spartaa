@@ -75,6 +75,18 @@ export function GradesTab({
                 <YAxis domain={[0, 100]} tick={{ fontSize: 9 }} />
                 <Tooltip contentStyle={{ fontSize: '10px', borderRadius: '8px' }} />
                 <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: 10 }} />
+                {gradeFilter === '전체' && (
+                  <Line
+                    type="monotone"
+                    dataKey="추세선"
+                    name="5회 가중평균 추세 (전체)"
+                    stroke="#86868B"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    dot={false}
+                    connectNulls={true}
+                  />
+                )}
                 {gradeSubjects
                   .filter(s => gradeFilter === '전체' || s === gradeFilter)
                   .map((subject, idx) => {

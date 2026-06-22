@@ -338,7 +338,7 @@ export default function ChuncheonInterviewPage() {
                 실전 면접장과 동일한 분위기 속에서 복장, 시선, 말투, 제스처 등 다차원 피드백 진행. 개별 약점 분석 및 최종 보완 가이드 제공.
               </p>
               <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-50 text-[#34C759]">
-                🎯 1:1 프리미엄 코칭
+                🎯 1:1 프리미엄 코칭 (선택 시)
               </span>
             </div>
           </div>
