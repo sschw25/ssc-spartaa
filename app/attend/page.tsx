@@ -216,8 +216,8 @@ function AttendInner() {
                 onClick={() => submitAction('return')}
                 className={`flex h-16 flex-col items-center justify-center rounded-2xl text-xs font-bold transition active:scale-[0.98] ${
                   checkedIn
-                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                    : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-md shadow-indigo-600/20'
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                    : 'bg-blue-600 text-white hover:bg-blue-700 shadow-md shadow-blue-600/20'
                 }`}
               >
                 복귀하기

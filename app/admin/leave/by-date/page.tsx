@@ -466,14 +466,14 @@ export default function AdminLeaveByDatePage() {
                   const typeAccent: Record<LeaveType, string> = {
                     morning:   'bg-sky-500',
                     afternoon: 'bg-orange-400',
-                    night:     'bg-violet-500',
+                    night:     'bg-emerald-500',
                     fullday:   'bg-slate-500',
                     sick:      'bg-rose-500',
                   };
                   const typeChip: Record<LeaveType, string> = {
                     morning:   'bg-sky-50 text-sky-700 border-sky-200/60',
                     afternoon: 'bg-orange-50 text-orange-700 border-orange-200/60',
-                    night:     'bg-violet-50 text-violet-700 border-violet-200/60',
+                    night:     'bg-emerald-50 text-emerald-700 border-emerald-200/60',
                     fullday:   'bg-slate-50 text-slate-700 border-slate-200/60',
                     sick:      'bg-rose-50 text-rose-700 border-rose-200/60',
                   };

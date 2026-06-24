@@ -320,7 +320,7 @@ export default function AttendKioskPage() {
                         submitPhone(undefined, 'return');
                       }}
                       disabled={phone.length < 4}
-                      className="flex h-14 items-center justify-center rounded-xl bg-indigo-600 text-base font-black text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                      className="flex h-14 items-center justify-center rounded-xl bg-blue-600 text-base font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
                     >
                       복귀
                     </button>
@@ -334,14 +334,14 @@ export default function AttendKioskPage() {
                     <span
                       className={`mb-4 grid size-20 place-items-center rounded-full ${
                         action === 'check-in' ? 'bg-emerald-500/10 text-emerald-400' :
-                        action === 'return' ? 'bg-indigo-500/10 text-indigo-400' :
+                        action === 'return' ? 'bg-blue-500/10 text-blue-400' :
                         action === 'check-out' ? 'bg-sky-500/10 text-sky-400' : 'bg-amber-500/10 text-amber-400'
                       }`}
                     >
                       {action === 'check-out' || action === 'outing' ? (
                         <LogOut className={`size-10 ${action === 'outing' ? 'text-amber-400' : 'text-sky-400'}`} />
                       ) : (
-                        <CheckCircle2 className={`size-10 ${action === 'return' ? 'text-indigo-400' : 'text-emerald-400'}`} />
+                        <CheckCircle2 className={`size-10 ${action === 'return' ? 'text-blue-400' : 'text-emerald-400'}`} />
                       )}
                     </span>
                     <h2 className="text-2xl font-black tracking-tight">
