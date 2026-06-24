@@ -3,7 +3,7 @@
 import React from 'react';
 import { Clock, CalendarDays, Trophy, Flame } from 'lucide-react';
 
-interface StudyStats {
+export interface StudyStats {
   weekTotalMin: number;
   monthTotalMin: number;
   byWeekday: { label: string; min: number }[];
