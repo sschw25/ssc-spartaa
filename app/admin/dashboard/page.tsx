@@ -38,7 +38,6 @@ export default function AdminDashboardPage() {
 
   // 모달 제어 상태
   const [analysisTarget, setAnalysisTarget] = useState<{ type: 'subject' | 'book'; name: string } | null>(null);
-  const [enrollmentModal, setEnrollmentModal] = useState<'expired' | 'warning' | null>(null);
   // 출결 위젯 새로고침 신호
   const [attendanceRefresh, setAttendanceRefresh] = useState(0);
 
@@ -728,7 +727,7 @@ export default function AdminDashboardPage() {
 
             {/* 만료 경고 — 빨강 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card onClick={() => setEnrollmentModal('expired')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${expiredStudents.length > 0 ? 'bg-gradient-to-br from-red-50 to-red-100/60 border-red-200/60' : 'bg-gradient-to-br from-white to-[#FFF5F5] border-black/[0.04]'}`}>
+            <Card onClick={() => router.push('/admin/enrollment-expired')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${expiredStudents.length > 0 ? 'bg-gradient-to-br from-red-50 to-red-100/60 border-red-200/60' : 'bg-gradient-to-br from-white to-[#FFF5F5] border-black/[0.04]'}`}>
               <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
                 <XCircle className="w-16 h-16 text-red-500" />
               </div>
@@ -749,7 +748,7 @@ export default function AdminDashboardPage() {
 
             {/* 재등록 임박 — 주황 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card onClick={() => setEnrollmentModal('warning')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${renewalWarnStudents.length > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-100/50 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}>
+            <Card onClick={() => router.push('/admin/enrollment-warning')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${renewalWarnStudents.length > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-100/50 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}>
               <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
                 <Clock className="w-16 h-16 text-amber-500" />
               </div>
@@ -1022,56 +1021,6 @@ export default function AdminDashboardPage() {
 
       </main>
 
-      {/* 등록 만료/임박 더보기 모달 */}
-      {enrollmentModal && (
-        <div
-          onClick={() => setEnrollmentModal(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-fadeIn"
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in-up"
-          >
-            <div className={`flex items-center justify-between p-5 border-b ${enrollmentModal === 'expired' ? 'border-red-100 bg-red-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
-              <div>
-                <p className={`text-[10px] font-extrabold uppercase tracking-wider ${enrollmentModal === 'expired' ? 'text-red-500' : 'text-amber-600'}`}>
-                  {enrollmentModal === 'expired' ? '경고 · 만료 초과' : '주의 · 재등록 임박'}
-                </p>
-                <h3 className="text-base font-black text-[#1D1D1F] mt-0.5">
-                  {enrollmentModal === 'expired'
-                    ? `만료 경고 — ${expiredStudents.length}명`
-                    : `재등록 임박 — ${renewalWarnStudents.length}명 (${RENEWAL_WARN_DAYS}일 이내)`}
-                </h3>
-              </div>
-              <button onClick={() => setEnrollmentModal(null)} className="p-2 rounded-full bg-black/[0.04] hover:bg-black/[0.08] transition-colors">
-                <X className="w-4 h-4 text-[#86868B]" />
-              </button>
-            </div>
-            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-2">
-              {(enrollmentModal === 'expired' ? expiredStudents : renewalWarnStudents).length === 0 ? (
-                <p className="text-sm text-[#86868B] text-center py-8">해당 원생이 없습니다.</p>
-              ) : (enrollmentModal === 'expired' ? expiredStudents : renewalWarnStudents).map(s => {
-                const d = enrollmentDaysLeft(s.enrollmentEndDate);
-                return (
-                  <div
-                    key={s.id}
-                    onClick={() => { handleOpenStudentById(s.id); setEnrollmentModal(null); }}
-                    className="flex items-center justify-between rounded-2xl border border-black/[0.04] bg-[#F5F5F7] hover:bg-[#EAEAEA] px-4 py-3 cursor-pointer transition-colors"
-                  >
-                    <div>
-                      <p className="text-sm font-black text-[#1D1D1F]">{s.name}</p>
-                      <p className="text-[11px] text-[#86868B] font-semibold mt-0.5">{getCampusLabel(s.campus)} · {s.enrollmentEndDate}</p>
-                    </div>
-                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl ${d !== null && d < 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
-                      {d !== null && d < 0 ? `만료 ${Math.abs(d)}일` : `D-${d}`}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 7. 과목/교재 학습 현황 분석 모달 */}
       {analysisTarget && analysisData && (

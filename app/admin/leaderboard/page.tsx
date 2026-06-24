@@ -18,14 +18,14 @@ interface Data {
   rows?: Row[];
 }
 
-const campusLabel = (v: string) => ({ wonju: '?�주', chuncheon: '춘천', chungju: '충주' } as Record<string, string>)[v] || '기�?';
+const campusLabel = (v: string) => ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' } as Record<string, string>)[v] || '기타';
 const fmt = (m: number) => {
-  if (!m || m <= 0) return '0�?;
+  if (!m || m <= 0) return '0분';
   const h = Math.floor(m / 60);
   const min = m % 60;
-  return h > 0 ? `${h}?�간 ${min}�? : `${min}�?;
+  return h > 0 ? `${h}시간 ${min}분` : `${min}분`;
 };
-const medal = (rank: number) => (rank === 1 ? '?��' : rank === 2 ? '?��' : rank === 3 ? '?��' : `${rank}`);
+const medal = (rank: number) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`);
 
 export default function WeeklyLeaderboardPage() {
   const router = useRouter();
@@ -45,10 +45,10 @@ export default function WeeklyLeaderboardPage() {
       if (res.ok && json.success) {
         setData(json);
       } else {
-        setError(json.message || '??�� ?�이?��? 불러?��? 못했?�니??');
+        setError(json.message || '랭킹 데이터를 불러오지 못했습니다.');
       }
     } catch {
-      setError('?�트?�크 ?�류�??�이?��? 불러?��? 못했?�니??');
+      setError('네트워크 오류로 데이터를 불러오지 못했습니다.');
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ export default function WeeklyLeaderboardPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B] font-bold">주간 ?�공 ??�� 불러?�는 �?..</p>
+        <p className="text-sm text-[#86868B] font-bold">주간 순공 랭킹 불러오는 중...</p>
       </div>
     );
   }
@@ -86,7 +86,7 @@ export default function WeeklyLeaderboardPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans p-4 text-center">
         <p className="text-sm text-red-600 font-bold mb-4">{error}</p>
-        <Button onClick={load} className="rounded-xl font-bold bg-[#1D1D1F] text-white">?�시 ?�도</Button>
+        <Button onClick={load} className="rounded-xl font-bold bg-[#1D1D1F] text-white">다시 시도</Button>
       </div>
     );
   }
@@ -94,7 +94,8 @@ export default function WeeklyLeaderboardPage() {
   const allRows = data?.rows || [];
   const scopedRows = allRows.filter((r) => campusFilter === 'all' || r.campus === campusFilter);
   
-  // 검?�어 ?�터�?  const filteredRows = scopedRows.filter((r) => 
+  // 검색어 필터링
+  const filteredRows = scopedRows.filter((r) => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
   ).map((r, index) => ({ ...r, rank: index + 1 }));
 
@@ -123,9 +124,9 @@ export default function WeeklyLeaderboardPage() {
   return (
     <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10">
       <AdminTopNav
-        title="주간 ?�공 ?�간 ?�세 분석"
+        title="주간 순공 시간 상세 분석"
         titleIcon={<Trophy className="w-4 h-4 text-[#F56300]" />}
-        campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '?�체' : campusLabel(c) }))}
+        campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}
         campusValue={campusFilter}
         onCampusChange={setCampusFilter}
         actions={
@@ -134,59 +135,61 @@ export default function WeeklyLeaderboardPage() {
             variant="outline"
             onClick={load}
             className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
-            title="?�로고침"
+            title="새로고침"
           >
             <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline font-bold">?�로고침</span>
+            <span className="hidden sm:inline font-bold">새로고침</span>
           </Button>
         }
       />
 
       <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-        {/* KPI 메트�??�약 카드 */}
+        {/* KPI 메트릭 요약 카드 */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
             <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
               <Activity className="w-16 h-16 text-emerald-500" />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">?�적 ?�습 ?�원</span>
+              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">누적 학습 인원</span>
               {liveCount > 0 && (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               )}
             </div>
             <div className="mt-3 flex items-baseline">
               <span className="text-3xl font-black tracking-tight text-emerald-600">{studiedCount}</span>
-              <span className="text-xs font-bold text-emerald-600/80 ml-1">�?/span>
+              <span className="text-xs font-bold text-emerald-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              ?�번 �??�공 ?�간??기록???�생 ??            </p>
+              이번 주 순공 시간이 기록된 원생 수
+            </p>
           </Card>
 
           <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
             <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
               <Flame className="w-16 h-16 text-amber-500" />
             </div>
-            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">미학???�원</span>
+            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">미학습 인원</span>
             <div className="mt-3 flex items-baseline">
               <span className="text-3xl font-black tracking-tight text-amber-600">{notStudiedCount}</span>
-              <span className="text-xs font-bold text-amber-600/80 ml-1">�?/span>
+              <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              ?�적 ?�공 ?�간??0분인 ?�생 ??            </p>
+              누적 순공 시간이 0분인 원생 수
+            </p>
           </Card>
 
           <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
             <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
               <Clock className="w-16 h-16 text-blue-500" />
             </div>
-            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">?�균 ?�습 ?�간</span>
+            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">평균 학습 시간</span>
             <div className="mt-3 flex items-baseline">
               <span className="text-3xl font-black tracking-tight text-blue-600">{Math.floor(avgWeekMin / 60)}</span>
-              <span className="text-xs font-bold text-blue-600/80 ml-1">?�간 {avgWeekMin % 60}�?/span>
+              <span className="text-xs font-bold text-blue-600/80 ml-1">시간 {avgWeekMin % 60}분</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              ?�체 ?�강?�의 주간 ?�균 ?�공 ?�간
+              전체 수강생의 주간 평균 순공 시간
             </p>
           </Card>
 
@@ -194,29 +197,30 @@ export default function WeeklyLeaderboardPage() {
             <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
               <Award className="w-16 h-16 text-blue-500" />
             </div>
-            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">?�시�?몰입 ?�원</span>
+            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">실시간 몰입 인원</span>
             <div className="mt-3 flex items-baseline">
               <span className="text-3xl font-black tracking-tight text-blue-600">{liveCount}</span>
-              <span className="text-xs font-bold text-blue-600/80 ml-1">�?/span>
+              <span className="text-xs font-bold text-blue-600/80 ml-1">명</span>
             </div>
             <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              ?�재 ?�원 중인 ?�시�??�습????            </p>
+              현재 등원 중인 실시간 학습자 수
+            </p>
           </Card>
         </div>
 
-        {/* ??�� ?�세 리스???�이�?*/}
+        {/* 랭킹 상세 리스트 테이블 */}
         <Card className="border border-black/[0.04] rounded-3xl bg-white shadow-sm overflow-hidden text-left">
           <CardHeader className="p-6 pb-4 border-b border-black/[0.03] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-sm font-black text-[#1D1D1F]">주간 ?�공 ?�세 ?�위??/CardTitle>
-              <CardDescription className="text-xs text-[#86868B] font-semibold mt-1">캠퍼?�별 ?�생?�의 ?�적 ?�공 ?�간 ??��?�니??</CardDescription>
+              <CardTitle className="text-sm font-black text-[#1D1D1F]">주간 순공 상세 순위표</CardTitle>
+              <CardDescription className="text-xs text-[#86868B] font-semibold mt-1">캠퍼스별 원생들의 누적 순공 시간 랭킹입니다.</CardDescription>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative w-full sm:w-60">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#86868B]" />
                 <Input
                   type="text"
-                  placeholder="?�름?�로 검??.."
+                  placeholder="이름으로 검색..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 pr-4 py-2 rounded-xl text-xs border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] bg-[#F5F5F7]/50 w-full"
@@ -232,19 +236,19 @@ export default function WeeklyLeaderboardPage() {
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="bg-black/[0.02] text-[#86868B] font-extrabold border-b border-black/[0.04]">
-                    <th className="px-6 py-3.5 w-16 text-center">?�위</th>
-                    <th className="px-6 py-3.5">?�생 ?�보</th>
-                    <th className="px-6 py-3.5">캠퍼??/th>
-                    <th className="px-6 py-3.5">?�시�??�태</th>
-                    <th className="px-6 py-3.5">?�늘 ?�습 ?�간</th>
-                    <th className="px-6 py-3.5">주간 ?�적 ?�공</th>
+                    <th className="px-6 py-3.5 w-16 text-center">순위</th>
+                    <th className="px-6 py-3.5">원생 정보</th>
+                    <th className="px-6 py-3.5">캠퍼스</th>
+                    <th className="px-6 py-3.5">실시간 상태</th>
+                    <th className="px-6 py-3.5">오늘 학습 시간</th>
+                    <th className="px-6 py-3.5">주간 누적 순공</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRows.length === 0 ? (
                     <tr>
                       <td colSpan={6} className="text-[11px] text-[#86868B] font-semibold text-center py-12">
-                        ?�시????�� ?�보가 ?�습?�다.
+                        표시할 랭킹 정보가 없습니다.
                       </td>
                     </tr>
                   ) : (
@@ -256,7 +260,7 @@ export default function WeeklyLeaderboardPage() {
                       >
                         <td className="px-6 py-4 text-center">
                           <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] shrink-0 border ${getRankBadgeStyle(student.rank, student.weekMinutes > 0)}`}>
-                            {student.weekMinutes > 0 ? (student.rank <= 3 ? medal(student.rank) : student.rank) : '??}
+                            {student.weekMinutes > 0 ? (student.rank <= 3 ? medal(student.rank) : student.rank) : '–'}
                           </span>
                         </td>
                         <td className="px-6 py-4 font-bold text-[#1D1D1F]">{student.name}</td>
@@ -265,10 +269,11 @@ export default function WeeklyLeaderboardPage() {
                           {student.isOpen ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                              ?�습�?                            </span>
+                              학습중
+                            </span>
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] border border-black/[0.03] px-2 py-0.5 rounded-full">
-                              ?�출/?�원
+                              외출/하원
                             </span>
                           )}
                         </td>
@@ -276,7 +281,7 @@ export default function WeeklyLeaderboardPage() {
                           {student.dayMinutes > 0 ? fmt(student.dayMinutes) : '-'}
                         </td>
                         <td className="px-6 py-4 font-black text-slate-800">
-                          {student.weekMinutes > 0 ? fmt(student.weekMinutes) : <span className="text-amber-600 font-semibold">미학??/span>}
+                          {student.weekMinutes > 0 ? fmt(student.weekMinutes) : <span className="text-amber-600 font-semibold">미학습</span>}
                         </td>
                       </tr>
                     ))
