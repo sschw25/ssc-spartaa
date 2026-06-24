@@ -3,6 +3,15 @@ import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { getStudentsSummary, getStudentAuthRecords } from '@/lib/store';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { signStudentSession, STUDENT_SESSION_COOKIE } from '@/lib/auth';
+
+const SESSION_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 60 * 60 * 24 * 30,
+  path: '/',
+};
 
 const normalizeName = (value: unknown) =>
   String(value || '').trim().replace(/\s+/g, '').toLowerCase();
@@ -57,13 +66,7 @@ export async function POST(request: Request) {
 
       const me = verified[0];
       const cookieStore = await cookies();
-      cookieStore.set('student-session', me.id, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24 * 30,
-        path: '/',
-      });
+      cookieStore.set(STUDENT_SESSION_COOKIE, signStudentSession(me.id), SESSION_COOKIE_OPTS);
       return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
     }
 
@@ -84,13 +87,7 @@ export async function POST(request: Request) {
           }
           const me = verified[0];
           const cookieStore = await cookies();
-          cookieStore.set('student-session', me.id, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 30,
-            path: '/',
-          });
+          cookieStore.set(STUDENT_SESSION_COOKIE, signStudentSession(me.id), SESSION_COOKIE_OPTS);
           return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
         }
       }
@@ -113,13 +110,7 @@ export async function POST(request: Request) {
           }
           const student = matches[0];
           const cookieStore = await cookies();
-          cookieStore.set('student-session', student.id, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 60 * 60 * 24 * 30,
-            path: '/',
-          });
+          cookieStore.set(STUDENT_SESSION_COOKIE, signStudentSession(student.id), SESSION_COOKIE_OPTS);
           return NextResponse.json({
             success: true,
             studentName: student.name,

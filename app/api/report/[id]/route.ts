@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { compare } from 'bcryptjs';
 import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
-import { canViewStudent, getStudentSessionId, isAdmin } from '@/lib/auth';
+import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
 import type { Student } from '@/lib/types/student';
 
@@ -74,16 +74,15 @@ export async function GET(
           { status: 403 }
         );
       }
-      if (student.sharePasswordHash) {
-        const ok = sharePasswordInput
-          ? await compare(sharePasswordInput, student.sharePasswordHash)
-          : false;
-        if (!ok) {
-          return NextResponse.json(
-            { success: false, message: '비밀번호가 올바르지 않습니다.' },
-            { status: 403 }
-          );
-        }
+      // hash가 없으면(레거시/부분저장) 무검사 통과가 아니라 안전 실패(deny)로 처리
+      const passwordOk = student.sharePasswordHash
+        ? await compare(sharePasswordInput, student.sharePasswordHash)
+        : false;
+      if (!passwordOk) {
+        return NextResponse.json(
+          { success: false, message: '비밀번호가 올바르지 않습니다.' },
+          { status: 403 }
+        );
       }
       // 학부모용 마스킹 데이터 반환 (학생 전용 정보 제외)
       const maskedStudent = buildMaskedStudent(student, 'parent');
@@ -105,21 +104,16 @@ export async function GET(
     }
   }
 
-  // 학생용 결과지는 본인 학생 또는 관리자만 열람 가능.
-  if (audience === 'student' && !(await canViewStudent(id))) {
+  // 토큰이 없는 직접 접근(학생/학부모 공통)은 본인 학생 또는 관리자만 허용한다.
+  // 공개 학부모 공유는 반드시 유효 share-token + 비밀번호 경로(위 분기)로만 접근해야 한다.
+  // (과거: 세션 없는 익명 학부모 접근을 허용해 학생 id만 알면 PII가 노출되는 IDOR가 있었음)
+  if (!(await canViewStudent(id))) {
     return NextResponse.json(
-      { success: false, message: '열람 권한이 없습니다. 학생 본인으로 로그인해 주세요.' },
+      {
+        success: false,
+        message: '열람 권한이 없습니다. 공유 링크(비밀번호)로 접속하거나 본인 계정으로 로그인해 주세요.',
+      },
       { status: 401 }
-    );
-  }
-
-  // 학부모용 결과지도 만약 학생 세션이 활성화되어 있다면, 타인 리포트 조회를 차단 (IDOR 방지)
-  // (세션이 없는 비로그인 상태의 학부모 접근은 허용)
-  const studentSessionId = await getStudentSessionId();
-  if (studentSessionId && studentSessionId !== id && !(await isAdmin())) {
-    return NextResponse.json(
-      { success: false, message: '열람 권한이 없습니다. 다른 학생의 결과지입니다.' },
-      { status: 403 }
     );
   }
 

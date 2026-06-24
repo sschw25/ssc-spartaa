@@ -11,10 +11,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '잘못된 요청입니다.' }, { status: 400 });
   }
 
-  const sessionStudentId = await getStudentSessionId();
-  const studentId = sessionStudentId || String(body?.studentId ?? '').trim();
+  // studentId는 반드시 검증된 세션에서만 유도한다(클라이언트 body 폴백 금지 — IDOR 방지)
+  const studentId = await getStudentSessionId();
   if (!studentId) {
-    return NextResponse.json({ success: false, message: '학생 정보를 확인할 수 없습니다.' }, { status: 401 });
+    return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
   const message = String(body?.message ?? '').trim();
@@ -48,10 +48,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const sessionStudentId = await getStudentSessionId();
-  const studentId = sessionStudentId || String(req.nextUrl.searchParams.get('studentId') ?? '').trim();
+  // studentId는 반드시 검증된 세션에서만 유도한다(쿼리 폴백 금지 — IDOR 방지)
+  const studentId = await getStudentSessionId();
   if (!studentId) {
-    return NextResponse.json({ success: false, message: '학생 정보를 확인할 수 없습니다.' }, { status: 401 });
+    return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
   const id = req.nextUrl.searchParams.get('id');
