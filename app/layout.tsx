@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SiteChrome } from '@/components/ssc/site-chrome'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 const inter = Inter({
@@ -54,6 +55,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <SiteChrome>{children}</SiteChrome>
         </ThemeProvider>
+        <Toaster richColors position="top-center" />
         <Analytics />
       </body>
     </html>
