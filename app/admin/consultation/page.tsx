@@ -30,7 +30,7 @@ export default function AdminConsultationPage() {
     <Suspense fallback={
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B]">상담일지 로드 중...</p>
+        <p className="text-sm text-[#86868B]">?�담?��? 로드 �?..</p>
       </div>
     }>
       <ConsultationContent />
@@ -52,7 +52,7 @@ function ConsultationContent() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 검색 & 필터 상태
+  // 검??& ?�터 ?�태
   const [searchTerm, setSearchTerm] = useState('');
   const [campusFilter, setCampusFilter] = useState('all');
   const [campusFilterStorageKey, setCampusFilterStorageKey] = useState('');
@@ -61,31 +61,29 @@ function ConsultationContent() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [progressSort, setProgressSort] = useState<'shortage' | 'status' | 'name'>('shortage');
 
-  // 300명+ 대비 점진적 렌더링(더 보기)
+  // 300�? ?��??�진???�더�???보기)
   const PAGE_SIZE = 50;
   const [studentLimit, setStudentLimit] = useState(PAGE_SIZE);
   const [progressLimit, setProgressLimit] = useState(PAGE_SIZE);
   const [progressDrafts, setProgressDrafts] = useState<Record<string, number>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // 디바운스 자동저장 타이머 & 최신 상태 Ref 관리
-  const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
+  // ?�바?�스 ?�동?�???�?�머 & 최신 ?�태 Ref 관�?  const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
   const studentsRef = useRef<Student[]>([]);
 
   useEffect(() => {
     studentsRef.current = students;
   }, [students]);
 
-  // 검색/필터/정렬이 바뀌면 "더 보기" 누적을 초기화해 상위 결과부터 보이게
-  useEffect(() => {
+  // 검???�터/?�렬??바뀌면 "??보기" ?�적??초기?�해 ?�위 결과부??보이�?  useEffect(() => {
     setStudentLimit(PAGE_SIZE);
     setProgressLimit(PAGE_SIZE);
   }, [searchTerm, campusFilter, quickFilter, progressSort]);
 
-  // 모달 제어 상태
+  // 모달 ?�어 ?�태
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // 1. 인증 체크
+  // 1. ?�증 체크
   useEffect(() => {
     async function verifyAuth() {
       try {
@@ -102,7 +100,7 @@ function ConsultationContent() {
           setCampusFilter(savedCampusFilter);
         }
         setCampusFilterStorageKey(storageKey);
-        // 인증 성공 시 데이터 로드
+        // ?�증 ?�공 ???�이??로드
         await loadStudents();
       } catch (err) {
         router.replace('/admin');
@@ -118,7 +116,7 @@ function ConsultationContent() {
     window.localStorage.setItem(campusFilterStorageKey, campusFilter);
   }, [campusFilter, campusFilterStorageKey]);
 
-  // 2. 파라미터 처리
+  // 2. ?�라미터 처리
   useEffect(() => {
     if (filterParam) {
       if (filterParam === 'consultation') {
@@ -154,7 +152,7 @@ function ConsultationContent() {
     }
   }, [studentIdParam, students]);
 
-  // 3. 학생 데이터 로드
+  // 3. ?�생 ?�이??로드
   const loadStudents = async () => {
     setLoading(true);
     try {
@@ -168,25 +166,25 @@ function ConsultationContent() {
           setStudents(json.data || []);
         }
       } else {
-        toast.error('학생 데이터를 가져오는 데 실패했습니다.');
+        toast.error('?�생 ?�이?��? 가?�오?????�패?�습?�다.');
       }
     } catch (err) {
-      toast.error('네트워크 에러가 발생했습니다.');
+      toast.error('?�트?�크 ?�러가 발생?�습?�다.');
     } finally {
       setLoading(false);
     }
   };
 
-  // 4. 로그아웃
+  // 4. 로그?�웃
   const handleLogout = async () => {
     try {
       const res = await fetch('/api/admin/auth/logout', { method: 'POST' });
       if (res.ok) {
-        toast.success('로그아웃 되었습니다.');
+        toast.success('로그?�웃 ?�었?�니??');
         router.replace('/admin');
       }
     } catch (err) {
-      toast.error('로그아웃 실패');
+      toast.error('로그?�웃 ?�패');
     }
   };
 
@@ -243,7 +241,7 @@ function ConsultationContent() {
 
   const getProgressDraftKey = (studentId: string, itemId: string) => `${studentId}_${itemId}`;
 
-  // 5. 진도율 테이블 퀵 조절용 API 호출
+  // 5. 진도???�이�???조절??API ?�출
   const handleQuickAdjustProgress = async (
     studentId: string,
     itemType: 'book' | 'lecture',
@@ -319,7 +317,7 @@ function ConsultationContent() {
       updatedAt: nowStr
     };
 
-    // 로컬 상태 즉각 반영 (Optimistic UI)
+    // 로컬 ?�태 즉각 반영 (Optimistic UI)
     setStudents(prev => prev.map(s => s.id === studentId ? updatedStudent : s));
     setProgressDrafts(prev => {
       const next = { ...prev };
@@ -331,7 +329,7 @@ function ConsultationContent() {
       clearTimeout(debounceTimersRef.current[studentId]);
     }
 
-    // 0.5초 디바운스 대기 후 구글 시트에 최종 데이터 전송
+    // 0.5�??�바?�스 ?��???구�? ?�트??최종 ?�이???�송
     debounceTimersRef.current[studentId] = setTimeout(async () => {
       const currentStudent = studentsRef.current.find(s => s.id === studentId);
       if (!currentStudent) return;
@@ -344,41 +342,40 @@ function ConsultationContent() {
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          toast.error('구글 시트 진도 동기화에 실패했습니다.');
-          loadStudents(); // 실패 시 롤백
+          toast.error('구�? ?�트 진도 ?�기?�에 ?�패?�습?�다.');
+          loadStudents(); // ?�패 ??롤백
         }
       } catch (err) {
-        toast.error('네트워크 에러로 구글 시트 동기화에 실패했습니다.');
+        toast.error('?�트?�크 ?�러�?구�? ?�트 ?�기?�에 ?�패?�습?�다.');
         loadStudents();
       }
     }, 500);
   };
 
-  // 데이터 가공 및 통계 계산
+  // ?�이??가�?�??�계 계산
   const campusScopedStudents = students.filter(s => campusFilter === 'all' || s.campus === campusFilter);
-  const selectedCampusLabel = campusFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(campusFilter);
+  const selectedCampusLabel = campusFilter === 'all' ? '?�체 캠퍼?? : getCampusLabel(campusFilter);
   
-  // 오늘 상담이 예정되었거나 지난 학생들
-  const todayStr = new Date().toISOString().split('T')[0];
+  // ?�늘 ?�담???�정?�었거나 지???�생??  const todayStr = new Date().toISOString().split('T')[0];
   const pendingConsultationStudents = campusScopedStudents.filter(s => {
     if (!s.nextConsultationDate) return false;
     return s.nextConsultationDate <= todayStr;
   });
 
-  // 진도 관리 항목 단일 소스 (과목 기반)
+  // 진도 관�???�� ?�일 ?�스 (과목 기반)
   const allProgressItems = getManagedProgressItems(campusScopedStudents);
 
   function getCampusLabel(val: string) {
     switch(val) {
-      case 'wonju': return '원주';
+      case 'wonju': return '?�주';
       case 'chuncheon': return '춘천';
       case 'chungju': return '충주';
-      default: return '기타';
+      default: return '기�?';
     }
   }
 
-  // 캠퍼스는 분류(식별)용이라 의미색(초록=양호/파랑=정보)과 분리해 중립 스타일로 통일.
-  // 식별은 뱃지 텍스트(원주/춘천/충주)가 담당하며, 앱 전반의 캠퍼스 표기(회색)와도 일치.
+  // 캠퍼?�는 분류(?�별)?�이???��???초록=?�호/?�랑=?�보)�?분리??중립 ?��??�로 ?�일.
+  // ?�별?� 뱃�? ?�스???�주/춘천/충주)가 ?�당?�며, ???�반??캠퍼???�기(?�색)?�???�치.
   const getCampusBadgeColor = (_val: string) => 'bg-[#F5F5F7] text-[#86868B] border-black/[0.06]';
 
   const getStudentSubjectSummaries = (student: Student) => {
@@ -414,7 +411,7 @@ function ConsultationContent() {
             title: lecture.name,
             current: lecture.completedLectures,
             total: lecture.totalLectures,
-            unit: '강',
+            unit: '�?,
             updatedAt: lecture.updatedAt,
             targetDate: lecture.targetDate,
             percent: lecture.totalLectures > 0 ? Math.round((lecture.completedLectures / lecture.totalLectures) * 100) : 0,
@@ -440,7 +437,7 @@ function ConsultationContent() {
       .slice(0, 3);
   };
 
-  // 검색 및 필터링된 학생 목록
+  // 검??�??�터링된 ?�생 목록
   const filteredStudents = campusScopedStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -455,11 +452,10 @@ function ConsultationContent() {
     return matchesSearch && matchesQuickFilter;
   });
 
-  // 상태 우선순위 (부족 → 진행중 → 충족 → 계획없음)
+  // ?�태 ?�선?�위 (부�???진행�???충족 ??계획?�음)
   const statusRank: Record<string, number> = { behind: 0, 'on-track': 1, ahead: 2, 'no-plan': 3 };
 
-  // 필터링 + 정렬된 전체 교재 진도 아이템
-  const filteredProgressItems = allProgressItems
+  // ?�터�?+ ?�렬???�체 교재 진도 ?�이??  const filteredProgressItems = allProgressItems
     .filter(item => {
       const matchesSearch = item.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             item.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -499,20 +495,20 @@ function ConsultationContent() {
 
   const getProgressStatusLabel = (status: string) => {
     switch (status) {
-      case 'behind': return '부족';
+      case 'behind': return '부�?;
       case 'ahead': return '충족';
-      case 'on-track': return '진행중';
-      default: return '계획 없음';
+      case 'on-track': return '진행�?;
+      default: return '계획 ?�음';
     }
   };
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10 transition-all animate-fade-in-up">
+    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10">
       
       {/* Navbar */}
       <AdminTopNav
-        title="상담일지 및 진도 관리"
-        campusOptions={CAMPUS_FILTERS.map((c) => ({ value: c, label: c === 'all' ? '전체' : getCampusLabel(c) }))}
+        title="?�담?��? �?진도 관�?
+        campusOptions={CAMPUS_FILTERS.map((c) => ({ value: c, label: c === 'all' ? '?�체' : getCampusLabel(c) }))}
         campusValue={campusFilter}
         onCampusChange={handleCampusFilterChange}
         onStudentSearch={handleFocusSearch}
@@ -525,30 +521,30 @@ function ConsultationContent() {
               variant="outline"
               onClick={handleFocusSearch}
               className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
-              title="검색"
+              title="검??
             >
               <Search className="w-4 h-4 md:mr-1.5 text-[#86868B]" />
-              <span className="hidden md:inline font-bold">검색</span>
+              <span className="hidden md:inline font-bold">검??/span>
             </Button>
             <Button
               size="sm"
               variant="outline"
               onClick={loadStudents}
               className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
-              title="새로고침"
+              title="?�로고침"
             >
               <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline font-bold">새로고침</span>
+              <span className="hidden sm:inline font-bold">?�로고침</span>
             </Button>
             <Button
               size="sm"
               variant="ghost"
               onClick={handleLogout}
               className="admin-fit-button text-red-600 hover:text-red-700 hover:bg-red-50 rounded-2xl text-xs h-9.5 px-3 transition-premium"
-              title="로그아웃"
+              title="로그?�웃"
             >
               <LogOut className="w-4 h-4 mr-1.5 text-red-500" />
-              <span className="hidden sm:inline font-bold">로그아웃</span>
+              <span className="hidden sm:inline font-bold">로그?�웃</span>
             </Button>
           </>
         }
@@ -556,14 +552,14 @@ function ConsultationContent() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
         
-        {/* 필터 및 검색 바 */}
+        {/* ?�터 �?검??�?*/}
         <div className="admin-fit-box flex flex-col gap-3.5 bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
           <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
             <div className="relative flex-1 max-w-md admin-mobile-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B]" />
               <Input
                 ref={searchInputRef}
-                placeholder="수강생 이름 또는 교재명을 입력해 주세요."
+                placeholder="?�강???�름 ?�는 교재명을 ?�력??주세??"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 rounded-xl border-black/[0.08] text-xs h-10 bg-[#F5F5F7]"
@@ -575,17 +571,17 @@ function ConsultationContent() {
               className="admin-fit-button rounded-xl bg-[#1D1D1F] hover:bg-[#323236] text-white text-xs h-10 px-4 md:px-5 font-bold shadow-sm flex items-center justify-center shrink-0"
             >
               <Plus className="w-4 h-4 mr-1.5" />
-              신규 원생 등록
+              ?�규 ?�생 ?�록
             </Button>
           </div>
 
           <div className="h-px bg-black/[0.04] my-0.5" />
 
-          {/* 필터 선택 영역 (캠퍼스 필터 + 퀵 필터) */}
+          {/* ?�터 ?�택 ?�역 (캠퍼???�터 + ???�터) */}
           <div className="flex flex-wrap items-center gap-5 text-xs">
-            {/* 캠퍼스(센터) 필터 */}
+            {/* 캠퍼???�터) ?�터 */}
             <div className="flex items-center gap-2.5">
-              <span className="font-extrabold text-[#86868B] shrink-0">캠퍼스</span>
+              <span className="font-extrabold text-[#86868B] shrink-0">캠퍼??/span>
               <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
                 {CAMPUS_FILTERS.map((c) => (
                   <Button
@@ -599,15 +595,15 @@ function ConsultationContent() {
                         : 'text-[#86868B] hover:text-black'
                     }`}
                   >
-                    {c === 'all' ? '전체' : getCampusLabel(c)}
+                    {c === 'all' ? '?�체' : getCampusLabel(c)}
                   </Button>
                 ))}
               </div>
             </div>
 
-            {/* 퀵 필터 (상담/진도) */}
+            {/* ???�터 (?�담/진도) */}
             <div className="flex items-center gap-2.5">
-              <span className="font-extrabold text-[#86868B] shrink-0">상태 필터</span>
+              <span className="font-extrabold text-[#86868B] shrink-0">?�태 ?�터</span>
               <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
                 <Button
                   variant={quickFilter === 'all' ? 'default' : 'ghost'}
@@ -617,7 +613,7 @@ function ConsultationContent() {
                     quickFilter === 'all' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
                   }`}
                 >
-                  전체
+                  ?�체
                 </Button>
                 <Button
                   variant={quickFilter === 'consultation' ? 'default' : 'ghost'}
@@ -627,8 +623,7 @@ function ConsultationContent() {
                     quickFilter === 'consultation' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
                   }`}
                 >
-                  상담 대상
-                </Button>
+                  ?�담 ?�??                </Button>
                 <Button
                   variant={quickFilter === 'behind' ? 'default' : 'ghost'}
                   size="sm"
@@ -637,28 +632,27 @@ function ConsultationContent() {
                     quickFilter === 'behind' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
                   }`}
                 >
-                  진도 부족
-                </Button>
+                  진도 부�?                </Button>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 대기요청 패널: 퀵필터가 상담/진도 전용이면 숨겨 관련 없는 데이터 노출 방지 */}
+        {/* ?�기요�??�널: ?�필?��? ?�담/진도 ?�용?�면 ?�겨 관???�는 ?�이???�출 방�? */}
         {quickFilter === 'all' && (
           <PendingChangeRequestsPanel
             students={campusScopedStudents}
             getCampusLabel={getCampusLabel}
             onOpenStudent={handleOpenStudentDetail}
-            description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항 대기 요청입니다. 바로 열면 기존 답변 UI가 있는 학생 상세 시트로 이동합니다.`}
+            description={`${selectedCampusLabel} 기�? ?�습 변�? 반차/?��?, 건의?�항 ?��??�청?�니?? 바로 ?�면 기존 ?��? UI가 ?�는 ?�생 ?�세 ?�트�??�동?�니??`}
           />
         )}
 
-        {/* 메인 대시보드 탭 분기 */}
+        {/* 메인 ?�?�보????분기 */}
         {loading ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center justify-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-            <p className="text-xs text-[#86868B]">스마트 시트 정보 불러오는 중...</p>
+            <p className="text-xs text-[#86868B]">?�마???�트 ?�보 불러?�는 �?..</p>
           </div>
         ) : (
           <Tabs value={dashboardTab} onValueChange={handleDashboardTabChange} className="w-full" id="student-list-section">
@@ -669,15 +663,15 @@ function ConsultationContent() {
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-[#1D1D1F] data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
                 >
                   <Users className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">원생별 학습 관리</span>
-                  <span className="sm:hidden">원생</span>
+                  <span className="hidden sm:inline">?�생�??�습 관�?/span>
+                  <span className="sm:hidden">?�생</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="db"
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-[#1D1D1F] data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
                 >
                   <SlidersHorizontal className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">교재/강의 진도 관리</span>
+                  <span className="hidden sm:inline">교재/강의 진도 관�?/span>
                   <span className="sm:hidden">진도</span>
                 </TabsTrigger>
                 <TabsTrigger
@@ -685,8 +679,8 @@ function ConsultationContent() {
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-[#1D1D1F] data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
                 >
                   <Calendar className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">상담 캘린더</span>
-                  <span className="sm:hidden">캘린더</span>
+                  <span className="hidden sm:inline">?�담 캘린??/span>
+                  <span className="sm:hidden">캘린??/span>
                 </TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
@@ -697,21 +691,21 @@ function ConsultationContent() {
                     onClick={() => setQuickFilter('all')}
                     className="admin-fit-button h-7 rounded-full border-black/[0.08] bg-white px-2 text-[10px]"
                   >
-                    필터 해제
+                    ?�터 ?�제
                   </Button>
                 )}
                 <span className="admin-fit-caption text-[#86868B] font-semibold">
-                  {quickFilter === 'consultation' ? '상담 대상: ' : quickFilter === 'behind' ? '부족 진도: ' : '검색 결과: '}
+                  {quickFilter === 'consultation' ? '?�담 ?�?? ' : quickFilter === 'behind' ? '부�?진도: ' : '검??결과: '}
                   {quickFilter === 'behind' ? filteredProgressItems.length : filteredStudents.length}
-                  {quickFilter === 'behind' ? '건' : '명'}
+                  {quickFilter === 'behind' ? '�? : '�?}
                 </span>
               </div>
             </div>
 
-            {/* TAB CONTENT 1: 수강생별 대시보드 카드 */}
+            {/* TAB CONTENT 1: ?�강?�별 ?�?�보??카드 */}
             <TabsContent value="cards" className="outline-none space-y-4">
               
-              {/* 보기 모드 토글 (카드형 / 표형) */}
+              {/* 보기 모드 ?��? (카드??/ ?�형) */}
               <div className="flex justify-end items-center">
                 <div className="flex bg-white border border-black/[0.06] p-0.5 rounded-lg shadow-sm">
                   <Button
@@ -725,8 +719,7 @@ function ConsultationContent() {
                     }`}
                   >
                     <LayoutGrid className="w-3.5 h-3.5 mr-1" />
-                    카드형
-                  </Button>
+                    카드??                  </Button>
                   <Button
                     size="sm"
                     variant={viewMode === 'table' ? 'default' : 'ghost'}
@@ -738,14 +731,14 @@ function ConsultationContent() {
                     }`}
                   >
                     <Table className="w-3.5 h-3.5 mr-1" />
-                    간략히 (표)
+                    간략??(??
                   </Button>
                 </div>
               </div>
 
               {filteredStudents.length === 0 ? (
                 <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
-                  검색 조건에 맞는 원생이 없습니다.
+                  검??조건??맞는 ?�생???�습?�다.
                 </div>
               ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -768,7 +761,7 @@ function ConsultationContent() {
                                 </Badge>
                               </div>
                               <p className="admin-fit-text admin-fit-caption text-[#86868B] mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                <span>{student.manager || '담당 코치'}</span>
+                                <span>{student.manager || '?�당 코치'}</span>
                                 {(() => {
                                   const todayMin = getStudentTodayTotalStudyTimeMin(student);
                                   if (todayMin <= 0) return null;
@@ -777,7 +770,7 @@ function ConsultationContent() {
                                   return (
                                     <>
                                       <span className="w-1 h-1 rounded-full bg-[#86868B]/40"></span>
-                                      <span className="text-[#0071E3] font-bold">오늘 {h > 0 ? `${h}시간 ` : ''}{m}분 예상</span>
+                                      <span className="text-[#0071E3] font-bold">?�늘 {h > 0 ? `${h}?�간 ` : ''}{m}�??�상</span>
                                     </>
                                   );
                                 })()}
@@ -786,10 +779,10 @@ function ConsultationContent() {
                             <ChevronRight className="admin-fit-icon w-4 h-4 text-[#86868B]" />
                           </div>
 
-                          {/* 과목별 현재 학습 흐름 */}
+                          {/* 과목�??�재 ?�습 ?�름 */}
                           <div className="space-y-2.5 pt-2 border-t border-black/[0.03]">
                             {totalItems === 0 ? (
-                              <p className="admin-fit-caption text-[#86868B] italic">진행 중인 교재/인강이 없습니다.</p>
+                              <p className="admin-fit-caption text-[#86868B] italic">진행 중인 교재/?�강???�습?�다.</p>
                             ) : (
                               <div className="space-y-2">
                                 {subjectSummaries.map((summary) => (
@@ -798,21 +791,21 @@ function ConsultationContent() {
                                       <span className="admin-fit-text admin-fit-caption font-black text-[#1D1D1F]">{summary.name}</span>
                                       <span className="admin-fit-caption text-[#86868B] shrink-0">
                                         {summary.periodStart ? `${summary.periodStart.substring(5, 10)}~` : ''}
-                                        {summary.completedCount > 0 ? ` 완료 ${summary.completedCount}` : ' 진행중'}
+                                        {summary.completedCount > 0 ? ` ?�료 ${summary.completedCount}` : ' 진행�?}
                                       </span>
                                     </div>
                                     <div className="mt-2 space-y-1.5">
                                       {summary.activeItems.length === 0 ? (
-                                        <p className="admin-fit-caption text-emerald-600 font-bold">현재 진행 항목 없음 · 완료 정리 필요</p>
+                                        <p className="admin-fit-caption text-emerald-600 font-bold">?�재 진행 ??�� ?�음 · ?�료 ?�리 ?�요</p>
                                       ) : (
                                         summary.activeItems.map((item) => (
                                           <div key={item.id} className="space-y-1">
                                             <div className="admin-fit-row flex items-center justify-between gap-2">
                                               <span className="admin-fit-text admin-fit-caption font-semibold text-[#434345]">
-                                                {item.type === 'book' ? '📚' : '💻'} {item.title}
+                                                {item.type === 'book' ? '?��' : '?��'} {item.title}
                                               </span>
                                               <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
-                                                현재 {item.current}/{item.total}{item.unit}
+                                                ?�재 {item.current}/{item.total}{item.unit}
                                               </span>
                                             </div>
                                             <div className="h-1.5 rounded-full bg-white overflow-hidden border border-black/[0.03]">
@@ -824,7 +817,7 @@ function ConsultationContent() {
                                             <div className="admin-fit-row flex items-center justify-between gap-2">
                                               <span className="admin-fit-caption text-[#86868B] shrink-0">
                                                 {item.startDate ? `${item.startDate.substring(5, 10)}~` : '기간 미정'}
-                                                {item.targetDate ? item.targetDate.substring(5, 10) : '진행중'}
+                                                {item.targetDate ? item.targetDate.substring(5, 10) : '진행�?}
                                               </span>
                                               <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 {item.percent}%
@@ -835,29 +828,29 @@ function ConsultationContent() {
                                       )}
                                       {summary.completedItems.length > 0 && (
                                         <p className="admin-fit-text admin-fit-caption text-[#86868B]">
-                                          완료: {summary.completedItems.map(item => item.title).join(', ')}
+                                          ?�료: {summary.completedItems.map(item => item.title).join(', ')}
                                         </p>
                                       )}
                                     </div>
                                   </div>
                                 ))}
                                 {totalItems > subjectSummaries.reduce((sum, summary) => sum + summary.activeItems.length + summary.completedCount, 0) && (
-                                  <p className="admin-fit-text admin-fit-caption text-[#86868B] font-medium">추가 학습 항목이 더 있습니다.</p>
+                                  <p className="admin-fit-text admin-fit-caption text-[#86868B] font-medium">추�? ?�습 ??��?????�습?�다.</p>
                                 )}
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* 다음 상담일 정보 */}
+                        {/* ?�음 ?�담???�보 */}
                         <div className="admin-fit-row mt-4 pt-3.5 border-t border-black/[0.03] flex justify-between items-center gap-2">
-                          <span className="admin-fit-caption text-[#86868B] shrink-0">다음 상담일</span>
+                          <span className="admin-fit-caption text-[#86868B] shrink-0">?�음 ?�담??/span>
                           {student.nextConsultationDate ? (
                             <span className={`admin-fit-text admin-fit-caption font-bold px-2 py-0.5 rounded-md ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse-slow' : 'bg-[#F5F5F7] text-[#1D1D1F]'}`}>
-                              📅 {student.nextConsultationDate}
+                              ?�� {student.nextConsultationDate}
                             </span>
                           ) : (
-                            <span className="admin-fit-text admin-fit-caption text-[#86868B] italic">상담일 미지정</span>
+                            <span className="admin-fit-text admin-fit-caption text-[#86868B] italic">?�담??미�???/span>
                           )}
                         </div>
                       </div>
@@ -865,17 +858,17 @@ function ConsultationContent() {
                   })}
                 </div>
               ) : (
-                /* 표 뷰 (간략히) */
+                /* ??�?(간략?? */
                 <div className="bg-white border border-black/[0.05] rounded-2xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-black/[0.08] bg-[#F5F5F7] text-[#86868B] font-bold">
-                          <th className="p-3.5 pl-6">원생명</th>
-                          <th className="p-3.5">캠퍼스</th>
-                          <th className="p-3.5">담당 코치</th>
-                          <th className="p-3.5">진행 중인 학습 (과목별 현황)</th>
-                          <th className="p-3.5 text-center">다음 상담일</th>
+                          <th className="p-3.5 pl-6">?�생�?/th>
+                          <th className="p-3.5">캠퍼??/th>
+                          <th className="p-3.5">?�당 코치</th>
+                          <th className="p-3.5">진행 중인 ?�습 (과목�??�황)</th>
+                          <th className="p-3.5 text-center">?�음 ?�담??/th>
                         </tr>
                       </thead>
                       <tbody>
@@ -900,7 +893,7 @@ function ConsultationContent() {
                                 </Badge>
                               </td>
                               <td className="p-3.5 text-[#434345]">
-                                <div>{student.manager || '담당 코치'}</div>
+                                <div>{student.manager || '?�당 코치'}</div>
                                 <div className="text-[10px] text-[#86868B] mt-0.5 flex flex-wrap gap-1 items-center">
                                   {(() => {
                                     const todayMin = getStudentTodayTotalStudyTimeMin(student);
@@ -909,7 +902,7 @@ function ConsultationContent() {
                                     const m = Math.round(todayMin % 60);
                                     return (
                                       <span className="bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 rounded text-[9px] font-bold">
-                                        오늘 {h > 0 ? `${h}h ` : ''}{m}m
+                                        ?�늘 {h > 0 ? `${h}h ` : ''}{m}m
                                       </span>
                                     );
                                   })()}
@@ -917,19 +910,19 @@ function ConsultationContent() {
                               </td>
                               <td className="p-3.5 min-w-[280px]">
                                 {totalItems === 0 ? (
-                                  <span className="text-[#86868B] italic">진행 중인 교재/인강 없음</span>
+                                  <span className="text-[#86868B] italic">진행 중인 교재/?�강 ?�음</span>
                                 ) : (
                                   <div className="space-y-1.5">
                                     {subjectSummaries.map((summary) => (
                                       <div key={summary.id} className="text-[11px] flex flex-wrap items-center gap-x-2">
                                         <span className="font-bold text-[#1D1D1F] bg-[#F5F5F7] px-1.5 py-0.5 rounded text-[10px]">{summary.name}</span>
                                         {summary.activeItems.length === 0 ? (
-                                          <span className="text-emerald-600 font-bold">완료 정리 필요</span>
+                                          <span className="text-emerald-600 font-bold">?�료 ?�리 ?�요</span>
                                         ) : (
                                           summary.activeItems.map((item, idx) => (
                                             <span key={item.id} className="text-[#434345] inline-flex items-center gap-1">
                                               {idx > 0 && <span className="text-black/10">|</span>}
-                                              <span className="text-[10px]">{item.type === 'book' ? '📚' : '💻'}</span>
+                                              <span className="text-[10px]">{item.type === 'book' ? '?��' : '?��'}</span>
                                               <span>{item.title}</span>
                                               <span className={`font-bold ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 ({item.current}/{item.total}{item.unit}, {item.percent}%)
@@ -945,10 +938,10 @@ function ConsultationContent() {
                               <td className="p-3.5 text-center">
                                 {student.nextConsultationDate ? (
                                   <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] inline-block ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-[#F5F5F7] text-[#1D1D1F]'}`}>
-                                    📅 {student.nextConsultationDate}
+                                    ?�� {student.nextConsultationDate}
                                   </span>
                                 ) : (
-                                  <span className="text-[#86868B] italic">상담일 미지정</span>
+                                  <span className="text-[#86868B] italic">?�담??미�???/span>
                                 )}
                               </td>
                             </tr>
@@ -960,7 +953,7 @@ function ConsultationContent() {
                 </div>
               )}
 
-              {/* 더 보기 (학생 목록) */}
+              {/* ??보기 (?�생 목록) */}
               {filteredStudents.length > visibleStudents.length && (
                 <div className="flex justify-center pt-2">
                   <Button
@@ -968,24 +961,24 @@ function ConsultationContent() {
                     onClick={() => setStudentLimit((n) => n + PAGE_SIZE)}
                     className="rounded-full border-black/[0.08] bg-white text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7]"
                   >
-                    더 보기 ({visibleStudents.length}/{filteredStudents.length})
+                    ??보기 ({visibleStudents.length}/{filteredStudents.length})
                   </Button>
                 </div>
               )}
             </TabsContent>
 
-            {/* TAB CONTENT 2: 인강/교재 진도관리 전체 DB */}
+            {/* TAB CONTENT 2: ?�강/교재 진도관�??�체 DB */}
             <TabsContent value="db" className="outline-none space-y-4">
 
-              {/* 정렬 + 보기 모드 토글 */}
+              {/* ?�렬 + 보기 모드 ?��? */}
               <div className="flex flex-wrap justify-between items-center gap-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-[#86868B] shrink-0">정렬</span>
+                  <span className="text-[10px] font-bold text-[#86868B] shrink-0">?�렬</span>
                   <div className="flex bg-white border border-black/[0.06] p-0.5 rounded-lg shadow-sm">
                     {([
-                      { key: 'shortage', label: '부족분 많은순' },
-                      { key: 'status', label: '상태순' },
-                      { key: 'name', label: '이름순' },
+                      { key: 'shortage', label: '부족분 많�??? },
+                      { key: 'status', label: '?�태?? },
+                      { key: 'name', label: '?�름?? },
                     ] as const).map(opt => (
                       <Button
                         key={opt.key}
@@ -1016,8 +1009,7 @@ function ConsultationContent() {
                     }`}
                   >
                     <LayoutGrid className="w-3.5 h-3.5 mr-1" />
-                    카드형
-                  </Button>
+                    카드??                  </Button>
                   <Button
                     size="sm"
                     variant={viewMode === 'table' ? 'default' : 'ghost'}
@@ -1029,20 +1021,20 @@ function ConsultationContent() {
                     }`}
                   >
                     <Table className="w-3.5 h-3.5 mr-1" />
-                    간략히 (표)
+                    간략??(??
                   </Button>
                 </div>
               </div>
 
               {filteredProgressItems.length === 0 ? (
                 <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
-                  데이터가 없습니다.
+                  ?�이?��? ?�습?�다.
                 </div>
               ) : viewMode === 'table' ? (
                 <div id="progress-table-section" className="bg-white border border-black/[0.05] rounded-2xl overflow-hidden shadow-sm scroll-mt-28">
                   
                   <div className="bg-[#1D1D1F] text-white p-4.5 flex justify-between items-center">
-                    <h3 className="text-xs font-bold tracking-tight">교재/강의별 오늘 기준 진도 관리표</h3>
+                    <h3 className="text-xs font-bold tracking-tight">교재/강의�??�늘 기�? 진도 관리표</h3>
                     <span className="text-[9px] text-[#86868B] font-bold uppercase tracking-wider">Managed Lines: {filteredProgressItems.length}</span>
                   </div>
 
@@ -1051,12 +1043,12 @@ function ConsultationContent() {
                       <thead>
                         <tr className="border-b border-black/[0.08] bg-[#F5F5F7] text-[#86868B] font-bold">
                           <th className="p-3.5 pl-6">교재/강의</th>
-                          <th className="p-3.5">수강생</th>
-                          <th className="p-3.5 text-center">상태</th>
+                          <th className="p-3.5">?�강??/th>
+                          <th className="p-3.5 text-center">?�태</th>
                           <th className="p-3.5 text-center">부족분</th>
-                          <th className="p-3.5 text-center">오늘 기준 권장</th>
-                          <th className="p-3.5 text-center">현재 (조절)</th>
-                          <th className="p-3.5 pr-6 text-center">상담/목표</th>
+                          <th className="p-3.5 text-center">?�늘 기�? 권장</th>
+                          <th className="p-3.5 text-center">?�재 (조절)</th>
+                          <th className="p-3.5 pr-6 text-center">?�담/목표</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1065,10 +1057,10 @@ function ConsultationContent() {
                             
                             <td className="p-3.5 pl-6 font-bold text-[#1D1D1F] min-w-[240px]">
                               <div className="flex items-start gap-2">
-                                <span className="shrink-0">{item.type === 'book' ? '📚' : '💻'}</span>
+                                <span className="shrink-0">{item.type === 'book' ? '?��' : '?��'}</span>
                                 <div className="min-w-0">
                                   <p className="truncate">{item.title}</p>
-                                  <p className="text-[10px] text-[#86868B] mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
+                                  <p className="text-[10px] text-[#86868B] mt-1">{item.subjectName} · �?{item.total}{item.type === 'book' ? 'p' : '�?}</p>
                                 </div>
                               </div>
                             </td>
@@ -1084,7 +1076,7 @@ function ConsultationContent() {
                                 <User className="w-3.5 h-3.5 shrink-0" />
                                 {item.studentName}
                               </span>
-                              <p className="text-[10px] text-[#86868B] mt-1">{getCampusLabel(item.campus)} · {item.manager || '담당자'}</p>
+                              <p className="text-[10px] text-[#86868B] mt-1">{getCampusLabel(item.campus)} · {item.manager || '?�당??}</p>
                             </td>
 
                             <td className="p-3.5 text-center">
@@ -1094,11 +1086,11 @@ function ConsultationContent() {
                             </td>
 
                             <td className={`p-3.5 text-center font-bold ${item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                              {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}
+                              {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '�?}` : '?�음'}
                             </td>
 
                             <td className="p-3.5 text-center font-bold text-[#1D1D1F]">
-                              {item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}
+                              {item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '�?}`}
                             </td>
 
                             <td className="p-3.5 text-center">
@@ -1141,7 +1133,7 @@ function ConsultationContent() {
                                     }}
                                     className="h-7 w-16 rounded-lg border-black/[0.08] bg-white px-2 text-center text-xs font-bold"
                                   />
-                                  <span className="text-[10px] font-bold text-[#86868B]">{item.type === 'book' ? 'p' : '강'}</span>
+                                  <span className="text-[10px] font-bold text-[#86868B]">{item.type === 'book' ? 'p' : '�?}</span>
                                   <Button
                                     size="icon"
                                     variant="outline"
@@ -1180,7 +1172,7 @@ function ConsultationContent() {
 
                             <td className="p-3.5 pr-6 text-center text-[#434345]">
                               <div className="space-y-1">
-                                <p className="text-[10px]">상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</p>
+                                <p className="text-[10px]">?�담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}??경과` : `${item.daysToConsultation}???�음`}</p>
                                 <p className="text-[10px] text-[#86868B]">목표 {item.targetDate || '-'}</p>
                               </div>
                             </td>
@@ -1192,7 +1184,7 @@ function ConsultationContent() {
                   </div>
                 </div>
               ) : (
-                /* 교재/강의 진도 카드형 뷰 */
+                /* 교재/강의 진도 카드??�?*/
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {visibleProgressItems.map((item) => {
                     const progressPercent = item.total > 0 ? Math.round((item.current / item.total) * 100) : 0;
@@ -1206,7 +1198,7 @@ function ConsultationContent() {
                             <div className="min-w-0">
                               <span className="text-[10px] text-[#86868B]">{item.subjectName}</span>
                               <h4 className="font-bold text-[#1D1D1F] truncate mt-0.5">
-                                {item.type === 'book' ? '📚' : '💻'} {item.title}
+                                {item.type === 'book' ? '?��' : '?��'} {item.title}
                               </h4>
                             </div>
                             <span className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[9px] font-bold shrink-0 ${getProgressStatusStyle(item.status)}`}>
@@ -1230,13 +1222,13 @@ function ConsultationContent() {
                                 {getCampusLabel(item.campus)}
                               </Badge>
                             </div>
-                            <p className="text-[10px] text-[#86868B]">담당: {item.manager || '담당자'}</p>
+                            <p className="text-[10px] text-[#86868B]">?�당: {item.manager || '?�당??}</p>
                           </div>
 
                           <div className="bg-[#F5F5F7] p-2.5 rounded-xl space-y-2">
                             <div className="flex justify-between items-center text-[10px] text-[#86868B]">
-                              <span>오늘 기준 권장: <strong className="text-[#1D1D1F]">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}</strong></span>
-                              <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}</strong></span>
+                              <span>?�늘 기�? 권장: <strong className="text-[#1D1D1F]">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '�?}`}</strong></span>
+                              <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '�?}` : '?�음'}</strong></span>
                             </div>
                             <div className="h-1.5 rounded-full bg-white overflow-hidden border border-black/[0.03]">
                               <div
@@ -1245,7 +1237,7 @@ function ConsultationContent() {
                               />
                             </div>
                             <div className="flex justify-between items-center text-[9px] text-[#86868B]">
-                              <span>진행도</span>
+                              <span>진행??/span>
                               <span className="font-bold text-[#1D1D1F]">{progressPercent}%</span>
                             </div>
                           </div>
@@ -1287,7 +1279,7 @@ function ConsultationContent() {
                                   }}
                                   className="h-5 w-12 border-none bg-transparent p-0 text-center text-xs font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
-                                <span className="text-[10px] font-bold text-[#86868B]">/ {item.total}{item.type === 'book' ? 'p' : '강'}</span>
+                                <span className="text-[10px] font-bold text-[#86868B]">/ {item.total}{item.type === 'book' ? 'p' : '�?}</span>
                               </div>
                               <Button
                                 size="icon"
@@ -1323,7 +1315,7 @@ function ConsultationContent() {
                         </div>
 
                         <div className="mt-4 pt-3 border-t border-black/[0.03] flex justify-between items-center text-[10px] text-[#86868B]">
-                          <span>상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</span>
+                          <span>?�담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}??경과` : `${item.daysToConsultation}???�음`}</span>
                           <span>목표 {item.targetDate || '-'}</span>
                         </div>
                       </div>
@@ -1332,7 +1324,7 @@ function ConsultationContent() {
                 </div>
               )}
 
-              {/* 더 보기 (진도 항목) */}
+              {/* ??보기 (진도 ??��) */}
               {filteredProgressItems.length > visibleProgressItems.length && (
                 <div className="flex justify-center pt-2">
                   <Button
@@ -1340,13 +1332,13 @@ function ConsultationContent() {
                     onClick={() => setProgressLimit((n) => n + PAGE_SIZE)}
                     className="rounded-full border-black/[0.08] bg-white text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7]"
                   >
-                    더 보기 ({visibleProgressItems.length}/{filteredProgressItems.length})
+                    ??보기 ({visibleProgressItems.length}/{filteredProgressItems.length})
                   </Button>
                 </div>
               )}
             </TabsContent>
 
-            {/* TAB CONTENT 3: 상담 캘린더 */}
+            {/* TAB CONTENT 3: ?�담 캘린??*/}
             <TabsContent value="calendar" className="outline-none">
               <ConsultationCalendar
                 students={campusScopedStudents}
@@ -1359,7 +1351,7 @@ function ConsultationContent() {
 
       </main>
 
-      {/* 신규 학생 추가 모달 */}
+      {/* ?�규 ?�생 추�? 모달 */}
       <AddStudentModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}

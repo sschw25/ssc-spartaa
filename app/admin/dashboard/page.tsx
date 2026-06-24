@@ -625,7 +625,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10 transition-all animate-fade-in-up">
+    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10">
       
       <AdminTopNav
         title="학습 및 진도 체계적 관리 대시보드"
@@ -720,7 +720,7 @@ export default function AdminDashboardPage() {
 
           {/* 4개 핵심 알림 카드 (1행) */}
           <motion.div
-            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
@@ -728,7 +728,7 @@ export default function AdminDashboardPage() {
 
             {/* 만료 경고 — 빨강 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden text-left h-full ${expiredStudents.length > 0 ? 'bg-gradient-to-br from-red-50 to-red-100/60 border-red-200/60' : 'bg-gradient-to-br from-white to-[#FFF5F5] border-black/[0.04]'}`}>
+            <Card onClick={() => setEnrollmentModal('expired')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${expiredStudents.length > 0 ? 'bg-gradient-to-br from-red-50 to-red-100/60 border-red-200/60' : 'bg-gradient-to-br from-white to-[#FFF5F5] border-black/[0.04]'}`}>
               <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
                 <XCircle className="w-16 h-16 text-red-500" />
               </div>
@@ -741,15 +741,15 @@ export default function AdminDashboardPage() {
                 <span className={`text-xs font-bold ml-1 ${expiredStudents.length > 0 ? 'text-red-600/80' : 'text-[#86868B]'}`}>명</span>
               </div>
               <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
-              <button onClick={() => setEnrollmentModal('expired')} className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 hover:underline ${expiredStudents.length > 0 ? 'text-red-700' : 'text-[#86868B]'}`}>
+              <div className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 group-hover:underline ${expiredStudents.length > 0 ? 'text-red-700' : 'text-[#86868B]'}`}>
                 {expiredStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3 h-3" />
-              </button>
+              </div>
             </Card>
             </motion.div>
 
             {/* 재등록 임박 — 주황 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden text-left h-full ${renewalWarnStudents.length > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-100/50 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}>
+            <Card onClick={() => setEnrollmentModal('warning')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${renewalWarnStudents.length > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-100/50 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}>
               <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
                 <Clock className="w-16 h-16 text-amber-500" />
               </div>
@@ -762,9 +762,9 @@ export default function AdminDashboardPage() {
                 <span className={`text-xs font-bold ml-1 ${renewalWarnStudents.length > 0 ? 'text-amber-600/80' : 'text-[#86868B]'}`}>명</span>
               </div>
               <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
-              <button onClick={() => setEnrollmentModal('warning')} className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 hover:underline ${renewalWarnStudents.length > 0 ? 'text-amber-700' : 'text-[#86868B]'}`}>
+              <div className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 group-hover:underline ${renewalWarnStudents.length > 0 ? 'text-amber-700' : 'text-[#86868B]'}`}>
                 {renewalWarnStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3 h-3" />
-              </button>
+              </div>
             </Card>
             </motion.div>
 
