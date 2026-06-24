@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
-import type { DetailedPlan } from '@/lib/types/student';
+import type { BookProgress, DetailedPlan, LectureProgress } from '@/lib/types/student';
 
 // 학생이 본인 교재/인강 진도를 직접 갱신 (즉시 반영)
 export async function PATCH(req: NextRequest) {
@@ -74,87 +74,121 @@ export async function PATCH(req: NextRequest) {
     return Number(plan.targetAmount || 0);
   };
 
-  // 모든 book 후보 (subjects + 최상위)
-  const allBooks = [
-    ...(student.books || []),
-    ...((student.subjects || []).flatMap((s) => s.books || [])),
-  ];
-  // 모든 lecture 후보 (subjects + 최상위)
-  const allLectures = [
-    ...(student.lectures || []),
-    ...((student.subjects || []).flatMap((s) => s.lectures || [])),
-  ];
-
   if (materialType === 'book') {
-    const book = allBooks.find((b) => b.id === materialId);
-    if (book) {
-      const total = book.totalPages || 0;
-      let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(book.currentPage || 0, total);
+    const matchingBooks: BookProgress[] = [
+      ...((student.books || []).filter((book) => book.id === materialId)),
+      ...((student.subjects || []).flatMap((subject) => (subject.books || []).filter((book) => book.id === materialId))),
+    ];
 
+    if (matchingBooks.length > 0) {
+      const baseBook = matchingBooks[0];
+      const total = baseBook.totalPages || 0;
+      let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(baseBook.currentPage || 0, total);
+
+      let planCompletedVal = false;
+      let matchedPlan = !hasPlanCompletion;
       if (hasPlanCompletion) {
-        const plan = (book.detailedPlans || []).find((p) => p.id === planId);
-        if (!plan) {
+        matchingBooks.forEach((book) => {
+          const plan = (book.detailedPlans || []).find((item) => item.id === planId);
+          if (plan) {
+            matchedPlan = true;
+            plan.isCompleted = Boolean(body.isCompleted);
+            planCompletedVal = plan.isCompleted;
+            if (plan.isCompleted) {
+              nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+              if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
+                plan.actualAmount = body.actualAmount;
+              }
+            } else {
+              plan.actualAmount = undefined;
+            }
+          }
+        });
+        if (!matchedPlan) {
           return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
         }
-        plan.isCompleted = Boolean(body.isCompleted);
-        if (plan.isCompleted) {
-          nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
-          if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
-            plan.actualAmount = body.actualAmount;
+      }
+
+      matchingBooks.forEach((book) => {
+        if (hasSolvedQuestions) {
+          const solvedVal = Number(body.solvedQuestions);
+          if (Number.isFinite(solvedVal) && solvedVal >= 0) {
+            book.solvedQuestions = solvedVal;
           }
-        } else {
-          plan.actualAmount = undefined;
         }
-      }
 
-      if (hasSolvedQuestions) {
-        const solvedVal = Number(body.solvedQuestions);
-        if (Number.isFinite(solvedVal) && solvedVal >= 0) {
-          book.solvedQuestions = solvedVal;
+        if (hasIncorrectTags) {
+          if (typeof body.incorrectTags === 'object' && body.incorrectTags !== null) {
+            // 오버포스팅 방지: 엔트리 수 상한 + 값은 0 이상 유한 정수로 정규화
+            const raw = body.incorrectTags as Record<string, unknown>;
+            const normalized: Record<string, number> = {};
+            for (const key of Object.keys(raw).slice(0, 50)) {
+              const v = Number(raw[key]);
+              if (Number.isFinite(v) && v >= 0) {
+                normalized[String(key).slice(0, 60)] = Math.min(9999, Math.round(v));
+              }
+            }
+            book.incorrectTags = normalized;
+          }
         }
-      }
 
-      if (hasIncorrectTags) {
-        if (typeof body.incorrectTags === 'object' && body.incorrectTags !== null) {
-          book.incorrectTags = body.incorrectTags as Record<string, number>;
-        }
-      }
+        book.currentPage = nextValue;
+        book.updatedAt = nowIso;
+      });
 
-      book.currentPage = nextValue;
-      book.updatedAt = nowIso;
       updated = {
         value: nextValue,
         total,
-        ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}),
-        solvedQuestions: book.solvedQuestions,
-        incorrectTags: book.incorrectTags,
+        ...(hasPlanCompletion ? { planId, isCompleted: planCompletedVal } : {}),
+        solvedQuestions: baseBook.solvedQuestions,
+        incorrectTags: baseBook.incorrectTags,
       };
     }
   } else {
-    const lecture = allLectures.find((l) => l.id === materialId);
-    if (lecture) {
-      const total = lecture.totalLectures || 0;
-      let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(lecture.completedLectures || 0, total);
+    const matchingLectures: LectureProgress[] = [
+      ...((student.lectures || []).filter((lecture) => lecture.id === materialId)),
+      ...((student.subjects || []).flatMap((subject) => (subject.lectures || []).filter((lecture) => lecture.id === materialId))),
+    ];
 
+    if (matchingLectures.length > 0) {
+      const baseLecture = matchingLectures[0];
+      const total = baseLecture.totalLectures || 0;
+      let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(baseLecture.completedLectures || 0, total);
+
+      let planCompletedVal = false;
+      let matchedPlan = !hasPlanCompletion;
       if (hasPlanCompletion) {
-        const plan = (lecture.detailedPlans || []).find((p) => p.id === planId);
-        if (!plan) {
-          return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
-        }
-        plan.isCompleted = Boolean(body.isCompleted);
-        if (plan.isCompleted) {
-          nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
-          if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
-            plan.actualAmount = body.actualAmount;
+        matchingLectures.forEach((lecture) => {
+          const plan = (lecture.detailedPlans || []).find((item) => item.id === planId);
+          if (plan) {
+            matchedPlan = true;
+            plan.isCompleted = Boolean(body.isCompleted);
+            planCompletedVal = plan.isCompleted;
+            if (plan.isCompleted) {
+              nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+              if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
+                plan.actualAmount = body.actualAmount;
+              }
+            } else {
+              plan.actualAmount = undefined;
+            }
           }
-        } else {
-          plan.actualAmount = undefined;
+        });
+        if (!matchedPlan) {
+          return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
         }
       }
 
-      lecture.completedLectures = nextValue;
-      lecture.updatedAt = nowIso;
-      updated = { value: nextValue, total, ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}) };
+      matchingLectures.forEach((lecture) => {
+        lecture.completedLectures = nextValue;
+        lecture.updatedAt = nowIso;
+      });
+
+      updated = {
+        value: nextValue,
+        total,
+        ...(hasPlanCompletion ? { planId, isCompleted: planCompletedVal } : {})
+      };
     }
   }
 
@@ -169,7 +203,7 @@ export async function PATCH(req: NextRequest) {
     total: updated.total, 
     planId: updated.planId, 
     isCompleted: updated.isCompleted,
-    solvedQuestions: (updated as any).solvedQuestions,
-    incorrectTags: (updated as any).incorrectTags
+    solvedQuestions: updated.solvedQuestions,
+    incorrectTags: updated.incorrectTags
   });
 }

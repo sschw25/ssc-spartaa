@@ -170,6 +170,34 @@ const ConsultationContentEditor = React.memo(function ConsultationContentEditor(
   );
 });
 
+// specialNote 컬럼은 학생 리워드/뽀모도로 JSON 상태({ noteText, pomodoro_*, rewards_log, daily_checklist })와
+// 어드민 내부 메모를 함께 담는다. 어드민 메모 textarea 는 noteText 만 편집해야 하며, 저장 시 나머지 JSON 봉투를
+// 보존해야 한다(과거: 메모 저장이 학생 리워드/뽀모도로 상태를 통째로 덮어쓰던 데이터 손실 버그).
+function extractAdminNote(raw?: string): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const obj = JSON.parse(trimmed);
+      if (obj && typeof obj === 'object') return typeof obj.noteText === 'string' ? obj.noteText : '';
+    } catch { /* JSON 아님 → 평문 메모로 취급 */ }
+  }
+  return raw;
+}
+
+function mergeAdminNote(raw: string | undefined, noteText: string): string {
+  const trimmed = (raw || '').trim();
+  if (trimmed.startsWith('{')) {
+    try {
+      const obj = JSON.parse(trimmed);
+      if (obj && typeof obj === 'object') {
+        return JSON.stringify({ ...obj, noteText });
+      }
+    } catch { /* JSON 아님 → 평문으로 저장 */ }
+  }
+  return noteText;
+}
+
 export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [] }: StudentDetailSheetProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -387,7 +415,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setContact(student.contact || '');
       setLifeComment(student.lifeComment || '');
       setStudentLifeComment(student.studentLifeComment || '');
-      setSpecialNote(student.specialNote || '');
+      setSpecialNote(extractAdminNote(student.specialNote));
       setNextConsultationDate(student.nextConsultationDate || '');
       setEnrollmentEndDate(student.enrollmentEndDate || '');
       setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
@@ -485,7 +513,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     );
     const sourceSnap = snap(
       student.name || '', student.campus || 'wonju', student.manager || '', student.contact || '',
-      1.0, student.specialNote || '',
+      1.0, extractAdminNote(student.specialNote),
       student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck)
     );
 
@@ -502,7 +530,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           campus,
           manager,
           contact,
-          specialNote,
+          specialNote: mergeAdminNote(student.specialNote, specialNote),
           nextConsultationDate: nextConsultationDate || undefined,
           enrollmentEndDate: enrollmentEndDate || undefined,
           weeklyGradeCheck,
@@ -785,7 +813,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       contact,
       lifeComment,
       studentLifeComment,
-      specialNote,
+      specialNote: mergeAdminNote(student.specialNote, specialNote),
       nextConsultationDate: cslNextDate || nextConsultationDate || undefined,
       enrollmentEndDate: enrollmentEndDate || undefined,
       weeklyGradeCheck,
@@ -892,7 +920,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       contact,
       lifeComment,
       studentLifeComment,
-      specialNote,
+      specialNote: mergeAdminNote(student.specialNote, specialNote),
       nextConsultationDate: nextConsultationDate || undefined,
       enrollmentEndDate: enrollmentEndDate || undefined,
       weeklyGradeCheck,
@@ -1671,6 +1699,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     action: 'inc' | 'dec' | 'setCurrent' | 'delete' | 'add' | 'updatePlan' | 'targetDate' | 'edit',
     payload?: any
   ) => {
+    // 교재/인강 삭제는 진도·상세계획·회독설정이 함께 사라지므로 확인 후 진행(오클릭 방지)
+    if (action === 'delete') {
+      const ok = typeof window === 'undefined'
+        || window.confirm('이 학습자료를 삭제하면 진도·상세계획·회독설정이 함께 삭제됩니다. 계속할까요?');
+      if (!ok) return;
+    }
     const nowStr = new Date().toISOString();
     const updatedSubjects = subjectsState.map(sub => {
       if (sub.id !== subId) return sub;
@@ -3192,6 +3226,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 성적 삭제
   const handleDeleteGrade = async (gradeId: string) => {
+    if (typeof window !== 'undefined' && !window.confirm('이 성적 기록을 삭제할까요? 추세 그래프에서도 함께 제거됩니다.')) return;
     const updatedStudent: Student = {
       ...student,
       grades: student.grades.filter(g => g.id !== gradeId),

@@ -42,7 +42,10 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const minutes = typeof body.minutes === 'number' && body.minutes > 0 ? Math.round(body.minutes) : 50;
+  // 1~120분으로 클램프 — 상한이 없으면 임의 큰 값으로 리워드(쿠폰)를 부당 적립할 수 있다.
+  const minutes = typeof body.minutes === 'number' && body.minutes > 0
+    ? Math.min(120, Math.round(body.minutes))
+    : 50;
 
   if (!noteObj.pomodoro_sessions) noteObj.pomodoro_sessions = {};
   if (!noteObj.pomodoro_minutes) noteObj.pomodoro_minutes = {};
