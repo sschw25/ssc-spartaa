@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getStudentById, saveStudent, deleteStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
-
-// 인증 상태 헬퍼 함수
-async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('admin-session')?.value;
-  return sessionToken === 'ssc-admin-authorized-token-2026';
-}
+import { isAdmin } from '@/lib/auth';
 
 // 0. 특정 원생 단건 조회
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -26,7 +19,8 @@ export async function GET(
     if (!student) {
       return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });
     }
-    return NextResponse.json({ success: true, data: student });
+    const { sharePasswordHash: _h, ...safeStudent } = student;
+    return NextResponse.json({ success: true, data: safeStudent });
   } catch (error) {
     console.error(`API GET /students/${id} error:`, error);
     return NextResponse.json({ success: false, message: '원생 조회에 실패했습니다.' }, { status: 500 });
@@ -38,7 +32,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -63,7 +57,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 

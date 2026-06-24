@@ -1,11 +1,10 @@
 import { cookies } from 'next/headers';
 
-// 관리자 세션 토큰 (기존 라우트와 동일 값)
-const ADMIN_TOKEN = 'ssc-admin-authorized-token-2026';
-
 export async function isAdmin(): Promise<boolean> {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret) return false;
   const store = await cookies();
-  return store.get('admin-session')?.value === ADMIN_TOKEN;
+  return store.get('admin-session')?.value === secret;
 }
 
 // 학생 세션에 저장된 학생 id (없으면 null)

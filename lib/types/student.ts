@@ -9,6 +9,7 @@ export interface DetailedPlan {
   dailyAmount?: number;    // 과목 학습 요일 기준 일일 학습량
   rangeText: string;       // 범위 설명 (예: "1p ~ 40p" 또는 "1강 ~ 8강")
   isCompleted: boolean;    // 완료 여부
+  actualAmount?: number;   // 실제 학습량 (완료 시 입력)
 }
 
 export interface ReviewPassSetting {
@@ -64,7 +65,13 @@ export interface ProposedGoal {
   targetDate?: string;
   proposedWeekNumber?: number;
   proposedRangeText?: string;
-  speedMultiplier?: number; // 제안된 개별 인강 배속
+  speedMultiplier?: number;
+  // 변경 전 현재 상태 (관리자가 before/after 비교에 사용)
+  currentGoal?: {
+    goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+    goalValue?: number;
+    speedMultiplier?: number;
+  };
 }
 
 export interface ConsultationLog {
@@ -152,7 +159,7 @@ export interface Student {
   weeklyGradeCheck?: boolean; // 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
   shareToken?: string;          // 학부모 리포트 공유 임시 토큰
   shareTokenExpiresAt?: string; // 공유 토큰 만료 시각 (ISO)
-  sharePassword?: string;       // 학부모 리포트 접근 비밀번호 (6자리 숫자)
+  sharePasswordHash?: string;   // 학부모 리포트 접근 비밀번호 bcrypt 해시 (서버 내부 전용 — 클라이언트 응답에서 제외)
   createdAt: string;
   updatedAt: string;
   

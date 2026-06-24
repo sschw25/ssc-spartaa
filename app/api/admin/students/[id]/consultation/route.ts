@@ -1,21 +1,14 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { ConsultationLog } from '@/lib/types/student';
-
-// 인증 상태 헬퍼 함수
-async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('admin-session')?.value;
-  return sessionToken === 'ssc-admin-authorized-token-2026';
-}
+import { isAdmin } from '@/lib/auth';
 
 // 특정 학생 상담 등록 API
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 

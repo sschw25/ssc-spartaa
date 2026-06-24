@@ -1,24 +1,18 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { getStudents, saveStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
-
-// 인증 상태 헬퍼 함수
-async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('admin-session')?.value;
-  return sessionToken === 'ssc-admin-authorized-token-2026';
-}
+import { isAdmin } from '@/lib/auth';
 
 // 1. 전체 학생 및 진도/상담/성적 일괄 조회
 export async function GET() {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
   try {
     const students = await getStudents();
-    return NextResponse.json({ success: true, data: students });
+    const sanitized = students.map(({ sharePasswordHash: _h, ...s }) => s);
+    return NextResponse.json({ success: true, data: sanitized });
   } catch (error) {
     console.error('API GET /students error:', error);
     return NextResponse.json({ success: false, message: '데이터 조회에 실패했습니다.' }, { status: 500 });
@@ -27,7 +21,7 @@ export async function GET() {
 
 // 2. 신규 학생 추가
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 

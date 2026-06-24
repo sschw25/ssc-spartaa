@@ -10,22 +10,25 @@ export async function POST(request: Request) {
       { status: 429 }
     );
   }
+  const correctPassword = process.env.ADMIN_PASSWORD;
+  const sessionSecret = process.env.ADMIN_SESSION_SECRET;
+  if (!correctPassword || !sessionSecret) {
+    console.error('[admin/login] ADMIN_PASSWORD 또는 ADMIN_SESSION_SECRET 환경변수가 설정되지 않았습니다.');
+    return NextResponse.json({ success: false, message: '서버 설정 오류입니다.' }, { status: 500 });
+  }
+
   try {
     const { username, password } = await request.json();
-    const correctPassword = process.env.ADMIN_PASSWORD || 'sparta123!';
 
-    // 디폴트 계정 admin / sparta123!
     if (username === 'admin' && password === correctPassword) {
       const cookieStore = await cookies();
-      
-      cookieStore.set('admin-session', 'ssc-admin-authorized-token-2026', {
+      cookieStore.set('admin-session', sessionSecret, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
-        maxAge: 60 * 60 * 24, // 1일 유지
+        maxAge: 60 * 60 * 24,
         path: '/',
       });
-
       return NextResponse.json({ success: true, message: '로그인에 성공했습니다.' });
     }
 

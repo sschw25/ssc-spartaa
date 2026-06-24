@@ -393,7 +393,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
       setShareToken(student.shareToken);
       setShareTokenExpiresAt(student.shareTokenExpiresAt);
-      setSharePassword(student.sharePassword);
+      setSharePassword(undefined); // PIN은 생성 직후 API 응답에서만 일회성 표시
       setSubjectsState(student.subjects || []);
       setCollapsedSubjects(Object.fromEntries((student.subjects || []).map((sub) => [sub.id, true])));
       if (student.customCategories && student.customCategories.length > 0) {

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { cookies } from 'next/headers';
 import { readSharedMaterials, saveSharedMaterial } from '@/lib/store';
 import { SharedMaterial } from '@/lib/types/student';
+import { isAdmin } from '@/lib/auth';
 
 const normalizeSearchText = (value: string) => {
   return value
@@ -32,16 +32,9 @@ const getQueryVariants = (query: string) => {
   return Array.from(variants).filter(Boolean);
 };
 
-// 인증 상태 헬퍼 함수
-async function isAuthenticated(): Promise<boolean> {
-  const cookieStore = await cookies();
-  const sessionToken = cookieStore.get('admin-session')?.value;
-  return sessionToken === 'ssc-admin-authorized-token-2026';
-}
-
 // 1. 공유 교재/강의 목록 조회 (필터링 지원)
 export async function GET(request: Request) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -90,7 +83,7 @@ export async function GET(request: Request) {
 
 // 2. 신규 교재/강의 공유 DB에 등록
 export async function POST(request: Request) {
-  if (!(await isAuthenticated())) {
+  if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 

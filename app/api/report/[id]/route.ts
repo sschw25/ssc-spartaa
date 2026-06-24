@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { compare } from 'bcryptjs';
 import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent, getStudentSessionId, isAdmin } from '@/lib/auth';
@@ -73,11 +74,16 @@ export async function GET(
           { status: 403 }
         );
       }
-      if (student.sharePassword && student.sharePassword !== sharePasswordInput) {
-        return NextResponse.json(
-          { success: false, message: '비밀번호가 올바르지 않습니다.' },
-          { status: 403 }
-        );
+      if (student.sharePasswordHash) {
+        const ok = sharePasswordInput
+          ? await compare(sharePasswordInput, student.sharePasswordHash)
+          : false;
+        if (!ok) {
+          return NextResponse.json(
+            { success: false, message: '비밀번호가 올바르지 않습니다.' },
+            { status: 403 }
+          );
+        }
       }
       // 학부모용 마스킹 데이터 반환 (학생 전용 정보 제외)
       const maskedStudent = buildMaskedStudent(student, 'parent');
