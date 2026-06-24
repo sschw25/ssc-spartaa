@@ -17,7 +17,6 @@ import { isWeeklyGradeMissing, enrollmentDaysLeft } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
-import { PendingChangeRequestsPanel } from '@/components/admin/pending-change-requests-panel';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { AnimatedNumber } from '@/components/admin/animated-number';
 import { motion } from 'framer-motion';
@@ -214,16 +213,19 @@ export default function AdminDashboardPage() {
   // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
   const weeklyGradeMissingStudents = campusScopedStudents.filter(s => isWeeklyGradeMissing(s));
 
-  // 대기중인 변경신청 + 건의사항 + 휴가신청 건수
-  const pendingRequestsTotal = campusScopedStudents.reduce((total, s) => {
-    const changeReqs = (s.consultationLogs || []).filter(
-      log => (log.type === 'request' || log.type === 'suggestion') && log.status === 'pending'
-    ).length;
-    const leaveReqs = (s.leaveRequests || []).filter(
-      req => req.status === 'pending'
-    ).length;
-    return total + changeReqs + leaveReqs;
-  }, 0);
+  // 대기중인 변경신청 + 건의사항 + 휴가신청 건수 (타입별 분리)
+  const pendingChangeCount = campusScopedStudents.reduce((total, s) =>
+    total + (s.consultationLogs || []).filter(log => log.type === 'request' && log.status === 'pending').length, 0);
+  const pendingLeaveCount = campusScopedStudents.reduce((total, s) =>
+    total + (s.leaveRequests || []).filter(req => req.status === 'pending').length, 0);
+  const pendingSuggestionCount = campusScopedStudents.reduce((total, s) =>
+    total + (s.consultationLogs || []).filter(log => log.type === 'suggestion' && log.status === 'pending').length, 0);
+  const pendingRequestsTotal = pendingChangeCount + pendingLeaveCount + pendingSuggestionCount;
+  const pendingStudentCount = campusScopedStudents.filter(s => {
+    const hasChange = (s.consultationLogs || []).some(log => (log.type === 'request' || log.type === 'suggestion') && log.status === 'pending');
+    const hasLeave = (s.leaveRequests || []).some(req => req.status === 'pending');
+    return hasChange || hasLeave;
+  }).length;
 
   // 각 카드 데이터 최종 업데이트 시각 계산
   const lastConsultationUpdate = pendingConsultationStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
@@ -717,9 +719,9 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
-          {/* 4개 핵심 알림 카드 (1행) */}
+          {/* 5개 핵심 알림 카드 (1행) */}
           <motion.div
-            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+            className="grid grid-cols-2 lg:grid-cols-5 gap-4"
             initial="hidden"
             animate="visible"
             variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
@@ -813,24 +815,37 @@ export default function AdminDashboardPage() {
             </Card>
             </motion.div>
 
+            {/* 대기 요청 — 앰버 */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
+            <Card
+              onClick={() => router.push('/admin/inbox')}
+              className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${pendingRequestsTotal > 0 ? 'bg-gradient-to-br from-amber-50 to-amber-100/60 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}
+            >
+              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
+                <ClipboardList className="w-16 h-16 text-amber-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-600/80">대기 요청</span>
+                {pendingRequestsTotal > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+              </div>
+              <div className="mt-3 flex items-baseline gap-1.5">
+                <AnimatedNumber value={pendingRequestsTotal} className={`text-3xl font-black tracking-tight ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#86868B]'}`} />
+                <span className={`text-xs font-bold ${pendingRequestsTotal > 0 ? 'text-amber-600/80' : 'text-[#86868B]'}`}>건</span>
+                {pendingStudentCount > 0 && (
+                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">{pendingStudentCount}명</span>
+                )}
+              </div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
+                변경 {pendingChangeCount} · 휴가 {pendingLeaveCount} · 건의 {pendingSuggestionCount}
+              </p>
+              <div className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 group-hover:underline ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#86868B]'}`}>
+                {pendingRequestsTotal > 0 ? '인박스 열기' : '대기 없음'} <ChevronRight className="w-3 h-3" />
+              </div>
+            </Card>
+            </motion.div>
+
           </motion.div>
         </div>{/* /섹션1 알림현황 */}
-
-        {/* ── 섹션 2: 대기 요청 ── */}
-        <div className="space-y-3.5">
-          <div className="flex items-center gap-2.5">
-            <ClipboardList className="w-3.5 h-3.5 text-[#86868B]" />
-            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">대기 요청</span>
-            <div className="flex-1 h-px bg-black/[0.06]" />
-          </div>
-          <PendingChangeRequestsPanel
-            students={campusScopedStudents}
-            maxRows={4}
-            getCampusLabel={getCampusLabel}
-            onOpenStudent={handleOpenStudentById}
-            description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항을 기존 상세 시트에서 바로 확인하고 처리할 수 있습니다.`}
-          />
-        </div>{/* /섹션2 */}
 
         {/* ── 섹션 3: 출결 현황 ── */}
         <div className="space-y-3.5">
