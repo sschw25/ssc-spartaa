@@ -52,6 +52,7 @@ export default function AdminInboxPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<InboxCategory>('all');
+  const [hideCompleted, setHideCompleted] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -249,8 +250,12 @@ export default function AdminInboxPage() {
 
   // 카테고리 필터링 반영
   const filteredItems = React.useMemo(() => {
-    return inboxItems.filter((item) => activeCategory === 'all' || item.category === activeCategory);
-  }, [inboxItems, activeCategory]);
+    return inboxItems.filter((item) => {
+      if (activeCategory !== 'all' && item.category !== activeCategory) return false;
+      if (hideCompleted && item.tone === 'emerald') return false;
+      return true;
+    });
+  }, [inboxItems, activeCategory, hideCompleted]);
 
   // 3. 통합 요청 해결 PATCH API 호출
   const handleProcessRequest = async (actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending') => {
@@ -361,6 +366,21 @@ export default function AdminInboxPage() {
                 {tab.label}
               </button>
             ))}
+          </div>
+
+          <div className="flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setHideCompleted((v) => !v)}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold border transition-all ${
+                hideCompleted
+                  ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
+                  : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-700'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              처리됨 제외
+            </button>
           </div>
 
           <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
@@ -496,40 +516,76 @@ export default function AdminInboxPage() {
                 {/* proposedGoal 제안 계획 표시 */}
                 {selectedItem.type === 'request' && selectedItem.rawItem?.proposedGoal && (() => {
                   const pg: ProposedGoal = selectedItem.rawItem.proposedGoal;
+                  const cg = pg.currentGoal;
                   const materialTitle = getMaterialTitle(selectedItem.studentId, pg);
                   const isBook = pg.materialType === 'book';
-                  const goalUnit = pg.goalType === 'weeks' ? '주' : pg.goalType === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주') : (isBook ? 'p/일' : '강/일');
+                  const unitFor = (gt?: string) => gt === 'weeks' ? '주' : gt === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주') : (isBook ? 'p/일' : '강/일');
                   return (
-                    <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.03] p-4 space-y-2.5">
+                    <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.03] p-4 space-y-3">
                       <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
                         <Target className="w-3.5 h-3.5" />
-                        학생 제안 증진계획
+                        학생 제안 변경 내역
                       </div>
-                      <div className="space-y-1.5 text-[11px]">
-                        <div className="flex items-center gap-2">
-                          {isBook
-                            ? <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                            : <Tv className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                          <span className="font-black text-slate-700 truncate">{materialTitle}</span>
-                          <span className="text-[9px] font-bold text-slate-400 shrink-0">{isBook ? '교재' : '인강'}</span>
+
+                      {/* 교재/인강 제목 */}
+                      <div className="flex items-center gap-2 text-[11px]">
+                        {isBook
+                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          : <Tv className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                        <span className="font-black text-slate-700 truncate">{materialTitle}</span>
+                        <span className="text-[9px] font-bold text-slate-400 shrink-0">{isBook ? '교재' : '인강'}</span>
+                      </div>
+
+                      {/* 변경 전/후 비교 */}
+                      {cg ? (
+                        <div className="grid grid-cols-2 gap-2 text-[10px]">
+                          <div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-1.5">
+                            <p className="font-black text-slate-400 uppercase tracking-wider text-[9px]">변경 전 (현재)</p>
+                            {cg.goalType && cg.goalValue ? (
+                              <span className="inline-block bg-slate-100 rounded-md px-2 py-0.5 font-bold text-slate-600">
+                                {getGoalTypeLabel(cg.goalType)}: {cg.goalValue}{unitFor(cg.goalType)}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-semibold">미설정</span>
+                            )}
+                            {cg.speedMultiplier && cg.speedMultiplier !== 1.0 && (
+                              <span className="inline-block ml-1 bg-slate-100 rounded-md px-2 py-0.5 font-bold text-slate-600">
+                                {cg.speedMultiplier}×
+                              </span>
+                            )}
+                          </div>
+                          <div className="rounded-xl border border-[#0071E3]/30 bg-[#0071E3]/[0.04] p-2.5 space-y-1.5">
+                            <p className="font-black text-[#0071E3]/70 uppercase tracking-wider text-[9px]">변경 후 (신청)</p>
+                            <span className="inline-block bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
+                              {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{unitFor(pg.goalType)}
+                            </span>
+                            {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
+                              <span className="inline-block ml-1 bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
+                                {pg.speedMultiplier}×
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2 pl-5">
+                      ) : (
+                        <div className="flex flex-wrap gap-2">
                           <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                            {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{goalUnit}
+                            {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{unitFor(pg.goalType)}
                           </span>
                           {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
                             <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
                               배속 {pg.speedMultiplier}×
                             </span>
                           )}
-                          {pg.proposedWeekNumber && pg.proposedRangeText && (
-                            <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
-                              {pg.proposedWeekNumber}주차: {pg.proposedRangeText}
-                            </span>
-                          )}
                         </div>
-                      </div>
-                      <p className="text-[9px] font-bold text-[#0071E3]/70 pl-0.5">
+                      )}
+
+                      {pg.proposedWeekNumber && pg.proposedRangeText && (
+                        <span className="inline-block bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                          {pg.proposedWeekNumber}주차: {pg.proposedRangeText}
+                        </span>
+                      )}
+
+                      <p className="text-[9px] font-bold text-[#0071E3]/70">
                         ✅ 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
                       </p>
                     </div>

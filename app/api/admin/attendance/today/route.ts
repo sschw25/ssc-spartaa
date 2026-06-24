@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import {
   activeBackend,
-  getStudents,
+  getStudentsSummary,
   getOpenSessions,
   getSessionsByDate,
   getStudyMinutesByStudent,
@@ -33,7 +33,7 @@ export async function GET() {
   try {
     const { todayStr, weekStart } = getPeriodBounds();
     const [students, openSessions, todaySessions, weekMinutesByStudent] = await Promise.all([
-      getStudents(),
+      getStudentsSummary(),
       getOpenSessions(),
       getSessionsByDate(todayStr),
       getStudyMinutesByStudent(weekStart),

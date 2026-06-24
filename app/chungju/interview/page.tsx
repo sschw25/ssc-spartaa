@@ -71,17 +71,33 @@ const INTERVIEW_TESTIMONIALS = [
 export default function ChungjuInterviewPage() {
   const googleFormUrl = 'https://forms.gle/hJyRHB9A9afAjHbB7'
 
-  const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'Course',
-    'name': '2026 지방직·교육행정직 공무원 면접반 (충주캠퍼스)',
-    'description': '강원 및 충북 전역, 경기도 공무원 면접 집중 대비반. 12시간 정규수업 및 1:1 코칭 제공.',
-    'provider': {
-      '@type': 'EducationalOrganization',
-      'name': 'SSC스파르타 충주캠퍼스',
-      'sameAs': 'https://www.sscsparta.com/chungju',
+  const jsonLd = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Course',
+      'name': '2026 지방직·교육행정직 공무원 면접반 (충주캠퍼스)',
+      'description': '충주 공무원 면접학원 SSC스파르타. 충북 지방직·교육행정직 필기합격자 대상 면접 집중 대비반. 12시간 정규수업 및 1:1 코칭 제공.',
+      'provider': {
+        '@type': 'EducationalOrganization',
+        'name': 'SSC스파르타 충주캠퍼스',
+        'sameAs': 'https://www.sscsparta.com/chungju',
+      },
     },
-  }
+    {
+      '@context': 'https://schema.org',
+      '@type': 'School',
+      '@id': 'https://www.sscsparta.com/chungju/interview#school',
+      'name': 'SSC스파르타 충주캠퍼스 (충주 공무원 면접학원)',
+      'telephone': '0507-1492-5574',
+      'address': {
+        '@type': 'PostalAddress',
+        'streetAddress': '계명대로 283 4층',
+        'addressLocality': '충주시',
+        'addressRegion': '충청북도',
+        'addressCountry': 'KR',
+      },
+    }
+  ]
 
   return (
     <main className="overflow-x-hidden bg-[#F8F9FA] text-[#1D1D1F] min-h-screen pb-24 md:pb-0">
@@ -115,7 +131,7 @@ export default function ChungjuInterviewPage() {
             2026 최종 합격을 향한 마지막 단 하나의 선택
           </div>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight mb-6">
-            충북 공무원 면접의 절대 기준<br />
+            충주 공무원 면접학원의 절대 기준<br />
             <span className="text-[#0071E3]">SSC스파르타 충주 면접반</span>
           </h1>
           <p className="text-base md:text-lg text-[#86868B] max-w-2xl mx-auto mb-10 leading-relaxed">

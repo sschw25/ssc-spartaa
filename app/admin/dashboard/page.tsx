@@ -853,6 +853,13 @@ export default function AdminDashboardPage() {
             <Calendar className="w-3.5 h-3.5 text-[#86868B]" />
             <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">출결 현황</span>
             <div className="flex-1 h-px bg-black/[0.06]" />
+            <button
+              onClick={() => router.push('/admin/attendance')}
+              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-[#0071E3] hover:bg-blue-50 transition-colors"
+            >
+              <ClipboardList className="w-3 h-3" />
+              출결 상세
+            </button>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <TodayAttendanceWidget

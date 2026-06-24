@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
-import { getStudents, getStudentAuthRecords } from '@/lib/store';
+import { getStudentsSummary, getStudentAuthRecords } from '@/lib/store';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 
 const normalizeName = (value: unknown) =>
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
 
       const normalizedCode = normalizeCode(authCode || phoneLast4);
       if (normalizedCode.length === 4) {
-        const students = await getStudents();
+        const students = await getStudentsSummary();
         const matches = students.filter((student) => {
           const studentName = normalizeName(student.name);
           const contactDigits = onlyDigits(student.contact);

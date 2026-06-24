@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyAttendToken } from '@/lib/attendance-token';
-import { getStudents } from '@/lib/store';
+import { getStudentsSummary } from '@/lib/store';
 import { toggleAttendance, processAttendance, type AttendanceAction } from '@/lib/attendance-service';
 import { clientIp, rateLimit } from '@/lib/rate-limit';
 import type { Student } from '@/lib/types/student';
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const students = await getStudents();
+    const students = await getStudentsSummary();
     const matches = findMatches(students, digits);
 
     if (matches.length === 0) {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
-import { activeBackend, getStudents, getSessionsByDate, getOpenSessions } from '@/lib/store';
+import { activeBackend, getStudentsSummary, getSessionsByDate, getOpenSessions } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
 
 function seoulHm(iso: string): { label: string; min: number } {
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
 
   try {
     const [students, sessions, openSessions] = await Promise.all([
-      getStudents(),
+      getStudentsSummary(),
       getSessionsByDate(date),
       getOpenSessions(),
     ]);

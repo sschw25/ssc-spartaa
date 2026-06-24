@@ -192,8 +192,11 @@ export default function StudentReportPage() {
     proposedWeekNumber: '',
     proposedRangeText: '',
     speedMultiplier: '1.0',
+    currentGoalSnapshot: null as { goalType?: string; goalValue?: number; speedMultiplier?: number } | null,
   });
   const [requestSubmitting, setRequestSubmitting] = useState(false);
+  const [pendingPlanId, setPendingPlanId] = useState<string | null>(null);
+  const [pendingAmount, setPendingAmount] = useState(0);
   const [requestError, setRequestError] = useState('');
   const [requestCustomOpen, setRequestCustomOpen] = useState(false);
   const [suggestionMessage, setSuggestionMessage] = useState('');
@@ -1012,8 +1015,10 @@ export default function StudentReportPage() {
                 materialId: lecture.id,
                 planId: plan.id,
                 isCompleted: plan.isCompleted,
+                actualAmount: plan.actualAmount,
                 studyTime: subject.studyTime || '',
                 rangeText: plan.rangeText,
+                dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
                 dailyLabel: getDailyAmountLabel(plan),
               }))
           );
@@ -1029,8 +1034,10 @@ export default function StudentReportPage() {
                 materialId: book.id,
                 planId: plan.id,
                 isCompleted: plan.isCompleted,
+                actualAmount: plan.actualAmount,
                 studyTime: subject.studyTime || '',
                 rangeText: plan.rangeText,
+                dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
                 dailyLabel: getDailyAmountLabel(plan),
               }))
           );
@@ -1390,6 +1397,7 @@ export default function StudentReportPage() {
     isCompleted?: boolean,
     solvedQuestions?: number,
     incorrectTags?: Record<string, number>,
+    actualAmount?: number,
   ) => {
     setStudent((prev) =>
       prev
@@ -1407,7 +1415,9 @@ export default function StudentReportPage() {
                   ...(planId
                     ? {
                         detailedPlans: (b.detailedPlans || []).map((p) =>
-                          p.id === planId ? { ...p, isCompleted: Boolean(isCompleted) } : p,
+                          p.id === planId
+                            ? { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
+                            : p,
                         ),
                       }
                     : {}),
@@ -1421,7 +1431,9 @@ export default function StudentReportPage() {
                   ...(planId
                     ? {
                         detailedPlans: (l.detailedPlans || []).map((p) =>
-                          p.id === planId ? { ...p, isCompleted: Boolean(isCompleted) } : p,
+                          p.id === planId
+                            ? { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
+                            : p,
                         ),
                       }
                     : {}),
@@ -1436,7 +1448,7 @@ export default function StudentReportPage() {
   const saveProgressPatch = async (
     materialType: ProgressMaterialType,
     materialId: string,
-    payload: { value?: number; planId?: string; isCompleted?: boolean; solvedQuestions?: number; incorrectTags?: Record<string, number> },
+    payload: { value?: number; planId?: string; isCompleted?: boolean; actualAmount?: number; solvedQuestions?: number; incorrectTags?: Record<string, number> },
   ) => {
     try {
       const res = await fetch('/api/student/progress', {
@@ -1447,13 +1459,14 @@ export default function StudentReportPage() {
       const json = await res.json();
       if (res.ok && json.success && typeof json.value === 'number') {
         applyProgressPatch(
-          materialType, 
-          materialId, 
-          json.value, 
-          json.planId, 
-          json.isCompleted, 
-          json.solvedQuestions, 
-          json.incorrectTags
+          materialType,
+          materialId,
+          json.value,
+          json.planId,
+          json.isCompleted,
+          json.solvedQuestions,
+          json.incorrectTags,
+          payload.actualAmount,
         );
       }
     } catch {
@@ -1476,7 +1489,8 @@ export default function StudentReportPage() {
     materialId: string,
     planId: string,
     isCompleted: boolean,
-  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted });
+    actualAmount?: number,
+  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted, ...(actualAmount !== undefined ? { actualAmount } : {}) });
 
   // 학생 본인 교재 오답 태그 누적 헬퍼
   const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => {
@@ -1592,6 +1606,7 @@ export default function StudentReportPage() {
           proposedWeekNumber: '',
           proposedRangeText: '',
           speedMultiplier: '1.0',
+          currentGoalSnapshot: null,
         });
         setRequestCustomOpen(false);
       } else {
@@ -2526,34 +2541,91 @@ export default function StudentReportPage() {
 
                   {todayPlanEntries.length > 0 ? (
                     <div className="mt-4 grid gap-2 md:grid-cols-3">
-                      {todayPlanEntries.map((entry, index) => (
-                        <div key={entry.id} className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 shadow-[0_6px_18px_rgba(0,113,227,0.04)]">
-                          <div className="flex items-start gap-2.5">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-[10px] font-black text-white">
-                              {index + 1}
-                            </span>
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-black text-slate-900">{entry.subject} · {entry.title}</p>
-                              <p className="mt-1 truncate text-[10px] font-bold text-slate-500">
-                                {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
-                              </p>
+                      {todayPlanEntries.map((entry, index) => {
+                        const isPending = pendingPlanId === entry.id;
+                        const _r = entry.rangeText || '';
+                        const unit = _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
+                        return (
+                          <div key={entry.id} className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 shadow-[0_6px_18px_rgba(0,113,227,0.04)]">
+                            <div className="flex items-start gap-2.5">
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-[10px] font-black text-white">
+                                {index + 1}
+                              </span>
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-xs font-black text-slate-900">{entry.subject} · {entry.title}</p>
+                                <p className="mt-1 truncate text-[10px] font-bold text-slate-500">
+                                  {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (entry.isCompleted) {
+                                    updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false);
+                                  } else {
+                                    setPendingPlanId(entry.id);
+                                    setPendingAmount(entry.dailyAmount ?? 1);
+                                  }
+                                }}
+                                aria-pressed={entry.isCompleted}
+                                className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black transition active:scale-[0.96] ${
+                                  entry.isCompleted
+                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                    : isPending
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                }`}
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                {entry.isCompleted ? `완료 (${entry.actualAmount ?? '?'}${unit})` : '완료'}
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, !entry.isCompleted)}
-                              aria-pressed={entry.isCompleted}
-                              className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black transition active:scale-[0.96] ${
-                                entry.isCompleted
-                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                  : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
-                              }`}
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              완료
-                            </button>
+                            {isPending && (
+                              <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
+                                <p className="text-[10px] font-black text-slate-500">실제로 얼마나 했나요?</p>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => setPendingAmount((v) => Math.max(0, v - 1))}
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 active:scale-95"
+                                  >
+                                    −
+                                  </button>
+                                  <span className="min-w-[3rem] text-center text-sm font-black text-slate-900">
+                                    {pendingAmount}{unit}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPendingAmount((v) => v + 1)}
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 active:scale-95"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount);
+                                      setPendingPlanId(null);
+                                    }}
+                                    className="flex-1 rounded-full bg-emerald-500 py-1.5 text-[10px] font-black text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                  >
+                                    완료 확인
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setPendingPlanId(null)}
+                                    className="flex-1 rounded-full border border-slate-200 bg-white py-1.5 text-[10px] font-black text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="mt-4 rounded-2xl border border-dashed border-[#0071E3]/20 bg-white/70 px-4 py-5 text-center text-xs font-bold text-slate-500">
@@ -3176,7 +3248,8 @@ export default function StudentReportPage() {
                             goalValue: requestForm.goalValue ? Number(requestForm.goalValue) : 0,
                             proposedWeekNumber: requestForm.proposedWeekNumber ? Number(requestForm.proposedWeekNumber) : undefined,
                             proposedRangeText: requestForm.proposedRangeText || undefined,
-                            speedMultiplier: requestForm.materialType === 'lecture' ? (requestForm.speedMultiplier ? Number(requestForm.speedMultiplier) : 1.0) : undefined
+                            speedMultiplier: requestForm.materialType === 'lecture' ? (requestForm.speedMultiplier ? Number(requestForm.speedMultiplier) : 1.0) : undefined,
+                            currentGoal: requestForm.currentGoalSnapshot || undefined,
                           };
                         }
                         sendRequest(requestForm.requestType, requestForm.message, proposedGoal);
@@ -3210,12 +3283,22 @@ export default function StudentReportPage() {
                               value={requestForm.materialId}
                               onChange={(e) => {
                                 const selectedId = e.target.value;
-                                const isBook = (student?.books || []).some(b => b.id === selectedId);
+                                const book = (student?.books || []).find(b => b.id === selectedId);
+                                const lecture = (student?.lectures || []).find(l => l.id === selectedId);
+                                const isBook = !!book;
+                                const material = book || lecture;
                                 setRequestForm(f => ({
                                   ...f,
                                   materialId: selectedId,
                                   materialType: isBook ? 'book' : 'lecture',
-                                  speedMultiplier: '1.0',
+                                  goalType: (material?.goalType as any) || 'weeks',
+                                  goalValue: material?.goalValue ? String(material.goalValue) : '',
+                                  speedMultiplier: !isBook && lecture?.speedMultiplier ? String(lecture.speedMultiplier) : '1.0',
+                                  currentGoalSnapshot: material ? {
+                                    goalType: material.goalType,
+                                    goalValue: material.goalValue,
+                                    speedMultiplier: !isBook ? lecture?.speedMultiplier : undefined,
+                                  } : null,
                                 }));
                               }}
                               className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-material-select"
@@ -3240,6 +3323,17 @@ export default function StudentReportPage() {
                           
                           {requestForm.materialId && (
                             <>
+                              {/* 현재 설정값 힌트 */}
+                              {requestForm.currentGoalSnapshot?.goalValue ? (
+                                <div className="rounded-lg bg-slate-100/80 border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 flex items-center gap-1.5">
+                                  <span className="font-black text-slate-400">현재 설정:</span>
+                                  <span>{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '목표 기간' : requestForm.currentGoalSnapshot.goalType === 'weeklyAmount' ? '주간 학습량' : '일일 학습량'} {requestForm.currentGoalSnapshot.goalValue}{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}</span>
+                                  {requestForm.currentGoalSnapshot.speedMultiplier && requestForm.currentGoalSnapshot.speedMultiplier !== 1.0 && (
+                                    <span>· {requestForm.currentGoalSnapshot.speedMultiplier}배속</span>
+                                  )}
+                                  <span className="text-slate-400">→ 아래에서 변경할 값을 입력하세요</span>
+                                </div>
+                              ) : null}
                               <div className="grid grid-cols-2 gap-2">
                                 <div className="space-y-1">
                                   <label className="text-[10px] font-bold text-slate-500">목표 설정 방식</label>
@@ -4040,7 +4134,7 @@ export default function StudentReportPage() {
                                               ? 'border-emerald-200 bg-white/70 text-emerald-700'
                                               : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
                                           }`}>
-                                            {plan.isCompleted ? '완료됨' : '완료'}
+                                            {plan.isCompleted ? (plan.actualAmount !== undefined ? `완료 (${plan.actualAmount}${b.unit || 'p'})` : '완료됨') : '완료'}
                                           </span>
                                         </button>
                                       ))}
@@ -4168,7 +4262,7 @@ export default function StudentReportPage() {
                                               ? 'border-emerald-200 bg-white/70 text-emerald-700'
                                               : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
                                           }`}>
-                                            {plan.isCompleted ? '완료됨' : '완료'}
+                                            {plan.isCompleted ? (plan.actualAmount !== undefined ? `완료 (${plan.actualAmount}강)` : '완료됨') : '완료'}
                                           </span>
                                         </button>
                                       ))}
@@ -4749,6 +4843,7 @@ export default function StudentReportPage() {
                           proposedWeekNumber: '',
                           proposedRangeText: '',
                           speedMultiplier: '1.0',
+                          currentGoalSnapshot: null,
                         });
                         setTimeout(() => {
                           window.scrollTo({ top: document.getElementById('student-requests')?.offsetTop || 0, behavior: 'smooth' });

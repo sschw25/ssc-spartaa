@@ -1180,6 +1180,7 @@ export function ProgressTab() {
                                                   <th className="py-1 px-2 text-left">기간</th>
                                                   <th className="py-1 px-2 text-left">목표 범위</th>
                                                   <th className="py-1 px-2 text-center w-16">일일 목표</th>
+                                                  <th className="py-1 px-2 text-center w-14">실제</th>
                                                   <th className="py-1 px-2 text-center w-12">완료</th>
                                                 </tr>
                                               </thead>
@@ -1207,6 +1208,13 @@ export function ProgressTab() {
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center font-semibold text-[#434345]">
                                                       {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}{book.unit || 'p'}
+                                                    </td>
+                                                    <td className="py-1.5 px-2 text-center">
+                                                      {plan.isCompleted && plan.actualAmount !== undefined ? (
+                                                        <span className="font-bold text-emerald-700">{plan.actualAmount}{book.unit || 'p'}</span>
+                                                      ) : (
+                                                        <span className="text-[#C7C7CC]">—</span>
+                                                      )}
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center">
                                                       <input
@@ -1585,6 +1593,7 @@ export function ProgressTab() {
                                                   <th className="py-1 px-2 text-left">기간</th>
                                                   <th className="py-1 px-2 text-left">목표 범위</th>
                                                   <th className="py-1 px-2 text-center w-16">일일 목표</th>
+                                                  <th className="py-1 px-2 text-center w-14">실제</th>
                                                   <th className="py-1 px-2 text-center w-12">완료</th>
                                                 </tr>
                                               </thead>
@@ -1612,6 +1621,13 @@ export function ProgressTab() {
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center font-semibold text-[#434345]">
                                                       {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}강
+                                                    </td>
+                                                    <td className="py-1.5 px-2 text-center">
+                                                      {plan.isCompleted && plan.actualAmount !== undefined ? (
+                                                        <span className="font-bold text-emerald-700">{plan.actualAmount}강</span>
+                                                      ) : (
+                                                        <span className="text-[#C7C7CC]">—</span>
+                                                      )}
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center">
                                                       <input

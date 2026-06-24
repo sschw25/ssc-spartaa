@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
-import { activeBackend, getStudents, getSessionsInRange } from '@/lib/store';
+import { activeBackend, getStudentsSummary, getSessionsInRange } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
 
 const DEADLINE_MIN: Record<string, number> = { '08:20': 8 * 60 + 20, '09:00': 9 * 60 };
@@ -25,7 +25,7 @@ export async function GET() {
   try {
     const { weekStart, todayStr } = getPeriodBounds();
     const [students, sessions] = await Promise.all([
-      getStudents(),
+      getStudentsSummary(),
       getSessionsInRange(weekStart, todayStr),
     ]);
     const studentMap = new Map(students.map((s) => [s.id, s]));

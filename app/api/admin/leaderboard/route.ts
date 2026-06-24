@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
-import { activeBackend, getStudents, getStudyMinutesByStudent, getOpenSessions } from '@/lib/store';
+import { activeBackend, getStudentsSummary, getStudyMinutesByStudent, getOpenSessions } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
 
 // 관리자: 전체 순공 랭킹 (관리관점 — 실명·전원 노출, 0분 학생도 하위에 포함).
@@ -15,7 +15,7 @@ export async function GET() {
   try {
     const { weekStart, todayStr } = getPeriodBounds();
     const [students, weekMin, dayMin, openSessions] = await Promise.all([
-      getStudents(),
+      getStudentsSummary(),
       getStudyMinutesByStudent(weekStart),
       getStudyMinutesByStudent(todayStr),
       getOpenSessions(),

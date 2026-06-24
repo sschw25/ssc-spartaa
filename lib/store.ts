@@ -6,6 +6,7 @@ import { Student, SharedMaterial } from './types/student';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
+  getStudentsSummarySupabase,
   getStudentByIdSupabase,
   saveStudentSupabase,
   deleteStudentSupabase,
@@ -46,6 +47,10 @@ export function activeBackend(): 'supabase' | 'local-json' {
 
 export async function getStudents(): Promise<Student[]> {
   return isSupabaseConfigured() ? getStudentsSupabase() : getStudentsLocal();
+}
+
+export async function getStudentsSummary(): Promise<Student[]> {
+  return isSupabaseConfigured() ? getStudentsSummarySupabase() : getStudentsLocal();
 }
 
 export async function getStudentById(id: string): Promise<Student | null> {

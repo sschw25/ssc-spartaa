@@ -644,16 +644,6 @@ function ConsultationContent() {
           </div>
         </div>
 
-        {/* 대기요청 패널: 퀵필터가 상담/진도 전용이면 숨겨 관련 없는 데이터 노출 방지 */}
-        {quickFilter === 'all' && (
-          <PendingChangeRequestsPanel
-            students={campusScopedStudents}
-            getCampusLabel={getCampusLabel}
-            onOpenStudent={handleOpenStudentDetail}
-            description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항 대기 요청입니다. 바로 열면 기존 답변 UI가 있는 학생 상세 시트로 이동합니다.`}
-          />
-        )}
-
         {/* 메인 대시보드 탭 분기 */}
         {loading ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center justify-center">

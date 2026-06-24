@@ -10,12 +10,13 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { 
-    materialType?: unknown; 
-    materialId?: unknown; 
-    value?: unknown; 
-    planId?: unknown; 
+  let body: {
+    materialType?: unknown;
+    materialId?: unknown;
+    value?: unknown;
+    planId?: unknown;
     isCompleted?: unknown;
+    actualAmount?: unknown;
     solvedQuestions?: unknown;
     incorrectTags?: unknown;
   };
@@ -98,6 +99,11 @@ export async function PATCH(req: NextRequest) {
         plan.isCompleted = Boolean(body.isCompleted);
         if (plan.isCompleted) {
           nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+          if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
+            plan.actualAmount = body.actualAmount;
+          }
+        } else {
+          plan.actualAmount = undefined;
         }
       }
 
@@ -138,6 +144,11 @@ export async function PATCH(req: NextRequest) {
         plan.isCompleted = Boolean(body.isCompleted);
         if (plan.isCompleted) {
           nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+          if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
+            plan.actualAmount = body.actualAmount;
+          }
+        } else {
+          plan.actualAmount = undefined;
         }
       }
 
