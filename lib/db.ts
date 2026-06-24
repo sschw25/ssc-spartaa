@@ -151,7 +151,6 @@ export function readDb(): Student[] {
           lifeComment: student.lifeComment || '',
           studentLifeComment: student.studentLifeComment || '',
           specialNote: student.specialNote || '',
-          speedMultiplier: student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0,
           subjects: mergedSubjects
         };
       }
@@ -177,7 +176,6 @@ export function readDb(): Student[] {
         lifeComment: student.lifeComment || '',
         studentLifeComment: student.studentLifeComment || '',
         specialNote: student.specialNote || '',
-        speedMultiplier: student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0,
         subjects: migratedSubjects,
         books: student.books || [],
         lectures: student.lectures || []

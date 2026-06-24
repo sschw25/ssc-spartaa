@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Loader2, KeyRound, Bell, CalendarClock, ClipboardCheck } from 'lucide-react';
+import { Trash2, Loader2, KeyRound, Bell, CalendarClock, ClipboardCheck, Link2, Copy, RotateCcw, X } from 'lucide-react';
 
 type SmsTarget = 'parent' | 'student';
 
@@ -39,8 +39,6 @@ interface InfoTabProps {
   setManager: (v: string) => void;
   contact: string;
   setContact: (v: string) => void;
-  speedMultiplier: number;
-  setSpeedMultiplier: (v: number) => void;
   nextConsultationDate: string;
   setNextConsultationDate: (v: string) => void;
   enrollmentEndDate: string;
@@ -58,6 +56,12 @@ interface InfoTabProps {
   initialStudentPhone?: string;
   initialSmsTargets?: SmsTarget[];
   onSaveNotify: (info: { parentPhone: string; studentPhone: string; smsTargets: SmsTarget[] }) => Promise<void>;
+  studentId?: string;
+  shareToken?: string;
+  shareTokenExpiresAt?: string;
+  sharePassword?: string;
+  onGenerateShareToken?: () => Promise<void>;
+  onRevokeShareToken?: () => Promise<void>;
 }
 
 // 학생 기본정보 탭 (프레젠테이셔널). 상태·핸들러는 부모가 소유하고 props 로 전달.
@@ -67,7 +71,6 @@ export function InfoTab({
   campus, setCampus,
   manager, setManager,
   contact, setContact,
-  speedMultiplier, setSpeedMultiplier,
   nextConsultationDate, setNextConsultationDate,
   enrollmentEndDate, setEnrollmentEndDate,
   weeklyGradeCheck, setWeeklyGradeCheck,
@@ -81,11 +84,46 @@ export function InfoTab({
   initialStudentPhone = '',
   initialSmsTargets = ['parent'],
   onSaveNotify,
+  studentId,
+  shareToken,
+  shareTokenExpiresAt,
+  sharePassword,
+  onGenerateShareToken,
+  onRevokeShareToken,
 }: InfoTabProps) {
   const [parentPhone, setParentPhone] = useState(initialParentPhone);
   const [studentPhone, setStudentPhone] = useState(initialStudentPhone);
   const [smsTargets, setSmsTargets] = useState<SmsTarget[]>(initialSmsTargets.length ? initialSmsTargets : ['parent']);
   const [savingNotify, setSavingNotify] = useState(false);
+  const [sharingLoading, setSharingLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const shareUrl = studentId && shareToken
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/report/${studentId}?token=${shareToken}`
+    : null;
+  const tokenExpired = shareTokenExpiresAt ? shareTokenExpiresAt < new Date().toISOString() : false;
+  const tokenValid = shareToken && !tokenExpired;
+  const expiryLabel = shareTokenExpiresAt
+    ? new Date(shareTokenExpiresAt).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : '';
+
+  async function handleGenerate() {
+    if (!onGenerateShareToken) return;
+    setSharingLoading(true);
+    try { await onGenerateShareToken(); } finally { setSharingLoading(false); }
+  }
+  async function handleRevoke() {
+    if (!onRevokeShareToken) return;
+    setSharingLoading(true);
+    try { await onRevokeShareToken(); } finally { setSharingLoading(false); }
+  }
+  function handleCopy() {
+    if (!shareUrl) return;
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   const toggleTarget = (t: SmsTarget) =>
     setSmsTargets((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
@@ -173,24 +211,6 @@ export function InfoTab({
               <option key={exam} value={exam} />
             ))}
           </datalist>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="edit-speed" className="text-xs font-semibold text-[#1D1D1F]">
-            학습 속도 가중치
-          </Label>
-          <Select value={String(speedMultiplier)} onValueChange={(val) => setSpeedMultiplier(Number(val))}>
-            <SelectTrigger id="edit-speed" className="rounded-lg border-black/[0.08] text-xs h-9 bg-white">
-              <SelectValue placeholder="가중치 선택" />
-            </SelectTrigger>
-            <SelectContent className="bg-white">
-              <SelectItem value="0.5" className="text-xs">0.5배속 (매우 느림 / 기초)</SelectItem>
-              <SelectItem value="0.8" className="text-xs">0.8배속 (조금 느림)</SelectItem>
-              <SelectItem value="1.0" className="text-xs">1.0배속 (보통 / 기본)</SelectItem>
-              <SelectItem value="1.2" className="text-xs">1.2배속 (조금 빠름)</SelectItem>
-              <SelectItem value="1.5" className="text-xs">1.5배속 (매우 빠름)</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="space-y-1.5">
@@ -329,6 +349,82 @@ export function InfoTab({
             {savingNotify ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '알림 설정 저장'}
           </Button>
         </div>
+      </div>
+
+      {/* 학부모 리포트 공유 */}
+      <div className="rounded-2xl border border-black/[0.06] bg-[#FAFAFA] p-4 space-y-3">
+        <div className="flex items-center gap-2">
+          <Link2 className="w-3.5 h-3.5 text-[#86868B]" />
+          <span className="text-[11px] font-black tracking-wide text-[#1D1D1F]">학부모 리포트 공유</span>
+          {tokenValid && (
+            <span className="ml-auto text-[9px] font-extrabold text-green-700 bg-green-50 border border-green-200/60 rounded-full px-2 py-0.5">
+              활성 · {expiryLabel} 만료
+            </span>
+          )}
+          {shareToken && tokenExpired && (
+            <span className="ml-auto text-[9px] font-extrabold text-[#86868B] bg-[#F5F5F7] border border-black/[0.06] rounded-full px-2 py-0.5">
+              만료됨
+            </span>
+          )}
+        </div>
+
+        {tokenValid && shareUrl ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 bg-white border border-black/[0.08] rounded-xl px-3 py-2">
+              <span className="text-[10px] text-[#6E6E73] truncate flex-1 font-mono">{shareUrl}</span>
+              <button
+                onClick={handleCopy}
+                className="shrink-0 p-1 rounded-md hover:bg-[#F5F5F7] transition-colors"
+                title="링크 복사"
+              >
+                {copied
+                  ? <span className="text-[9px] font-extrabold text-green-600">복사됨!</span>
+                  : <Copy className="w-3.5 h-3.5 text-[#86868B]" />
+                }
+              </button>
+            </div>
+            {sharePassword && (
+              <div className="flex items-center gap-2 bg-[#F5F5F7] rounded-xl px-3 py-2">
+                <span className="text-[10px] text-[#86868B] font-semibold">비밀번호</span>
+                <span className="text-sm font-black tracking-[0.25em] text-[#1D1D1F]">{sharePassword}</span>
+                <span className="ml-auto text-[9px] text-[#86868B]">링크와 별도로 전달</span>
+              </div>
+            )}
+            <p className="text-[10px] text-[#86868B]">링크와 비밀번호를 각각 따로 전달해 주세요.</p>
+            <div className="flex gap-2">
+              <button
+                onClick={handleGenerate}
+                disabled={sharingLoading}
+                className="flex items-center gap-1 text-[10px] font-extrabold text-[#0071E3] hover:underline disabled:opacity-50"
+              >
+                <RotateCcw className="w-3 h-3" />
+                새 링크 발급
+              </button>
+              <button
+                onClick={handleRevoke}
+                disabled={sharingLoading}
+                className="flex items-center gap-1 text-[10px] font-extrabold text-red-600 hover:underline disabled:opacity-50"
+              >
+                <X className="w-3 h-3" />
+                링크 폐기
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-[10px] text-[#86868B]">
+              임시 링크를 생성하면 학부모님이 로그인 없이 리포트를 열람할 수 있습니다. 유효 기간은 7일입니다.
+            </p>
+            <button
+              onClick={handleGenerate}
+              disabled={sharingLoading || !onGenerateShareToken}
+              className="flex items-center gap-1.5 text-[11px] font-extrabold text-white bg-[#1D1D1F] hover:bg-[#323236] disabled:opacity-50 rounded-xl px-4 py-2 transition-colors"
+            >
+              {sharingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
+              링크 생성 (7일 유효)
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap gap-2 justify-between items-center">

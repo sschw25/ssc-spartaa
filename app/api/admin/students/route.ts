@@ -57,7 +57,9 @@ export async function POST(request: Request) {
       lectures: studentData.lectures || [],
       consultationLogs: studentData.consultationLogs || [],
       grades: studentData.grades || [],
-      subjects: studentData.subjects || []
+      subjects: studentData.subjects || [],
+      enrollmentEndDate: studentData.enrollmentEndDate,
+      weeklyGradeCheck: studentData.weeklyGradeCheck,
     };
 
     const saved = await saveStudent(newStudent);

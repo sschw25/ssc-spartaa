@@ -17,9 +17,10 @@ import { Student } from '@/lib/types/student';
 import { getManagedProgressItems, getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
 import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AddStudentModal } from '@/components/admin/add-student-modal';
-import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { PendingChangeRequestsPanel } from '@/components/admin/pending-change-requests-panel';
+import { ConsultationCalendar } from '@/components/admin/consultation-calendar';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const isCampusFilterValue = (value: string | null): value is string => !!value && CAMPUS_FILTERS.includes(value);
@@ -40,7 +41,8 @@ export default function AdminConsultationPage() {
 function ConsultationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+  const { openStudent, closeSheet, isSheetOpen } = useAdminGlobalSheet();
+
   const studentIdParam = searchParams.get('studentId');
   const focusParam = searchParams.get('focus');
   const actionParam = searchParams.get('action');
@@ -58,7 +60,7 @@ function ConsultationContent() {
   const [dashboardTab, setDashboardTab] = useState('cards');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [progressSort, setProgressSort] = useState<'shortage' | 'status' | 'name'>('shortage');
-  
+
   // 300명+ 대비 점진적 렌더링(더 보기)
   const PAGE_SIZE = 50;
   const [studentLimit, setStudentLimit] = useState(PAGE_SIZE);
@@ -80,10 +82,8 @@ function ConsultationContent() {
     setProgressLimit(PAGE_SIZE);
   }, [searchTerm, campusFilter, quickFilter, progressSort]);
 
-  // 모달 및 시트 제어 상태
+  // 모달 제어 상태
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   // 1. 인증 체크
   useEffect(() => {
@@ -149,8 +149,7 @@ function ConsultationContent() {
     if (studentIdParam && students.length > 0) {
       const target = students.find((s) => s.id === studentIdParam);
       if (target) {
-        setSelectedStudent(target);
-        setIsDetailOpen(true);
+        handleOpenStudentDetail(target.id);
       }
     }
   }, [studentIdParam, students]);
@@ -214,8 +213,15 @@ function ConsultationContent() {
   const handleOpenStudentDetail = (studentId: string) => {
     const target = students.find((s) => s.id === studentId);
     if (!target) return;
-    setSelectedStudent(target);
-    setIsDetailOpen(true);
+    openStudent(target, {
+      onUpdate: (updated) => {
+        setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+      },
+      onDelete: (id) => {
+        setStudents((prev) => prev.filter((s) => s.id !== id));
+      },
+      allStudents: students,
+    });
   };
 
   useEffect(() => {
@@ -638,12 +644,15 @@ function ConsultationContent() {
           </div>
         </div>
 
-        <PendingChangeRequestsPanel
-          students={campusScopedStudents}
-          getCampusLabel={getCampusLabel}
-          onOpenStudent={handleOpenStudentDetail}
-          description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항 대기 요청입니다. 바로 열면 기존 답변 UI가 있는 학생 상세 시트로 이동합니다.`}
-        />
+        {/* 대기요청 패널: 퀵필터가 상담/진도 전용이면 숨겨 관련 없는 데이터 노출 방지 */}
+        {quickFilter === 'all' && (
+          <PendingChangeRequestsPanel
+            students={campusScopedStudents}
+            getCampusLabel={getCampusLabel}
+            onOpenStudent={handleOpenStudentDetail}
+            description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항 대기 요청입니다. 바로 열면 기존 답변 UI가 있는 학생 상세 시트로 이동합니다.`}
+          />
+        )}
 
         {/* 메인 대시보드 탭 분기 */}
         {loading ? (
@@ -654,22 +663,30 @@ function ConsultationContent() {
         ) : (
           <Tabs value={dashboardTab} onValueChange={handleDashboardTabChange} className="w-full" id="student-list-section">
             <div className="admin-fit-row flex justify-between items-center border-b border-black/[0.05] pb-4 mb-4 gap-3 admin-mobile-wrap">
-              <TabsList className="bg-white border border-black/[0.06] p-1 grid grid-cols-2 gap-1 h-auto min-w-0 w-full sm:w-auto rounded-full shadow-sm">
-                <TabsTrigger 
-                  value="cards" 
+              <TabsList className="bg-white border border-black/[0.06] p-1 grid grid-cols-3 gap-1 h-auto min-w-0 w-full sm:w-auto rounded-full shadow-sm">
+                <TabsTrigger
+                  value="cards"
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-[#1D1D1F] data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
                 >
                   <Users className="w-4 h-4 mr-1.5" />
                   <span className="hidden sm:inline">원생별 학습 관리</span>
-                  <span className="sm:hidden">원생 관리</span>
+                  <span className="sm:hidden">원생</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="db" 
+                <TabsTrigger
+                  value="db"
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-[#1D1D1F] data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
                 >
                   <SlidersHorizontal className="w-4 h-4 mr-1.5" />
                   <span className="hidden sm:inline">교재/강의 진도 관리</span>
-                  <span className="sm:hidden">교재/강의</span>
+                  <span className="sm:hidden">진도</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="calendar"
+                  className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-[#1D1D1F] data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
+                >
+                  <Calendar className="w-4 h-4 mr-1.5" />
+                  <span className="hidden sm:inline">상담 캘린더</span>
+                  <span className="sm:hidden">캘린더</span>
                 </TabsTrigger>
               </TabsList>
               <div className="flex items-center gap-2 shrink-0 sm:ml-auto">
@@ -738,10 +755,7 @@ function ConsultationContent() {
                     return (
                       <div
                         key={student.id}
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setIsDetailOpen(true);
-                        }}
+                        onClick={() => handleOpenStudentDetail(student.id)}
                         className="admin-fit-box bg-white border border-black/[0.05] rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-[1px] cursor-pointer transition-all duration-300 flex flex-col justify-between"
                       >
                         <div className="space-y-3">
@@ -755,8 +769,6 @@ function ConsultationContent() {
                               </div>
                               <p className="admin-fit-text admin-fit-caption text-[#86868B] mt-0.5 flex items-center gap-1.5 flex-wrap">
                                 <span>{student.manager || '담당 코치'}</span>
-                                <span className="w-1 h-1 rounded-full bg-[#86868B]/40"></span>
-                                <span>{student.speedMultiplier ? `${student.speedMultiplier}배속` : '1.0배속'}</span>
                                 {(() => {
                                   const todayMin = getStudentTodayTotalStudyTimeMin(student);
                                   if (todayMin <= 0) return null;
@@ -873,10 +885,7 @@ function ConsultationContent() {
                           return (
                             <tr
                               key={student.id}
-                              onClick={() => {
-                                setSelectedStudent(student);
-                                setIsDetailOpen(true);
-                              }}
+                              onClick={() => handleOpenStudentDetail(student.id)}
                               className="border-b border-black/[0.04] hover:bg-black/[0.01] transition-colors align-middle cursor-pointer"
                             >
                               <td className="p-3.5 pl-6 font-bold text-[#1D1D1F]">
@@ -893,7 +902,6 @@ function ConsultationContent() {
                               <td className="p-3.5 text-[#434345]">
                                 <div>{student.manager || '담당 코치'}</div>
                                 <div className="text-[10px] text-[#86868B] mt-0.5 flex flex-wrap gap-1 items-center">
-                                  <span className="bg-[#F5F5F7] px-1.5 py-0.5 rounded text-[9px] font-semibold">{student.speedMultiplier ? `${student.speedMultiplier}배속` : '1.0배속'}</span>
                                   {(() => {
                                     const todayMin = getStudentTodayTotalStudyTimeMin(student);
                                     if (todayMin <= 0) return null;
@@ -1066,14 +1074,10 @@ function ConsultationContent() {
                             </td>
 
                             <td className="p-3.5">
-                              <span 
+                              <span
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const stud = students.find(s => s.id === item.studentId);
-                                  if (stud) {
-                                    setSelectedStudent(stud);
-                                    setIsDetailOpen(true);
-                                  }
+                                  handleOpenStudentDetail(item.studentId);
                                 }}
                                 className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 w-fit"
                               >
@@ -1212,14 +1216,10 @@ function ConsultationContent() {
 
                           <div className="pt-2 border-t border-black/[0.03] space-y-1">
                             <div className="flex items-center justify-between">
-                              <span 
+                              <span
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  const stud = students.find(s => s.id === item.studentId);
-                                  if (stud) {
-                                    setSelectedStudent(stud);
-                                    setIsDetailOpen(true);
-                                  }
+                                  handleOpenStudentDetail(item.studentId);
                                 }}
                                 className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 text-[11px]"
                               >
@@ -1345,6 +1345,15 @@ function ConsultationContent() {
                 </div>
               )}
             </TabsContent>
+
+            {/* TAB CONTENT 3: 상담 캘린더 */}
+            <TabsContent value="calendar" className="outline-none">
+              <ConsultationCalendar
+                students={campusScopedStudents}
+                onOpenStudent={handleOpenStudentDetail}
+              />
+            </TabsContent>
+
           </Tabs>
         )}
 
@@ -1356,24 +1365,6 @@ function ConsultationContent() {
         onClose={() => setIsAddModalOpen(false)}
         onSuccess={(newStudent) => {
           setStudents(prev => [newStudent, ...prev]);
-        }}
-        students={students}
-      />
-
-      {/* 학생 상세 정보 시트 패널 */}
-      <StudentDetailSheet
-        student={selectedStudent}
-        isOpen={isDetailOpen}
-        onClose={() => {
-          setIsDetailOpen(false);
-          setSelectedStudent(null);
-        }}
-        onUpdate={(updatedStudent) => {
-          setStudents(prev => prev.map(s => s.id === updatedStudent.id ? updatedStudent : s));
-          setSelectedStudent(updatedStudent);
-        }}
-        onDelete={(studentId) => {
-          setStudents(prev => prev.filter(s => s.id !== studentId));
         }}
         students={students}
       />

@@ -24,7 +24,6 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
   const [nextConsultationDate, setNextConsultationDate] = useState('');
-  const [speedMultiplier, setSpeedMultiplier] = useState(1.0);
   const [specialNote, setSpecialNote] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +52,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
         manager: manager.trim(),
         contact: contact.trim(),
         nextConsultationDate: nextConsultationDate || undefined,
-        speedMultiplier,
+        speedMultiplier: 1.0,
         lifeComment: '',
         specialNote,
         consultationLogs: [],
@@ -81,7 +80,6 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
         setManager('');
         setContact('');
         setNextConsultationDate('');
-        setSpeedMultiplier(1.0);
         setSpecialNote('');
         onClose();
       } else {
@@ -172,23 +170,6 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="new-speed" className="text-xs font-semibold text-[#1D1D1F]">
-              학습 속도 가중치
-            </Label>
-            <Select value={String(speedMultiplier)} onValueChange={(val) => setSpeedMultiplier(Number(val))}>
-              <SelectTrigger id="new-speed" className="rounded-xl border-black/[0.08] text-xs py-4.5 bg-white">
-                <SelectValue placeholder="가중치 선택" />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                <SelectItem value="0.5" className="text-xs">0.5배속 (매우 느림 / 기초)</SelectItem>
-                <SelectItem value="0.8" className="text-xs">0.8배속 (조금 느림)</SelectItem>
-                <SelectItem value="1.0" className="text-xs">1.0배속 (보통 / 기본)</SelectItem>
-                <SelectItem value="1.2" className="text-xs">1.2배속 (조금 빠름)</SelectItem>
-                <SelectItem value="1.5" className="text-xs">1.5배속 (매우 빠름)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="new-next-consult" className="text-xs font-semibold text-[#1D1D1F]">

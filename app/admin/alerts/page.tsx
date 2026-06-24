@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,8 @@ import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 import { getManagedProgressItems } from '@/lib/progress-plan';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { AnimatedNumber } from '@/components/admin/animated-number';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 
@@ -25,9 +28,10 @@ const getCampusLabel = (campus: string) => {
   }
 };
 
-export default function AdminAlertsPage() {
+function AdminAlertsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { openStudent } = useAdminGlobalSheet();
   
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
@@ -64,7 +68,15 @@ export default function AdminAlertsPage() {
     verifyAuth();
   }, [router, searchParams]);
 
-  // 2. 학생 데이터 로드
+  // 2. 로그아웃
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/admin/auth/logout', { method: 'POST' });
+    } catch {}
+    router.replace('/admin');
+  };
+
+  // 3. 학생 데이터 로드
   const loadStudents = async () => {
     setLoading(true);
     try {
@@ -120,7 +132,10 @@ export default function AdminAlertsPage() {
   if (checkingAuth) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#F8F9FA]">
-        <div className="text-sm font-black text-slate-400">인증 확인 중...</div>
+        <div className="flex items-center gap-2 text-sm font-black text-slate-400">
+          <span className="w-4 h-4 rounded-full border-2 border-slate-300 border-t-slate-500 animate-spin" />
+          인증 확인 중...
+        </div>
       </div>
     );
   }
@@ -176,7 +191,7 @@ export default function AdminAlertsPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] pb-12 font-sans text-[#1D1D1F]">
-      <AdminTopNav title="원생 진도 및 일정 관리 케어" onLogout={() => {}} />
+      <AdminTopNav title="원생 진도 및 일정 관리 케어" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-7xl px-4 pt-6 sm:px-6 lg:px-8 space-y-6">
         {/* 헤더 및 필터 영역 */}
@@ -232,7 +247,7 @@ export default function AdminAlertsPage() {
             </div>
             <h3 className="text-base font-black text-slate-800 mt-4">24시간 진도 정체</h3>
             <p className="text-xs font-bold text-slate-400 mt-0.5">하루 동안 진도 갱신이 없는 원생</p>
-            <p className="text-2xl font-black text-red-600 mt-2">{stagnantList.length}명</p>
+            <p className="text-2xl font-black text-red-600 mt-2"><AnimatedNumber value={stagnantList.length} suffix="명" /></p>
           </button>
 
           {/* 지연 카드 🟠 */}
@@ -252,7 +267,7 @@ export default function AdminAlertsPage() {
             </div>
             <h3 className="text-base font-black text-slate-800 mt-4">계획 대비 30% 지연</h3>
             <p className="text-xs font-bold text-slate-400 mt-0.5">교재/인강 진도가 밀린 원생</p>
-            <p className="text-2xl font-black text-amber-600 mt-2">{delayedList.length}명</p>
+            <p className="text-2xl font-black text-amber-600 mt-2"><AnimatedNumber value={delayedList.length} suffix="명" /></p>
           </button>
 
           {/* 상담 카드 ⚪ */}
@@ -272,7 +287,7 @@ export default function AdminAlertsPage() {
             </div>
             <h3 className="text-base font-black text-slate-800 mt-4">상담 일정 도래</h3>
             <p className="text-xs font-bold text-slate-400 mt-0.5">오늘 혹은 과거 상담 예정일 원생</p>
-            <p className="text-2xl font-black text-slate-700 mt-2">{consultationList.length}명</p>
+            <p className="text-2xl font-black text-slate-700 mt-2"><AnimatedNumber value={consultationList.length} suffix="명" /></p>
           </button>
         </div>
 
@@ -288,7 +303,7 @@ export default function AdminAlertsPage() {
                  activeTab === 'delayed' ? '계획보다 30% 이상 진도가 밀린 원생 목록 (🟠 주의)' : 
                  '상담 예정일이 오늘이거나 경과된 원생 목록 (⚪ 중립)'}
               </CardTitle>
-              <CardDescription className="text-[11px] font-bold text-slate-400 mt-1">행을 누르면 상담 및 피드백 페이지로 이동합니다.</CardDescription>
+              <CardDescription className="text-[11px] font-bold text-slate-400 mt-1">행을 누르면 원생 상세 시트가 열립니다.</CardDescription>
             </div>
 
             {/* 검색바 */}
@@ -305,8 +320,19 @@ export default function AdminAlertsPage() {
 
           <CardContent className="p-0">
             {loading ? (
-              <div className="py-20 text-center text-xs font-bold text-slate-400">데이터를 로드하는 중...</div>
+              <div className="py-16 flex flex-col items-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-slate-200 border-t-slate-400 animate-spin" />
+                <span className="text-xs font-bold text-slate-400">데이터를 로드하는 중...</span>
+              </div>
             ) : (
+              <AnimatePresence mode="wait">
+              <motion.div
+                key={activeTab}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+              >
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
                   <thead className="bg-slate-50/70 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
@@ -327,7 +353,11 @@ export default function AdminAlertsPage() {
                       .map(r => (
                         <tr
                           key={r.student.id}
-                          onClick={() => router.push(`/admin/consultation?studentId=${r.student.id}`)}
+                          onClick={() => openStudent(r.student, {
+                            onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
+                            onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
+                            allStudents: students,
+                          })}
                           className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
                         >
                           <td className="px-6 py-4 font-black text-slate-800">
@@ -358,7 +388,11 @@ export default function AdminAlertsPage() {
                       .map(r => (
                         <tr
                           key={r.student.id}
-                          onClick={() => router.push(`/admin/consultation?studentId=${r.student.id}`)}
+                          onClick={() => openStudent(r.student, {
+                            onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
+                            onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
+                            allStudents: students,
+                          })}
                           className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
                         >
                           <td className="px-6 py-4 font-black text-slate-800">
@@ -400,7 +434,11 @@ export default function AdminAlertsPage() {
                       .map(s => (
                         <tr
                           key={s.id}
-                          onClick={() => router.push(`/admin/consultation?studentId=${s.id}`)}
+                          onClick={() => openStudent(s, {
+                            onUpdate: (updated) => setStudents((prev) => prev.map((st) => st.id === updated.id ? updated : st)),
+                            onDelete: (id) => setStudents((prev) => prev.filter((st) => st.id !== id)),
+                            allStudents: students,
+                          })}
                           className="hover:bg-slate-50/60 cursor-pointer transition-colors group"
                         >
                           <td className="px-6 py-4 font-black text-slate-800">
@@ -427,18 +465,35 @@ export default function AdminAlertsPage() {
                       (activeTab === 'delayed' && delayedList.length === 0) ||
                       (activeTab === 'consultation' && consultationList.length === 0)) && (
                       <tr>
-                        <td colSpan={5} className="py-20 text-center text-xs font-bold text-slate-400">
-                          이 조건에 해당하는 알림 원생이 존재하지 않습니다. 아주 훌륭합니다! 🟢
+                        <td colSpan={5} className="py-16 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <span className="text-3xl animate-float-y">🟢</span>
+                            <p className="text-xs font-bold text-slate-400">이 조건에 해당하는 알림 원생이 없습니다. 아주 훌륭합니다!</p>
+                          </div>
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
               </div>
+              </motion.div>
+              </AnimatePresence>
             )}
           </CardContent>
         </Card>
       </main>
     </div>
+  );
+}
+
+export default function AdminAlertsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-[#F8F9FA]">
+        <div className="text-sm font-black text-slate-400">로딩 중...</div>
+      </div>
+    }>
+      <AdminAlertsContent />
+    </Suspense>
   );
 }

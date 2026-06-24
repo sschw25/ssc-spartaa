@@ -51,8 +51,20 @@ export interface LectureProgress {
   goalValue?: number;
   goalDescription?: string;
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
+  speedMultiplier?: number;          // 개별 인강 배속 설정 (예: 1.2, 1.5 등)
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
   detailedPlans?: DetailedPlan[];
+}
+
+export interface ProposedGoal {
+  materialId: string;
+  materialType: 'book' | 'lecture';
+  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+  goalValue: number;
+  targetDate?: string;
+  proposedWeekNumber?: number;
+  proposedRangeText?: string;
+  speedMultiplier?: number; // 제안된 개별 인강 배속
 }
 
 export interface ConsultationLog {
@@ -68,6 +80,7 @@ export interface ConsultationLog {
   resolvedAt?: string;                                    // 처리 시각 (ISO)
   adminReply?: string;                                    // 관리자 코멘트 답변 (학생에게 노출)
   repliedAt?: string;                                     // 답변 시각 (ISO)
+  proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
 }
 
 // 휴가/반차/휴식권/병가 신청 (상담 변경신청과 별개의 전용 구조 — 월 한도/쿠폰 차원 존재)
@@ -80,6 +93,7 @@ export interface LeaveRequest {
   reason?: string;        // 사유 (옵션 — 병가는 밴드채팅 영수증 증빙 안내)
   status: 'pending' | 'approved' | 'rejected';
   usedCoupon?: boolean;   // 쿠폰으로 추가 신청한 건 (관리자 표시용)
+  source?: 'student' | 'admin'; // 신청 주체 (없으면 student)
   createdAt: string;      // 신청 시각 (ISO)
   reviewedAt?: string;    // 처리(승인/반려) 시각 (ISO)
   adminReply?: string;    // 관리자 코멘트 (학생에게 노출)
@@ -136,6 +150,9 @@ export interface Student {
   expectedArrival?: '08:20' | '09:00'; // 지각 기준(등원 마감) — 학생별 그룹, 기본 08:20
   enrollmentEndDate?: string; // 등록(수강) 종료일 (YYYY-MM-DD) — 출결 시 D-3부터 학생에게 안내
   weeklyGradeCheck?: boolean; // 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
+  shareToken?: string;          // 학부모 리포트 공유 임시 토큰
+  shareTokenExpiresAt?: string; // 공유 토큰 만료 시각 (ISO)
+  sharePassword?: string;       // 학부모 리포트 접근 비밀번호 (6자리 숫자)
   createdAt: string;
   updatedAt: string;
   
@@ -156,5 +173,4 @@ export interface Student {
   // 학생별 과목 설정 및 계획
   subjects?: SubjectProgress[];
   customCategories?: string[];
-  speedMultiplier?: number; // 속도 가중치 보정 옵션 (기본값: 1.0)
 }

@@ -41,12 +41,15 @@ export async function POST(req: NextRequest) {
     noteObj = { noteText: student.specialNote || '' };
   }
 
-  if (!noteObj.pomodoro_sessions) {
-    noteObj.pomodoro_sessions = {};
-  }
+  const body = await req.json().catch(() => ({}));
+  const minutes = typeof body.minutes === 'number' && body.minutes > 0 ? Math.round(body.minutes) : 50;
+
+  if (!noteObj.pomodoro_sessions) noteObj.pomodoro_sessions = {};
+  if (!noteObj.pomodoro_minutes) noteObj.pomodoro_minutes = {};
 
   const todayKey = getSeoulDateKey();
   noteObj.pomodoro_sessions[todayKey] = (noteObj.pomodoro_sessions[todayKey] || 0) + 1;
+  noteObj.pomodoro_minutes[todayKey] = (noteObj.pomodoro_minutes[todayKey] || 0) + minutes;
 
   student.specialNote = JSON.stringify(noteObj);
   await saveStudent(student);
@@ -60,6 +63,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     success: true,
     pomodoroCount: noteObj.pomodoro_sessions[todayKey],
+    pomodoroMinutes: noteObj.pomodoro_minutes[todayKey],
     specialNote: student.specialNote,
     leaveCoupons: updatedStudent?.leaveCoupons || 0,
     rewardGranted: rewardResult.granted,

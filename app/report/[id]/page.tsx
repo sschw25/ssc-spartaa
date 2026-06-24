@@ -5,7 +5,8 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu, Plus, Trash2, Bell, X, Home, Pencil } from 'lucide-react';
+import { Loader2, BookOpen, Tv, Calendar, FileText, Printer, MessageSquare, AlertCircle, CheckCircle2, Clock, LayoutDashboard, Sparkles, Award, User, Target, LogOut, Menu, Plus, Trash2, Bell, X, Home, Pencil, AlertTriangle, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Student, DetailedPlan, LeaveType, ConsultationLog } from '@/lib/types/student';
 import {
   LEAVE_TYPES,
@@ -35,7 +36,7 @@ import { AttendanceStatusCard } from '@/components/report/attendance-status-card
 const BRIEFING_MESSAGES: Record<string, string[]> = {
   studying: [
     '지금 이 한 과목이 합격을 만듭니다.',
-    '딱 25분만 깊게 몰입해볼까요? 💪',
+    '딱 한 세션만 깊게 몰입해볼까요? 💪',
     '집중은 시작하는 순간 만들어져요.',
     '지금 흐름을 놓치지 말고 끝까지 가봐요.',
     '오늘의 이 시간이 내일의 점수예요.',
@@ -147,9 +148,17 @@ export default function StudentReportPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const studentId = params.id as string;
-  const audience = searchParams.get('audience') === 'student' ? 'student' : 'parent';
+  const shareTokenParam = searchParams.get('token');
+  // 토큰이 있으면 학부모 공유 링크 — 세션 없이 parent 뷰로 열람
+  const audience = shareTokenParam ? 'parent' : (searchParams.get('audience') === 'student' ? 'student' : 'parent');
   const isStudentReport = audience === 'student';
   const isParentReport = audience === 'parent';
+
+  // 학부모 공유 링크 비밀번호 게이트
+  const [sharePasswordInput, setSharePasswordInput] = useState('');
+  const [sharePasswordError, setSharePasswordError] = useState('');
+  const [sharePasswordVerified, setSharePasswordVerified] = useState(false);
+  const [sharePasswordChecking, setSharePasswordChecking] = useState(false);
 
   const [student, setStudent] = useState<Student | null>(null);
   const [materialBenchmarks, setMaterialBenchmarks] = useState<MaterialBenchmarkMap>({});
@@ -173,7 +182,17 @@ export default function StudentReportPage() {
   }));
   const [gradeSubmitting, setGradeSubmitting] = useState(false);
   const [gradeError, setGradeError] = useState('');
-  const [requestForm, setRequestForm] = useState({ requestType: 'progress', message: '' });
+  const [requestForm, setRequestForm] = useState({
+    requestType: 'progress',
+    message: '',
+    materialId: '',
+    materialType: 'book' as 'book' | 'lecture',
+    goalType: 'weeks' as 'weeks' | 'weeklyAmount' | 'dailyAmount',
+    goalValue: '',
+    proposedWeekNumber: '',
+    proposedRangeText: '',
+    speedMultiplier: '1.0',
+  });
   const [requestSubmitting, setRequestSubmitting] = useState(false);
   const [requestError, setRequestError] = useState('');
   const [requestCustomOpen, setRequestCustomOpen] = useState(false);
@@ -205,7 +224,7 @@ export default function StudentReportPage() {
       if (pomodoroMode === 'focus') {
         handlePomodoroComplete();
       } else {
-        alert('휴식 시간이 완료되었습니다! 다시 집중해볼까요? 🔵');
+        toast('휴식 완료! 다시 집중할 시간입니다 🔵', { duration: 4000 });
         setPomodoroMode('focus');
         setPomodoroSeconds(3000);
       }
@@ -444,7 +463,8 @@ export default function StudentReportPage() {
     setMounted(true);
     async function loadReport() {
       try {
-        const res = await fetch(`/api/report/${studentId}?audience=${audience}`);
+        const tokenQuery = shareTokenParam ? `&token=${encodeURIComponent(shareTokenParam)}&pw=${encodeURIComponent(sharePasswordInput)}` : '';
+        const res = await fetch(`/api/report/${studentId}?audience=${audience}${tokenQuery}`);
         if (res.ok) {
           const json = await res.json();
           if (json.success) {
@@ -463,10 +483,11 @@ export default function StudentReportPage() {
         setLoading(false);
       }
     }
-    if (studentId) {
+    // 공유 링크 접근 시 비밀번호 미인증이면 리포트 로드 건너뜀
+    if (studentId && (!shareTokenParam || sharePasswordVerified)) {
       loadReport();
     }
-  }, [studentId, audience]);
+  }, [studentId, audience, sharePasswordVerified]);
 
   const getCampusLabel = (val: string) => {
     switch(val) {
@@ -490,6 +511,81 @@ export default function StudentReportPage() {
     }
     window.location.href = '/student/login';
   };
+
+  // 학부모 공유 링크 — 비밀번호 게이트
+  const handleSharePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sharePasswordInput.trim()) return;
+    setSharePasswordChecking(true);
+    setSharePasswordError('');
+    try {
+      const res = await fetch(
+        `/api/report/${studentId}?audience=parent&token=${encodeURIComponent(shareTokenParam!)}&pw=${encodeURIComponent(sharePasswordInput)}`
+      );
+      const json = await res.json();
+      if (json.success) {
+        setSharePasswordVerified(true);
+        setStudent(json.data);
+        setMaterialBenchmarks(json.materialBenchmarks || {});
+        setStudyStats(json.studyStats || null);
+        setLoading(false);
+      } else {
+        setSharePasswordError(json.message || '비밀번호가 올바르지 않습니다.');
+      }
+    } catch {
+      setSharePasswordError('오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setSharePasswordChecking(false);
+    }
+  };
+
+  if (shareTokenParam && !sharePasswordVerified) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] flex flex-col items-center justify-center font-sans px-4">
+        <div className="w-full max-w-[340px] bg-white rounded-3xl shadow-sm border border-black/[0.06] p-8 flex flex-col gap-6">
+          <div className="flex flex-col gap-1 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-[#0071E3]/10 flex items-center justify-center mx-auto mb-2">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0071E3" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </div>
+            <h1 className="text-base font-black text-[#1D1D1F]">리포트 비밀번호</h1>
+            <p className="text-[11px] text-[#86868B] leading-relaxed">
+              담당 코치에게 받은 6자리 비밀번호를 입력해 주세요.
+            </p>
+          </div>
+          <form onSubmit={handleSharePasswordSubmit} className="flex flex-col gap-3">
+            <input
+              type="number"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={sharePasswordInput}
+              onChange={e => {
+                const v = e.target.value.replace(/\D/g, '').slice(0, 6);
+                setSharePasswordInput(v);
+                setSharePasswordError('');
+              }}
+              placeholder="000000"
+              className="w-full text-center text-2xl font-black tracking-[0.3em] border border-black/[0.1] rounded-2xl px-4 py-3 outline-none focus:border-[#0071E3] transition-colors bg-[#FAFAFA]"
+              autoFocus
+            />
+            {sharePasswordError && (
+              <p className="text-[11px] text-red-600 text-center font-semibold">{sharePasswordError}</p>
+            )}
+            <button
+              type="submit"
+              disabled={sharePasswordInput.length !== 6 || sharePasswordChecking}
+              className="w-full rounded-2xl bg-[#0071E3] text-white text-[13px] font-black py-3 hover:bg-[#0077ED] transition-colors disabled:opacity-40"
+            >
+              {sharePasswordChecking ? '확인 중...' : '리포트 열기'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -872,7 +968,12 @@ export default function StudentReportPage() {
   const homeElapsedMin = homeAttend.checkedIn && homeAttend.sinceToday && homeAttend.since && homeAttendNow > 0
     ? Math.max(0, Math.floor((homeAttendNow - new Date(homeAttend.since).getTime()) / 60_000))
     : 0;
-  const homeTotalMin = homeAttend.todayMinutes + homeElapsedMin;
+  const homePomodoroMin = (() => {
+    const note = getSpecialNoteObj();
+    const todayKey = getSeoulDateKey();
+    return note.pomodoro_minutes?.[todayKey] || 0;
+  })();
+  const homeTotalMin = homeAttend.todayMinutes + homeElapsedMin + homePomodoroMin;
 
   const isPlanActiveOnDate = (plan: DetailedPlan, dateKey: string) =>
     plan.startDate <= dateKey && dateKey <= plan.endDate;
@@ -993,6 +1094,9 @@ export default function StudentReportPage() {
   const daysUntilEnrollmentEnd = enrollmentEndDate
     ? Math.ceil((enrollmentEndDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
     : null;
+  // 만료 3일 초과 → 기능 잠금 / 만료 0~3일 → 경고 배너만
+  const isEnrollmentExpiredLocked = isStudentReport && daysUntilEnrollmentEnd !== null && daysUntilEnrollmentEnd < -3;
+  const showEnrollmentWarning = isStudentReport && daysUntilEnrollmentEnd !== null && daysUntilEnrollmentEnd >= -3 && daysUntilEnrollmentEnd < 0;
 
   const requestNotifications: StudentNotification[] = (student.changeRequests || []).map((request) => {
     const requestLabel = getRequestTypeLabel(request.requestType);
@@ -1410,31 +1514,58 @@ export default function StudentReportPage() {
   };
 
   // 뽀모도로 세션 완료 시 백엔드 API 호출
-  const handlePomodoroComplete = async () => {
+  const handlePomodoroComplete = async (elapsedSeconds = 3000) => {
+    const minutes = Math.max(1, Math.round(elapsedSeconds / 60));
     try {
       const res = await fetch('/api/student/pomodoro', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote, leaveCoupons: json.leaveCoupons } : prev));
-        alert('🎉 50분 집중 뽀모도로 완료! 10분 휴식 모드로 전환됩니다.');
+        toast.success(`🎉 ${minutes}분 집중 완료! 10분 휴식 모드로 전환됩니다.`, { duration: 4000 });
         setPomodoroMode('rest');
         setPomodoroSeconds(600); // 10분 휴식 = 600초
-        
+
         if (json.rewardGranted) {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
-          setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 5000);
+          setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 6000);
         }
       }
     } catch {
-      alert('뽀모도로 완료 저장 중 문제가 발생했습니다.');
+      toast.error('뽀모도로 완료 저장 중 문제가 발생했습니다.');
     }
   };
 
+  // 템플릿 신청 클릭 시 직접 작성 폼 열고 필드 미리 세팅
+  const handleQuickRequest = (type: string, message: string) => {
+    setRequestCustomOpen(true);
+    setRequestForm((f) => ({
+      ...f,
+      requestType: type,
+      message: message,
+      materialId: '',
+      goalValue: '',
+      proposedWeekNumber: '',
+      proposedRangeText: '',
+    }));
+
+    setTimeout(() => {
+      const element = document.getElementById('request-custom-form');
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const focusTarget = element.querySelector('.request-material-select') as HTMLSelectElement;
+        if (focusTarget) {
+          focusTarget.focus();
+        }
+      }
+    }, 100);
+  };
+
   // 학생 변경 신청 (관리자에게)
-  const sendRequest = async (requestType: string, rawMessage: string) => {
+  const sendRequest = async (requestType: string, rawMessage: string, proposedGoal?: any) => {
     const message = (rawMessage || '').trim();
     if (!message) {
       setRequestError('신청 내용을 입력해 주세요.');
@@ -1446,12 +1577,22 @@ export default function StudentReportPage() {
       const res = await fetch('/api/student/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestType, message }),
+        body: JSON.stringify({ requestType, message, proposedGoal }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, changeRequests: [json.request, ...(prev.changeRequests || [])] } : prev));
-        setRequestForm({ requestType: 'progress', message: '' });
+        setRequestForm({
+          requestType: 'progress',
+          message: '',
+          materialId: '',
+          materialType: 'book',
+          goalType: 'weeks',
+          goalValue: '',
+          proposedWeekNumber: '',
+          proposedRangeText: '',
+          speedMultiplier: '1.0',
+        });
         setRequestCustomOpen(false);
       } else {
         setRequestError(json.message || '신청에 실패했습니다.');
@@ -1670,6 +1811,41 @@ export default function StudentReportPage() {
         }
       `}</style>
 
+      {/* 등록 만료 3일 이내 경고 배너 (기능은 아직 작동) */}
+      {showEnrollmentWarning && (
+        <div className="no-print sticky top-0 z-40 w-full bg-amber-500 text-white px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-bold shadow-md">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <span>
+            등록 기간이 <strong>{Math.abs(daysUntilEnrollmentEnd!)}일 전</strong>에 만료되었습니다.
+            {' '}3일 후부터 기능이 제한됩니다. <strong>결제 부탁드립니다.</strong>
+          </span>
+        </div>
+      )}
+
+      {/* 등록 만료 3일 초과 → 전체 잠금 오버레이 */}
+      {isEnrollmentExpiredLocked && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white/97 backdrop-blur-sm px-4">
+          <div className="text-center space-y-5 max-w-sm w-full bg-white rounded-3xl border border-red-100 shadow-2xl p-8">
+            <div className="w-16 h-16 rounded-full bg-red-50 border border-red-100 flex items-center justify-center mx-auto">
+              <XCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-[#1D1D1F] tracking-tight">등록 기간이 만료되었습니다</h2>
+              <p className="text-sm text-[#86868B] leading-relaxed mt-2">
+                결제가 완료되면 기능이 자동으로 복구됩니다.<br />
+                학원 데스크 또는 담당 코치에게 문의해 주세요.
+              </p>
+            </div>
+            <div className="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 text-left">
+              <p className="text-xs font-black text-red-600 text-center">결제 부탁드립니다</p>
+              {student.enrollmentEndDate && (
+                <p className="text-[11px] text-red-400 mt-1 text-center">만료일: {student.enrollmentEndDate}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`${isStudentReport ? 'max-w-5xl lg:max-w-6xl xl:max-w-7xl' : 'max-w-[1320px] xl:grid xl:grid-cols-[250px_minmax(0,1fr)] xl:items-start xl:gap-6'} mx-auto print-container`}>
         {isParentReport && (
           <aside className="no-print sticky top-6 hidden xl:block">
@@ -1762,7 +1938,7 @@ export default function StudentReportPage() {
               )}
             </div>
 
-            <div className="no-print fixed right-4 top-4 z-50">
+            <div className="no-print fixed right-4 top-4 z-50 flex flex-col items-end">
               <button
                 type="button"
                 onClick={() => { setNotificationPanelOpen((open) => !open); setMobileMenuOpen(false); }}
@@ -1909,7 +2085,7 @@ export default function StudentReportPage() {
         {/* 결과 리포트 종이 영역 */}
         <div
           ref={paperRef}
-          className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10"
+          className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10 min-h-[70vh] print:min-h-0"
           onTouchStart={isStudentReport ? handleSwipeStart : undefined}
           onTouchEnd={isStudentReport ? handleSwipeEnd : undefined}
         >
@@ -2017,16 +2193,22 @@ export default function StudentReportPage() {
 
                 {/* 🔵 리워드 달성 배너 알림 */}
                 {rewardBanner.show && (
-                  <div className="no-print rounded-3xl border border-emerald-200 bg-emerald-50/80 p-4 text-emerald-800 font-black text-xs flex items-center gap-3 animate-bounce shadow-sm">
-                    <span className="text-base">🎁</span>
-                    <div>
-                      <p>축하합니다! 미션을 달성하여 휴가/반차 쿠폰이 지급되었습니다!</p>
-                      <div className="flex gap-1.5 mt-1">
-                        {rewardBanner.reasons.map((r, idx) => (
-                          <span key={idx} className="bg-emerald-100 text-emerald-800 text-[9px] px-2 py-0.5 rounded-full border border-emerald-200/50">
-                            {r}
-                          </span>
-                        ))}
+                  <div className="no-print relative overflow-hidden rounded-3xl border border-emerald-300/60 bg-gradient-to-r from-emerald-50 to-teal-50 p-5 shadow-[0_8px_24px_rgba(16,185,129,0.12)] animate-fade-in-up">
+                    <div className="absolute -right-4 -top-4 text-6xl opacity-10 select-none pointer-events-none">🎁</div>
+                    <div className="flex items-start gap-3.5">
+                      <div className="shrink-0 w-10 h-10 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-[0_4px_12px_rgba(16,185,129,0.35)]">
+                        <span className="text-lg">🎁</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-black text-emerald-800 tracking-tight">미션 달성! 쿠폰이 지급되었어요 🎉</p>
+                        <p className="text-[11px] font-bold text-emerald-700/80 mt-0.5">오늘 학습 미션을 완수하여 휴가/반차 쿠폰이 자동 적립되었습니다.</p>
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {rewardBanner.reasons.map((r, idx) => (
+                            <span key={idx} className="inline-flex items-center gap-1 bg-white/80 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200/60 shadow-sm">
+                              ✓ {r}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2035,67 +2217,181 @@ export default function StudentReportPage() {
                 {/* 🔵 뽀모도로 타이머 & 아침 자가 점검표 위젯 레이아웃 (가로 2열 그리드) */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* 1. 뽀모도로 타이머 */}
-                  <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-3.5 flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-center">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">실시간 집중 뽀모도로</p>
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black ${
-                          pomodoroMode === 'focus' 
-                            ? 'bg-[#0071E3]/10 text-[#0071E3] border border-[#0071E3]/15'
-                            : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                        }`}>
-                          {pomodoroMode === 'focus' ? '🎯 집중 50분' : '☕ 휴식 10분'}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-400 font-bold mt-0.5">50분 동안 온전히 몰입하고 10분간 휴식하며 리듬을 조절하세요.</p>
-                    </div>
-
-                    <div className="flex items-center gap-6 my-2">
-                      <div className="text-4xl md:text-5xl font-black text-slate-800 font-mono tracking-tight shrink-0">
-                        {formatPomodoroTime(pomodoroSeconds)}
-                      </div>
-                      <div className="flex gap-1.5 w-full">
-                        <button
-                          type="button"
-                          onClick={() => setPomodoroActive(!pomodoroActive)}
-                          className={`flex-1 rounded-xl text-xs font-black py-2.5 shadow-sm transition active:scale-95 ${
-                            pomodoroActive 
-                              ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                              : 'bg-[#0071E3] hover:bg-[#0077ED] text-white'
-                          }`}
-                        >
-                          {pomodoroActive ? '일시 정지' : '집중 시작'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setPomodoroActive(false);
-                            setPomodoroMode('focus');
-                            setPomodoroSeconds(3000);
-                            if (student) window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
-                          }}
-                          className="rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 px-3 py-2.5 text-xs font-bold transition active:scale-95 shadow-sm"
-                        >
-                          리셋
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* 오늘 누적 뽀모도로 세션 현황 */}
-                    {(() => {
-                      const note = getSpecialNoteObj();
-                      const todayKey = getSeoulDateKey();
-                      const count = note.pomodoro_sessions?.[todayKey] || 0;
-                      return (
-                        <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold border-t border-slate-100 pt-3">
-                          <span>오늘 성공한 세션수:</span>
-                          <span className="font-black text-[#0071E3] bg-[#0071E3]/5 border border-[#0071E3]/15 px-2 py-0.5 rounded-lg">
-                            {count} 세션 완료
+                  {(() => {
+                    const totalSecs = pomodoroMode === 'focus' ? 3000 : 600;
+                    const remaining = pomodoroSeconds;
+                    const pct = Math.min(remaining / totalSecs, 1); // 남은 비율 (1→0으로 감소)
+                    const R = 58;
+                    const CIRC = 2 * Math.PI * R;
+                    const dash = pct * CIRC; // 꽉찬 상태에서 줄어듦
+                    const note = getSpecialNoteObj();
+                    const todayKey = getSeoulDateKey();
+                    const sessionCount = note.pomodoro_sessions?.[todayKey] || 0;
+                    const isFocus = pomodoroMode === 'focus';
+                    const ringColor = isFocus ? '#0071E3' : '#10B981';
+                    const glowId = `pomo-glow-${isFocus ? 'blue' : 'green'}`;
+                    // tip at the trailing end of the remaining arc (SVG coords, before CSS rotate(-90deg))
+                    // stroke starts at SVG 3-o'clock; after CSS -90deg it appears at visual 12-o'clock
+                    // arc end = pct * 2π from 3-o'clock in SVG → visual: pct=1→12, 0.5→6, 0.25→3
+                    const tipAngle = pct * 2 * Math.PI;
+                    const tipCx = 70 + R * Math.cos(tipAngle);
+                    const tipCy = 70 + R * Math.sin(tipAngle);
+                    return (
+                      <div className={`rounded-3xl border p-5 flex flex-col justify-between gap-4 transition-all duration-500 ${
+                        pomodoroActive
+                          ? isFocus
+                            ? 'bg-gradient-to-br from-white to-blue-50/60 border-[#0071E3]/20 shadow-[0_8px_32px_rgba(0,113,227,0.12)]'
+                            : 'bg-gradient-to-br from-white to-emerald-50/60 border-emerald-300/30 shadow-[0_8px_32px_rgba(16,185,129,0.12)]'
+                          : 'bg-white border-slate-100 shadow-sm'
+                      }`}>
+                        {/* 헤더 */}
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">실시간 집중 뽀모도로</p>
+                          <span className={`px-2.5 py-1 rounded-full text-[9px] font-black border transition-all ${
+                            pomodoroActive
+                              ? isFocus
+                                ? 'bg-[#0071E3] text-white border-[#0071E3] shadow-[0_2px_8px_rgba(0,113,227,0.35)]'
+                                : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_2px_8px_rgba(16,185,129,0.35)]'
+                              : isFocus
+                                ? 'bg-[#0071E3]/8 text-[#0071E3] border-[#0071E3]/15'
+                                : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                          }`}>
+                            {isFocus ? '🎯 집중 50분' : '☕ 휴식 10분'}
                           </span>
                         </div>
-                      );
-                    })()}
-                  </div>
+
+                        {/* SVG 링 + 타이머 */}
+                        <div className="flex items-center gap-5">
+                          <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
+                            <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
+                              <defs>
+                                <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+                                  <feGaussianBlur stdDeviation="3" result="blur" />
+                                  <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+                                </filter>
+                              </defs>
+                              {/* 배경 링 */}
+                              <circle cx="70" cy="70" r={R} fill="none" stroke="#F1F5F9" strokeWidth="10" />
+                              {/* 트랙 눈금 (4세션 구분선) */}
+                              {[0, 1, 2, 3].map(i => {
+                                const a = (i / 4) * 2 * Math.PI - Math.PI / 2;
+                                const x1 = 70 + (R - 7) * Math.cos(a);
+                                const y1 = 70 + (R - 7) * Math.sin(a);
+                                const x2 = 70 + (R + 7) * Math.cos(a);
+                                const y2 = 70 + (R + 7) * Math.sin(a);
+                                return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="white" strokeWidth="2.5" />;
+                              })}
+                              {/* 카운트다운 링 — 꽉 찬 상태에서 줄어듦 */}
+                              <circle
+                                cx="70" cy="70" r={R} fill="none"
+                                stroke={pct > 0.005 ? ringColor : 'transparent'} strokeWidth="10"
+                                strokeLinecap={pct > 0.99 ? 'butt' : 'round'}
+                                strokeDasharray={`${dash} ${CIRC}`}
+                                filter={pomodoroActive && pct < 0.99 ? `url(#${glowId})` : undefined}
+                                style={{ transition: 'stroke-dasharray 0.8s linear' }}
+                              />
+                              {/* tip 빛 점 (진행 중일 때, 꽉 찬 상태가 아닐 때) */}
+                              {pct > 0.02 && pct < 0.99 && (
+                                <circle cx={tipCx} cy={tipCy} r="6" fill={ringColor} opacity={pomodoroActive ? 1 : 0.6}
+                                  filter={pomodoroActive ? `url(#${glowId})` : undefined} />
+                              )}
+                              {/* 세션 완료 점 */}
+                              {sessionCount > 0 && Array.from({ length: Math.min(sessionCount, 8) }).map((_, i) => {
+                                const angle = (i / 8) * 2 * Math.PI - Math.PI / 2;
+                                const cx = 70 + (R + 16) * Math.cos(angle);
+                                const cy = 70 + (R + 16) * Math.sin(angle);
+                                return <circle key={i} cx={cx} cy={cy} r="4" fill={ringColor} opacity="0.8" />;
+                              })}
+                            </svg>
+                            {/* 중앙 시간 표시 */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center">
+                              <span className={`text-[28px] font-black leading-none tabular-nums transition-colors ${
+                                pomodoroActive ? (isFocus ? 'text-[#0071E3]' : 'text-emerald-600') : 'text-slate-800'
+                              }`} style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+                                {formatPomodoroTime(pomodoroSeconds)}
+                              </span>
+                              <span className="text-[9px] font-bold text-slate-400 mt-0.5">
+                                {isFocus ? '집중' : '휴식'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* 버튼 + 세션 카운트 */}
+                          <div className="flex flex-col gap-2 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => setPomodoroActive(!pomodoroActive)}
+                              className={`w-full rounded-2xl text-xs font-black py-3 transition active:scale-95 ${
+                                pomodoroActive
+                                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                                  : isFocus
+                                    ? 'bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-[0_4px_16px_rgba(0,113,227,0.35)]'
+                                    : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.35)]'
+                              }`}
+                            >
+                              {pomodoroActive ? '⏸ 일시 정지' : isFocus ? '▶ 집중 시작' : '▶ 휴식 시작'}
+                            </button>
+                            {isFocus && pomodoroSeconds < 3000 ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    setPomodoroActive(false);
+                                    if (student) window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                                    await handlePomodoroComplete(3000 - pomodoroSeconds);
+                                  }}
+                                  className="w-full rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/5 hover:bg-[#0071E3]/10 text-[#0071E3] py-2.5 text-xs font-black transition active:scale-95"
+                                >
+                                  ✅ 세션 완료
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setPomodoroActive(false);
+                                    setPomodoroMode('focus');
+                                    setPomodoroSeconds(3000);
+                                    if (student) window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                                  }}
+                                  className="w-full text-center text-[10px] font-bold text-slate-300 hover:text-slate-400 py-1 transition"
+                                >
+                                  ↺ 리셋
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setPomodoroActive(false);
+                                  setPomodoroMode('focus');
+                                  setPomodoroSeconds(3000);
+                                  if (student) window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                                }}
+                                className="w-full rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-500 py-2.5 text-xs font-bold transition active:scale-95"
+                              >
+                                ↺ 리셋
+                              </button>
+                            )}
+
+                            <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2 mt-0.5">
+                              <span className="text-[10px] text-slate-400 font-bold">오늘 완료</span>
+                              <div className="flex items-center gap-1">
+                                {Array.from({ length: Math.min(sessionCount, 6) }).map((_, i) => (
+                                  <span key={i} className="w-2 h-2 rounded-full bg-[#0071E3]" />
+                                ))}
+                                {sessionCount > 6 && <span className="text-[9px] font-black text-[#0071E3]">+{sessionCount - 6}</span>}
+                                {sessionCount === 0 && <span className="text-[9px] font-black text-slate-300">-</span>}
+                                <span className="text-[10px] font-black text-[#0071E3] ml-1">{sessionCount}세션</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <p className="text-[9px] text-slate-400 font-bold text-center leading-relaxed">
+                          50분 집중 후 10분 휴식 — 하루 4세션 = 3.3시간 순공
+                        </p>
+                      </div>
+                    );
+                  })()}
 
                   {/* 2. 아침 자가 점검표 & 코칭 팁 */}
                   {(() => {
@@ -2123,7 +2419,7 @@ export default function StudentReportPage() {
                                   onChange={(e) => setChecklistForm(f => ({ ...f, sleepHours: Number(e.target.value) }))}
                                   className="rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-black text-slate-700 focus:border-[#0071E3] focus:outline-none"
                                 >
-                                  {[4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9].map(h => (
+                                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map(h => (
                                     <option key={h} value={h}>{h}시간</option>
                                   ))}
                                 </select>
@@ -2290,10 +2586,13 @@ export default function StudentReportPage() {
                     ) : (
                       <>
                         <p className="mt-2 text-xs font-black text-[#0071E3]">{fmtStudyMin(homeTotalMin)}</p>
-                        <p className="mt-1 text-[10px] font-bold">
+                        <p className="mt-1 text-[10px] font-bold leading-tight">
                           {homeAttend.checkedIn
                             ? <span className="text-emerald-600">🔥 학습 중</span>
                             : <span className="text-slate-400">하원 상태</span>}
+                          {homePomodoroMin > 0 && (
+                            <span className="block text-[#0071E3]/60 mt-0.5">🍅 +{homePomodoroMin}분</span>
+                          )}
                         </p>
                       </>
                     )}
@@ -2343,7 +2642,7 @@ export default function StudentReportPage() {
           </div>
 
           {/* 원생 메타 격자 프로필 카드 */}
-          <div className={`grid-cols-2 md:grid-cols-4 gap-4 print-card ${!isStudentReport || activeTab === 'report-overview' ? 'grid' : 'hidden print:grid'}`}>
+          <div className={`grid-cols-1 sm:grid-cols-3 md:grid-cols-3 gap-4 print-card ${!isStudentReport || activeTab === 'report-overview' ? 'grid' : 'hidden print:grid'}`}>
             <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
               <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 shadow-sm">
                 <Award className="w-4.5 h-4.5" />
@@ -2369,15 +2668,6 @@ export default function StudentReportPage() {
               <div className="min-w-0">
                 <span className="text-[10px] font-bold text-slate-400 block">목표 시험</span>
                 <span className="text-xs font-black text-slate-800 truncate block max-w-[120px]">{student.contact || '미지정'}</span>
-              </div>
-            </div>
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-white border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all duration-300 flex items-center gap-3.5">
-              <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0 shadow-sm">
-                <Clock className="w-4.5 h-4.5" />
-              </div>
-              <div>
-                <span className="text-[10px] font-bold text-slate-400 block">학습 배속</span>
-                <span className="text-xs font-black text-slate-800">{student.speedMultiplier ? `${student.speedMultiplier}배속` : '1.0배속'}</span>
               </div>
             </div>
           </div>
@@ -2568,6 +2858,151 @@ export default function StudentReportPage() {
                 );
               })()}
 
+              {/* 오늘의 실시간 타임라인 계획표 (시간표 연동) */}
+              {isStudentReport && (
+                <div className="rounded-3xl border border-[#0071E3]/15 bg-white p-5 md:p-6 shadow-sm space-y-4 print-card">
+                  <div className="flex items-center justify-between">
+                    <h3 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
+                      <Clock className="w-4 h-4" /> 실시간 하루 계획표 (시간표 연동)
+                    </h3>
+                    <Badge variant="outline" className="text-[10px] font-bold text-slate-500 bg-slate-50 border-slate-200">
+                      0교시 ~ 8교시
+                    </Badge>
+                  </div>
+
+                  <div className="relative border-l border-slate-100 pl-4.5 ml-2.5 space-y-3.5 my-2">
+                    {ACADEMY_TIMETABLE.map((period, pIdx) => {
+                      const isStudyPeriod = period.type === 'study' || period.type === 'late-study' || period.type === 'supplement';
+                      const periodMinutes = toMinutes(period.start);
+                      const isPast = currentMinutes >= toMinutes(period.end);
+                      const isCurrent = currentMinutes >= toMinutes(period.start) && currentMinutes < toMinutes(period.end);
+
+                      // 오늘 날짜 구하기
+                      const todayStr = getSeoulDateKey();
+
+                      // 이 교시(studyTime: morning/afternoon/night)에 공부해야 하는 과목과 그 계획 매핑
+                      const matchedPlans: Array<{ subjectName: string; title: string; type: 'book' | 'lecture'; range: string; amount: number; speed?: number }> = [];
+
+                      if (isStudyPeriod && period.studyTime) {
+                        todaySubjects.forEach(subject => {
+                          if (subject.studyTime === period.studyTime) {
+                            // 교재 계획 체크
+                            (subject.books || []).forEach(b => {
+                              const activePlan = (b.detailedPlans || []).find(p => p.startDate <= todayStr && todayStr <= p.endDate);
+                              if (activePlan) {
+                                const dailyVal = activePlan.dailyAmount || Math.ceil(activePlan.targetAmount / 6);
+                                matchedPlans.push({
+                                  subjectName: subject.name,
+                                  title: b.title,
+                                  type: 'book',
+                                  range: activePlan.rangeText,
+                                  amount: dailyVal
+                                });
+                              }
+                            });
+                            // 인강 계획 체크
+                            (subject.lectures || []).forEach(l => {
+                              const activePlan = (l.detailedPlans || []).find(p => p.startDate <= todayStr && todayStr <= p.endDate);
+                              if (activePlan) {
+                                const dailyVal = activePlan.dailyAmount || Math.ceil(activePlan.targetAmount / 6);
+                                matchedPlans.push({
+                                  subjectName: subject.name,
+                                  title: l.name,
+                                  type: 'lecture',
+                                  range: activePlan.rangeText,
+                                  amount: dailyVal,
+                                  speed: l.speedMultiplier
+                                });
+                              }
+                            });
+                          }
+                        });
+                      }
+
+                      // 0교시부터 8교시 매칭 헬퍼 라벨
+                      let periodNumLabel = '';
+                      if (period.label.includes('0교시')) periodNumLabel = '0교시';
+                      else if (period.label.includes('1교시')) periodNumLabel = '1교시';
+                      else if (period.label.includes('2교시')) periodNumLabel = '2교시';
+                      else if (period.label.includes('3교시')) periodNumLabel = '3교시';
+                      else if (period.label.includes('4교시')) periodNumLabel = '4교시';
+                      else if (period.label.includes('5교시')) periodNumLabel = '5교시';
+                      else if (period.label.includes('6교시')) periodNumLabel = '6교시';
+                      else if (period.label.includes('7교시')) periodNumLabel = '7교시';
+                      else if (period.label.includes('심야 자율')) periodNumLabel = '8교시';
+
+                      return (
+                        <div key={pIdx} className="relative group">
+                          {/* 타임라인 포인트 */}
+                          <span className={`absolute -left-[27.5px] top-1.5 w-3.5 h-3.5 rounded-full border-2 bg-white flex items-center justify-center transition-all ${
+                            isCurrent
+                              ? 'border-[#0071E3] ring-4 ring-[#0071E3]/20 scale-110 z-10'
+                              : isPast
+                                ? 'border-emerald-500 bg-emerald-50'
+                                : 'border-slate-200'
+                          }`}>
+                            {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-ping" />}
+                          </span>
+
+                          <div className={`p-3 rounded-2xl border transition-all text-left ${
+                            isCurrent 
+                              ? 'bg-[#0071E3]/[0.04] border-[#0071E3]/25 shadow-sm' 
+                              : isPast
+                                ? 'bg-slate-50/50 border-slate-100 opacity-70'
+                                : 'bg-white border-slate-100'
+                          }`}>
+                            <div className="flex flex-wrap items-center justify-between gap-1.5">
+                              <div className="flex items-center gap-1.5">
+                                {periodNumLabel ? (
+                                  <Badge className="bg-slate-100 hover:bg-slate-100 text-slate-700 text-[10px] font-black shrink-0 px-2 py-0.5 rounded-md border-0">
+                                    {periodNumLabel}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-slate-400">☕️</span>
+                                )}
+                                <span className="text-[11px] font-black text-slate-800">{period.label.split(':')[1]?.trim() || period.label}</span>
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-400">{period.start} ~ {period.end}</span>
+                            </div>
+
+                            {/* 매칭된 계획들 표시 */}
+                            {isStudyPeriod && matchedPlans.length > 0 && (
+                              <div className="mt-2 space-y-1.5 border-t border-dashed border-slate-100 pt-2">
+                                {matchedPlans.map((pl, idx) => (
+                                  <div key={idx} className="flex flex-wrap items-center gap-2 text-[10px]">
+                                    <span className="font-black text-[#0071E3] bg-[#0071E3]/5 border border-[#0071E3]/10 px-1.5 py-0.5 rounded">
+                                      {pl.subjectName}
+                                    </span>
+                                    <span className="font-semibold text-slate-700 truncate max-w-[200px]">
+                                      {pl.type === 'book' ? '📚' : '💻'} {pl.title}
+                                    </span>
+                                    <span className="font-bold text-slate-500">
+                                      오늘 목표: {pl.amount}{pl.type === 'book' ? 'p' : '강'} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
+                                    </span>
+                                    {pl.speed && pl.speed !== 1.0 && (
+                                      <Badge className="bg-emerald-50 hover:bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 font-bold px-1 py-0 rounded border-0">
+                                        {pl.speed}배속 적용됨
+                                      </Badge>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* 계획이 없는 자습 세션의 경우 */}
+                            {isStudyPeriod && matchedPlans.length === 0 && (
+                              <p className="mt-1 text-[9px] font-bold text-slate-400">
+                                ✨ 개별 자습 및 취약 영역 보완 학습 시간
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex justify-between items-center">
                 <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#0071E3]" />
@@ -2708,7 +3143,7 @@ export default function StudentReportPage() {
                         key={q.label}
                         type="button"
                         disabled={requestSubmitting}
-                        onClick={() => sendRequest(q.type, q.message)}
+                        onClick={() => handleQuickRequest(q.type, q.message)}
                         className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] active:scale-[0.97] disabled:opacity-50"
                       >
                         <span className="text-base leading-none">{q.icon}</span>
@@ -2729,9 +3164,29 @@ export default function StudentReportPage() {
 
                   {requestCustomOpen && (
                     <form
-                      onSubmit={(e) => { e.preventDefault(); sendRequest(requestForm.requestType, requestForm.message); }}
-                      className="space-y-2 rounded-2xl border border-slate-100 bg-white/70 p-3"
+                      id="request-custom-form"
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        let proposedGoal = undefined;
+                        if ((requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && requestForm.materialId) {
+                          proposedGoal = {
+                            materialId: requestForm.materialId,
+                            materialType: requestForm.materialType,
+                            goalType: requestForm.goalType,
+                            goalValue: requestForm.goalValue ? Number(requestForm.goalValue) : 0,
+                            proposedWeekNumber: requestForm.proposedWeekNumber ? Number(requestForm.proposedWeekNumber) : undefined,
+                            proposedRangeText: requestForm.proposedRangeText || undefined,
+                            speedMultiplier: requestForm.materialType === 'lecture' ? (requestForm.speedMultiplier ? Number(requestForm.speedMultiplier) : 1.0) : undefined
+                          };
+                        }
+                        sendRequest(requestForm.requestType, requestForm.message, proposedGoal);
+                      }}
+                      className="space-y-2.5 rounded-2xl border border-slate-100 bg-white/70 p-3"
                     >
+                      <div className="bg-[#0071E3]/5 rounded-xl p-2.5 text-[10px] font-bold text-[#0071E3] mb-1 leading-normal flex items-start gap-1.5 border border-[#0071E3]/10">
+                        <span className="shrink-0 text-xs">💡</span>
+                        <span>선택한 템플릿에 맞추어 서식이 작성되었습니다. 어떤 과목을 어떻게 조정할지 아래 상세 항목들을 채운 뒤 [신청하기] 버튼을 눌러 완료해 주세요!</span>
+                      </div>
                       <div className="flex flex-wrap gap-1.5">
                         {Object.entries(REQUEST_TYPE_LABEL).map(([v, label]) => (
                           <button
@@ -2744,6 +3199,127 @@ export default function StudentReportPage() {
                           </button>
                         ))}
                       </div>
+
+                      {/* 자동 계획 반영을 위한 세부 변경 영역 */}
+                      {(requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && (
+                        <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-2.5 my-1 text-left">
+                          <p className="text-[10px] font-black text-slate-400">변경할 계획 세부 지정 (자동 반영용)</p>
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-bold text-slate-500">대상 학습자료 선택</label>
+                            <select
+                              value={requestForm.materialId}
+                              onChange={(e) => {
+                                const selectedId = e.target.value;
+                                const isBook = (student?.books || []).some(b => b.id === selectedId);
+                                setRequestForm(f => ({
+                                  ...f,
+                                  materialId: selectedId,
+                                  materialType: isBook ? 'book' : 'lecture',
+                                  speedMultiplier: '1.0',
+                                }));
+                              }}
+                              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-material-select"
+                            >
+                              <option value="">-- 변경할 교재/인강 선택 --</option>
+                              {(student?.books || []).length > 0 && (
+                                <optgroup label="📚 교재 목록">
+                                  {(student?.books || []).map(b => (
+                                    <option key={b.id} value={b.id}>{b.title}</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                              {(student?.lectures || []).length > 0 && (
+                                <optgroup label="💻 인강 목록">
+                                  {(student?.lectures || []).map(l => (
+                                    <option key={l.id} value={l.id}>{l.name}</option>
+                                  ))}
+                                </optgroup>
+                              )}
+                            </select>
+                          </div>
+                          
+                          {requestForm.materialId && (
+                            <>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500">목표 설정 방식</label>
+                                  <select
+                                    value={requestForm.goalType}
+                                    onChange={(e) => setRequestForm(f => ({ ...f, goalType: e.target.value as any }))}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-type-select"
+                                  >
+                                    <option value="weeks">목표 기간(주)</option>
+                                    <option value="weeklyAmount">주간 학습량</option>
+                                    <option value="dailyAmount">일일 학습량</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-[10px] font-bold text-slate-500">목표 수치</label>
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      value={requestForm.goalValue}
+                                      onChange={(e) => setRequestForm(f => ({ ...f, goalValue: e.target.value }))}
+                                      placeholder="예: 8"
+                                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-value-input"
+                                    />
+                                    <span className="text-xs font-bold text-slate-500">
+                                      {requestForm.goalType === 'weeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 인강 배속 제안 UI */}
+                              {requestForm.materialType === 'lecture' && (
+                                <div className="space-y-1.5">
+                                  <label className="text-[10px] font-bold text-slate-500">제안할 강의 배속 설정</label>
+                                  <select
+                                    value={requestForm.speedMultiplier || '1.0'}
+                                    onChange={(e) => setRequestForm(f => ({ ...f, speedMultiplier: e.target.value }))}
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-speed-multiplier-select"
+                                  >
+                                    <option value="1.0">1.0 배속 (기본)</option>
+                                    <option value="1.2">1.2 배속</option>
+                                    <option value="1.5">1.5 배속</option>
+                                    <option value="1.8">1.8 배속</option>
+                                    <option value="2.0">2.0 배속</option>
+                                  </select>
+                                </div>
+                              )}
+
+                              {requestForm.requestType === 'progress' && (
+                                <div className="space-y-2 border-t border-slate-200/60 pt-2">
+                                  <p className="text-[10px] font-bold text-slate-400">특정 주차 범위 정정 (선택사항)</p>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500">주차 번호</label>
+                                      <input
+                                        type="number"
+                                        value={requestForm.proposedWeekNumber}
+                                        onChange={(e) => setRequestForm(f => ({ ...f, proposedWeekNumber: e.target.value }))}
+                                        placeholder="예: 1"
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-week-number-input"
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-bold text-slate-500">수정할 범위</label>
+                                      <input
+                                        type="text"
+                                        value={requestForm.proposedRangeText}
+                                        onChange={(e) => setRequestForm(f => ({ ...f, proposedRangeText: e.target.value }))}
+                                        placeholder="예: 1p ~ 50p"
+                                        className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-range-text-input"
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+
                       <textarea
                         value={requestForm.message}
                         onChange={(e) => setRequestForm((f) => ({ ...f, message: e.target.value }))}
@@ -2752,6 +3328,7 @@ export default function StudentReportPage() {
                         className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
                       />
                       <button
+                        id="btn-submit-change-request"
                         type="submit"
                         disabled={requestSubmitting}
                         className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
@@ -3060,87 +3637,104 @@ export default function StudentReportPage() {
 
                   {/* 🔵 Phase 0: 교재 vs 인강 비율 도넛 및 문제 풀이 Pace 도넛 차트 */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* 1. 교재 vs 인강 비율 도넛 */}
-                    <div className="rounded-3xl border border-slate-100 bg-slate-50/50 p-5 shadow-sm flex flex-col items-center justify-between min-h-[220px]">
-                      <div className="w-full">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">교재 vs 인강 학습 비중 (📚 💻)</p>
-                        <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">포트폴리오 내 학습 자료 비율</p>
-                      </div>
-                      
-                      <div className="relative w-full h-[110px] flex items-center justify-center my-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { name: '교재', value: allBooksCount || 1 },
-                                { name: '인강', value: allLecturesCount || 1 }
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={30}
-                              outerRadius={45}
-                              paddingAngle={3}
-                              dataKey="value"
-                            >
-                              <Cell fill="#0071E3" />
-                              <Cell fill="#BFDBFE" />
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute text-center">
-                          <p className="text-xs font-black text-slate-800">{allBooksCount}:{allLecturesCount}</p>
-                          <p className="text-[8px] font-bold text-slate-400">자료 수 비율</p>
+                    {/* 1. 교재 vs 인강 비율 도넛 — SVG */}
+                    {(() => {
+                      const total = (allBooksCount || 0) + (allLecturesCount || 0);
+                      const bookPct = total > 0 ? allBooksCount / total : 0.5;
+                      const DR = 40; const DC = 2 * Math.PI * DR;
+                      const bookDash = bookPct * DC;
+                      return (
+                        <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col gap-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">📚 교재 vs 💻 인강 비중</p>
+                            <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">학습 포트폴리오 내 자료 비율</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="relative shrink-0" style={{ width: 100, height: 100 }}>
+                              <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="50" cy="50" r={DR} fill="none" stroke="#BAE6FD" strokeWidth="12" />
+                                <circle cx="50" cy="50" r={DR} fill="none" stroke="#0071E3" strokeWidth="12"
+                                  strokeLinecap="round" strokeDasharray={`${bookDash - 3} ${DC}`} />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <p className="text-[11px] font-black text-slate-700 leading-tight">{allBooksCount}:{allLecturesCount}</p>
+                                <p className="text-[8px] font-bold text-slate-400">비중</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 flex-1">
+                              <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2">
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-[#0071E3] shrink-0" />
+                                  📚 교재
+                                </span>
+                                <span className="text-[10px] font-black text-[#0071E3]">{allBooksCount}개</span>
+                              </div>
+                              <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2">
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                                  <span className="w-2.5 h-2.5 rounded-full bg-sky-300 shrink-0" />
+                                  💻 인강
+                                </span>
+                                <span className="text-[10px] font-black text-sky-500">{allLecturesCount}개</span>
+                              </div>
+                              {total > 0 && (
+                                <p className="text-[9px] text-slate-400 font-bold text-center">
+                                  총 {total}개 학습 자료
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      );
+                    })()}
 
-                      <div className="flex gap-4 text-[9px] font-black text-slate-500 w-full justify-center">
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#0071E3] inline-block" /> 📚 교재 ({allBooksCount}개)</span>
-                        <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-[#BFDBFE] inline-block" /> 💻 인강 ({allLecturesCount}개)</span>
-                      </div>
-                    </div>
-
-                    {/* 2. 인강 대비 문제풀이 Pace 도넛 */}
-                    <div className="rounded-3xl border border-slate-100 bg-slate-50/50 p-5 shadow-sm flex flex-col items-center justify-between min-h-[220px]">
-                      <div className="w-full">
-                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">문제 풀이 진척도 (Pace)</p>
-                        <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">인강 수강 대비 자습 풀이 비율</p>
-                      </div>
-                      
-                      <div className="relative w-full h-[110px] flex items-center justify-center my-2">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <PieChart>
-                            <Pie
-                              data={[
-                                { value: paceScore },
-                                { value: Math.max(0, 100 - paceScore) }
-                              ]}
-                              cx="50%"
-                              cy="50%"
-                              innerRadius={30}
-                              outerRadius={45}
-                              startAngle={90}
-                              endAngle={-270}
-                              dataKey="value"
-                            >
-                              <Cell fill={paceColor} />
-                              <Cell fill="#E2E8F0" />
-                            </Pie>
-                          </PieChart>
-                        </ResponsiveContainer>
-                        <div className="absolute text-center">
-                          <p className="text-xs font-black text-slate-800">{paceScore}%</p>
-                          <span className={`inline-block rounded-full px-1.5 py-0.5 text-[7px] font-black text-white ${paceBgClass}`}>
-                            {paceStatus}
-                          </span>
+                    {/* 2. 문제풀이 Pace 도넛 — SVG */}
+                    {(() => {
+                      const PR = 40; const PC = 2 * Math.PI * PR;
+                      const paceDash = Math.max(0, (paceScore / 100)) * PC;
+                      return (
+                        <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col gap-3">
+                          <div>
+                            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">문제풀이 Pace 지수</p>
+                            <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">인강 수강 대비 자습 풀이 비율</p>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <div className="relative shrink-0" style={{ width: 100, height: 100 }}>
+                              <svg width="100" height="100" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                                <circle cx="50" cy="50" r={PR} fill="none" stroke="#F1F5F9" strokeWidth="12" />
+                                <circle cx="50" cy="50" r={PR} fill="none" stroke={paceColor} strokeWidth="12"
+                                  strokeLinecap="round"
+                                  strokeDasharray={`${paceDash > 3 ? paceDash - 3 : paceDash} ${PC}`}
+                                  style={{ transition: 'stroke-dasharray 0.6s ease' }} />
+                              </svg>
+                              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                <p className="text-sm font-black leading-none" style={{ color: paceColor }}>{paceScore}%</p>
+                                <p className="text-[8px] font-bold text-slate-400 mt-0.5">Pace</p>
+                              </div>
+                            </div>
+                            <div className="flex flex-col gap-2 flex-1">
+                              <div className={`rounded-2xl px-3 py-2 text-center ${paceBgClass} text-white`}>
+                                <p className="text-xs font-black">{paceStatus}</p>
+                              </div>
+                              <p className="text-[9px] font-bold text-slate-400 leading-relaxed text-center px-1">
+                                {paceStatus === '적정' && '인강-교재 밸런스 최적 ✅'}
+                                {paceStatus === '양호' && '풀이량을 조금 더 늘려봐요 🔵'}
+                                {paceStatus === '부족' && '스스로 푸는 시간이 부족해요 🟠'}
+                              </p>
+                              <div className="flex items-center gap-1.5 justify-center">
+                                {[25, 50, 75, 100].map(mark => (
+                                  <div key={mark} className="flex-1 h-1.5 rounded-full overflow-hidden bg-slate-100">
+                                    <div
+                                      className="h-full rounded-full transition-all duration-500"
+                                      style={{ width: paceScore >= mark ? '100%' : `${(paceScore % 25) / 25 * 100}%`, backgroundColor: paceColor }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-
-                      <div className="text-[8px] font-bold text-slate-400 text-center leading-relaxed px-2">
-                        {paceStatus === '적정' && '🟢 인강 수강 속도와 교재 문제풀이의 균형이 양호합니다.'}
-                        {paceStatus === '양호' && '🔵 전반적인 밸런스가 잡혀 있으나 조금 더 풀이량을 늘려보세요.'}
-                        {paceStatus === '부족' && '🟠 인강 시청 대비 스스로 푸는 문제풀이 시간이 현저히 부족합니다.'}
-                      </div>
-                    </div>
+                      );
+                    })()}
                   </div>
                 </div>
               );
@@ -3811,6 +4405,7 @@ export default function StudentReportPage() {
                     className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
                   />
                   <button
+                    id="btn-submit-suggestion"
                     type="button"
                     onClick={submitSuggestion}
                     disabled={suggestionSubmitting}
@@ -4010,9 +4605,17 @@ export default function StudentReportPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
                 
                 {/* 성적 차트 시각화 */}
-                <div className={`${isStudentReport ? 'md:col-span-2' : 'md:col-span-3'} p-5 rounded-3xl bg-slate-50/70 border border-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)]`}>
-                  <h4 className="text-[10px] font-black text-slate-400 tracking-wider uppercase mb-4">학습 과목 성적 향상 곡선</h4>
-                  {mounted && chartData.length > 0 ? (
+                <div className={`${isStudentReport ? 'md:col-span-2' : 'md:col-span-3'} p-5 rounded-3xl bg-gradient-to-br from-white to-slate-50/80 border border-slate-100 shadow-sm overflow-hidden relative`}>
+                  <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-[#0071E3]/[0.04] pointer-events-none" />
+                  <div className="absolute -left-4 -bottom-4 w-16 h-16 rounded-full bg-emerald-400/[0.04] pointer-events-none" />
+                  <div className="relative flex items-center justify-between mb-4">
+                    <div>
+                      <h4 className="text-[11px] font-black text-slate-700 tracking-tight">성적 향상 곡선</h4>
+                      <p className="text-[9px] text-slate-400 font-bold mt-0.5">과목별 점수 추이 및 5회 가중평균</p>
+                    </div>
+                    <span className="text-[9px] font-black text-[#0071E3] bg-[#0071E3]/8 border border-[#0071E3]/15 px-2.5 py-1 rounded-full">최근 {chartData.length}회 시험</span>
+                  </div>
+                  {mounted && chartData.length >= 2 ? (
                     <div className="w-full h-[230px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <LineChart data={chartData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
@@ -4035,12 +4638,14 @@ export default function StudentReportPage() {
                           {gradeSubjects.map((subject, idx) => {
                             const colors: Record<string, string> = {
                               '국어': '#0071E3',
-                              '수학': '#0071E3',
-                              '영어': '#F56300',
-                              '한국사': '#10B981',
-                              '기타': '#EF4444'
+                              '수학': '#F56300',
+                              '영어': '#10B981',
+                              '한국사': '#8B5CF6',
+                              '사회': '#EC4899',
+                              '과학': '#06B6D4',
+                              '기타': '#64748B'
                             };
-                            const defaultColors = ['#0071E3', '#0071E3', '#F56300', '#10B981', '#86868B', '#0071E3', '#EF4444'];
+                            const defaultColors = ['#0071E3', '#F56300', '#10B981', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
                             return (
                               <Line 
                                 key={subject}
@@ -4059,7 +4664,23 @@ export default function StudentReportPage() {
                       </ResponsiveContainer>
                     </div>
                   ) : (
-                    <div className="h-[190px] flex items-center justify-center text-xs text-slate-400 font-semibold">차트 모듈 구성하는 중...</div>
+                    <div className="h-[190px] flex flex-col items-center justify-center gap-3">
+                      {/* SVG skeleton bar chart placeholder */}
+                      <svg width="260" height="100" viewBox="0 0 260 100" fill="none" aria-hidden="true">
+                        {[20, 35, 55, 42, 68, 50, 75, 60].map((h, i) => (
+                          <rect
+                            key={i}
+                            x={i * 32 + 4} y={100 - h} width="22" height={h} rx="4"
+                            fill={i % 2 === 0 ? 'rgba(0,113,227,0.12)' : 'rgba(226,232,240,0.8)'}
+                            className="animate-pulse"
+                            style={{ animationDelay: `${i * 0.1}s` }}
+                          />
+                        ))}
+                      </svg>
+                      <p className="text-[11px] font-bold text-slate-400">
+                        {!mounted ? '차트 불러오는 중...' : '시험 기록 2회 이상이면 추이 그래프가 표시돼요'}
+                      </p>
+                    </div>
                   )}
                 </div>
 
@@ -4120,7 +4741,14 @@ export default function StudentReportPage() {
                         setRequestCustomOpen(true);
                         setRequestForm({
                           requestType: 'etc',
-                          message: `${dropInfo.subject} 성적 보완을 위한 1:1 약점 피드백 상담을 신청합니다. (최근 시험: ${dropInfo.testName} ${dropInfo.currentScore}점)`
+                          message: `${dropInfo.subject} 성적 보완을 위한 1:1 약점 피드백 상담을 신청합니다. (최근 시험: ${dropInfo.testName} ${dropInfo.currentScore}점)`,
+                          materialId: '',
+                          materialType: 'book',
+                          goalType: 'weeks',
+                          goalValue: '',
+                          proposedWeekNumber: '',
+                          proposedRangeText: '',
+                          speedMultiplier: '1.0',
                         });
                         setTimeout(() => {
                           window.scrollTo({ top: document.getElementById('student-requests')?.offsetTop || 0, behavior: 'smooth' });

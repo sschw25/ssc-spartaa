@@ -85,6 +85,9 @@ export function GradesTab({
                     strokeDasharray="5 5"
                     dot={false}
                     connectNulls={true}
+                    isAnimationActive={true}
+                    animationDuration={800}
+                    animationEasing="ease-out"
                   />
                 )}
                 {gradeSubjects
@@ -109,6 +112,9 @@ export function GradesTab({
                         activeDot={{ r: 6 }}
                         dot={{ strokeWidth: 2, r: 4 }}
                         connectNulls={true}
+                        isAnimationActive={true}
+                        animationDuration={800}
+                        animationEasing="ease-out"
                       />
                     );
                   })}

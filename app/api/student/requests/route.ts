@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { requestType?: unknown; message?: unknown };
+  let body: { requestType?: unknown; message?: unknown; proposedGoal?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
     type: 'request',
     requestType,
     status: 'pending',
+    proposedGoal: body?.proposedGoal ? (body.proposedGoal as any) : undefined,
     createdAt: nowIso,
   };
   student.consultationLogs = [...(student.consultationLogs || []), request];

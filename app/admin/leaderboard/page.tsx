@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 interface Row { rank: number; id: string; name: string; campus: string; weekMinutes: number; dayMinutes: number; isOpen: boolean }
 interface Data {
@@ -28,6 +29,7 @@ const medal = (rank: number) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : ran
 
 export default function WeeklyLeaderboardPage() {
   const router = useRouter();
+  const { openStudent } = useAdminGlobalSheet();
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -55,6 +57,21 @@ export default function WeeklyLeaderboardPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleOpenStudentById = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/students/${id}`, { cache: 'no-store' });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        openStudent(json.data, {
+          onUpdate: () => {},
+          onDelete: () => {},
+        });
+        return;
+      }
+    } catch {}
+    router.push(`/admin/consultation?studentId=${id}`);
+  };
 
   if (loading && !data) {
     return (
@@ -236,9 +253,9 @@ export default function WeeklyLeaderboardPage() {
                     </tr>
                   ) : (
                     filteredRows.map((student) => (
-                      <tr 
-                        key={student.id} 
-                        onClick={() => router.push(`/admin/consultation?studentId=${student.id}`)}
+                      <tr
+                        key={student.id}
+                        onClick={() => handleOpenStudentById(student.id)}
                         className="border-b border-black/[0.02] hover:bg-black/[0.015] cursor-pointer transition-colors"
                       >
                         <td className="px-6 py-4 text-center">

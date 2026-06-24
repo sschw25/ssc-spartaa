@@ -415,6 +415,54 @@ body:has(.admin-fluid-ui) {
   padding-top: 0 !important;
 }
 
+/* ── Motion Keyframes & Utilities ── */
+
+/* 백드롭 페이드인 (모달 오버레이) — dashboard 모달 참조 클래스 실체화 */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 모달 패널 scale+fade 진입 */
+@keyframes scaleInUp {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-scale-in-up {
+  animation: scaleInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 진도 바 드로우인 (transform 기반, 리플로우 없음) */
+@keyframes barGrow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.animate-bar-grow {
+  transform-origin: left;
+  animation: barGrow 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 빈 상태 아이콘 미세 플로트 */
+@keyframes floatY {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-4px); }
+}
+.animate-float-y {
+  animation: floatY 2.4s ease-in-out infinite;
+}
+
+/* 접근성 가드 — prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
 /* Custom subtle scrollbars for premium look */
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;

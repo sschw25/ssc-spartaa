@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { saveStudent, deleteStudent } from '@/lib/store';
+import { getStudentById, saveStudent, deleteStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
 
 // 인증 상태 헬퍼 함수
@@ -8,6 +8,29 @@ async function isAuthenticated(): Promise<boolean> {
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get('admin-session')?.value;
   return sessionToken === 'ssc-admin-authorized-token-2026';
+}
+
+// 0. 특정 원생 단건 조회
+export async function GET(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
+  }
+
+  const { id } = await params;
+
+  try {
+    const student = await getStudentById(id);
+    if (!student) {
+      return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    return NextResponse.json({ success: true, data: student });
+  } catch (error) {
+    console.error(`API GET /students/${id} error:`, error);
+    return NextResponse.json({ success: false, message: '원생 조회에 실패했습니다.' }, { status: 500 });
+  }
 }
 
 // 1. 특정 원생의 상세 내용 일괄 수정 (교재/인강 진도 및 기본정보)

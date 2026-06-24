@@ -28,7 +28,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest } from '@/lib/types/student';
-import { getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
+import { getStudentTodayTotalStudyTimeMin, generateDetailedPlans as generateDetailedPlansLib } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
@@ -197,13 +197,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [campus, setCampus] = useState('');
   const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
-  const [speedMultiplier, setSpeedMultiplier] = useState(1.0);
   const [lifeComment, setLifeComment] = useState('');
   const [studentLifeComment, setStudentLifeComment] = useState('');
   const [specialNote, setSpecialNote] = useState('');
   const [nextConsultationDate, setNextConsultationDate] = useState('');
   const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
+  const [shareToken, setShareToken] = useState<string | undefined>(undefined);
+  const [shareTokenExpiresAt, setShareTokenExpiresAt] = useState<string | undefined>(undefined);
+  const [sharePassword, setSharePassword] = useState<string | undefined>(undefined);
 
   // 등록된 기존 원생들의 목표시험 목록 중복제거 추출
   const uniqueExams = Array.from(
@@ -244,7 +246,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const campusRef = useRef(campus);
   const managerRef = useRef(manager);
   const contactRef = useRef(contact);
-  const speedMultiplierRef = useRef(speedMultiplier);
   const lifeCommentRef = useRef(lifeComment);
   const studentLifeCommentRef = useRef(studentLifeComment);
   const specialNoteRef = useRef(specialNote);
@@ -259,7 +260,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   useEffect(() => { campusRef.current = campus; }, [campus]);
   useEffect(() => { managerRef.current = manager; }, [manager]);
   useEffect(() => { contactRef.current = contact; }, [contact]);
-  useEffect(() => { speedMultiplierRef.current = speedMultiplier; }, [speedMultiplier]);
   useEffect(() => { lifeCommentRef.current = lifeComment; }, [lifeComment]);
   useEffect(() => { studentLifeCommentRef.current = studentLifeComment; }, [studentLifeComment]);
   useEffect(() => { specialNoteRef.current = specialNote; }, [specialNote]);
@@ -346,6 +346,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [showGuideDetail, setShowGuideDetail] = useState(false);
   const [newMaterialEstimatedMinutes, setNewMaterialEstimatedMinutes] = useState<number | ''>('');
   const [editingMaterialEstimatedMinutes, setEditingMaterialEstimatedMinutes] = useState<number | ''>('');
+  const [newMaterialSpeedMultiplier, setNewMaterialSpeedMultiplier] = useState<number>(1.0);
+  const [editingMaterialSpeedMultiplier, setEditingMaterialSpeedMultiplier] = useState<number>(1.0);
   // 통합 폼 전용 자동완성 검색 상태
   const [integratedSearchResults, setIntegratedSearchResults] = useState<SharedMaterial[]>([]);
   const [isSearchingIntegrated, setIsSearchingIntegrated] = useState(false);
@@ -383,13 +385,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setCampus(student.campus || 'wonju');
       setManager(student.manager || '');
       setContact(student.contact || '');
-      setSpeedMultiplier(student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0);
       setLifeComment(student.lifeComment || '');
       setStudentLifeComment(student.studentLifeComment || '');
       setSpecialNote(student.specialNote || '');
       setNextConsultationDate(student.nextConsultationDate || '');
       setEnrollmentEndDate(student.enrollmentEndDate || '');
       setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
+      setShareToken(student.shareToken);
+      setShareTokenExpiresAt(student.shareTokenExpiresAt);
+      setSharePassword(student.sharePassword);
       setSubjectsState(student.subjects || []);
       setCollapsedSubjects(Object.fromEntries((student.subjects || []).map((sub) => [sub.id, true])));
       if (student.customCategories && student.customCategories.length > 0) {
@@ -476,12 +480,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade });
 
     const localSnap = snap(
-      name, campus, manager, contact, Number(speedMultiplier), specialNote,
+      name, campus, manager, contact, 1.0, specialNote,
       nextConsultationDate || '', subjectsState, enrollmentEndDate || '', weeklyGradeCheck
     );
     const sourceSnap = snap(
       student.name || '', student.campus || 'wonju', student.manager || '', student.contact || '',
-      Number(student.speedMultiplier ?? 1.0), student.specialNote || '',
+      1.0, student.specialNote || '',
       student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck)
     );
 
@@ -498,7 +502,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           campus,
           manager,
           contact,
-          speedMultiplier: Number(speedMultiplier),
           specialNote,
           nextConsultationDate: nextConsultationDate || undefined,
           enrollmentEndDate: enrollmentEndDate || undefined,
@@ -528,7 +531,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [student, name, campus, manager, contact, speedMultiplier, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate]);
+  }, [student, name, campus, manager, contact, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate]);
 
   useEffect(() => {
     cslContentRef.current = cslContent;
@@ -604,19 +607,26 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       const json = await res.json();
       if (res.ok && json.success) {
         const nowIso = new Date().toISOString();
-        const updatedStudent: Student = {
-          ...student,
-          consultationLogs: (student.consultationLogs || []).map((log) => {
-            if (log.id !== reqId) return log;
-            return {
-              ...log,
-              ...(typeof opts.reply === 'string' ? { adminReply: opts.reply, repliedAt: nowIso } : {}),
-              ...(opts.status === 'resolved' ? { status: 'resolved' as const, resolvedAt: nowIso } : {}),
-            };
-          }),
-          updatedAt: nowIso,
-        };
-        onUpdate(updatedStudent);
+        if (json.student) {
+          onUpdate(json.student);
+          if (json.student.subjects) {
+            setSubjectsState(json.student.subjects);
+          }
+        } else {
+          const updatedStudent: Student = {
+            ...student,
+            consultationLogs: (student.consultationLogs || []).map((log) => {
+              if (log.id !== reqId) return log;
+              return {
+                ...log,
+                ...(typeof opts.reply === 'string' ? { adminReply: opts.reply, repliedAt: nowIso } : {}),
+                ...(opts.status === 'resolved' ? { status: 'resolved' as const, resolvedAt: nowIso } : {}),
+              };
+            }),
+            updatedAt: nowIso,
+          };
+          onUpdate(updatedStudent);
+        }
 
         if (typeof opts.reply === 'string') {
           setSentReplies(prev => ({ ...prev, [reqId]: opts.reply as string }));
@@ -624,7 +634,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         }
         if (opts.status === 'resolved') {
           setResolvedReqIds(prev => [...prev, reqId]);
-          toast.success('변경 신청을 처리완료로 표시했습니다.');
+          toast.success('변경 신청이 승인 및 계획에 즉시 반영되었습니다.');
         } else if (typeof opts.reply === 'string') {
           toast.success('답변을 보냈습니다.');
         }
@@ -773,7 +783,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       campus,
       manager,
       contact,
-      speedMultiplier: Number(speedMultiplier),
       lifeComment,
       studentLifeComment,
       specialNote,
@@ -881,7 +890,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       campus,
       manager,
       contact,
-      speedMultiplier: Number(speedMultiplier),
       lifeComment,
       studentLifeComment,
       specialNote,
@@ -897,6 +905,32 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       toast.success('원생 기본 정보가 수정되었습니다.');
     }
     setLoading(false);
+  };
+
+  const handleGenerateShareToken = async () => {
+    const res = await fetch(`/api/admin/students/${student.id}/share-token`, { method: 'POST' });
+    const json = await res.json();
+    if (json.success) {
+      setShareToken(json.token);
+      setShareTokenExpiresAt(json.expiresAt);
+      setSharePassword(json.password);
+      toast.success('학부모 공유 링크가 생성되었습니다.');
+    } else {
+      toast.error('링크 생성에 실패했습니다.');
+    }
+  };
+
+  const handleRevokeShareToken = async () => {
+    const res = await fetch(`/api/admin/students/${student.id}/share-token`, { method: 'DELETE' });
+    const json = await res.json();
+    if (json.success) {
+      setShareToken(undefined);
+      setShareTokenExpiresAt(undefined);
+      setSharePassword(undefined);
+      toast.success('공유 링크가 폐기되었습니다.');
+    } else {
+      toast.error('링크 폐기에 실패했습니다.');
+    }
   };
 
   // 2. 과목 추가
@@ -1027,183 +1061,56 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     goalValue: number,
     currentAmount = 0,
     customUnit?: string,
-    reviewPasses: ReviewPassSetting[] = []
+    reviewPasses: ReviewPassSetting[] = [],
+    overrideSpeedMultiplier?: number,
+    overrideEstimatedMinutes?: number | null,
+    overrideCategory?: string
   ): { plans: DetailedPlan[], calculatedTargetDate: string } => {
-    const plans: DetailedPlan[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const safeCurrentAmount = Math.min(totalAmount, Math.max(0, Math.round(currentAmount)));
-    const planAmount = Math.max(0, totalAmount - safeCurrentAmount);
-
-    if (planAmount <= 0 && reviewPasses.length === 0) {
-      return { plans, calculatedTargetDate: today.toISOString().split('T')[0] };
-    }
-
-    const speed = student?.speedMultiplier || 1.0;
-
-    // materialId에 매칭되는 parentSubject 및 studyDays 추출
     const parentSubject = subjectsState.find((s) => {
       const hasBook = s.books?.some((b) => b.id === materialId);
       const hasLecture = s.lectures?.some((l) => l.id === materialId);
       return hasBook || hasLecture;
     });
-
-    const activeStudyDays = getActiveStudyDays(parentSubject?.studyDays);
-    const daysCountPerWeek = activeStudyDays.length;
-
-    // 이번 주 월요일 구하기
-    const dayOfWeek = today.getDay();
-    const startOfWeek = new Date(today);
-    if (dayOfWeek === 0 && isStudyDay(today, parentSubject?.studyDays)) {
-      startOfWeek.setDate(today.getDate() - 6);
-    } else if (dayOfWeek === 0) { // 일요일이 학습일이 아닌 경우 다음 주 월요일 기준 주차로 시작
-      startOfWeek.setDate(today.getDate() + 1);
-    } else { // 월~토인 경우 이번 주 월요일로 보정
-      startOfWeek.setDate(today.getDate() - (dayOfWeek - 1));
-    }
-
-    const getStudyDaysInWeek = (weekStart: Date, fromDate?: Date) => {
-      let studyDayCount = 0;
-      const lowerBound = fromDate ? new Date(fromDate) : new Date(weekStart);
-      lowerBound.setHours(0, 0, 0, 0);
-
-      for (let offset = 0; offset <= 6; offset++) {
-        const targetDate = new Date(weekStart);
-        targetDate.setDate(weekStart.getDate() + offset);
-        targetDate.setHours(0, 0, 0, 0);
-        if (targetDate < lowerBound) continue;
-
-        if (!isStudyDay(targetDate, parentSubject?.studyDays)) continue;
-        studyDayCount++;
-      }
-
-      return Math.max(1, studyDayCount);
-    };
-
-    const appendPlansByWeeklyAmount = (
-      passNumber: number,
-      phaseAmount: number,
-      startBaseAmount: number,
-      firstWeekAmount: number,
-      amountPerWeek: number,
-      totalWeeks: number,
-      phaseStartWeek: Date,
-      firstWeekFromDate?: Date
-    ) => {
-      let remainingAmount = phaseAmount;
-      let currentStart = new Date(phaseStartWeek);
-
-      for (let i = 0; i < totalWeeks; i++) {
-        const startStr = currentStart.toISOString().split('T')[0];
-        const currentEnd = new Date(currentStart);
-        currentEnd.setDate(currentStart.getDate() + 6);
-        const endStr = currentEnd.toISOString().split('T')[0];
-
-        const thisWeekAmount = i === 0
-          ? Math.min(remainingAmount, firstWeekAmount)
-          : Math.min(remainingAmount, amountPerWeek);
-
-        if (thisWeekAmount <= 0) break;
-
-        const fromNum = startBaseAmount + (phaseAmount - remainingAmount) + 1;
-        const toNum = fromNum + thisWeekAmount - 1;
-        const unit = customUnit || (type === 'book' ? 'p' : '강');
-        const rangeText = `${passNumber}회독 ${fromNum}${unit} ~ ${toNum}${unit}`;
-        const dailyDays = getStudyDaysInWeek(currentStart, i === 0 ? firstWeekFromDate : undefined);
-
-        plans.push({
-          id: `plan_${Date.now()}_${plans.length}_${Math.random().toString(36).substr(2, 5)}`,
-          materialId,
-          weekNumber: plans.length + 1,
-          passNumber,
-          startDate: startStr,
-          endDate: endStr,
-          targetAmount: thisWeekAmount,
-          dailyAmount: Math.ceil(thisWeekAmount / dailyDays),
-          rangeText,
-          isCompleted: false
-        });
-
-        remainingAmount -= thisWeekAmount;
-        if (remainingAmount <= 0) break;
-
-        currentStart = new Date(currentEnd);
-        currentStart.setDate(currentEnd.getDate() + 1);
-      }
-    };
-
-    const firstWeekDays = getStudyDaysInWeek(startOfWeek, today);
-
-    let totalWeeks = 1;
-    let firstWeekAmount = planAmount;
-    let amountPerWeek = 0; // 2주차부터의 기준 주당 학습량
-
-    if (goalType === 'weeks') {
-      totalWeeks = Math.max(1, Math.round(goalValue / speed));
-      if (totalWeeks === 1) {
-        firstWeekAmount = planAmount;
-        amountPerWeek = 0;
-      } else {
-        const totalLearningDays = firstWeekDays + (totalWeeks - 1) * daysCountPerWeek;
-        const baseDailyAmount = planAmount / totalLearningDays;
-        firstWeekAmount = Math.min(planAmount, Math.round(baseDailyAmount * firstWeekDays));
-        const remainingForOthers = planAmount - firstWeekAmount;
-        amountPerWeek = Math.ceil(remainingForOthers / (totalWeeks - 1));
-      }
-
-    } else if (goalType === 'weeklyAmount') {
-      const weeklyAmount = Math.max(1, Math.round(goalValue * speed));
-      firstWeekAmount = Math.min(planAmount, Math.round(weeklyAmount * (firstWeekDays / daysCountPerWeek)));
-      const remainingForOthers = planAmount - firstWeekAmount;
-      
-      if (remainingForOthers <= 0) {
-        totalWeeks = 1;
-        amountPerWeek = 0;
-      } else {
-        const extraWeeks = Math.ceil(remainingForOthers / weeklyAmount);
-        totalWeeks = 1 + extraWeeks;
-        amountPerWeek = weeklyAmount;
-      }
-
-    } else if (goalType === 'dailyAmount') {
-      const targetDaily = Math.max(1, Math.round(goalValue * speed));
-      firstWeekAmount = Math.min(planAmount, targetDaily * firstWeekDays);
-      const remainingForOthers = planAmount - firstWeekAmount;
-      
-      if (remainingForOthers <= 0) {
-        totalWeeks = 1;
-        amountPerWeek = 0;
-      } else {
-        const weeklyAmount = targetDaily * daysCountPerWeek;
-        const extraWeeks = Math.ceil(remainingForOthers / weeklyAmount);
-        totalWeeks = 1 + extraWeeks;
-        amountPerWeek = weeklyAmount;
+    const studyDays = parentSubject?.studyDays;
+    let speedMultiplier = overrideSpeedMultiplier ?? 1.0;
+    if (overrideSpeedMultiplier === undefined && type === 'lecture' && parentSubject) {
+      const lec = parentSubject.lectures.find(l => l.id === materialId);
+      if (lec && lec.speedMultiplier !== undefined) {
+        speedMultiplier = Number(lec.speedMultiplier);
       }
     }
-
-    if (planAmount > 0) {
-      appendPlansByWeeklyAmount(1, planAmount, safeCurrentAmount, firstWeekAmount, amountPerWeek, totalWeeks, startOfWeek, today);
+    let estimatedMinutes: number | undefined;
+    if (overrideEstimatedMinutes !== undefined && overrideEstimatedMinutes !== null) {
+      estimatedMinutes = overrideEstimatedMinutes;
+    } else if (overrideEstimatedMinutes === undefined && parentSubject) {
+      const mat = type === 'book'
+        ? parentSubject.books.find(b => b.id === materialId)
+        : parentSubject.lectures.find(l => l.id === materialId);
+      if (mat?.estimatedMinutesPerUnit !== undefined) estimatedMinutes = mat.estimatedMinutesPerUnit;
+    }
+    let category = overrideCategory;
+    if (category === undefined && parentSubject) {
+      const mat = type === 'book'
+        ? parentSubject.books.find(b => b.id === materialId)
+        : parentSubject.lectures.find(l => l.id === materialId);
+      category = mat?.category;
     }
 
-    const enabledReviewPasses = reviewPasses
-      .filter((pass) => pass.days > 0)
-      .sort((a, b) => a.passNumber - b.passNumber);
-
-    enabledReviewPasses.forEach((pass) => {
-      const lastPlan = plans[plans.length - 1];
-      const phaseStart = lastPlan ? new Date(lastPlan.endDate) : new Date(startOfWeek);
-      if (lastPlan) {
-        phaseStart.setDate(phaseStart.getDate() + 1);
-      }
-
-      const phaseWeeks = Math.max(1, Math.ceil(pass.days / daysCountPerWeek));
-      const phaseWeeklyAmount = Math.ceil(totalAmount / phaseWeeks);
-      appendPlansByWeeklyAmount(pass.passNumber, totalAmount, 0, phaseWeeklyAmount, phaseWeeklyAmount, phaseWeeks, phaseStart);
-    });
-
-    const lastPlan = plans[plans.length - 1];
-    const calculatedTargetDate = lastPlan?.endDate || today.toISOString().split('T')[0];
-    return { plans, calculatedTargetDate };
+    return generateDetailedPlansLib(
+      materialId,
+      totalAmount,
+      type,
+      goalType,
+      goalValue,
+      currentAmount,
+      customUnit,
+      reviewPasses,
+      studyDays,
+      speedMultiplier,
+      estimatedMinutes,
+      parentSubject?.studyTime,
+      category
+    );
   };
 
   // 과목 내 교재 목표 설정 변경 필드 핸들러
@@ -1212,9 +1119,35 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (sub.id !== subId) return sub;
       return {
         ...sub,
-        books: sub.books.map(b => b.id === bookId ? { ...b, [field]: value } : b)
+        books: sub.books.map(b => {
+          if (b.id !== bookId) return b;
+          const updatedBook = { ...b, [field]: value };
+          const goalType = updatedBook.goalType || 'weeks';
+          const goalValue = updatedBook.goalValue || 0;
+          if (goalValue > 0 && (field === 'goalType' || field === 'goalValue')) {
+            const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+              bookId,
+              updatedBook.totalPages,
+              'book',
+              goalType,
+              goalValue,
+              updatedBook.currentPage,
+              updatedBook.unit,
+              updatedBook.reviewPasses || [],
+              sub.studyDays,
+              1.0,
+              updatedBook.estimatedMinutesPerUnit,
+              sub.studyTime,
+              updatedBook.category
+            );
+            updatedBook.detailedPlans = plans;
+            updatedBook.targetDate = calculatedTargetDate;
+          }
+          return updatedBook;
+        })
       };
     }));
+    setIsAutoSaving(true);
   };
 
   // 과목 내 인강 목표 설정 변경 필드 핸들러
@@ -1223,9 +1156,35 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (sub.id !== subId) return sub;
       return {
         ...sub,
-        lectures: sub.lectures.map(l => l.id === lectureId ? { ...l, [field]: value } : l)
+        lectures: sub.lectures.map(l => {
+          if (l.id !== lectureId) return l;
+          const updatedLec = { ...l, [field]: value };
+          const goalType = updatedLec.goalType || 'weeks';
+          const goalValue = updatedLec.goalValue || 0;
+          if (goalValue > 0 && (field === 'goalType' || field === 'goalValue')) {
+            const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+              lectureId,
+              updatedLec.totalLectures,
+              'lecture',
+              goalType,
+              goalValue,
+              updatedLec.completedLectures,
+              undefined,
+              updatedLec.reviewPasses || [],
+              sub.studyDays,
+              Number(updatedLec.speedMultiplier || 1.0),
+              updatedLec.estimatedMinutesPerUnit,
+              sub.studyTime,
+              updatedLec.category
+            );
+            updatedLec.detailedPlans = plans;
+            updatedLec.targetDate = calculatedTargetDate;
+          }
+          return updatedLec;
+        })
       };
     }));
+    setIsAutoSaving(true);
   };
 
   const updateReviewPassSetting = (
@@ -1252,14 +1211,69 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (type === 'book') {
         return {
           ...sub,
-          books: sub.books.map(b => b.id === materialId ? { ...b, reviewPasses: normalizePasses(b.reviewPasses) } : b)
+          books: sub.books.map(b => {
+            if (b.id !== materialId) return b;
+            const newPasses = normalizePasses(b.reviewPasses);
+            const goalType = b.goalType || 'weeks';
+            const goalValue = b.goalValue || 0;
+            let newPlans = b.detailedPlans || [];
+            let newTargetDate = b.targetDate;
+            if (goalValue > 0) {
+              const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+                materialId,
+                b.totalPages,
+                'book',
+                goalType,
+                goalValue,
+                b.currentPage,
+                b.unit,
+                newPasses,
+                sub.studyDays,
+                1.0,
+                b.estimatedMinutesPerUnit,
+                sub.studyTime,
+                b.category
+              );
+              newPlans = plans;
+              newTargetDate = calculatedTargetDate;
+            }
+            return { ...b, reviewPasses: newPasses, detailedPlans: newPlans, targetDate: newTargetDate };
+          })
         };
       }
       return {
         ...sub,
-        lectures: sub.lectures.map(l => l.id === materialId ? { ...l, reviewPasses: normalizePasses(l.reviewPasses) } : l)
+        lectures: sub.lectures.map(l => {
+          if (l.id !== materialId) return l;
+          const newPasses = normalizePasses(l.reviewPasses);
+          const goalType = l.goalType || 'weeks';
+          const goalValue = l.goalValue || 0;
+          let newPlans = l.detailedPlans || [];
+          let newTargetDate = l.targetDate;
+          if (goalValue > 0) {
+            const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+              materialId,
+              l.totalLectures,
+              'lecture',
+              goalType,
+              goalValue,
+              l.completedLectures,
+              undefined,
+              newPasses,
+              sub.studyDays,
+              Number(l.speedMultiplier || 1.0),
+              l.estimatedMinutesPerUnit,
+              sub.studyTime,
+              l.category
+            );
+            newPlans = plans;
+            newTargetDate = calculatedTargetDate;
+          }
+          return { ...l, reviewPasses: newPasses, detailedPlans: newPlans, targetDate: newTargetDate };
+        })
       };
     }));
+    setIsAutoSaving(true);
   };
 
   // 학습 목표를 세이브하고 계획을 자동 생성하는 공통 핸들러
@@ -1310,7 +1324,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
     let estimatedDailyAmount = 0;
     const remainingAmount = totalAmount - currentAmount;
-    const speed = student?.speedMultiplier || 1.0;
+    const speed = type === 'lecture' ? Number((targetMaterial as LectureProgress).speedMultiplier || 1.0) : 1.0;
     const adjustedSpeedGoalValue = goalValue / speed;
 
     if (goalType === 'dailyAmount') {
@@ -1488,8 +1502,24 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (sub.id !== targetSubject!.id) return sub;
 
       if (newMaterialType === 'book') {
+        const tempBookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+          tempBookId,
+          total,
+          'book',
+          'weeks',
+          4,
+          0,
+          newMaterialUnit,
+          [],
+          sub.studyDays,
+          1.0,
+          newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
+          sub.studyTime,
+          newMaterialCategory
+        );
         const newBook: BookProgress = {
-          id: `book_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          id: tempBookId,
           title: title,
           totalPages: total,
           currentPage: 0,
@@ -1500,7 +1530,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           goalValue: 4,
           goalDescription: '',
           estimatedMinutesPerUnit: newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
-          detailedPlans: []
+          detailedPlans: plans,
+          targetDate: calculatedTargetDate
         };
         return {
           ...sub,
@@ -1508,8 +1539,24 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           updatedAt: nowStr
         };
       } else {
+        const tempLecId = `lec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
+        const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+          tempLecId,
+          total,
+          'lecture',
+          'weeks',
+          4,
+          0,
+          undefined,
+          [],
+          sub.studyDays,
+          newMaterialSpeedMultiplier,
+          newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
+          sub.studyTime,
+          newMaterialCategory
+        );
         const newLecture: LectureProgress = {
-          id: `lec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          id: tempLecId,
           name: title,
           totalLectures: total,
           completedLectures: 0,
@@ -1519,7 +1566,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           goalValue: 4,
           goalDescription: '',
           estimatedMinutesPerUnit: newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
-          detailedPlans: []
+          speedMultiplier: newMaterialSpeedMultiplier,
+          detailedPlans: plans,
+          targetDate: calculatedTargetDate
         };
         return {
           ...sub,
@@ -1540,6 +1589,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setNewMaterialPublisher('');
     setNewMaterialAuthor('');
     setNewMaterialEstimatedMinutes('');
+    setNewMaterialSpeedMultiplier(1.0);
     setShowIntegratedSuggestions(false);
     setIntegratedSearchResults([]);
   };
@@ -1783,9 +1833,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             if (l.id === materialId) {
               const prevTotal = l.totalLectures;
               const newTotal = payload.total;
+              const newSpeed = payload.speedMultiplier || 1.0;
+              const speedChanged = l.speedMultiplier !== newSpeed;
+              const totalChanged = prevTotal !== newTotal;
               let newPlans = l.detailedPlans || [];
 
-              if (prevTotal !== newTotal && l.targetDate) {
+              if ((totalChanged || speedChanged) && l.targetDate) {
                 const { plans } = generateDetailedPlans(
                   materialId,
                   newTotal,
@@ -1794,7 +1847,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                   l.goalValue || 4,
                   Math.min(l.completedLectures, newTotal),
                   undefined,
-                  l.reviewPasses || []
+                  l.reviewPasses || [],
+                  newSpeed,
+                  payload.estimatedMinutesPerUnit !== undefined ? (payload.estimatedMinutesPerUnit === null ? undefined : payload.estimatedMinutesPerUnit) : l.estimatedMinutesPerUnit,
+                  l.category
                 );
                 newPlans = plans;
               }
@@ -1804,6 +1860,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 totalLectures: newTotal, 
                 completedLectures: Math.min(l.completedLectures, newTotal), 
                 estimatedMinutesPerUnit: payload.estimatedMinutesPerUnit !== undefined ? (payload.estimatedMinutesPerUnit === null ? undefined : payload.estimatedMinutesPerUnit) : l.estimatedMinutesPerUnit,
+                speedMultiplier: newSpeed,
                 detailedPlans: newPlans, 
                 updatedAt: nowStr 
               };
@@ -2318,7 +2375,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     if (mode === 'keepTargetDate' && material.targetDate) {
       const learningDays = getLearningDaysUntil(material.targetDate, parentSubject?.studyDays);
       if (learningDays > 0) {
-        const speed = student?.speedMultiplier || 1.0;
+        const speed = (material as LectureProgress).speedMultiplier || 1.0;
         goalType = 'dailyAmount';
         goalValue = Math.max(1, Math.ceil((remainingAmount / learningDays) / speed));
       }
@@ -3270,7 +3327,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setCampus(student.campus || 'wonju');
     setManager(student.manager || '');
     setContact(student.contact || '');
-    setSpeedMultiplier(student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0);
     setLifeComment(student.lifeComment || '');
     setStudentLifeComment(student.studentLifeComment || '');
     setSpecialNote(student.specialNote || '');
@@ -3580,18 +3636,18 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         {/* 상시 플로팅 마스터 저장 버튼 & 동기화 뱃지 (X 버튼 바로 왼쪽 옆에 배치) */}
         <div className="absolute top-3 right-12 z-50 flex items-center gap-2">
           {loading || isAutoSaving ? (
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#FF9500]/15 border border-[#FF9500]/30 text-[#FF9500] px-2 py-0.5 rounded-full animate-pulse shadow-sm">
-              <span className="w-1 h-1 rounded-full bg-[#FF9500] animate-ping"></span>
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-bold bg-[#FF9500]/15 border border-[#FF9500]/30 text-[#FF9500] px-2 py-0.5 rounded-full shadow-sm transition-all duration-300">
+              <span className="w-3 h-3 rounded-full border border-[#FF9500]/50 border-t-[#FF9500] animate-spin shrink-0" />
               저장 중...
             </span>
           ) : hasPendingConsultationChanges ? (
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#FF9500]/10 border border-[#FF9500]/25 text-[#D27C00] px-2 py-0.5 rounded-full shadow-sm">
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#FF9500]/10 border border-[#FF9500]/25 text-[#D27C00] px-2 py-0.5 rounded-full shadow-sm transition-all duration-300">
               <span className="w-1 h-1 rounded-full bg-[#FF9500]"></span>
               저장 필요
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#34C759]/15 border border-[#34C759]/30 text-[#34C759] px-2 py-0.5 rounded-full shadow-sm">
-              <span className="w-1 h-1 rounded-full bg-[#34C759]"></span>
+            <span className="inline-flex items-center gap-1 text-[9px] font-bold bg-[#34C759]/15 border border-[#34C759]/30 text-[#34C759] px-2 py-0.5 rounded-full shadow-sm transition-all duration-300">
+              <svg className="w-2.5 h-2.5" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
               동기화 완료
             </span>
           )}
@@ -3632,9 +3688,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 {student.campus === 'wonju' ? '원주 캠퍼스' : student.campus === 'chuncheon' ? '춘천 캠퍼스' : student.campus === 'chungju' ? '충주 캠퍼스' : '기타/퇴원'} · {student.manager || '담당 관리자'}
               </p>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className="inline-flex items-center text-[10px] font-semibold bg-white/10 text-white/90 px-2 py-0.5 rounded shadow-sm">
-                  속도 가중치: {student.speedMultiplier !== undefined ? `${student.speedMultiplier}배속` : '1.0배속'}
-                </span>
                 {(() => {
                   const todayTotalStudyMin = getStudentTodayTotalStudyTimeMin(student);
                   const studyHours = Math.floor(todayTotalStudyMin / 60);
@@ -3719,6 +3772,30 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                     </div>
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
 
+                    {req.proposedGoal && (
+                      <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[10px] space-y-1 my-1.5">
+                        <p className="font-black text-[#0071E3] flex items-center gap-1">📋 제안된 학습 계획 변경 사항</p>
+                        <p className="font-bold text-slate-600">
+                          • 대상: {req.proposedGoal.materialType === 'book' ? '📚 교재' : '💻 인강'}
+                        </p>
+                        {req.proposedGoal.proposedWeekNumber && req.proposedGoal.proposedRangeText && (
+                          <p className="font-bold text-slate-600">
+                            • {req.proposedGoal.proposedWeekNumber}주차 범위: <span className="text-[#0071E3] font-black">{req.proposedGoal.proposedRangeText}</span>
+                          </p>
+                        )}
+                        {req.proposedGoal.goalValue > 0 && (
+                          <p className="font-bold text-slate-600">
+                            • 기준 값: {req.proposedGoal.goalType === 'weeks' ? '총 주 수' : req.proposedGoal.goalType === 'weeklyAmount' ? '주당 목표' : '하루 목표'} ({req.proposedGoal.goalValue})
+                          </p>
+                        )}
+                        {req.proposedGoal.targetDate && (
+                          <p className="font-bold text-slate-600">
+                            • 완독 목표일: {req.proposedGoal.targetDate}
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     {(sentReplies[req.id] ?? req.adminReply) && (
                       <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
                         💬 내 답변: {sentReplies[req.id] ?? req.adminReply}
@@ -3757,14 +3834,26 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                       >
                         답변
                       </Button>
-                      <Button
-                        size="sm"
-                        disabled={resolvingReqId === req.id}
-                        onClick={() => actOnRequest(req.id, { status: 'resolved', reply: (replyDrafts[req.id] || '').trim() || undefined })}
-                        className="h-8 shrink-0 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700"
-                      >
-                        {resolvingReqId === req.id ? '처리 중' : '처리완료'}
-                      </Button>
+                      
+                      {req.proposedGoal ? (
+                        <Button
+                          size="sm"
+                          disabled={resolvingReqId === req.id}
+                          onClick={() => actOnRequest(req.id, { status: 'resolved', reply: (replyDrafts[req.id] || '').trim() || '신청이 승인되어 학습 계획에 즉시 반영되었습니다.' })}
+                          className="h-8 shrink-0 rounded-lg bg-[#0071E3] hover:bg-[#0077ED] px-2.5 text-[11px] font-bold text-white approve-plan-btn"
+                        >
+                          {resolvingReqId === req.id ? '승인 중' : '승인 및 계획 반영'}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          disabled={resolvingReqId === req.id}
+                          onClick={() => actOnRequest(req.id, { status: 'resolved', reply: (replyDrafts[req.id] || '').trim() || undefined })}
+                          className="h-8 shrink-0 rounded-lg bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700"
+                        >
+                          {resolvingReqId === req.id ? '처리 중' : '처리완료'}
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -3960,22 +4049,22 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid grid-cols-4 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
-              <TabsTrigger value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+              <TabsTrigger id="admin-tab-progress" value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학습 관리</span>
                 <span className="sm:hidden">학습</span>
               </TabsTrigger>
-              <TabsTrigger value="consult" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+              <TabsTrigger id="admin-tab-consult" value="consult" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <MessageSquare className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">생활 관리</span>
                 <span className="sm:hidden">생활</span>
               </TabsTrigger>
-              <TabsTrigger value="grades" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+              <TabsTrigger id="admin-tab-grades" value="grades" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <Award className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">성적 관리</span>
                 <span className="sm:hidden">성적</span>
               </TabsTrigger>
-              <TabsTrigger value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+              <TabsTrigger id="admin-tab-info" value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <User className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학생 정보</span>
                 <span className="sm:hidden">정보</span>
@@ -3998,6 +4087,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 dropdownRef,
                 editingGoals,
                 editingMaterialEstimatedMinutes,
+                editingMaterialSpeedMultiplier,
                 editingMaterialId,
                 editingMaterialTitle,
                 editingMaterialTotal,
@@ -4029,6 +4119,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 newMaterialAuthor,
                 newMaterialCategory,
                 newMaterialEstimatedMinutes,
+                newMaterialSpeedMultiplier,
                 newMaterialPublisher,
                 newMaterialSubject,
                 newMaterialTitle,
@@ -4047,6 +4138,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setCustomUnitInput,
                 setEditingGoals,
                 setEditingMaterialEstimatedMinutes,
+                setEditingMaterialSpeedMultiplier,
                 setEditingMaterialId,
                 setEditingMaterialTitle,
                 setEditingMaterialTotal,
@@ -4059,6 +4151,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setNewMaterialAuthor,
                 setNewMaterialCategory,
                 setNewMaterialEstimatedMinutes,
+                setNewMaterialSpeedMultiplier,
                 setNewMaterialPublisher,
                 setNewMaterialSubject,
                 setNewMaterialTitle,
@@ -4141,8 +4234,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setManager={setManager}
                 contact={contact}
                 setContact={setContact}
-                speedMultiplier={speedMultiplier}
-                setSpeedMultiplier={setSpeedMultiplier}
                 nextConsultationDate={nextConsultationDate}
                 setNextConsultationDate={setNextConsultationDate}
                 enrollmentEndDate={enrollmentEndDate}
@@ -4160,6 +4251,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 initialStudentPhone={student.studentPhone || ''}
                 initialSmsTargets={student.smsTargets || ['parent']}
                 onSaveNotify={handleSaveNotify}
+                studentId={student.id}
+                shareToken={shareToken}
+                shareTokenExpiresAt={shareTokenExpiresAt}
+                sharePassword={sharePassword}
+                onGenerateShareToken={handleGenerateShareToken}
+                onRevokeShareToken={handleRevokeShareToken}
               />
             </TabsContent>
           </Tabs>

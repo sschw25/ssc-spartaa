@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   BookOpen,
   Calendar,
+  CalendarDays,
   ClipboardList,
   Home,
   LogOut,
@@ -14,6 +15,8 @@ import {
   Search,
   Trophy,
   Inbox,
+  AlertTriangle,
+  BarChart3,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -174,15 +177,74 @@ export function AdminTopNav({
             </SheetDescription>
           </SheetHeader>
 
-          <div className="flex flex-col gap-1 p-3">
+          <div className="flex flex-col gap-0.5 p-3 overflow-y-auto flex-1">
+            {/* 메인 */}
+            <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">메인</p>
             <button
               type="button"
               onClick={() => navigate('/admin/dashboard')}
               className={menuButtonClass(pathname === '/admin/dashboard')}
             >
               <Home className="w-4 h-4 text-[#0071E3]" />
-              홈
+              홈 대시보드
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/inbox')}
+              className={menuButtonClass(pathname === '/admin/inbox')}
+            >
+              <Inbox className="w-4 h-4 text-[#0071E3]" />
+              통합 인박스
+            </button>
+
+            {/* 알림 */}
+            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">알림</p>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/alerts')}
+              className={menuButtonClass(pathname === '/admin/alerts')}
+            >
+              <AlertTriangle className="w-4 h-4 text-[#0071E3]" />
+              진도 정체 · 상담 도래
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/progress-delayed')}
+              className={menuButtonClass(pathname === '/admin/progress-delayed')}
+            >
+              <BarChart3 className="w-4 h-4 text-[#0071E3]" />
+              진도 지연 원생
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/grades-missing')}
+              className={menuButtonClass(pathname === '/admin/grades-missing')}
+            >
+              <ClipboardList className="w-4 h-4 text-[#0071E3]" />
+              성적 미입력 원생
+            </button>
+
+            {/* 원생 관리 */}
+            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">원생 관리</p>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/consultation')}
+              className={menuButtonClass(pathname === '/admin/consultation')}
+            >
+              <BookOpen className="w-4 h-4 text-[#0071E3]" />
+              상담일지 · 진도 관리
+            </button>
+            <button type="button" onClick={searchStudent} className={menuButtonClass(false)}>
+              <Search className="w-4 h-4 text-[#0071E3]" />
+              학생 검색
+            </button>
+            <button type="button" onClick={addStudent} className={menuButtonClass(false)}>
+              <Plus className="w-4 h-4 text-[#0071E3]" />
+              학생 추가
+            </button>
+
+            {/* 출결 · 생활 */}
+            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">출결 · 생활</p>
             <button
               type="button"
               onClick={() => navigate('/admin/attendance')}
@@ -193,15 +255,7 @@ export function AdminTopNav({
             </button>
             <button type="button" onClick={openKiosk} className={menuButtonClass(false)}>
               <ScanLine className="w-4 h-4 text-[#0071E3]" />
-              등하원 체크
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/consultation')}
-              className={menuButtonClass(pathname === '/admin/consultation')}
-            >
-              <BookOpen className="w-4 h-4 text-[#0071E3]" />
-              상담일지
+              등하원 체크 ↗
             </button>
             <button
               type="button"
@@ -213,12 +267,15 @@ export function AdminTopNav({
             </button>
             <button
               type="button"
-              onClick={() => navigate('/admin/inbox')}
-              className={menuButtonClass(pathname === '/admin/inbox')}
+              onClick={() => navigate('/admin/leave/by-date')}
+              className={menuButtonClass(pathname === '/admin/leave/by-date')}
             >
-              <Inbox className="w-4 h-4 text-[#0071E3]" />
-              통합 인박스
+              <CalendarDays className="w-4 h-4 text-[#0071E3]" />
+              날짜별 현황
             </button>
+
+            {/* 통계 */}
+            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">통계</p>
             <button
               type="button"
               onClick={() => navigate('/admin/leaderboard')}
@@ -226,14 +283,6 @@ export function AdminTopNav({
             >
               <Trophy className="w-4 h-4 text-[#0071E3]" />
               순공 랭킹
-            </button>
-            <button type="button" onClick={searchStudent} className={menuButtonClass(false)}>
-              <Search className="w-4 h-4 text-[#0071E3]" />
-              학생 검색
-            </button>
-            <button type="button" onClick={addStudent} className={menuButtonClass(false)}>
-              <Plus className="w-4 h-4 text-[#0071E3]" />
-              학생 추가
             </button>
           </div>
 

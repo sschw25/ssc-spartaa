@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
+import { generateDetailedPlans } from '@/lib/progress-plan';
 
 // 관리자: 학생 변경 신청 처리 상태 변경 (pending <-> resolved)
 export async function PATCH(
@@ -48,8 +49,180 @@ export async function PATCH(
   if (status) {
     target.status = status;
     target.resolvedAt = status === 'resolved' ? nowIso : undefined;
+
+    // 승인(resolved) 시 제안된 변경 계획 데이터가 있다면 실제 학생 계획에 연동
+    if (status === 'resolved' && target.proposedGoal) {
+      const { materialId, materialType, goalType, goalValue, targetDate, proposedWeekNumber, proposedRangeText } = target.proposedGoal;
+      
+      const parentSubject = (student.subjects || []).find((s: any) => {
+        const hasBook = s.books?.some((b: any) => b.id === materialId);
+        const hasLecture = s.lectures?.some((l: any) => l.id === materialId);
+        return hasBook || hasLecture;
+      });
+      const studyDays = parentSubject?.studyDays;
+
+      if (materialType === 'book') {
+        // 1. 과목 정보(subjects)에 적용
+        if (student.subjects) {
+          student.subjects = student.subjects.map((sub: any) => {
+            if (sub.id !== parentSubject?.id) return sub;
+            return {
+              ...sub,
+              books: (sub.books || []).map((b: any) => {
+                if (b.id !== materialId) return b;
+                const updated = { ...b };
+                if (proposedWeekNumber && proposedRangeText) {
+                  updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
+                    if (p.weekNumber === proposedWeekNumber) {
+                      return { ...p, rangeText: proposedRangeText };
+                    }
+                    return p;
+                  });
+                }
+                if (goalValue > 0) {
+                  updated.goalType = goalType;
+                  updated.goalValue = goalValue;
+                  const { plans, calculatedTargetDate } = generateDetailedPlans(
+                    materialId,
+                    updated.totalPages,
+                    'book',
+                    goalType,
+                    goalValue,
+                    updated.currentPage,
+                    updated.unit,
+                    updated.reviewPasses || [],
+                    studyDays,
+                    1.0,
+                    updated.estimatedMinutesPerUnit,
+                    parentSubject?.studyTime,
+                    updated.category
+                  );
+                  updated.detailedPlans = plans;
+                  updated.targetDate = calculatedTargetDate;
+                }
+                return updated;
+              })
+            };
+          });
+        }
+        // 2. 루트 레벨의 books 필드에도 싱크 (필요시)
+        student.books = (student.books || []).map((b: any) => {
+          if (b.id !== materialId) return b;
+          const updated = { ...b };
+          if (proposedWeekNumber && proposedRangeText) {
+            updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
+              if (p.weekNumber === proposedWeekNumber) {
+                return { ...p, rangeText: proposedRangeText };
+              }
+              return p;
+            });
+          }
+          if (goalValue > 0) {
+            updated.goalType = goalType;
+            updated.goalValue = goalValue;
+            const { plans, calculatedTargetDate } = generateDetailedPlans(
+              materialId,
+              updated.totalPages,
+              'book',
+              goalType,
+              goalValue,
+              updated.currentPage,
+              updated.unit,
+              updated.reviewPasses || [],
+              studyDays,
+              1.0,
+              updated.estimatedMinutesPerUnit,
+              parentSubject?.studyTime,
+              updated.category
+            );
+            updated.detailedPlans = plans;
+            updated.targetDate = calculatedTargetDate;
+          }
+          return updated;
+        });
+      } else if (materialType === 'lecture') {
+        const proposedSpeed = target.proposedGoal.speedMultiplier || 1.0;
+        
+        if (student.subjects) {
+          student.subjects = student.subjects.map((sub: any) => {
+            if (sub.id !== parentSubject?.id) return sub;
+            return {
+              ...sub,
+              lectures: (sub.lectures || []).map((l: any) => {
+                if (l.id !== materialId) return l;
+                const updated = { ...l, speedMultiplier: proposedSpeed };
+                if (proposedWeekNumber && proposedRangeText) {
+                  updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
+                    if (p.weekNumber === proposedWeekNumber) {
+                      return { ...p, rangeText: proposedRangeText };
+                    }
+                    return p;
+                  });
+                }
+                if (goalValue > 0) {
+                  updated.goalType = goalType;
+                  updated.goalValue = goalValue;
+                  const { plans, calculatedTargetDate } = generateDetailedPlans(
+                    materialId,
+                    updated.totalLectures,
+                    'lecture',
+                    goalType,
+                    goalValue,
+                    updated.completedLectures,
+                    undefined,
+                    updated.reviewPasses || [],
+                    studyDays,
+                    proposedSpeed,
+                    updated.estimatedMinutesPerUnit,
+                    parentSubject?.studyTime,
+                    updated.category
+                  );
+                  updated.detailedPlans = plans;
+                  updated.targetDate = calculatedTargetDate;
+                }
+                return updated;
+              })
+            };
+          });
+        }
+        student.lectures = (student.lectures || []).map((l: any) => {
+          if (l.id !== materialId) return l;
+          const updated = { ...l, speedMultiplier: proposedSpeed };
+          if (proposedWeekNumber && proposedRangeText) {
+            updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
+              if (p.weekNumber === proposedWeekNumber) {
+                return { ...p, rangeText: proposedRangeText };
+              }
+              return p;
+            });
+          }
+          if (goalValue > 0) {
+            updated.goalType = goalType;
+            updated.goalValue = goalValue;
+            const { plans, calculatedTargetDate } = generateDetailedPlans(
+              materialId,
+              updated.totalLectures,
+              'lecture',
+              goalType,
+              goalValue,
+              updated.completedLectures,
+              undefined,
+              updated.reviewPasses || [],
+              studyDays,
+              proposedSpeed,
+              updated.estimatedMinutesPerUnit,
+              parentSubject?.studyTime,
+              updated.category
+            );
+            updated.detailedPlans = plans;
+            updated.targetDate = calculatedTargetDate;
+          }
+          return updated;
+        });
+      }
+    }
   }
   await saveStudent(student);
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, student });
 }

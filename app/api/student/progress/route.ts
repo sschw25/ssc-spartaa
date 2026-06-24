@@ -73,72 +73,77 @@ export async function PATCH(req: NextRequest) {
     return Number(plan.targetAmount || 0);
   };
 
-  for (const subject of student.subjects || []) {
-    if (materialType === 'book') {
-      const book = (subject.books || []).find((b) => b.id === materialId);
-      if (book) {
-        const total = book.totalPages || 0;
-        let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(book.currentPage || 0, total);
+  // 모든 book 후보 (subjects + 최상위)
+  const allBooks = [
+    ...(student.books || []),
+    ...((student.subjects || []).flatMap((s) => s.books || [])),
+  ];
+  // 모든 lecture 후보 (subjects + 최상위)
+  const allLectures = [
+    ...(student.lectures || []),
+    ...((student.subjects || []).flatMap((s) => s.lectures || [])),
+  ];
 
-        if (hasPlanCompletion) {
-          const plan = (book.detailedPlans || []).find((p) => p.id === planId);
-          if (!plan) {
-            return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
-          }
+  if (materialType === 'book') {
+    const book = allBooks.find((b) => b.id === materialId);
+    if (book) {
+      const total = book.totalPages || 0;
+      let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(book.currentPage || 0, total);
 
-          plan.isCompleted = Boolean(body.isCompleted);
-          if (plan.isCompleted) {
-            nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
-          }
+      if (hasPlanCompletion) {
+        const plan = (book.detailedPlans || []).find((p) => p.id === planId);
+        if (!plan) {
+          return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
         }
-
-        if (hasSolvedQuestions) {
-          const solvedVal = Number(body.solvedQuestions);
-          if (Number.isFinite(solvedVal) && solvedVal >= 0) {
-            book.solvedQuestions = solvedVal;
-          }
+        plan.isCompleted = Boolean(body.isCompleted);
+        if (plan.isCompleted) {
+          nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
         }
-
-        if (hasIncorrectTags) {
-          if (typeof body.incorrectTags === 'object' && body.incorrectTags !== null) {
-            book.incorrectTags = body.incorrectTags as Record<string, number>;
-          }
-        }
-
-        book.currentPage = nextValue;
-        book.updatedAt = nowIso;
-        updated = { 
-          value: nextValue, 
-          total, 
-          ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}),
-          solvedQuestions: book.solvedQuestions,
-          incorrectTags: book.incorrectTags
-        };
-        break;
       }
-    } else {
-      const lecture = (subject.lectures || []).find((l) => l.id === materialId);
-      if (lecture) {
-        const total = lecture.totalLectures || 0;
-        let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(lecture.completedLectures || 0, total);
 
-        if (hasPlanCompletion) {
-          const plan = (lecture.detailedPlans || []).find((p) => p.id === planId);
-          if (!plan) {
-            return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
-          }
-
-          plan.isCompleted = Boolean(body.isCompleted);
-          if (plan.isCompleted) {
-            nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
-          }
+      if (hasSolvedQuestions) {
+        const solvedVal = Number(body.solvedQuestions);
+        if (Number.isFinite(solvedVal) && solvedVal >= 0) {
+          book.solvedQuestions = solvedVal;
         }
-
-        lecture.completedLectures = nextValue;
-        lecture.updatedAt = nowIso;
-        updated = { value: nextValue, total, ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}) };
-        break;
       }
+
+      if (hasIncorrectTags) {
+        if (typeof body.incorrectTags === 'object' && body.incorrectTags !== null) {
+          book.incorrectTags = body.incorrectTags as Record<string, number>;
+        }
+      }
+
+      book.currentPage = nextValue;
+      book.updatedAt = nowIso;
+      updated = {
+        value: nextValue,
+        total,
+        ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}),
+        solvedQuestions: book.solvedQuestions,
+        incorrectTags: book.incorrectTags,
+      };
+    }
+  } else {
+    const lecture = allLectures.find((l) => l.id === materialId);
+    if (lecture) {
+      const total = lecture.totalLectures || 0;
+      let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(lecture.completedLectures || 0, total);
+
+      if (hasPlanCompletion) {
+        const plan = (lecture.detailedPlans || []).find((p) => p.id === planId);
+        if (!plan) {
+          return NextResponse.json({ success: false, message: '해당 주간 계획을 찾을 수 없습니다.' }, { status: 404 });
+        }
+        plan.isCompleted = Boolean(body.isCompleted);
+        if (plan.isCompleted) {
+          nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+        }
+      }
+
+      lecture.completedLectures = nextValue;
+      lecture.updatedAt = nowIso;
+      updated = { value: nextValue, total, ...(hasPlanCompletion ? { planId, isCompleted: Boolean(body.isCompleted) } : {}) };
     }
   }
 

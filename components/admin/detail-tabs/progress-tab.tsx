@@ -37,6 +37,7 @@ export function ProgressTab() {
     dropdownRef,
     editingGoals,
     editingMaterialEstimatedMinutes,
+    editingMaterialSpeedMultiplier,
     editingMaterialId,
     editingMaterialTitle,
     editingMaterialTotal,
@@ -68,6 +69,7 @@ export function ProgressTab() {
     newMaterialAuthor,
     newMaterialCategory,
     newMaterialEstimatedMinutes,
+    newMaterialSpeedMultiplier,
     newMaterialPublisher,
     newMaterialSubject,
     newMaterialTitle,
@@ -86,6 +88,7 @@ export function ProgressTab() {
     setCustomUnitInput,
     setEditingGoals,
     setEditingMaterialEstimatedMinutes,
+    setEditingMaterialSpeedMultiplier,
     setEditingMaterialId,
     setEditingMaterialTitle,
     setEditingMaterialTotal,
@@ -98,6 +101,7 @@ export function ProgressTab() {
     setNewMaterialAuthor,
     setNewMaterialCategory,
     setNewMaterialEstimatedMinutes,
+    setNewMaterialSpeedMultiplier,
     setNewMaterialPublisher,
     setNewMaterialSubject,
     setNewMaterialTitle,
@@ -605,6 +609,26 @@ export function ProgressTab() {
                       지정하지 않으면 기본값({newMaterialType === 'book' ? '단위별 기준 시간' : '60분'})이 적용됩니다.
                     </p>
                   </div>
+
+                  {newMaterialType === 'lecture' && (
+                    <div className="space-y-1">
+                      <Label className="text-[10px] font-bold text-[#434345]">기본 강의 배속 설정</Label>
+                      <select
+                        value={newMaterialSpeedMultiplier}
+                        onChange={(e) => setNewMaterialSpeedMultiplier(Number(e.target.value))}
+                        className="w-full rounded-lg border border-black/[0.08] text-xs h-9 bg-white px-2 focus:outline-none"
+                      >
+                        <option value="1.0">1.0 배속 (기본)</option>
+                        <option value="1.2">1.2 배속</option>
+                        <option value="1.5">1.5 배속</option>
+                        <option value="1.8">1.8 배속</option>
+                        <option value="2.0">2.0 배속</option>
+                      </select>
+                      <p className="text-[9px] text-[#86868B]">
+                        인강 학습 시 기본 적용할 배속을 지정합니다.
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* 학습 유형 분류 (동적 카테고리) 및 플러스 버튼 */}
@@ -1257,17 +1281,33 @@ export function ProgressTab() {
                                             />
                                           </div>
                                         </div>
-                                        <div className="space-y-1">
-                                          <Label className="text-[9px] text-[#86868B]">강의당 소요 시간 (분)</Label>
-                                          <div className="flex items-center gap-2">
-                                            <Input
-                                              type="number"
-                                              placeholder="글로벌 기본값 (60분) 사용"
-                                              value={editingMaterialEstimatedMinutes}
-                                              onChange={(e) => setEditingMaterialEstimatedMinutes(e.target.value === '' ? '' : Number(e.target.value))}
-                                              className="h-8 text-[11px] bg-white rounded-lg border-black/[0.08]"
-                                            />
-                                            <span className="text-[10px] text-[#86868B]">분</span>
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-1">
+                                            <Label className="text-[9px] text-[#86868B]">강의당 소요 시간 (분)</Label>
+                                            <div className="flex items-center gap-2">
+                                              <Input
+                                                type="number"
+                                                placeholder="글로벌 기본값 (60분) 사용"
+                                                value={editingMaterialEstimatedMinutes}
+                                                onChange={(e) => setEditingMaterialEstimatedMinutes(e.target.value === '' ? '' : Number(e.target.value))}
+                                                className="h-8 text-[11px] bg-white rounded-lg border-black/[0.08]"
+                                              />
+                                              <span className="text-[10px] text-[#86868B]">분</span>
+                                            </div>
+                                          </div>
+                                          <div className="space-y-1">
+                                            <Label className="text-[9px] text-[#86868B]">강의 배속 설정</Label>
+                                            <select
+                                              value={editingMaterialSpeedMultiplier}
+                                              onChange={(e) => setEditingMaterialSpeedMultiplier(Number(e.target.value))}
+                                              className="w-full rounded-lg border border-black/[0.08] text-[11px] h-8 bg-white px-2 focus:outline-none"
+                                            >
+                                              <option value="1.0">1.0 배속 (기본)</option>
+                                              <option value="1.2">1.2 배속</option>
+                                              <option value="1.5">1.5 배속</option>
+                                              <option value="1.8">1.8 배속</option>
+                                              <option value="2.0">2.0 배속</option>
+                                            </select>
                                           </div>
                                         </div>
                                         <div className="flex gap-1.5 justify-end">
@@ -1287,7 +1327,8 @@ export function ProgressTab() {
                                               await updateProgress(sub.id, 'lecture', lec.id, 'edit', {
                                                 title: editingMaterialTitle,
                                                 total: editingMaterialTotal,
-                                                estimatedMinutesPerUnit: editingMaterialEstimatedMinutes !== '' ? Number(editingMaterialEstimatedMinutes) : null
+                                                estimatedMinutesPerUnit: editingMaterialEstimatedMinutes !== '' ? Number(editingMaterialEstimatedMinutes) : null,
+                                                speedMultiplier: editingMaterialSpeedMultiplier
                                               });
                                               setEditingMaterialId(null);
                                             }}
@@ -1339,6 +1380,7 @@ export function ProgressTab() {
                                               setEditingMaterialTitle(lec.name);
                                               setEditingMaterialTotal(lec.totalLectures);
                                               setEditingMaterialEstimatedMinutes(lec.estimatedMinutesPerUnit !== undefined ? lec.estimatedMinutesPerUnit : '');
+                                              setEditingMaterialSpeedMultiplier(lec.speedMultiplier || 1.0);
                                             }}
                                             className="text-[#86868B] hover:text-[#1D1D1F] w-7 h-7 rounded-lg hover:bg-black/[0.02] edit-btn-lecture"
                                           >

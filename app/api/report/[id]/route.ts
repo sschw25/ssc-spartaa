@@ -3,6 +3,39 @@ import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent, getStudentSessionId, isAdmin } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
+import type { Student } from '@/lib/types/student';
+
+function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
+  return {
+    id: student.id,
+    name: student.name,
+    campus: student.campus,
+    manager: student.manager,
+    contact: student.contact || '',
+    lifeComment: student.lifeComment || '',
+    studentLifeComment: audience === 'student' ? (student.studentLifeComment || '') : '',
+    nextConsultationDate: student.nextConsultationDate,
+    enrollmentEndDate: student.enrollmentEndDate,
+    weeklyGradeCheck: Boolean(student.weeklyGradeCheck),
+    speedMultiplier: 1.0,
+    updatedAt: student.updatedAt,
+    books: student.books,
+    lectures: student.lectures,
+    consultationLogs: (student.consultationLogs || []).filter((l) => l.type !== 'request' && l.type !== 'suggestion').slice(0, 3),
+    changeRequests: (student.consultationLogs || [])
+      .filter((l) => l.type === 'request')
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+    suggestionRequests: (student.consultationLogs || [])
+      .filter((l) => l.type === 'suggestion')
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+    leaveRequests: (student.leaveRequests || [])
+      .slice()
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+    leaveCoupons: student.leaveCoupons ?? 0,
+    grades: student.grades,
+    subjects: student.subjects || [],
+  };
+}
 
 // 학부모/학생용 결과 리포트 조회 API
 export async function GET(
@@ -12,6 +45,59 @@ export async function GET(
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const audience = searchParams.get('audience') === 'student' ? 'student' : 'parent';
+  const shareToken = searchParams.get('token');
+  const sharePasswordInput = searchParams.get('pw');
+
+  // 토큰 기반 접근 (학부모 공유 링크) — 세션 인증 우선순위에서 제외
+  if (shareToken) {
+    try {
+      const student = await getStudentById(id);
+      const now = new Date().toISOString();
+      if (
+        !student ||
+        !student.shareToken ||
+        student.shareToken !== shareToken ||
+        !student.shareTokenExpiresAt ||
+        student.shareTokenExpiresAt < now
+      ) {
+        return NextResponse.json(
+          { success: false, message: '유효하지 않거나 만료된 링크입니다.' },
+          { status: 401 }
+        );
+      }
+      // 비밀번호 검증
+      if (!sharePasswordInput) {
+        // pw 파라미터 없음 → 비밀번호 입력 요구
+        return NextResponse.json(
+          { success: false, requirePassword: true },
+          { status: 403 }
+        );
+      }
+      if (student.sharePassword && student.sharePassword !== sharePasswordInput) {
+        return NextResponse.json(
+          { success: false, message: '비밀번호가 올바르지 않습니다.' },
+          { status: 403 }
+        );
+      }
+      // 학부모용 마스킹 데이터 반환 (학생 전용 정보 제외)
+      const maskedStudent = buildMaskedStudent(student, 'parent');
+      const students = await getStudents();
+      const materialBenchmarks = buildMaterialBenchmarks(students);
+      let studyStats = null;
+      try {
+        const { weekStart, monthStart } = getPeriodBounds();
+        const [sessions, weeklyMinutesByStudent] = await Promise.all([
+          getStudySessions(id, monthStart),
+          getStudyMinutesByStudent(weekStart),
+        ]);
+        studyStats = buildStudyStats({ sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length });
+      } catch { /* 통계 실패 시 무시 */ }
+      return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats });
+    } catch (error) {
+      console.error(`API GET /report/${id} (token) error:`, error);
+      return NextResponse.json({ success: false, message: '리포트 로드 중 에러가 발생했습니다.' }, { status: 500 });
+    }
+  }
 
   // 학생용 결과지는 본인 학생 또는 관리자만 열람 가능.
   if (audience === 'student' && !(await canViewStudent(id))) {
@@ -41,39 +127,7 @@ export async function GET(
       );
     }
 
-    // 보안 및 프라이버시를 위해 연락처 등 민감 정보는 제거하거나 마스킹하여 전달
-    const maskedStudent = {
-      id: student.id,
-      name: student.name,
-      campus: student.campus,
-      manager: student.manager,
-      contact: student.contact || '',
-      lifeComment: student.lifeComment || '',
-      studentLifeComment: student.studentLifeComment || '',
-      nextConsultationDate: student.nextConsultationDate,
-      enrollmentEndDate: student.enrollmentEndDate,
-      weeklyGradeCheck: Boolean(student.weeklyGradeCheck),
-      speedMultiplier: student.speedMultiplier !== undefined ? Number(student.speedMultiplier) : 1.0,
-      updatedAt: student.updatedAt,
-      books: student.books,
-      lectures: student.lectures,
-      // 부모님 공개용으로는 가장 최근 상담 일지 2건 정도만 전달 (변경 신청은 별도 분리)
-      consultationLogs: (student.consultationLogs || []).filter((l) => l.type !== 'request' && l.type !== 'suggestion').slice(0, 3),
-      // 학생 본인 변경 신청 내역 (consultation_logs 중 type==='request'만 추려서 전달)
-      changeRequests: (student.consultationLogs || [])
-        .filter((l) => l.type === 'request')
-        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
-      suggestionRequests: (student.consultationLogs || [])
-        .filter((l) => l.type === 'suggestion')
-        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
-      // 휴가/반차/휴식권/병가 신청 내역 + 쿠폰 잔액 (학생 본인 화면용)
-      leaveRequests: (student.leaveRequests || [])
-        .slice()
-        .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
-      leaveCoupons: student.leaveCoupons ?? 0,
-      grades: student.grades,
-      subjects: student.subjects || []
-    };
+    const maskedStudent = buildMaskedStudent(student, audience);
 
     const students = await getStudents();
     const materialBenchmarks = buildMaterialBenchmarks(students);

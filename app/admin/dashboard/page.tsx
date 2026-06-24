@@ -7,22 +7,27 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   Users, User, Calendar, BarChart3, Search, LogOut, Loader2,
-  AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw, Clock
+  AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw, Clock,
+  ChevronRight, XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 import { getManagedProgressItems } from '@/lib/progress-plan';
-import { isWeeklyGradeMissing } from '@/lib/student-flags';
+import { isWeeklyGradeMissing, enrollmentDaysLeft } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { PendingChangeRequestsPanel } from '@/components/admin/pending-change-requests-panel';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { AnimatedNumber } from '@/components/admin/animated-number';
+import { motion } from 'framer-motion';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const isCampusFilterValue = (value: string | null): value is string => !!value && CAMPUS_FILTERS.includes(value);
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +38,7 @@ export default function AdminDashboardPage() {
 
   // 모달 제어 상태
   const [analysisTarget, setAnalysisTarget] = useState<{ type: 'subject' | 'book'; name: string } | null>(null);
+  const [enrollmentModal, setEnrollmentModal] = useState<'expired' | 'warning' | null>(null);
   // 출결 위젯 새로고침 신호
   const [attendanceRefresh, setAttendanceRefresh] = useState(0);
 
@@ -41,7 +47,16 @@ export default function AdminDashboardPage() {
   const [viewedTimes, setViewedTimes] = useState<Record<string, string>>({});
 
   const handleOpenStudentById = (id: string) => {
-    router.push(`/admin/consultation?studentId=${id}`);
+    const target = students.find((s) => s.id === id);
+    if (target) {
+      openStudent(target, {
+        onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
+        onDelete: (sid) => setStudents((prev) => prev.filter((s) => s.id !== sid)),
+        allStudents: students,
+      });
+    } else {
+      router.push(`/admin/consultation?studentId=${id}`);
+    }
   };
 
   // 1. 인증 체크
@@ -150,11 +165,11 @@ export default function AdminDashboardPage() {
   };
 
   const handleShowConsultationStudents = () => {
-    router.push('/admin/consultation?filter=consultation');
+    router.push('/admin/alerts?type=consultation');
   };
 
   const handleShowBehindMaterials = () => {
-    router.push('/admin/consultation?filter=behind');
+    router.push('/admin/progress-delayed');
   };
 
   useEffect(() => {
@@ -179,6 +194,17 @@ export default function AdminDashboardPage() {
   const totalStudentsCount = campusScopedStudents.length;
   const selectedCampusLabel = campusFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(campusFilter);
   
+  // 등록 만료/임박 학생
+  const RENEWAL_WARN_DAYS = 5;
+  const expiredStudents = campusScopedStudents.filter(s => {
+    const d = enrollmentDaysLeft(s.enrollmentEndDate);
+    return d !== null && d < 0;
+  });
+  const renewalWarnStudents = campusScopedStudents.filter(s => {
+    const d = enrollmentDaysLeft(s.enrollmentEndDate);
+    return d !== null && d >= 0 && d <= RENEWAL_WARN_DAYS;
+  });
+
   // 오늘 상담이 예정되었거나 지난 학생들
   const todayStr = new Date().toISOString().split('T')[0];
   const pendingConsultationStudents = campusScopedStudents.filter(s => {
@@ -188,6 +214,17 @@ export default function AdminDashboardPage() {
 
   // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
   const weeklyGradeMissingStudents = campusScopedStudents.filter(s => isWeeklyGradeMissing(s));
+
+  // 대기중인 변경신청 + 건의사항 + 휴가신청 건수
+  const pendingRequestsTotal = campusScopedStudents.reduce((total, s) => {
+    const changeReqs = (s.consultationLogs || []).filter(
+      log => (log.type === 'request' || log.type === 'suggestion') && log.status === 'pending'
+    ).length;
+    const leaveReqs = (s.leaveRequests || []).filter(
+      req => req.status === 'pending'
+    ).length;
+    return total + changeReqs + leaveReqs;
+  }, 0);
 
   // 각 카드 데이터 최종 업데이트 시각 계산
   const lastConsultationUpdate = pendingConsultationStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
@@ -240,6 +277,12 @@ export default function AdminDashboardPage() {
 
   const averageProgress = calculateAverageProgress();
   const activeProgressItems = allProgressItems.filter(item => item.total > 0 && item.current < item.total);
+
+  // 진도 지연 원생 (목표 대비 behind 상태 아이템이 하나라도 있는 원생)
+  const behindStudentIds = Array.from(new Set(
+    allProgressItems.filter(item => item.status === 'behind').map(item => item.studentId)
+  ));
+  const behindStudentsCount = behindStudentIds.length;
 
   type PopularStudyRank = {
     key: string;
@@ -628,18 +671,233 @@ export default function AdminDashboardPage() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+      <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
 
-        <PendingChangeRequestsPanel
-          students={campusScopedStudents}
-          maxRows={4}
-          getCampusLabel={getCampusLabel}
-          onOpenStudent={handleOpenStudentById}
-          description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항을 기존 상세 시트에서 바로 확인하고 처리할 수 있습니다.`}
-        />
+        {/* ── 섹션 1: 알림 현황 (4 핵심 카드 + 보조 지표 인라인) ── */}
+        <div className="space-y-3.5">
+          {/* 헤더 + 보조 지표 칩 */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <AlertTriangle className="w-3.5 h-3.5 text-[#86868B] shrink-0" />
+            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B] shrink-0">알림 현황</span>
+            <div className="flex-1 h-px bg-black/[0.06] min-w-[20px]" />
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => router.push('/admin/inbox')}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100' : 'bg-white border-black/[0.06] text-[#86868B] hover:bg-[#F5F5F7]'}`}
+              >
+                <ClipboardList className="w-3 h-3" />
+                대기요청 {pendingRequestsTotal}건
+              </button>
+              <button
+                onClick={() => { handleCardClick('grades'); router.push('/admin/grades-missing'); }}
+                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border transition-colors ${weeklyGradeMissingStudents.length > 0 ? 'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100' : 'bg-white border-black/[0.06] text-[#86868B] hover:bg-[#F5F5F7]'}`}
+              >
+                성적미입력 {weeklyGradeMissingStudents.length}명
+              </button>
+              <button
+                onClick={() => { handleCardClick('students'); handleShowAllStudents(); }}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <Users className="w-3 h-3" />
+                총원생 {totalStudentsCount}명
+              </button>
+              <button
+                onClick={() => { handleCardClick('progress'); handleShowBehindMaterials(); }}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-blue-600 hover:bg-blue-50 transition-colors"
+              >
+                <BarChart3 className="w-3 h-3" />
+                평균진도 {averageProgress}%
+              </button>
+              <button
+                onClick={() => router.push('/admin/leave/by-date')}
+                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-[#0071E3] hover:bg-blue-50 transition-colors"
+              >
+                <Calendar className="w-3 h-3" />
+                날짜별 휴식반차
+              </button>
+            </div>
+          </div>
 
-        {/* 1. 출결 우선 카드 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* 4개 핵심 알림 카드 (1행) */}
+          <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4"
+            initial="hidden"
+            animate="visible"
+            variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.07 } } }}
+          >
+
+            {/* 만료 경고 — 빨강 */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
+            <Card className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden text-left h-full ${expiredStudents.length > 0 ? 'bg-gradient-to-br from-red-50 to-red-100/60 border-red-200/60' : 'bg-gradient-to-br from-white to-[#FFF5F5] border-black/[0.04]'}`}>
+              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
+                <XCircle className="w-16 h-16 text-red-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase text-red-600/80">만료 경고</span>
+                {expiredStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+              </div>
+              <div className="mt-3 flex items-baseline">
+                <AnimatedNumber value={expiredStudents.length} className={`text-3xl font-black tracking-tight ${expiredStudents.length > 0 ? 'text-red-600' : 'text-[#86868B]'}`} />
+                <span className={`text-xs font-bold ml-1 ${expiredStudents.length > 0 ? 'text-red-600/80' : 'text-[#86868B]'}`}>명</span>
+              </div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
+              <button onClick={() => setEnrollmentModal('expired')} className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 hover:underline ${expiredStudents.length > 0 ? 'text-red-700' : 'text-[#86868B]'}`}>
+                {expiredStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3 h-3" />
+              </button>
+            </Card>
+            </motion.div>
+
+            {/* 재등록 임박 — 주황 */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
+            <Card className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 relative overflow-hidden text-left h-full ${renewalWarnStudents.length > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-100/50 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}>
+              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
+                <Clock className="w-16 h-16 text-amber-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-600/80">재등록 임박</span>
+                {renewalWarnStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+              </div>
+              <div className="mt-3 flex items-baseline">
+                <AnimatedNumber value={renewalWarnStudents.length} className={`text-3xl font-black tracking-tight ${renewalWarnStudents.length > 0 ? 'text-amber-600' : 'text-[#86868B]'}`} />
+                <span className={`text-xs font-bold ml-1 ${renewalWarnStudents.length > 0 ? 'text-amber-600/80' : 'text-[#86868B]'}`}>명</span>
+              </div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
+              <button onClick={() => setEnrollmentModal('warning')} className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 hover:underline ${renewalWarnStudents.length > 0 ? 'text-amber-700' : 'text-[#86868B]'}`}>
+                {renewalWarnStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3 h-3" />
+              </button>
+            </Card>
+            </motion.div>
+
+            {/* 상담 도래 — 주황 */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
+            <Card
+              onClick={() => { handleCardClick('consultation'); handleShowConsultationStudents(); }}
+              className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FDFBF7] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full"
+            >
+              <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
+                <Calendar className="w-16 h-16 text-[#F56300]" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">상담 도래</span>
+                {shouldShowDot('consultation', lastConsultationUpdate) && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />}
+              </div>
+              <div className="mt-3 flex items-baseline">
+                <AnimatedNumber value={pendingConsultationStudents.length} className="text-3xl font-black tracking-tight text-amber-600" />
+                <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
+              </div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">{selectedCampusLabel} 기준 상담 일지 미작성 대상자</p>
+              <div className="mt-3 text-[10px] text-amber-700 font-extrabold group-hover:underline flex items-center gap-0.5">대상 원생 보기 &rarr;</div>
+            </Card>
+            </motion.div>
+
+            {/* 진도 지연 — 주황/빨강 */}
+            <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
+            <Card
+              onClick={() => router.push('/admin/progress-delayed')}
+              className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${behindStudentsCount > 0 ? 'bg-gradient-to-br from-orange-50 to-red-100/40 border-orange-200/60' : 'bg-gradient-to-br from-white to-[#FFF8F5] border-black/[0.04]'}`}
+            >
+              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
+                <AlertTriangle className="w-16 h-16 text-orange-500" />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase text-orange-600/80">진도 지연</span>
+                {behindStudentsCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />}
+              </div>
+              <div className="mt-3 flex items-baseline">
+                <AnimatedNumber value={behindStudentsCount} className={`text-3xl font-black tracking-tight ${behindStudentsCount > 0 ? 'text-orange-600' : 'text-[#86868B]'}`} />
+                <span className={`text-xs font-bold ml-1 ${behindStudentsCount > 0 ? 'text-orange-600/80' : 'text-[#86868B]'}`}>명</span>
+              </div>
+              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">목표 대비 진도가 뒤처진 원생</p>
+              <div className="mt-3 text-[10px] text-orange-700 font-extrabold group-hover:underline flex items-center gap-0.5">
+                {behindStudentsCount > 0 ? '지연 원생 보기' : '지연 없음'} <ChevronRight className="w-3 h-3" />
+              </div>
+            </Card>
+            </motion.div>
+
+          </motion.div>
+        </div>{/* /섹션1 알림현황 */}
+
+        {/* ── 섹션 2: 대기 요청 ── */}
+        <div className="space-y-3.5">
+          <div className="flex items-center gap-2.5">
+            <ClipboardList className="w-3.5 h-3.5 text-[#86868B]" />
+            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">대기 요청</span>
+            <div className="flex-1 h-px bg-black/[0.06]" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5 items-stretch">
+          <PendingChangeRequestsPanel
+            students={campusScopedStudents}
+            maxRows={4}
+            getCampusLabel={getCampusLabel}
+            onOpenStudent={handleOpenStudentById}
+            description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항을 기존 상세 시트에서 바로 확인하고 처리할 수 있습니다.`}
+          />
+          {(pendingConsultationStudents.length > 0 || weeklyGradeMissingStudents.length > 0) ? (
+            <div className="admin-fit-box h-full bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] border border-amber-500/15 rounded-3xl p-5 space-y-4 shadow-[0_2px_8px_rgba(245,99,0,0.02)]">
+              {pendingConsultationStudents.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-700 shrink-0 mt-0.5">
+                      <AlertTriangle className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-black text-amber-900">상담 도래 {pendingConsultationStudents.length}명</h4>
+                      <p className="text-[10px] font-semibold text-amber-700/80 mt-0.5 leading-snug">오늘 이전 상담 일정 경과</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pl-9">
+                    {pendingConsultationStudents.slice(0, 6).map(s => (
+                      <Badge key={s.id} onClick={() => handleOpenStudentById(s.id)}
+                        className="bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-2.5 py-1 text-[10px] font-extrabold shadow-sm hover:scale-[1.02] transition-transform">
+                        {s.name}
+                      </Badge>
+                    ))}
+                    {pendingConsultationStudents.length > 6 && <span className="text-[10px] text-amber-700 font-extrabold self-center">+{pendingConsultationStudents.length - 6}</span>}
+                  </div>
+                </div>
+              )}
+              {pendingConsultationStudents.length > 0 && weeklyGradeMissingStudents.length > 0 && (
+                <div className="border-t border-amber-500/10" />
+              )}
+              {weeklyGradeMissingStudents.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-start gap-3">
+                    <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-700 shrink-0 mt-0.5">
+                      <ClipboardList className="w-3.5 h-3.5" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-xs font-black text-amber-900">성적 미입력 {weeklyGradeMissingStudents.length}명</h4>
+                      <p className="text-[10px] font-semibold text-amber-700/80 mt-0.5 leading-snug">이번 주 미등록 원생</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 pl-9">
+                    {weeklyGradeMissingStudents.slice(0, 6).map(s => (
+                      <Badge key={s.id} onClick={() => handleOpenStudentById(s.id)}
+                        className="bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-2.5 py-1 text-[10px] font-extrabold shadow-sm hover:scale-[1.02] transition-transform">
+                        {s.name}
+                      </Badge>
+                    ))}
+                    {weeklyGradeMissingStudents.length > 6 && <span className="text-[10px] text-amber-700 font-extrabold self-center">+{weeklyGradeMissingStudents.length - 6}</span>}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="hidden lg:flex items-center justify-center h-full min-h-[80px] rounded-3xl border border-dashed border-slate-200 text-[11px] text-slate-300 font-bold">
+              알림 없음
+            </div>
+          )}
+        </div>
+        </div>{/* /섹션2 */}
+
+        {/* ── 섹션 3: 출결 현황 ── */}
+        <div className="space-y-3.5">
+          <div className="flex items-center gap-2.5">
+            <Calendar className="w-3.5 h-3.5 text-[#86868B]" />
+            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">출결 현황</span>
+            <div className="flex-1 h-px bg-black/[0.06]" />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <TodayAttendanceWidget
             campusFilter={campusFilter}
             refreshSignal={attendanceRefresh}
@@ -651,199 +909,17 @@ export default function AdminDashboardPage() {
             onSelectStudentId={handleOpenStudentById}
           />
         </div>
+        </div>{/* /섹션3 */}
 
-        {/* 2. 알림 배너 (상담 필요 학생) */}
-        {pendingConsultationStudents.length > 0 && (
-          <div className="admin-fit-box bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] border border-amber-500/15 rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-[0_2px_8px_rgba(245,99,0,0.02)] backdrop-blur-sm transition-all duration-300 hover:border-amber-500/25">
-            <div className="admin-fit-row flex items-start gap-3.5">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 shrink-0">
-                <AlertTriangle className="admin-fit-icon w-5 h-5 shrink-0" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="admin-fit-text text-sm font-black text-amber-900 tracking-tight">상담 일정이 도래한 원생이 존재합니다 ({pendingConsultationStudents.length}명)</h4>
-                <p className="admin-fit-caption text-xs font-semibold text-amber-700/90 mt-1 leading-relaxed">
-                  다음 상담일이 오늘이거나 이미 경과되었습니다. 원생명을 클릭해 밀착 상담 및 목표 피드백을 진행해 주세요.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 shrink-0">
-              {pendingConsultationStudents.slice(0, 4).map(s => (
-                <Badge
-                  key={s.id}
-                  onClick={() => router.push(`/admin/consultation?studentId=${s.id}`)}
-                  className="admin-fit-button bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-3 py-1.5 text-[10px] font-extrabold max-w-[9rem] shadow-sm hover:scale-[1.02] transition-transform"
-                >
-                  {s.name} ({getCampusLabel(s.campus)})
-                </Badge>
-              ))}
-              {pendingConsultationStudents.length > 4 && (
-                <span className="text-[10px] text-amber-700 font-extrabold self-center px-1">외 {pendingConsultationStudents.length - 4}명 더 있음</span>
-              )}
-            </div>
+        {/* ── 섹션 4: 학습 현황 ── */}
+        <div className="space-y-3.5">
+          <div className="flex items-center gap-2.5">
+            <BookOpen className="w-3.5 h-3.5 text-[#86868B]" />
+            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">학습 현황</span>
+            <div className="flex-1 h-px bg-black/[0.06]" />
           </div>
-        )}
-
-        {/* 2-2. 알림 배너 (이번 주 성적 미입력) */}
-        {weeklyGradeMissingStudents.length > 0 && (
-          <div className="admin-fit-box bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] border border-amber-500/15 rounded-3xl p-5 flex flex-col sm:flex-row justify-between sm:items-center gap-4 shadow-[0_2px_8px_rgba(245,99,0,0.02)] backdrop-blur-sm transition-all duration-300 hover:border-amber-500/25">
-            <div className="admin-fit-row flex items-start gap-3.5">
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-700 shrink-0">
-                <ClipboardList className="admin-fit-icon w-5 h-5 shrink-0" />
-              </div>
-              <div className="min-w-0">
-                <h4 className="admin-fit-text text-sm font-black text-amber-900 tracking-tight">이번 주 성적 미입력 원생이 존재합니다 ({weeklyGradeMissingStudents.length}명)</h4>
-                <p className="admin-fit-caption text-xs font-semibold text-amber-700/90 mt-1 leading-relaxed">
-                  매주 성적 입력 대상이지만 이번 주(월~일) 성적이 아직 등록되지 않았습니다. 원생명을 클릭해 성적을 입력해 주세요.
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-2 shrink-0">
-              {weeklyGradeMissingStudents.slice(0, 4).map(s => (
-                <Badge
-                  key={s.id}
-                  onClick={() => router.push(`/admin/consultation?studentId=${s.id}`)}
-                  className="admin-fit-button bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-3 py-1.5 text-[10px] font-extrabold max-w-[9rem] shadow-sm hover:scale-[1.02] transition-transform"
-                >
-                  {s.name} ({getCampusLabel(s.campus)})
-                </Badge>
-              ))}
-              {weeklyGradeMissingStudents.length > 4 && (
-                <span className="text-[10px] text-amber-700 font-extrabold self-center px-1">외 {weeklyGradeMissingStudents.length - 4}명 더 있음</span>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* 3. 상담/관리 요약 카드 */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          <Card
-            onClick={() => {
-              handleCardClick('consultation');
-              handleShowConsultationStudents();
-            }}
-            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FDFBF7] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
-          >
-            <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <Calendar className="w-16 h-16 text-[#F56300]" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">금주 상담 필요</span>
-              {shouldShowDot('consultation', lastConsultationUpdate) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-              )}
-            </div>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-amber-600">
-                {pendingConsultationStudents.length}
-              </span>
-              <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
-            </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              {selectedCampusLabel} 기준 상담 일지 미작성 대상자
-            </p>
-            <div className="mt-3 text-[10px] text-amber-700 font-extrabold group-hover:underline flex items-center gap-0.5">
-              대상 원생 보기 &rarr;
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => {
-              handleCardClick('students');
-              handleShowAllStudents();
-            }}
-            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FC] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
-          >
-            <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <Users className="w-16 h-16 text-[#0071E3]" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">총 수강 원생</span>
-              {shouldShowDot('students', lastStudentUpdate) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              )}
-            </div>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-blue-600">
-                {totalStudentsCount}
-              </span>
-              <span className="text-xs font-bold text-blue-600/80 ml-1">명</span>
-            </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              {selectedCampusLabel} 기준 관리 중인 원생 수
-            </p>
-            <div className="mt-3 text-[10px] text-blue-700 font-extrabold group-hover:underline flex items-center gap-0.5">
-              전체 원생 보기 &rarr;
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => {
-              handleCardClick('grades');
-              if (weeklyGradeMissingStudents[0]) {
-                router.push(`/admin/consultation?studentId=${weeklyGradeMissingStudents[0].id}`);
-              } else {
-                router.push('/admin/consultation');
-              }
-            }}
-            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FFF8F2] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
-          >
-            <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <ClipboardList className="w-16 h-16 text-amber-600" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">성적 미입력</span>
-              {shouldShowDot('grades', lastGradeUpdate) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              )}
-            </div>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-amber-600">
-                {weeklyGradeMissingStudents.length}
-              </span>
-              <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
-            </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              이번 주 성적 입력 대상 중 미등록 원생
-            </p>
-            <div className="mt-3 text-[10px] text-amber-700 font-extrabold group-hover:underline flex items-center gap-0.5">
-              {weeklyGradeMissingStudents.length > 0 ? '첫 원생 열기' : '미입력 없음'} &rarr;
-            </div>
-          </Card>
-
-          <Card
-            onClick={() => {
-              handleCardClick('progress');
-              handleShowBehindMaterials();
-            }}
-            className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FC] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left"
-          >
-            <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-              <BarChart3 className="w-16 h-16 text-blue-600" />
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">평균 학습 진도율</span>
-              {shouldShowDot('progress', lastProgressUpdate) && (
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-              )}
-            </div>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-blue-600">
-                {averageProgress}
-              </span>
-              <span className="text-xs font-bold text-blue-600/80 ml-1">%</span>
-            </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              {selectedCampusLabel} 기준 교재 및 인강 진행도 평균
-            </p>
-            <div className="mt-3 text-[10px] text-blue-700 font-extrabold group-hover:underline flex items-center gap-0.5">
-              부족 진도 보기 &rarr;
-            </div>
-          </Card>
-        </div>
-
-        {/* 4. 과목/교재/인강 랭킹 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-          <Card className="admin-fit-box gap-2 border border-black/[0.04] rounded-2xl bg-white p-4.5 shadow-sm xl:col-span-2 text-left">
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
+          <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
               <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 과목 (교재)</CardTitle>
               <BookOpen className="w-4 h-4 text-[#0071E3]" />
@@ -866,7 +942,13 @@ export default function AdminDashboardPage() {
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
-                        <p className="text-[10px] font-bold text-[#86868B]">진행 항목 {rank.itemCount}개 · 평균 {rank.averageProgress}%</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
+                            <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
+                          </div>
+                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                        </div>
+                        <p className="text-[9px] font-bold text-[#86868B] mt-0.5">항목 {rank.itemCount}개</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -876,7 +958,7 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="admin-fit-box gap-2 border border-black/[0.04] rounded-2xl bg-white p-4.5 shadow-sm xl:col-span-2 text-left">
+          <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
               <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 책</CardTitle>
               <ClipboardList className="w-4 h-4 text-[#0071E3]" />
@@ -899,7 +981,13 @@ export default function AdminDashboardPage() {
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
-                        <p className="truncate text-[10px] font-bold text-[#86868B]">{rank.meta || '기타'} · 평균 {rank.averageProgress}%</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
+                            <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
+                          </div>
+                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                        </div>
+                        <p className="truncate text-[9px] font-bold text-[#86868B] mt-0.5">{rank.meta || '기타'}</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -909,7 +997,7 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="admin-fit-box gap-2 border border-black/[0.04] rounded-2xl bg-white p-4.5 shadow-sm xl:col-span-2 text-left">
+          <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
               <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 듣고 있는 과목 (인강)</CardTitle>
               <Play className="w-4 h-4 text-[#0071E3]" />
@@ -932,7 +1020,13 @@ export default function AdminDashboardPage() {
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
-                        <p className="text-[10px] font-bold text-[#86868B]">진행 항목 {rank.itemCount}개 · 평균 {rank.averageProgress}%</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
+                            <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
+                          </div>
+                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                        </div>
+                        <p className="text-[9px] font-bold text-[#86868B] mt-0.5">항목 {rank.itemCount}개</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -942,7 +1036,7 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="admin-fit-box gap-2 border border-black/[0.04] rounded-2xl bg-white p-4.5 shadow-sm xl:col-span-2 text-left">
+          <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
               <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 듣고 있는 강의</CardTitle>
               <Play className="w-4 h-4 text-[#0071E3]" />
@@ -965,7 +1059,13 @@ export default function AdminDashboardPage() {
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
-                        <p className="truncate text-[10px] font-bold text-[#86868B]">{rank.meta || '기타'} · 평균 {rank.averageProgress}%</p>
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
+                            <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
+                          </div>
+                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                        </div>
+                        <p className="truncate text-[9px] font-bold text-[#86868B] mt-0.5">{rank.meta || '기타'}</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -975,18 +1075,70 @@ export default function AdminDashboardPage() {
             </CardContent>
           </Card>
         </div>
+        </div>{/* /섹션4 */}
 
       </main>
 
+      {/* 등록 만료/임박 더보기 모달 */}
+      {enrollmentModal && (
+        <div
+          onClick={() => setEnrollmentModal(null)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-fadeIn"
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden animate-scale-in-up"
+          >
+            <div className={`flex items-center justify-between p-5 border-b ${enrollmentModal === 'expired' ? 'border-red-100 bg-red-50/60' : 'border-amber-100 bg-amber-50/60'}`}>
+              <div>
+                <p className={`text-[10px] font-extrabold uppercase tracking-wider ${enrollmentModal === 'expired' ? 'text-red-500' : 'text-amber-600'}`}>
+                  {enrollmentModal === 'expired' ? '경고 · 만료 초과' : '주의 · 재등록 임박'}
+                </p>
+                <h3 className="text-base font-black text-[#1D1D1F] mt-0.5">
+                  {enrollmentModal === 'expired'
+                    ? `만료 경고 — ${expiredStudents.length}명`
+                    : `재등록 임박 — ${renewalWarnStudents.length}명 (${RENEWAL_WARN_DAYS}일 이내)`}
+                </h3>
+              </div>
+              <button onClick={() => setEnrollmentModal(null)} className="p-2 rounded-full bg-black/[0.04] hover:bg-black/[0.08] transition-colors">
+                <X className="w-4 h-4 text-[#86868B]" />
+              </button>
+            </div>
+            <div className="p-5 max-h-[60vh] overflow-y-auto space-y-2">
+              {(enrollmentModal === 'expired' ? expiredStudents : renewalWarnStudents).length === 0 ? (
+                <p className="text-sm text-[#86868B] text-center py-8">해당 원생이 없습니다.</p>
+              ) : (enrollmentModal === 'expired' ? expiredStudents : renewalWarnStudents).map(s => {
+                const d = enrollmentDaysLeft(s.enrollmentEndDate);
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => { handleOpenStudentById(s.id); setEnrollmentModal(null); }}
+                    className="flex items-center justify-between rounded-2xl border border-black/[0.04] bg-[#F5F5F7] hover:bg-[#EAEAEA] px-4 py-3 cursor-pointer transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-black text-[#1D1D1F]">{s.name}</p>
+                      <p className="text-[11px] text-[#86868B] font-semibold mt-0.5">{getCampusLabel(s.campus)} · {s.enrollmentEndDate}</p>
+                    </div>
+                    <span className={`text-xs font-black px-2.5 py-1 rounded-xl ${d !== null && d < 0 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {d !== null && d < 0 ? `만료 ${Math.abs(d)}일` : `D-${d}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 7. 과목/교재 학습 현황 분석 모달 */}
       {analysisTarget && analysisData && (
-        <div 
+        <div
           onClick={() => setAnalysisTarget(null)}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md p-4 animate-fadeIn"
         >
-          <div 
+          <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white/95 border border-black/[0.06] shadow-2xl rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden backdrop-blur-md text-left"
+            className="bg-white/95 border border-black/[0.06] shadow-2xl rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden backdrop-blur-md text-left animate-scale-in-up"
           >
             
             {/* 모달 헤더 */}

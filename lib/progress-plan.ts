@@ -1,4 +1,4 @@
-import { BookProgress, DetailedPlan, LectureProgress, Student } from '@/lib/types/student';
+import { BookProgress, DetailedPlan, LectureProgress, Student, ReviewPassSetting } from '@/lib/types/student';
 
 export type ProgressItemType = 'book' | 'lecture';
 
@@ -183,7 +183,8 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
     plans: DetailedPlan[] | undefined,
     unit: string | undefined,
     type: ProgressItemType,
-    estimatedMinutesPerUnit?: number
+    estimatedMinutesPerUnit?: number,
+    lectureSpeedMultiplier = 1.0
   ) => {
     if (!plans) return;
     const todayPlan = plans.find(p => p.startDate <= targetDateStr && targetDateStr <= p.endDate);
@@ -205,7 +206,11 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
 
       if (isStudyDay) {
         const dailyAmount = todayPlan.dailyAmount || Math.ceil(todayPlan.targetAmount / 6);
-        totalMin += getEstimatedStudyTimeMin(unit, dailyAmount, type, estimatedMinutesPerUnit);
+        let planMin = getEstimatedStudyTimeMin(unit, dailyAmount, type, estimatedMinutesPerUnit);
+        if (type === 'lecture') {
+          planMin = planMin / lectureSpeedMultiplier;
+        }
+        totalMin += planMin;
       }
     }
   };
@@ -213,17 +218,245 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
   if (student.subjects) {
     student.subjects.forEach(sub => {
       (sub.books || []).forEach(b => checkPlan(b.detailedPlans, b.unit, 'book', b.estimatedMinutesPerUnit));
-      (sub.lectures || []).forEach(l => checkPlan(l.detailedPlans, '강', 'lecture', l.estimatedMinutesPerUnit));
+      (sub.lectures || []).forEach(l => checkPlan(l.detailedPlans, '강', 'lecture', l.estimatedMinutesPerUnit, l.speedMultiplier));
     });
   } else {
     (student.books || []).forEach(b => checkPlan(b.detailedPlans, b.unit, 'book', b.estimatedMinutesPerUnit));
-    (student.lectures || []).forEach(l => checkPlan(l.detailedPlans, '강', 'lecture', l.estimatedMinutesPerUnit));
+    (student.lectures || []).forEach(l => checkPlan(l.detailedPlans, '강', 'lecture', l.estimatedMinutesPerUnit, l.speedMultiplier));
   }
 
-  // 속도 가중치 보정 반영 (0.8배속은 1.25배 오래 걸림, 1.2배속은 0.83배 덜 걸림)
-  const speedMultiplier = student.speedMultiplier || 1.0;
-  const rawTotalMin = totalMin / speedMultiplier;
-  
   // 소수점 없이 완전한 정수(분) 단위로 반올림하여 반환
-  return Math.round(rawTotalMin);
+  return Math.round(totalMin);
+}
+
+export function getActiveStudyDays(studyDays?: string[]) {
+  return studyDays && studyDays.length > 0 ? studyDays : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+}
+
+export function isStudyDay(date: Date, studyDays?: string[]) {
+  const dayMap: Record<number, string> = {
+    0: 'sun',
+    1: 'mon',
+    2: 'tue',
+    3: 'wed',
+    4: 'thu',
+    5: 'fri',
+    6: 'sat',
+  };
+  return getActiveStudyDays(studyDays).includes(dayMap[date.getDay()]);
+}
+
+export function getAvailableMinutes(studyTime?: 'morning' | 'afternoon' | 'night' | '') {
+  if (studyTime === 'morning') return 190;
+  if (studyTime === 'afternoon') return 210;
+  if (studyTime === 'night') return 250;
+  return 650; // 기본 전체 자습 시간
+}
+
+export function generateDetailedPlans(
+  materialId: string,
+  totalAmount: number,
+  type: 'book' | 'lecture',
+  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount',
+  goalValue: number,
+  currentAmount = 0,
+  customUnit?: string,
+  reviewPasses: ReviewPassSetting[] = [],
+  studyDays?: string[],
+  lectureSpeedMultiplier = 1.0,
+  estimatedMinutesPerUnit?: number,
+  studyTime?: 'morning' | 'afternoon' | 'night' | '',
+  category?: string
+): { plans: DetailedPlan[], calculatedTargetDate: string } {
+  const plans: DetailedPlan[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const safeCurrentAmount = Math.min(totalAmount, Math.max(0, Math.round(currentAmount)));
+  const planAmount = Math.max(0, totalAmount - safeCurrentAmount);
+
+  if (planAmount <= 0 && reviewPasses.length === 0) {
+    return { plans, calculatedTargetDate: today.toISOString().split('T')[0] };
+  }
+
+  const activeStudyDays = getActiveStudyDays(studyDays);
+  const daysCountPerWeek = activeStudyDays.length;
+
+  // 1. 인강 하루 한계 학습량 계산 (문제풀이가 아닌 경우만 제한)
+  let maxLecturesPerDay = Infinity;
+  if (type === 'lecture' && category !== '문제풀이') {
+    const actualDuration = (estimatedMinutesPerUnit || 60) / lectureSpeedMultiplier;
+    const availableMinutes = getAvailableMinutes(studyTime);
+    maxLecturesPerDay = Math.max(1, Math.floor(availableMinutes / actualDuration));
+  }
+
+  // 2. 시간표 한계에 따른 목표 값 보정
+  let adjustedGoalValue = goalValue;
+  if (type === 'lecture' && category !== '문제풀이' && maxLecturesPerDay !== Infinity) {
+    if (goalType === 'dailyAmount' && goalValue > maxLecturesPerDay) {
+      adjustedGoalValue = maxLecturesPerDay;
+    } else if (goalType === 'weeklyAmount') {
+      const maxWeeklyAmount = maxLecturesPerDay * daysCountPerWeek;
+      if (goalValue > maxWeeklyAmount) {
+        adjustedGoalValue = maxWeeklyAmount;
+      }
+    }
+  }
+
+  const dayOfWeek = today.getDay();
+  const startOfWeek = new Date(today);
+  if (dayOfWeek === 0 && isStudyDay(today, studyDays)) {
+    startOfWeek.setDate(today.getDate() - 6);
+  } else if (dayOfWeek === 0) {
+    startOfWeek.setDate(today.getDate() + 1);
+  } else {
+    startOfWeek.setDate(today.getDate() - (dayOfWeek - 1));
+  }
+
+  const getStudyDaysInWeek = (weekStart: Date, fromDate?: Date) => {
+    let studyDayCount = 0;
+    const lowerBound = fromDate ? new Date(fromDate) : new Date(weekStart);
+    lowerBound.setHours(0, 0, 0, 0);
+
+    for (let offset = 0; offset <= 6; offset++) {
+      const targetDate = new Date(weekStart);
+      targetDate.setDate(weekStart.getDate() + offset);
+      targetDate.setHours(0, 0, 0, 0);
+      if (targetDate < lowerBound) continue;
+      if (!isStudyDay(targetDate, studyDays)) continue;
+      studyDayCount++;
+    }
+    return Math.max(1, studyDayCount);
+  };
+
+  const appendPlansByWeeklyAmount = (
+    passNumber: number,
+    phaseAmount: number,
+    startBaseAmount: number,
+    firstWeekAmount: number,
+    amountPerWeek: number,
+    totalWeeks: number,
+    phaseStartWeek: Date,
+    firstWeekFromDate?: Date
+  ) => {
+    let remainingAmount = phaseAmount;
+    let currentStart = new Date(phaseStartWeek);
+
+    for (let i = 0; i < totalWeeks; i++) {
+      const startStr = currentStart.toISOString().split('T')[0];
+      const currentEnd = new Date(currentStart);
+      currentEnd.setDate(currentStart.getDate() + 6);
+      const endStr = currentEnd.toISOString().split('T')[0];
+
+      const thisWeekAmount = i === 0
+        ? Math.min(remainingAmount, firstWeekAmount)
+        : Math.min(remainingAmount, amountPerWeek);
+
+      if (thisWeekAmount <= 0) break;
+
+      const fromNum = startBaseAmount + (phaseAmount - remainingAmount) + 1;
+      const toNum = fromNum + thisWeekAmount - 1;
+      const unit = customUnit || (type === 'book' ? 'p' : '강');
+      const rangeText = `${passNumber}회독 ${fromNum}${unit} ~ ${toNum}${unit}`;
+      const dailyDays = getStudyDaysInWeek(currentStart, i === 0 ? firstWeekFromDate : undefined);
+      
+      let dailyAmount = Math.ceil(thisWeekAmount / dailyDays);
+      if (type === 'lecture' && category !== '문제풀이' && maxLecturesPerDay !== Infinity) {
+        dailyAmount = Math.min(dailyAmount, maxLecturesPerDay);
+      }
+
+      plans.push({
+        id: `plan_${Date.now()}_${plans.length}_${Math.random().toString(36).substr(2, 5)}`,
+        materialId,
+        weekNumber: plans.length + 1,
+        passNumber,
+        startDate: startStr,
+        endDate: endStr,
+        targetAmount: thisWeekAmount,
+        dailyAmount,
+        rangeText,
+        isCompleted: false
+      });
+
+      remainingAmount -= thisWeekAmount;
+      if (remainingAmount <= 0) break;
+
+      currentStart = new Date(currentEnd);
+      currentStart.setDate(currentEnd.getDate() + 1);
+    }
+  };
+
+  const firstWeekDays = getStudyDaysInWeek(startOfWeek, today);
+  let totalWeeks = 1;
+  let firstWeekAmount = planAmount;
+  let amountPerWeek = 0;
+
+  if (goalType === 'weeks') {
+    let baseWeeks = Math.max(1, Math.round(adjustedGoalValue));
+    if (type === 'lecture' && category !== '문제풀이' && maxLecturesPerDay !== Infinity) {
+      const maxWeeklyAmount = maxLecturesPerDay * daysCountPerWeek;
+      const minWeeks = Math.ceil(planAmount / maxWeeklyAmount);
+      if (baseWeeks < minWeeks) {
+        baseWeeks = minWeeks;
+      }
+    }
+    totalWeeks = Math.max(1, baseWeeks);
+    if (totalWeeks === 1) {
+      firstWeekAmount = planAmount;
+      amountPerWeek = 0;
+    } else {
+      const totalLearningDays = firstWeekDays + (totalWeeks - 1) * daysCountPerWeek;
+      const baseDailyAmount = planAmount / totalLearningDays;
+      firstWeekAmount = Math.min(planAmount, Math.round(baseDailyAmount * firstWeekDays));
+      const remainingForOthers = planAmount - firstWeekAmount;
+      amountPerWeek = Math.ceil(remainingForOthers / (totalWeeks - 1));
+    }
+  } else if (goalType === 'weeklyAmount') {
+    const weeklyAmount = Math.max(1, Math.round(adjustedGoalValue));
+    firstWeekAmount = Math.min(planAmount, Math.round(weeklyAmount * (firstWeekDays / daysCountPerWeek)));
+    const remainingForOthers = planAmount - firstWeekAmount;
+    if (remainingForOthers <= 0) {
+      totalWeeks = 1;
+      amountPerWeek = 0;
+    } else {
+      const extraWeeks = Math.ceil(remainingForOthers / weeklyAmount);
+      totalWeeks = 1 + extraWeeks;
+      amountPerWeek = weeklyAmount;
+    }
+  } else if (goalType === 'dailyAmount') {
+    const targetDaily = Math.max(1, Math.round(adjustedGoalValue));
+    firstWeekAmount = Math.min(planAmount, targetDaily * firstWeekDays);
+    const remainingForOthers = planAmount - firstWeekAmount;
+    if (remainingForOthers <= 0) {
+      totalWeeks = 1;
+      amountPerWeek = 0;
+    } else {
+      const weeklyAmount = targetDaily * daysCountPerWeek;
+      const extraWeeks = Math.ceil(remainingForOthers / weeklyAmount);
+      totalWeeks = 1 + extraWeeks;
+      amountPerWeek = weeklyAmount;
+    }
+  }
+
+  if (planAmount > 0) {
+    appendPlansByWeeklyAmount(1, planAmount, safeCurrentAmount, firstWeekAmount, amountPerWeek, totalWeeks, startOfWeek, today);
+  }
+
+  const enabledReviewPasses = reviewPasses
+    .filter((pass) => pass.days > 0)
+    .sort((a, b) => a.passNumber - b.passNumber);
+
+  enabledReviewPasses.forEach((pass) => {
+    const lastPlan = plans[plans.length - 1];
+    const phaseStart = lastPlan ? new Date(lastPlan.endDate) : new Date(startOfWeek);
+    if (lastPlan) {
+      phaseStart.setDate(phaseStart.getDate() + 1);
+    }
+    const phaseWeeks = Math.max(1, Math.ceil(pass.days / daysCountPerWeek));
+    const phaseWeeklyAmount = Math.ceil(totalAmount / phaseWeeks);
+    appendPlansByWeeklyAmount(pass.passNumber, totalAmount, 0, phaseWeeklyAmount, phaseWeeklyAmount, phaseWeeks, phaseStart);
+  });
+
+  const lastPlan = plans[plans.length - 1];
+  const calculatedTargetDate = lastPlan?.endDate || today.toISOString().split('T')[0];
+  return { plans, calculatedTargetDate };
 }

@@ -5,15 +5,17 @@ import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2, 
-  Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2 
+import {
+  Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
+  Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
+  Target, BookOpen, Tv, User
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Student, LeaveType } from '@/lib/types/student';
+import { Student, LeaveType, ProposedGoal } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel } from '@/lib/leave';
 import { getRequestTypeLabel } from '@/lib/student-requests';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 type InboxCategory = 'all' | 'living' | 'counsel' | 'facility';
 type TimelineTone = 'amber' | 'blue' | 'emerald';
@@ -39,12 +41,13 @@ interface InboxItem {
 const CATEGORY_TABS: { value: InboxCategory; label: string }[] = [
   { value: 'all', label: '전체 요청' },
   { value: 'living', label: '생활환경 (휴가/반차)' },
-  { value: 'counsel', label: '심리상담 (과목/진도)' },
+  { value: 'counsel', label: '학습 변경 (과목/진도)' },
   { value: 'facility', label: '시설 수리 (건의사항)' },
 ];
 
 export default function AdminInboxPage() {
   const router = useRouter();
+  const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,6 +112,31 @@ export default function AdminInboxPage() {
   const getCampusLabel = (campus: string) => {
     const map: Record<string, string> = { wonju: '원주', chuncheon: '춘천', chungju: '충주' };
     return map[campus] || campus;
+  };
+
+  // proposedGoal에서 자료 제목 조회
+  const getMaterialTitle = (studentId: string, proposedGoal: ProposedGoal): string => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return proposedGoal.materialId;
+    const allBooks = [
+      ...(student.books || []),
+      ...(student.subjects || []).flatMap(s => s.books || []),
+    ];
+    const allLectures = [
+      ...(student.lectures || []),
+      ...(student.subjects || []).flatMap(s => s.lectures || []),
+    ];
+    if (proposedGoal.materialType === 'book') {
+      return allBooks.find(b => b.id === proposedGoal.materialId)?.title || proposedGoal.materialId;
+    }
+    return allLectures.find(l => l.id === proposedGoal.materialId)?.name || proposedGoal.materialId;
+  };
+
+  const getGoalTypeLabel = (goalType: string) => {
+    if (goalType === 'weeks') return '기간 지정';
+    if (goalType === 'weeklyAmount') return '주당 분량';
+    if (goalType === 'dailyAmount') return '일일 분량';
+    return goalType;
   };
 
   // 모든 신청건 통합 변환 가공
@@ -435,6 +463,24 @@ export default function AdminInboxPage() {
                   </p>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={() => {
+                    const student = students.find(s => s.id === selectedItem.studentId);
+                    if (student) {
+                      openStudent(student, {
+                        onUpdate: updated => setStudents(prev => prev.map(s => s.id === updated.id ? updated : s)),
+                        onDelete: id => setStudents(prev => prev.filter(s => s.id !== id)),
+                        allStudents: students,
+                      });
+                    }
+                  }}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-[#F5F5F7] text-xs font-bold text-slate-600 py-2.5 transition-all active:scale-[0.98]"
+                >
+                  <User className="w-3.5 h-3.5 text-[#0071E3]" />
+                  원생 상세 시트 열기
+                </button>
+
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코치 피드백 답변 작성</label>
                   <textarea
@@ -446,6 +492,49 @@ export default function AdminInboxPage() {
                   />
                   <p className="text-[9px] font-bold text-slate-400">답변을 입력하면 실시간으로 '처리중🔵' 또는 '완료🟢' 상태로 학생 화면에 표시됩니다.</p>
                 </div>
+
+                {/* proposedGoal 제안 계획 표시 */}
+                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedGoal && (() => {
+                  const pg: ProposedGoal = selectedItem.rawItem.proposedGoal;
+                  const materialTitle = getMaterialTitle(selectedItem.studentId, pg);
+                  const isBook = pg.materialType === 'book';
+                  const goalUnit = pg.goalType === 'weeks' ? '주' : pg.goalType === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주') : (isBook ? 'p/일' : '강/일');
+                  return (
+                    <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.03] p-4 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
+                        <Target className="w-3.5 h-3.5" />
+                        학생 제안 증진계획
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex items-center gap-2">
+                          {isBook
+                            ? <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            : <Tv className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                          <span className="font-black text-slate-700 truncate">{materialTitle}</span>
+                          <span className="text-[9px] font-bold text-slate-400 shrink-0">{isBook ? '교재' : '인강'}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 pl-5">
+                          <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                            {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{goalUnit}
+                          </span>
+                          {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
+                            <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                              배속 {pg.speedMultiplier}×
+                            </span>
+                          )}
+                          {pg.proposedWeekNumber && pg.proposedRangeText && (
+                            <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                              {pg.proposedWeekNumber}주차: {pg.proposedRangeText}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[9px] font-bold text-[#0071E3]/70 pl-0.5">
+                        ✅ 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 <div className="space-y-2 border-t border-slate-100 pt-4">
                   {selectedItem.type === 'leave' ? (
@@ -472,7 +561,8 @@ export default function AdminInboxPage() {
                         onClick={() => handleProcessRequest('resolved')}
                         className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
                       >
-                        <Check className="w-3.5 h-3.5 mr-1" /> 해결/처리 완료
+                        <Check className="w-3.5 h-3.5 mr-1" />
+                        {selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
                       </Button>
                       <Button
                         disabled={processing}
