@@ -1,9 +1,21 @@
-const { getStudents } = require('../lib/store');
-const dotenv = require('dotenv');
+// 동기식 환경변수 로딩으로 Static Import 시점 맞춤
+const fs = require('fs');
 const path = require('path');
+const envPath = path.join(__dirname, '../.env.local');
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf8');
+  envContent.split(/\r?\n/).forEach(line => {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith('#')) {
+      const parts = trimmed.split('=');
+      const key = parts[0].trim();
+      const val = parts.slice(1).join('=').trim();
+      process.env[key] = val;
+    }
+  });
+}
 
-// .env.local 로드
-dotenv.config({ path: path.join(__dirname, '../.env.local') });
+const { getStudents } = require('../lib/store');
 
 async function main() {
   try {
