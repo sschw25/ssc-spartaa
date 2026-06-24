@@ -824,7 +824,6 @@ export default function AdminDashboardPage() {
             <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">대기 요청</span>
             <div className="flex-1 h-px bg-black/[0.06]" />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-5 items-stretch">
           <PendingChangeRequestsPanel
             students={campusScopedStudents}
             maxRows={4}
@@ -832,62 +831,6 @@ export default function AdminDashboardPage() {
             onOpenStudent={handleOpenStudentById}
             description={`${selectedCampusLabel} 기준 학습 변경, 반차/휴가, 건의사항을 기존 상세 시트에서 바로 확인하고 처리할 수 있습니다.`}
           />
-          {(pendingConsultationStudents.length > 0 || weeklyGradeMissingStudents.length > 0) ? (
-            <div className="admin-fit-box h-full bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] border border-amber-500/15 rounded-3xl p-5 space-y-4 shadow-[0_2px_8px_rgba(245,99,0,0.02)]">
-              {pendingConsultationStudents.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-700 shrink-0 mt-0.5">
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-black text-amber-900">상담 도래 {pendingConsultationStudents.length}명</h4>
-                      <p className="text-[10px] font-semibold text-amber-700/80 mt-0.5 leading-snug">오늘 이전 상담 일정 경과</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 pl-9">
-                    {pendingConsultationStudents.slice(0, 6).map(s => (
-                      <Badge key={s.id} onClick={() => handleOpenStudentById(s.id)}
-                        className="bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-2.5 py-1 text-[10px] font-extrabold shadow-sm hover:scale-[1.02] transition-transform">
-                        {s.name}
-                      </Badge>
-                    ))}
-                    {pendingConsultationStudents.length > 6 && <span className="text-[10px] text-amber-700 font-extrabold self-center">+{pendingConsultationStudents.length - 6}</span>}
-                  </div>
-                </div>
-              )}
-              {pendingConsultationStudents.length > 0 && weeklyGradeMissingStudents.length > 0 && (
-                <div className="border-t border-amber-500/10" />
-              )}
-              {weeklyGradeMissingStudents.length > 0 && (
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-start gap-3">
-                    <div className="p-1.5 rounded-xl bg-amber-500/10 text-amber-700 shrink-0 mt-0.5">
-                      <ClipboardList className="w-3.5 h-3.5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-xs font-black text-amber-900">성적 미입력 {weeklyGradeMissingStudents.length}명</h4>
-                      <p className="text-[10px] font-semibold text-amber-700/80 mt-0.5 leading-snug">이번 주 미등록 원생</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 pl-9">
-                    {weeklyGradeMissingStudents.slice(0, 6).map(s => (
-                      <Badge key={s.id} onClick={() => handleOpenStudentById(s.id)}
-                        className="bg-amber-100/80 hover:bg-amber-200 text-amber-900 border border-amber-200/50 cursor-pointer rounded-xl px-2.5 py-1 text-[10px] font-extrabold shadow-sm hover:scale-[1.02] transition-transform">
-                        {s.name}
-                      </Badge>
-                    ))}
-                    {weeklyGradeMissingStudents.length > 6 && <span className="text-[10px] text-amber-700 font-extrabold self-center">+{weeklyGradeMissingStudents.length - 6}</span>}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="hidden lg:flex items-center justify-center h-full min-h-[80px] rounded-3xl border border-dashed border-slate-200 text-[11px] text-slate-300 font-bold">
-              알림 없음
-            </div>
-          )}
-        </div>
         </div>{/* /섹션2 */}
 
         {/* ── 섹션 3: 출결 현황 ── */}
