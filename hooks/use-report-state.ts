@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, BookOpen, FileText } from 'lucide-react';
 import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal } from '@/lib/types/student';
@@ -64,6 +64,164 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
 };
 
 const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
+
+// ─── 모듈 스코프 순수 헬퍼 (렌더마다 재생성 방지) ───────────────────────────
+
+const WEEKDAY_KEY_MAP: Record<string, 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'> = {
+  Sun: 'sun', Mon: 'mon', Tue: 'tue', Wed: 'wed', Thu: 'thu', Fri: 'fri', Sat: 'sat',
+};
+
+const WEEK_DAY_SLOTS = [
+  { key: 'mon', label: '월요일' },
+  { key: 'tue', label: '화요일' },
+  { key: 'wed', label: '수요일' },
+  { key: 'thu', label: '목요일' },
+  { key: 'fri', label: '금요일' },
+  { key: 'sat', label: '토요일' },
+  { key: 'sun', label: '일요일' },
+] as const;
+
+const WEEK_DAY_SLOTS_BY_DATE = [
+  { key: 'sun', label: '일요일' },
+  { key: 'mon', label: '월요일' },
+  { key: 'tue', label: '화요일' },
+  { key: 'wed', label: '수요일' },
+  { key: 'thu', label: '목요일' },
+  { key: 'fri', label: '금요일' },
+  { key: 'sat', label: '토요일' },
+] as const;
+
+const STUDY_TIME_ORDER: Record<string, number> = { morning: 0, afternoon: 1, night: 2, '': 3 };
+
+const STUDY_TIME_LABELS: Record<string, string> = {
+  morning: getStudyTimeSlot('morning')?.displayLabel || '오전',
+  afternoon: getStudyTimeSlot('afternoon')?.displayLabel || '오후',
+  night: getStudyTimeSlot('night')?.displayLabel || '야간',
+  '': '미지정',
+};
+
+const STUDY_TIME_SLOTS_MAPPED = [
+  ...STUDY_TIME_SLOTS.map((slot) => ({
+    key: slot.key,
+    label: slot.displayLabel,
+    timeRange: slot.timeRange,
+    periodLabel: slot.periodLabel,
+    description: slot.description,
+  })),
+  { key: '' as const, label: '미지정', timeRange: '', periodLabel: '시간대 미지정', description: '아직 학원 시간표 구간이 배정되지 않았습니다.' },
+];
+
+type SpecialNoteEnvelope = {
+  noteText?: string;
+  pomodoro_minutes?: Record<string, number>;
+  [key: string]: unknown;
+};
+
+function getSeoulDateKey() {
+  const formatter = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year  = parts.find(p => p.type === 'year')?.value;
+  const month = parts.find(p => p.type === 'month')?.value;
+  const day   = parts.find(p => p.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+}
+
+function parseSpecialNoteObj(specialNote?: string | null): SpecialNoteEnvelope {
+  if (!specialNote) return {};
+  try {
+    const obj = JSON.parse(specialNote);
+    if (typeof obj === 'object' && obj !== null) return obj as SpecialNoteEnvelope;
+    return { noteText: specialNote };
+  } catch {
+    return { noteText: specialNote };
+  }
+}
+
+function extractQuestsFromComment(comment?: string): string[] {
+  if (!comment) return [];
+  const quests: string[] = [];
+  for (const line of comment.split('\n')) {
+    const trimmed = line.trim();
+    const match = trimmed.match(/^(?:(?:\d+[\.\)]\s*)|(?:[-\*]\s*)|(?:\[\s*\]\s*)|(?:[①-⑨]\s*))(.*)$/);
+    if (match?.[1]) {
+      const content = match[1].trim();
+      if (content) quests.push(content);
+    }
+  }
+  return quests;
+}
+
+function toMinutes(time: string) {
+  const [hour, minute] = time.split(':').map(Number);
+  return hour * 60 + minute;
+}
+
+function getKstNowParts(timestamp = Date.now()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Seoul', weekday: 'short',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(timestamp));
+  const value = (type: string) => parts.find((p) => p.type === type)?.value || '';
+  return { weekday: value('weekday'), hour: Number(value('hour')), minute: Number(value('minute')) };
+}
+
+function formatDateKey(date: Date) {
+  const year  = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day   = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatShortDate(date: Date) {
+  return `${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getDailyAmountLabel(plan: DetailedPlan) {
+  const amount = plan.dailyAmount || Math.ceil(plan.targetAmount / 6);
+  const range  = plan.rangeText || '';
+  const rangeWithoutPass = range.replace(/\d+회독/g, '');
+  const unit =
+    range.includes('문제') ? '문제' :
+    range.includes('강')   ? '강' :
+    range.toLowerCase().includes('p') ? 'p' :
+    rangeWithoutPass.includes('회') ? '회' :
+    '';
+  return `하루 ${amount}${unit}`;
+}
+
+function isPlanActiveOnDate(plan: DetailedPlan, dateKey: string) {
+  return plan.startDate <= dateKey && dateKey <= plan.endDate;
+}
+
+function formatNotificationDate(value?: string) {
+  if (!value) return '오늘';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: 'short',
+    day: 'numeric',
+    hour: value.includes('T') ? '2-digit' : undefined,
+    minute: value.includes('T') ? '2-digit' : undefined,
+  }).format(date);
+}
+
+function truncateNotificationText(value: string, max = 120) {
+  const normalized = value.replace(/\s+/g, ' ').trim();
+  return normalized.length > max ? `${normalized.slice(0, max)}...` : normalized;
+}
+
+function parseDateOnly(value?: string) {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const parsed = new Date(year, month - 1, day);
+  parsed.setHours(0, 0, 0, 0);
+  return parsed;
+}
+
+// ────────────────────────────────────────────────────────────────────────────
 
 type ProgressMaterialType = 'book' | 'lecture';
 
@@ -159,52 +317,6 @@ export function useReportState() {
     sinceToday: false,
   });
   const [homeAttendNow, setHomeAttendNow] = useState(0);
-
-  const getSeoulDateKey = () => {
-    const d = new Date();
-    const formatter = new Intl.DateTimeFormat('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    });
-    const parts = formatter.formatToParts(d);
-    const year = parts.find(part => part.type === 'year')?.value;
-    const month = parts.find(part => part.type === 'month')?.value;
-    const day = parts.find(part => part.type === 'day')?.value;
-    return `${year}-${month}-${day}`;
-  };
-
-  const getSpecialNoteObj = () => {
-    if (!student) return {};
-    try {
-      if (!student.specialNote) return {};
-      const obj = JSON.parse(student.specialNote);
-      if (typeof obj === 'object' && obj !== null) return obj;
-      return { noteText: student.specialNote };
-    } catch {
-      return { noteText: student.specialNote || '' };
-    }
-  };
-
-  const extractQuestsFromComment = (comment?: string) => {
-    if (!comment) return [];
-    const lines = comment.split('\n');
-    const quests: string[] = [];
-    
-    lines.forEach(line => {
-      const trimmed = line.trim();
-      const match = trimmed.match(/^(?:(?:\d+[\.\)]\s*)|(?:[-\*]\s*)|(?:\[\s*\]\s*)|(?:[①-⑨]\s*))(.*)$/);
-      if (match && match[1]) {
-        const content = match[1].trim();
-        if (content) {
-          quests.push(content);
-        }
-      }
-    });
-
-    return quests;
-  };
 
   // 1. 코치 퀘스트 상태 동기화 로드
   useEffect(() => {
@@ -764,6 +876,105 @@ export function useReportState() {
     }
   };
 
+  // ─── useMemo: 고비용 파생 연산 (Rules of Hooks — 조건부 return 이전) ──────
+
+  const chartData = useMemo(
+    () => getGradeChartData(student?.grades ?? []),
+    [student?.grades],
+  );
+
+  const gradeSubjects = useMemo(
+    () => getGradeSubjects(student?.grades ?? []),
+    [student?.grades],
+  );
+
+  // 30 초 폴링으로 갱신되는 homeAttendNow 를 dep 으로 삼아 30 초마다만 재계산
+  const kstNow = useMemo(() => getKstNowParts(homeAttendNow), [homeAttendNow]);
+
+  const weeklyDailyPlans = useMemo(() => {
+    if (!student) return [];
+    const _today = new Date();
+    _today.setHours(0, 0, 0, 0);
+    const _weekStart = new Date(_today);
+    _weekStart.setDate(_today.getDate() - _today.getDay());
+
+    return Array.from({ length: visiblePlanWeeks }, (_, weekOffset) => {
+      const start = new Date(_weekStart);
+      start.setDate(_weekStart.getDate() + weekOffset * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+
+      const days = Array.from({ length: 7 }, (_, dayIndex) => {
+        const currentDate = new Date(start);
+        currentDate.setDate(start.getDate() + dayIndex);
+        const dateKey = formatDateKey(currentDate);
+        const day = WEEK_DAY_SLOTS_BY_DATE[currentDate.getDay()];
+
+        const entries = (student.subjects || [])
+          .filter((subject) => {
+            const ds = subject.studyDays || [];
+            return ds.length === 0 || ds.includes(day.key);
+          })
+          .sort((a, b) => {
+            const timeDiff = STUDY_TIME_ORDER[a.studyTime || ''] - STUDY_TIME_ORDER[b.studyTime || ''];
+            return timeDiff || a.name.localeCompare(b.name);
+          })
+          .flatMap((subject) => {
+            const lectures = (subject.lectures || []).flatMap((lecture) =>
+              (lecture.detailedPlans || [])
+                .filter((plan) => isPlanActiveOnDate(plan, dateKey))
+                .map((plan) => ({
+                  id: `${subject.id}_${lecture.id}_${plan.id}`,
+                  subject: subject.name,
+                  title: lecture.name,
+                  type: '강의',
+                  materialType: 'lecture' as const,
+                  materialId: lecture.id,
+                  planId: plan.id,
+                  isCompleted: plan.isCompleted,
+                  actualAmount: plan.actualAmount,
+                  studyTime: subject.studyTime || '',
+                  rangeText: plan.rangeText,
+                  dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
+                  dailyLabel: getDailyAmountLabel(plan),
+                }))
+            );
+            const books = (subject.books || []).flatMap((book) =>
+              (book.detailedPlans || [])
+                .filter((plan) => isPlanActiveOnDate(plan, dateKey))
+                .map((plan) => ({
+                  id: `${subject.id}_${book.id}_${plan.id}`,
+                  subject: subject.name,
+                  title: book.title,
+                  type: '교재',
+                  materialType: 'book' as const,
+                  materialId: book.id,
+                  planId: plan.id,
+                  isCompleted: plan.isCompleted,
+                  actualAmount: plan.actualAmount,
+                  studyTime: subject.studyTime || '',
+                  rangeText: plan.rangeText,
+                  dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
+                  dailyLabel: getDailyAmountLabel(plan),
+                }))
+            );
+            return [...lectures, ...books];
+          });
+
+        return { key: day.key, label: day.label, dateKey, dateLabel: formatShortDate(currentDate), entries };
+      });
+
+      return {
+        weekNumber: weekOffset + 1,
+        rangeLabel: `${formatShortDate(start)} ~ ${formatShortDate(end)}`,
+        days,
+      };
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.subjects, visiblePlanWeeks]);
+
+  // ────────────────────────────────────────────────────────────────────────────
+
   // ---------------- 데이터 가공 연산들 ----------------
   if (!student) {
     return {
@@ -784,8 +995,7 @@ export function useReportState() {
     } as any;
   }
 
-  const chartData = getGradeChartData(student.grades);
-  const gradeSubjects = getGradeSubjects(student.grades);
+  // chartData, gradeSubjects, kstNow, weeklyDailyPlans 는 위의 useMemo 에서 계산됨
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -819,90 +1029,9 @@ export function useReportState() {
     nextConsultationText = `${formatDate(startDate)} ~ ${finishDateStr} 예정`;
   }
 
-  const studyTimeSlots = [
-    ...STUDY_TIME_SLOTS.map((slot) => ({
-      key: slot.key,
-      label: slot.displayLabel,
-      timeRange: slot.timeRange,
-      periodLabel: slot.periodLabel,
-      description: slot.description,
-    })),
-    { key: '', label: '미지정', timeRange: '', periodLabel: '시간대 미지정', description: '아직 학원 시간표 구간이 배정되지 않았습니다.' },
-  ] as const;
-  
-  const weekDaySlots = [
-    { key: 'mon', label: '월요일' },
-    { key: 'tue', label: '화요일' },
-    { key: 'wed', label: '수요일' },
-    { key: 'thu', label: '목요일' },
-    { key: 'fri', label: '금요일' },
-    { key: 'sat', label: '토요일' },
-    { key: 'sun', label: '일요일' },
-  ] as const;
-  
-  const weekDaySlotsByDate = [
-    { key: 'sun', label: '일요일' },
-    { key: 'mon', label: '월요일' },
-    { key: 'tue', label: '화요일' },
-    { key: 'wed', label: '수요일' },
-    { key: 'thu', label: '목요일' },
-    { key: 'fri', label: '금요일' },
-    { key: 'sat', label: '토요일' },
-  ] as const;
+  // 모듈 스코프 상수 참조: WEEK_DAY_SLOTS, WEEK_DAY_SLOTS_BY_DATE, STUDY_TIME_ORDER, STUDY_TIME_LABELS
+  // 모듈 스코프 함수 참조: formatDateKey, formatShortDate, getDailyAmountLabel, toMinutes, getKstNowParts
 
-  const studyTimeOrder: Record<string, number> = { morning: 0, afternoon: 1, night: 2, '': 3 };
-  const studyTimeLabels: Record<string, string> = {
-    morning: getStudyTimeSlot('morning')?.displayLabel || '오전',
-    afternoon: getStudyTimeSlot('afternoon')?.displayLabel || '오후',
-    night: getStudyTimeSlot('night')?.displayLabel || '야간',
-    '': '미지정',
-  };
-
-  const formatDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const formatShortDate = (date: Date) =>
-    `${String(date.getMonth() + 1).padStart(2, '0')}.${String(date.getDate()).padStart(2, '0')}`;
-
-  const getDailyAmountLabel = (plan: DetailedPlan) => {
-    const amount = plan.dailyAmount || Math.ceil(plan.targetAmount / 6);
-    const range = plan.rangeText || '';
-    const rangeWithoutPass = range.replace(/\d+회독/g, '');
-    const unit =
-      range.includes('문제') ? '문제' :
-      range.includes('강') ? '강' :
-      range.toLowerCase().includes('p') ? 'p' :
-      rangeWithoutPass.includes('회') ? '회' :
-      '';
-    return `하루 ${amount}${unit}`;
-  };
-
-  const getKstNowParts = () => {
-    const parts = new Intl.DateTimeFormat('en-US', {
-      timeZone: 'Asia/Seoul',
-      weekday: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(new Date());
-    const value = (type: string) => parts.find((part) => part.type === type)?.value || '';
-    return {
-      weekday: value('weekday'),
-      hour: Number(value('hour')),
-      minute: Number(value('minute')),
-    };
-  };
-
-  const toMinutes = (time: string) => {
-    const [hour, minute] = time.split(':').map(Number);
-    return hour * 60 + minute;
-  };
-
-  const kstNow = getKstNowParts();
   const currentMinutes = kstNow.hour * 60 + kstNow.minute;
   const currentPeriod = ACADEMY_TIMETABLE.find((period) => {
     const start = toMinutes(period.start);
@@ -910,16 +1039,7 @@ export function useReportState() {
     return start <= currentMinutes && currentMinutes < end;
   });
   const currentStudyTimeKey = currentPeriod?.studyTime || '';
-  const weekdayKeyMap: Record<string, 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'> = {
-    Sun: 'sun',
-    Mon: 'mon',
-    Tue: 'tue',
-    Wed: 'wed',
-    Thu: 'thu',
-    Fri: 'fri',
-    Sat: 'sat',
-  };
-  const todayDayKey = weekdayKeyMap[kstNow.weekday] || 'mon';
+  const todayDayKey = WEEKDAY_KEY_MAP[kstNow.weekday] || 'mon';
   
   const todaySubjects = (student.subjects || []).filter((subject) => {
     const subjectDays = subject.studyDays || [];
@@ -959,7 +1079,7 @@ export function useReportState() {
   const currentBriefingPhrase = hasCurrentSubjects
     ? `지금은 ${currentSubjectText} 시간이에요`
     : currentStudyTimeKey
-      ? `지금은 ${studyTimeLabels[currentStudyTimeKey]} 자율 학습 시간이에요`
+      ? `지금은 ${STUDY_TIME_LABELS[currentStudyTimeKey]} 자율 학습 시간이에요`
       : offHoursPhrase;
       
   const briefingContext = hasCurrentSubjects
@@ -979,7 +1099,7 @@ export function useReportState() {
     .reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
   const briefingSubMessage = briefingPool[briefingSeed % briefingPool.length];
   const currentStudyLabel = currentStudyTimeKey
-    ? studyTimeLabels[currentStudyTimeKey]
+    ? STUDY_TIME_LABELS[currentStudyTimeKey]
     : nonStudyPeriodLabel || '운영 시간 외';
   const currentStudyRange = currentPeriod
     ? `${currentPeriod.start}~${currentPeriod.end}`
@@ -994,126 +1114,18 @@ export function useReportState() {
     ? Math.max(0, Math.floor((homeAttendNow - new Date(homeAttend.since).getTime()) / 60_000))
     : 0;
   
-  const homePomodoroMin = (() => {
-    const note = getSpecialNoteObj();
-    const todayKey = getSeoulDateKey();
-    return note.pomodoro_minutes?.[todayKey] || 0;
-  })();
+  const homePomodoroMin = parseSpecialNoteObj(student.specialNote).pomodoro_minutes?.[getSeoulDateKey()] || 0;
   const homeTotalMin = homeAttend.todayMinutes + homeElapsedMin + homePomodoroMin;
 
-  const isPlanActiveOnDate = (plan: DetailedPlan, dateKey: string) =>
-    plan.startDate <= dateKey && dateKey <= plan.endDate;
+  // weeklyDailyPlans 는 위의 useMemo 로 계산됨
 
-  const weeklyDailyPlans = Array.from({ length: visiblePlanWeeks }, (_, weekOffset) => {
-    const start = new Date(weekStart);
-    start.setDate(weekStart.getDate() + weekOffset * 7);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-
-    const days = Array.from({ length: 7 }, (_, dayIndex) => {
-      const currentDate = new Date(start);
-      currentDate.setDate(start.getDate() + dayIndex);
-      const dateKey = formatDateKey(currentDate);
-      const day = weekDaySlotsByDate[currentDate.getDay()];
-
-      const entries = (student.subjects || [])
-        .filter((subject) => {
-          const days = subject.studyDays || [];
-          return days.length === 0 || days.includes(day.key);
-        })
-        .sort((a, b) => {
-          const timeDiff = studyTimeOrder[a.studyTime || ''] - studyTimeOrder[b.studyTime || ''];
-          return timeDiff || a.name.localeCompare(b.name);
-        })
-        .flatMap((subject) => {
-          const lectures = (subject.lectures || []).flatMap((lecture) =>
-            (lecture.detailedPlans || [])
-              .filter((plan) => isPlanActiveOnDate(plan, dateKey))
-              .map((plan) => ({
-                id: `${subject.id}_${lecture.id}_${plan.id}`,
-                subject: subject.name,
-                title: lecture.name,
-                type: '강의',
-                materialType: 'lecture' as const,
-                materialId: lecture.id,
-                planId: plan.id,
-                isCompleted: plan.isCompleted,
-                actualAmount: plan.actualAmount,
-                studyTime: subject.studyTime || '',
-                rangeText: plan.rangeText,
-                dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
-                dailyLabel: getDailyAmountLabel(plan),
-              }))
-          );
-          const books = (subject.books || []).flatMap((book) =>
-            (book.detailedPlans || [])
-              .filter((plan) => isPlanActiveOnDate(plan, dateKey))
-              .map((plan) => ({
-                id: `${subject.id}_${book.id}_${plan.id}`,
-                subject: subject.name,
-                title: book.title,
-                type: '교재',
-                materialType: 'book' as const,
-                materialId: book.id,
-                planId: plan.id,
-                isCompleted: plan.isCompleted,
-                actualAmount: plan.actualAmount,
-                studyTime: subject.studyTime || '',
-                rangeText: plan.rangeText,
-                dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
-                dailyLabel: getDailyAmountLabel(plan),
-              }))
-          );
-          return [...lectures, ...books];
-        });
-
-      return {
-        key: day.key,
-        label: day.label,
-        dateKey,
-        dateLabel: formatShortDate(currentDate),
-        entries,
-      };
-    });
-
-    return {
-      weekNumber: weekOffset + 1,
-      rangeLabel: `${formatShortDate(start)} ~ ${formatShortDate(end)}`,
-      days,
-    };
-  });
-  
   const todayDateKey = formatDateKey(today);
   const todayDailyPlan = weeklyDailyPlans
     .flatMap((week) => week.days)
     .find((day) => day.dateKey === todayDateKey);
   const todayPlanEntries = todayDailyPlan?.entries || [];
 
-  const formatNotificationDate = (value?: string) => {
-    if (!value) return '오늘';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return value;
-    return new Intl.DateTimeFormat('ko-KR', {
-      month: 'short',
-      day: 'numeric',
-      hour: value.includes('T') ? '2-digit' : undefined,
-      minute: value.includes('T') ? '2-digit' : undefined,
-    }).format(date);
-  };
-
-  const truncateNotificationText = (value: string, max = 120) => {
-    const normalized = value.replace(/\s+/g, ' ').trim();
-    return normalized.length > max ? `${normalized.slice(0, max)}...` : normalized;
-  };
-
-  const parseDateOnly = (value?: string) => {
-    if (!value) return null;
-    const [year, month, day] = value.split('-').map(Number);
-    if (!year || !month || !day) return null;
-    const parsed = new Date(year, month - 1, day);
-    parsed.setHours(0, 0, 0, 0);
-    return parsed;
-  };
+  // formatNotificationDate, truncateNotificationText, parseDateOnly 는 모듈 스코프 함수
 
   const weekStartKey = formatDateKey(weekStart);
   const weekEndKey = formatDateKey(weekEnd);
@@ -1400,9 +1412,9 @@ export function useReportState() {
     updatePlanCompletion,
     incrementBookIncorrectTag,
     submitChecklist,
-    studyTimeLabels,
-    weekDaySlots,
-    studyTimeSlots,
+    studyTimeLabels: STUDY_TIME_LABELS,
+    weekDaySlots: WEEK_DAY_SLOTS,
+    studyTimeSlots: STUDY_TIME_SLOTS_MAPPED,
     currentMinutes,
     todayDayKey,
   };

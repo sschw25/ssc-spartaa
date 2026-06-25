@@ -177,6 +177,27 @@ export async function deleteStudentSupabase(id: string): Promise<boolean> {
   return true;
 }
 
+// 진도 PATCH 전용 optimistic locking 저장.
+// updated_at 이 originalUpdatedAt 과 일치할 때만 업데이트하여 동시 쓰기 충돌을 감지한다.
+// 반환값: 저장된 Student | 'conflict' (다른 요청이 먼저 썼을 때)
+export async function patchStudentProgressSupabase(
+  student: Student,
+  originalUpdatedAt: string,
+): Promise<Student | 'conflict'> {
+  const nowIso = new Date().toISOString();
+  const row = studentToRow(student, nowIso);
+  const { data, error } = await getClient()
+    .from('students')
+    .update(row)
+    .eq('id', student.id)
+    .eq('updated_at', originalUpdatedAt)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return 'conflict';
+  return rowToStudent(data);
+}
+
 // ── 공유 교재/강의 ───────────────────────────────────────────
 export async function readSharedMaterialsSupabase(): Promise<SharedMaterial[]> {
   const { data, error } = await getClient().from('shared_materials').select('*');

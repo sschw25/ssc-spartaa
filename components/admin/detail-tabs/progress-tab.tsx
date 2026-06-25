@@ -21,6 +21,7 @@ import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
+import { LearningConsultationPanel } from '@/components/admin/detail-tabs/learning-consultation-panel';
 
 export function ProgressTab() {
   const {
@@ -58,7 +59,6 @@ export function ProgressTab() {
     isCustomUnit,
     isLearningInputOpen,
     isSearchingIntegrated,
-    learningConsultationPanel,
     learningInputMode,
     learningLogs,
     loadEtcStudyTemplate,
@@ -129,7 +129,7 @@ export function ProgressTab() {
   return (
     <>
 
-              {learningConsultationPanel}
+              <LearningConsultationPanel />
 
               <div className="flex items-center justify-between gap-3 rounded-xl border border-black/[0.05] bg-white p-4 shadow-sm">
                 <div className="min-w-0">

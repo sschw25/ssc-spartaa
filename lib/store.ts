@@ -9,6 +9,7 @@ import {
   getStudentsSummarySupabase,
   getStudentByIdSupabase,
   saveStudentSupabase,
+  patchStudentProgressSupabase,
   deleteStudentSupabase,
   readSharedMaterialsSupabase,
   saveSharedMaterialSupabase,
@@ -59,6 +60,17 @@ export async function getStudentById(id: string): Promise<Student | null> {
 
 export async function saveStudent(student: Student): Promise<Student> {
   return isSupabaseConfigured() ? saveStudentSupabase(student) : saveStudentLocal(student);
+}
+
+// 진도 PATCH 전용: Supabase 에서 optimistic locking, 로컬에서는 일반 저장.
+export async function patchStudentProgress(
+  student: Student,
+  originalUpdatedAt: string,
+): Promise<Student | 'conflict'> {
+  if (!isSupabaseConfigured()) {
+    return saveStudentLocal(student);
+  }
+  return patchStudentProgressSupabase(student, originalUpdatedAt);
 }
 
 export async function deleteStudent(id: string): Promise<boolean> {
