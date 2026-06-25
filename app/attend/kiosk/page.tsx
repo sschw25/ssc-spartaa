@@ -205,8 +205,8 @@ export default function AttendKioskPage() {
   const showResult = submitState === 'done' || submitState === 'error' || matches.length > 0;
 
   return (
-    <main className="min-h-screen bg-[#111827] text-white font-sans">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6">
+    <main className="min-h-screen bg-[#111827] text-white font-sans flex items-center justify-center p-4">
+      <div className="mx-auto flex w-full max-w-3xl flex-col px-6 py-8 md:py-12 gap-8 md:gap-12">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="text-[11px] font-bold tracking-[0.3em] text-slate-400">SSC SPARTA</p>
@@ -239,7 +239,7 @@ export default function AttendKioskPage() {
           </div>
         </header>
 
-        <section className="grid flex-1 place-items-center py-8">
+        <section className="flex justify-center">
           <div className="w-full max-w-[420px] transition-all duration-300">
             {!showResult ? (
               <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
