@@ -4,6 +4,7 @@ import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
+import { serializeClientActivityNote } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
 
 function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
@@ -15,6 +16,7 @@ function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
     contact: student.contact || '',
     lifeComment: student.lifeComment || '',
     studentLifeComment: audience === 'student' ? (student.studentLifeComment || '') : '',
+    specialNote: audience === 'student' ? serializeClientActivityNote(student.specialNote) : undefined,
     nextConsultationDate: student.nextConsultationDate,
     enrollmentEndDate: student.enrollmentEndDate,
     weeklyGradeCheck: Boolean(student.weeklyGradeCheck),

@@ -13,6 +13,7 @@ import {
 import { MaterialBenchmarkMap } from '@/lib/material-benchmark';
 import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
+import { getPlanDailyCompletion } from '@/lib/student-activity';
 import type { StudyStats } from '@/components/report/study-stats-card';
 
 const BRIEFING_MESSAGES: Record<string, string[]> = {
@@ -64,6 +65,35 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
 };
 
 const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
+const notificationStorageKey = (studentId: string) => `ssc-dismissed-notifications:${studentId}`;
+
+function readDismissedNotificationIds(studentId: string): string[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = window.localStorage.getItem(notificationStorageKey(studentId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeDismissedNotificationIds(studentId: string, ids: string[]) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(notificationStorageKey(studentId), JSON.stringify(ids));
+}
+
+function getDismissedNotificationIdsFromNote(specialNote?: string | null): string[] {
+  const value = parseSpecialNoteObj(specialNote).dismissed_notifications;
+  return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+}
+
+function getInitialDismissedNotificationIds(student: Student): string[] {
+  return Array.from(new Set([
+    ...getDismissedNotificationIdsFromNote(student.specialNote),
+    ...readDismissedNotificationIds(student.id),
+  ]));
+}
 
 // ─── 모듈 스코프 순수 헬퍼 (렌더마다 재생성 방지) ───────────────────────────
 
@@ -114,6 +144,7 @@ const STUDY_TIME_SLOTS_MAPPED = [
 type SpecialNoteEnvelope = {
   noteText?: string;
   pomodoro_minutes?: Record<string, number>;
+  dismissed_notifications?: string[];
   [key: string]: unknown;
 };
 
@@ -241,6 +272,7 @@ export function useReportState() {
   const [sharePasswordChecking, setSharePasswordChecking] = useState(false);
 
   const [student, setStudent] = useState<Student | null>(null);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
   const [materialBenchmarks, setMaterialBenchmarks] = useState<MaterialBenchmarkMap>({});
   const [studyStats, setStudyStats] = useState<StudyStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -394,6 +426,7 @@ export function useReportState() {
           const json = await res.json();
           if (json.success) {
             setStudent(json.data);
+            setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
             setMaterialBenchmarks(json.materialBenchmarks || {});
             setStudyStats(json.studyStats || null);
           } else {
@@ -435,6 +468,50 @@ export function useReportState() {
     window.location.href = '/student/login';
   };
 
+  const commitDismissedNotifications = (ids: string[]) => {
+    if (!student?.id) return;
+    writeDismissedNotificationIds(student.id, ids);
+    fetch('/api/student/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ dismissedNotificationIds: ids }),
+    })
+      .then(async (res) => {
+        const json = await res.json().catch(() => null);
+        if (res.ok && json?.success && typeof json.specialNote === 'string') {
+          setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote } : prev));
+        }
+      })
+      .catch(() => {
+        // 로컬 숨김 상태는 유지한다. 서버 동기화는 다음 조작 때 다시 시도된다.
+      });
+  };
+
+  const dismissNotification = (notificationId: string) => {
+    if (!student?.id) return;
+    setDismissedNotificationIds((prev) => {
+      if (prev.includes(notificationId)) return prev;
+      const next = [...prev, notificationId];
+      commitDismissedNotifications(next);
+      return next;
+    });
+  };
+
+  const restoreNotification = (notificationId: string) => {
+    if (!student?.id) return;
+    setDismissedNotificationIds((prev) => {
+      const next = prev.filter((id) => id !== notificationId);
+      commitDismissedNotifications(next);
+      return next;
+    });
+  };
+
+  const restoreAllNotifications = () => {
+    if (!student?.id) return;
+    commitDismissedNotifications([]);
+    setDismissedNotificationIds([]);
+  };
+
   const handleSharePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sharePasswordInput.trim()) return;
@@ -448,6 +525,7 @@ export function useReportState() {
       if (json.success) {
         setSharePasswordVerified(true);
         setStudent(json.data);
+        setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
         setMaterialBenchmarks(json.materialBenchmarks || {});
         setStudyStats(json.studyStats || null);
         setLoading(false);
@@ -541,6 +619,7 @@ export function useReportState() {
     solvedQuestions?: number,
     incorrectTags?: Record<string, number>,
     actualAmount?: number,
+    dateKey?: string,
   ) => {
     setStudent((prev) => {
       if (!prev) return prev;
@@ -557,7 +636,23 @@ export function useReportState() {
             ? {
                 detailedPlans: (b.detailedPlans || []).map((p) =>
                   p.id === planId
-                    ? { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
+                      ? dateKey
+                        ? {
+                            ...p,
+                            dailyCompletions: isCompleted
+                              ? {
+                                  ...(p.dailyCompletions || {}),
+                                  [dateKey]: {
+                                    isCompleted: true,
+                                    ...(actualAmount !== undefined ? { actualAmount } : {}),
+                                    completedAt: new Date().toISOString(),
+                                  },
+                                }
+                              : Object.fromEntries(
+                                  Object.entries(p.dailyCompletions || {}).filter(([key]) => key !== dateKey),
+                                ),
+                          }
+                        : { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
                     : p,
                 ),
               }
@@ -575,7 +670,23 @@ export function useReportState() {
             ? {
                 detailedPlans: (l.detailedPlans || []).map((p) =>
                   p.id === planId
-                    ? { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
+                      ? dateKey
+                        ? {
+                            ...p,
+                            dailyCompletions: isCompleted
+                              ? {
+                                  ...(p.dailyCompletions || {}),
+                                  [dateKey]: {
+                                    isCompleted: true,
+                                    ...(actualAmount !== undefined ? { actualAmount } : {}),
+                                    completedAt: new Date().toISOString(),
+                                  },
+                                }
+                              : Object.fromEntries(
+                                  Object.entries(p.dailyCompletions || {}).filter(([key]) => key !== dateKey),
+                                ),
+                          }
+                        : { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
                     : p,
                 ),
               }
@@ -597,7 +708,23 @@ export function useReportState() {
               ? {
                   detailedPlans: (b.detailedPlans || []).map((p) =>
                     p.id === planId
-                      ? { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
+                        ? dateKey
+                          ? {
+                              ...p,
+                              dailyCompletions: isCompleted
+                                ? {
+                                    ...(p.dailyCompletions || {}),
+                                    [dateKey]: {
+                                      isCompleted: true,
+                                      ...(actualAmount !== undefined ? { actualAmount } : {}),
+                                      completedAt: new Date().toISOString(),
+                                    },
+                                  }
+                                : Object.fromEntries(
+                                    Object.entries(p.dailyCompletions || {}).filter(([key]) => key !== dateKey),
+                                  ),
+                            }
+                          : { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
                       : p,
                   ),
                 }
@@ -613,7 +740,23 @@ export function useReportState() {
               ? {
                   detailedPlans: (l.detailedPlans || []).map((p) =>
                     p.id === planId
-                      ? { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
+                        ? dateKey
+                          ? {
+                              ...p,
+                              dailyCompletions: isCompleted
+                                ? {
+                                    ...(p.dailyCompletions || {}),
+                                    [dateKey]: {
+                                      isCompleted: true,
+                                      ...(actualAmount !== undefined ? { actualAmount } : {}),
+                                      completedAt: new Date().toISOString(),
+                                    },
+                                  }
+                                : Object.fromEntries(
+                                    Object.entries(p.dailyCompletions || {}).filter(([key]) => key !== dateKey),
+                                  ),
+                            }
+                          : { ...p, isCompleted: Boolean(isCompleted), ...(actualAmount !== undefined && isCompleted ? { actualAmount } : isCompleted === false ? { actualAmount: undefined } : {}) }
                       : p,
                   ),
                 }
@@ -634,7 +777,7 @@ export function useReportState() {
   const saveProgressPatch = async (
     materialType: ProgressMaterialType,
     materialId: string,
-    payload: { value?: number; planId?: string; isCompleted?: boolean; actualAmount?: number; solvedQuestions?: number; incorrectTags?: Record<string, number> },
+    payload: { value?: number; planId?: string; isCompleted?: boolean; dateKey?: string; actualAmount?: number; solvedQuestions?: number; incorrectTags?: Record<string, number> },
   ) => {
     try {
       const res = await fetch('/api/student/progress', {
@@ -652,7 +795,8 @@ export function useReportState() {
           json.isCompleted,
           json.solvedQuestions,
           json.incorrectTags,
-          payload.actualAmount,
+          json.actualAmount ?? payload.actualAmount,
+          json.dateKey ?? payload.dateKey,
         );
       }
     } catch {
@@ -673,7 +817,8 @@ export function useReportState() {
     planId: string,
     isCompleted: boolean,
     actualAmount?: number,
-  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted, ...(actualAmount !== undefined ? { actualAmount } : {}) });
+    dateKey?: string,
+  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted, ...(actualAmount !== undefined ? { actualAmount } : {}), ...(dateKey ? { dateKey } : {}) });
 
   const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => {
     const nextTags = { ...(currentTags || {}) };
@@ -923,40 +1068,48 @@ export function useReportState() {
             const lectures = (subject.lectures || []).flatMap((lecture) =>
               (lecture.detailedPlans || [])
                 .filter((plan) => isPlanActiveOnDate(plan, dateKey))
-                .map((plan) => ({
-                  id: `${subject.id}_${lecture.id}_${plan.id}`,
-                  subject: subject.name,
-                  title: lecture.name,
-                  type: '강의',
-                  materialType: 'lecture' as const,
-                  materialId: lecture.id,
-                  planId: plan.id,
-                  isCompleted: plan.isCompleted,
-                  actualAmount: plan.actualAmount,
-                  studyTime: subject.studyTime || '',
-                  rangeText: plan.rangeText,
-                  dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
-                  dailyLabel: getDailyAmountLabel(plan),
-                }))
+                .map((plan) => {
+                  const dailyCompletion = getPlanDailyCompletion(plan, dateKey);
+                  return {
+                    id: `${dateKey}_${subject.id}_${lecture.id}_${plan.id}`,
+                    dateKey,
+                    subject: subject.name,
+                    title: lecture.name,
+                    type: '강의',
+                    materialType: 'lecture' as const,
+                    materialId: lecture.id,
+                    planId: plan.id,
+                    isCompleted: dailyCompletion.isCompleted,
+                    actualAmount: dailyCompletion.actualAmount,
+                    studyTime: subject.studyTime || '',
+                    rangeText: plan.rangeText,
+                    dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
+                    dailyLabel: getDailyAmountLabel(plan),
+                  };
+                })
             );
             const books = (subject.books || []).flatMap((book) =>
               (book.detailedPlans || [])
                 .filter((plan) => isPlanActiveOnDate(plan, dateKey))
-                .map((plan) => ({
-                  id: `${subject.id}_${book.id}_${plan.id}`,
-                  subject: subject.name,
-                  title: book.title,
-                  type: '교재',
-                  materialType: 'book' as const,
-                  materialId: book.id,
-                  planId: plan.id,
-                  isCompleted: plan.isCompleted,
-                  actualAmount: plan.actualAmount,
-                  studyTime: subject.studyTime || '',
-                  rangeText: plan.rangeText,
-                  dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
-                  dailyLabel: getDailyAmountLabel(plan),
-                }))
+                .map((plan) => {
+                  const dailyCompletion = getPlanDailyCompletion(plan, dateKey);
+                  return {
+                    id: `${dateKey}_${subject.id}_${book.id}_${plan.id}`,
+                    dateKey,
+                    subject: subject.name,
+                    title: book.title,
+                    type: '교재',
+                    materialType: 'book' as const,
+                    materialId: book.id,
+                    planId: plan.id,
+                    isCompleted: dailyCompletion.isCompleted,
+                    actualAmount: dailyCompletion.actualAmount,
+                    studyTime: subject.studyTime || '',
+                    rangeText: plan.rangeText,
+                    dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
+                    dailyLabel: getDailyAmountLabel(plan),
+                  };
+                })
             );
             return [...lectures, ...books];
           });
@@ -1272,11 +1425,14 @@ export function useReportState() {
       : []),
   ];
 
-  const studentNotifications = [...requestNotifications, ...suggestionNotifications, ...systemNotifications].sort((a, b) => {
+  const allStudentNotifications = [...requestNotifications, ...suggestionNotifications, ...systemNotifications].sort((a, b) => {
     const priorityDiff = a.priority - b.priority;
     if (priorityDiff !== 0) return priorityDiff;
     return (b.date || '').localeCompare(a.date || '');
   });
+  const dismissedNotificationIdSet = new Set(dismissedNotificationIds);
+  const studentNotifications = allStudentNotifications.filter((notification) => !dismissedNotificationIdSet.has(notification.id));
+  const dismissedStudentNotifications = allStudentNotifications.filter((notification) => dismissedNotificationIdSet.has(notification.id));
   const notificationCount = studentNotifications.length;
   const notificationPreview = studentNotifications.slice(0, 5);
 
@@ -1399,6 +1555,10 @@ export function useReportState() {
     notificationCount,
     notificationPreview,
     studentNotifications,
+    dismissedStudentNotifications,
+    dismissNotification,
+    restoreNotification,
+    restoreAllNotifications,
     reportNavItems,
     tabIds,
     hasGradeThisWeek,

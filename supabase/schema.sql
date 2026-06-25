@@ -71,8 +71,8 @@ create table if not exists study_sessions (
   date        date not null,                 -- 로컬 날짜 (YYYY-MM-DD)
   check_in    timestamptz not null,
   check_out   timestamptz,                   -- 퇴실 전이면 null (진행 중)
-  minutes     integer,                       -- 퇴실 시 계산된 체류(순공)분
-  source      text not null default 'qr',    -- 'qr' | 'manual'
+  minutes     integer,                       -- 퇴실 시 계산된 체류(순공)분. 자동 하원(auto-sweep)은 null 유지
+  source      text not null default 'qr',    -- 'qr' | 'manual' | 'auto-sweep'
   created_at  timestamptz not null default now()
 );
 

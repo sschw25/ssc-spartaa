@@ -2,10 +2,20 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, RefreshCw, Clock, Flame, ChevronDown, UserCheck, Home, UserX } from 'lucide-react';
+import { Loader2, RefreshCw, Clock, Flame, UserCheck, Home, UserX } from 'lucide-react';
 
+type AttendanceSection = 'present' | 'left' | 'absent';
 type PresentRow = { id: string; name: string; campus: string; checkInAt: string; minutesSoFar: number; weekMinutes: number };
-type LeftRow = { id: string; name: string; campus: string; checkInAt: string; checkOutAt: string; minutes: number; weekMinutes: number };
+type LeftRow = {
+  id: string;
+  name: string;
+  campus: string;
+  checkInAt: string;
+  checkOutAt: string | null;
+  minutes: number | null;
+  autoClosed?: boolean;
+  weekMinutes: number;
+};
 type AbsentRow = { id: string; name: string; campus: string; weekMinutes: number };
 
 interface AttendanceData {
@@ -26,12 +36,109 @@ interface Props {
 const campusLabel = (val: string) =>
   ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' } as Record<string, string>)[val] || '기타';
 
-const fmtMin = (m: number) => {
+const fmtMin = (m?: number | null) => {
   if (!m || m <= 0) return '0분';
   const h = Math.floor(m / 60);
   const min = m % 60;
   return h > 0 ? `${h}시간 ${min}분` : `${min}분`;
 };
+
+function Tile({
+  label,
+  count,
+  section,
+  activeColor,
+  inactiveColor,
+  icon: Icon,
+  dotColor,
+  isActive,
+  onSelect,
+}: {
+  label: string;
+  count: number;
+  section: AttendanceSection;
+  activeColor: string;
+  inactiveColor: string;
+  icon: React.ComponentType<{ className?: string }>;
+  dotColor: string;
+  isActive: boolean;
+  onSelect: (section: AttendanceSection) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(section)}
+      className={`flex-1 min-h-[104px] flex flex-col justify-between rounded-2xl p-4 text-left transition-all duration-300 relative overflow-hidden border ${
+        isActive
+          ? `${activeColor} shadow-[0_6px_16px_-4px_rgba(0,0,0,0.06)] scale-[1.01] z-10`
+          : `${inactiveColor} hover:bg-black/[0.01] hover:scale-[1.005] hover:border-black/[0.08]`
+      }`}
+    >
+      <div className={`absolute right-2 bottom-1 opacity-[0.06] transition-transform duration-500 pointer-events-none ${isActive ? 'scale-105 opacity-[0.09]' : 'scale-95'}`}>
+        <Icon className="w-14 h-14" />
+      </div>
+
+      <div className="flex items-center gap-1.5">
+        <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${section === 'present' ? 'animate-pulse' : ''}`} />
+        <span className={`text-[11px] font-extrabold tracking-wide uppercase transition-colors duration-300 ${
+          isActive ? 'text-[#1D1D1F]' : 'text-[#86868B]'
+        }`}>
+          {label}
+        </span>
+      </div>
+
+      <div className="mt-2.5 flex items-baseline">
+        <span className={`text-2xl sm:text-3xl font-black tracking-tight transition-colors duration-300 ${
+          isActive ? 'text-[#1D1D1F]' : 'text-[#3A3A3C]'
+        }`}>
+          {count}
+        </span>
+        <span className={`text-xs font-bold ml-1 transition-colors duration-300 ${
+          isActive ? 'text-[#1D1D1F]/70' : 'text-[#86868B]'
+        }`}>
+          명
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function AttendanceRow({
+  id,
+  children,
+  onSelect,
+}: {
+  id: string;
+  children: React.ReactNode;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(id)}
+      className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-[#F5F5F7]/80 hover:translate-x-0.5 active:translate-x-0 transition-premium text-left"
+    >
+      {children}
+    </button>
+  );
+}
+
+function Name({ name, campus }: { name: string; campus: string }) {
+  return (
+    <span className="flex items-center gap-2 min-w-0">
+      <span className="text-xs font-semibold text-[#1D1D1F] truncate">{name}</span>
+      <span className="text-[9px] font-extrabold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(campus)}</span>
+    </span>
+  );
+}
+
+function WeekPace({ min }: { min: number }) {
+  return (
+    <span className="flex items-center gap-1 text-[10px] font-bold text-[#86868B] shrink-0">
+      <Flame className="w-3 h-3 text-[#F56300]" /> 주 {fmtMin(min)}
+    </span>
+  );
+}
 
 export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStudentId }: Props) {
   const router = useRouter();
@@ -39,7 +146,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const detailsOpen = true;
-  const [openSection, setOpenSection] = useState<'present' | 'left' | 'absent'>('present');
+  const [openSection, setOpenSection] = useState<AttendanceSection>('present');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -101,85 +208,6 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     );
   }
 
-
-
-  const Tile = ({
-    label, count, section, activeColor, inactiveColor, icon: Icon, dotColor
-  }: {
-    label: string;
-    count: number;
-    section: 'present' | 'left' | 'absent';
-    activeColor: string;
-    inactiveColor: string;
-    icon: React.ComponentType<{ className?: string }>;
-    dotColor: string;
-  }) => {
-    const isActive = detailsOpen && openSection === section;
-    return (
-      <button
-        type="button"
-        onClick={() => setOpenSection(section)}
-        className={`flex-1 min-h-[104px] flex flex-col justify-between rounded-2xl p-4 text-left transition-all duration-300 relative overflow-hidden border ${
-          isActive 
-            ? `${activeColor} shadow-[0_6px_16px_-4px_rgba(0,0,0,0.06)] scale-[1.01] z-10` 
-            : `${inactiveColor} hover:bg-black/[0.01] hover:scale-[1.005] hover:border-black/[0.08]`
-        }`}
-      >
-        {/* Decorative background icon */}
-        <div className={`absolute right-2 bottom-1 opacity-[0.06] transition-transform duration-500 pointer-events-none ${isActive ? 'scale-105 opacity-[0.09]' : 'scale-95'}`}>
-          <Icon className="w-14 h-14" />
-        </div>
-
-        {/* Top area: Label & status indicator */}
-        <div className="flex items-center gap-1.5">
-          <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${section === 'present' ? 'animate-pulse' : ''}`} />
-          <span className={`text-[11px] font-extrabold tracking-wide uppercase transition-colors duration-300 ${
-            isActive ? 'text-[#1D1D1F]' : 'text-[#86868B]'
-          }`}>
-            {label}
-          </span>
-        </div>
-
-        {/* Bottom area: Count */}
-        <div className="mt-2.5 flex items-baseline">
-          <span className={`text-2xl sm:text-3xl font-black tracking-tight transition-colors duration-300 ${
-            isActive ? 'text-[#1D1D1F]' : 'text-[#3A3A3C]'
-          }`}>
-            {count}
-          </span>
-          <span className={`text-xs font-bold ml-1 transition-colors duration-300 ${
-            isActive ? 'text-[#1D1D1F]/70' : 'text-[#86868B]'
-          }`}>
-            명
-          </span>
-        </div>
-      </button>
-    );
-  };
-
-  const Row = ({ id, children }: { id: string; children: React.ReactNode }) => (
-    <button
-      type="button"
-      onClick={() => onSelectStudentId(id)}
-      className="w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-[#F5F5F7]/80 hover:translate-x-0.5 active:translate-x-0 transition-premium text-left"
-    >
-      {children}
-    </button>
-  );
-
-  const Name = ({ name, campus }: { name: string; campus: string }) => (
-    <span className="flex items-center gap-2 min-w-0">
-      <span className="text-xs font-semibold text-[#1D1D1F] truncate">{name}</span>
-      <span className="text-[9px] font-extrabold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(campus)}</span>
-    </span>
-  );
-
-  const WeekPace = ({ min }: { min: number }) => (
-    <span className="flex items-center gap-1 text-[10px] font-bold text-[#86868B] shrink-0">
-      <Flame className="w-3 h-3 text-[#F56300]" /> 주 {fmtMin(min)}
-    </span>
-  );
-
   return (
     <div className={wrap}>
       <div className="mb-4 flex items-center justify-between">
@@ -212,6 +240,8 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
           inactiveColor="border-black/[0.04] bg-white text-slate-500"
           icon={UserCheck}
           dotColor="bg-emerald-500"
+          isActive={detailsOpen && openSection === 'present'}
+          onSelect={setOpenSection}
         />
         <Tile
           label="하원"
@@ -221,6 +251,8 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
           inactiveColor="border-black/[0.04] bg-white text-slate-500"
           icon={Home}
           dotColor="bg-blue-500"
+          isActive={detailsOpen && openSection === 'left'}
+          onSelect={setOpenSection}
         />
         <Tile
           label="미등원"
@@ -230,6 +262,8 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
           inactiveColor="border-black/[0.04] bg-white text-slate-500"
           icon={UserX}
           dotColor="bg-slate-400"
+          isActive={detailsOpen && openSection === 'absent'}
+          onSelect={setOpenSection}
         />
       </div>
 
@@ -238,7 +272,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
           {openSection === 'present' && (
             present.length === 0 ? <Empty text="현재 등원 중인 원생이 없습니다." /> :
             present.map((r) => (
-              <Row key={r.id} id={r.id}>
+              <AttendanceRow key={r.id} id={r.id} onSelect={onSelectStudentId}>
                 <Name name={r.name} campus={r.campus} />
                 <span className="flex items-center gap-2 shrink-0">
                   <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100/80 px-2 py-0.5 rounded-md shrink-0">
@@ -246,30 +280,32 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
                   </span>
                   <WeekPace min={r.weekMinutes} />
                 </span>
-              </Row>
+              </AttendanceRow>
             ))
           )}
           {openSection === 'left' && (
             left.length === 0 ? <Empty text="오늘 하원한 원생이 없습니다." /> :
             left.map((r) => (
-              <Row key={r.id} id={r.id}>
+              <AttendanceRow key={r.id} id={r.id} onSelect={onSelectStudentId}>
                 <Name name={r.name} campus={r.campus} />
                 <span className="flex items-center gap-2 shrink-0">
-                  <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-100/80 px-2 py-0.5 rounded-md shrink-0">
-                    {r.checkInAt}~{r.checkOutAt} · 순공 {fmtMin(r.minutes)}
+                  <span className={`text-[10px] font-semibold border px-2 py-0.5 rounded-md shrink-0 ${r.autoClosed ? 'text-amber-700 bg-amber-50 border-amber-100/80' : 'text-blue-700 bg-blue-50 border-blue-100/80'}`}>
+                    {r.autoClosed
+                      ? `${r.checkInAt}~미입력 · 수동입력 필요`
+                      : `${r.checkInAt}~${r.checkOutAt || '-'} · 순공 ${fmtMin(r.minutes)}`}
                   </span>
                   <WeekPace min={r.weekMinutes} />
                 </span>
-              </Row>
+              </AttendanceRow>
             ))
           )}
           {openSection === 'absent' && (
             absent.length === 0 ? <Empty text="미등원 원생이 없습니다. 전원 출석!" /> :
             absent.map((r) => (
-              <Row key={r.id} id={r.id}>
+              <AttendanceRow key={r.id} id={r.id} onSelect={onSelectStudentId}>
                 <Name name={r.name} campus={r.campus} />
                 <WeekPace min={r.weekMinutes} />
-              </Row>
+              </AttendanceRow>
             ))
           )}
         </div>

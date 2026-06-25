@@ -101,6 +101,10 @@ function StudentReportInner() {
     notificationCount,
     notificationPreview,
     studentNotifications,
+    dismissedStudentNotifications,
+    dismissNotification,
+    restoreNotification,
+    restoreAllNotifications,
     reportNavItems,
     tabIds,
     daysUntilEnrollmentEnd,
@@ -239,7 +243,11 @@ function StudentReportInner() {
           <NotificationsSection
             studentName={student.name}
             studentNotifications={studentNotifications}
+            dismissedNotifications={dismissedStudentNotifications}
             notificationCount={notificationCount}
+            onDismissNotification={dismissNotification}
+            onRestoreNotification={restoreNotification}
+            onRestoreAllNotifications={restoreAllNotifications}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             slideDirRef={slideDirRef}

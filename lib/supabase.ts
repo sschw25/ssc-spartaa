@@ -307,6 +307,17 @@ export async function checkOutSupabase(session: StudySession, now = new Date()):
   return data as StudySession;
 }
 
+export async function autoCloseSessionSupabase(session: StudySession, now = new Date()): Promise<StudySession> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .update({ check_out: now.toISOString(), minutes: null, source: 'auto-sweep' })
+    .eq('id', session.id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data as StudySession;
+}
+
 export async function getStudySessionsSupabase(studentId: string, sinceDate?: string): Promise<StudySession[]> {
   let q = getClient()
     .from('study_sessions')

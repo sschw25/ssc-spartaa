@@ -16,6 +16,7 @@ type DailyPlanEntry = {
   materialType: 'book' | 'lecture';
   materialId: string;
   planId: string;
+  dateKey: string;
   isCompleted: boolean;
   actualAmount?: number;
   studyTime: string;
@@ -40,7 +41,7 @@ interface HomeOverviewTabProps {
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
-  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number) => void;
+  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
   homeAttend: { loading: boolean; checkedIn: boolean; todayMinutes: number; since: string | null; sinceToday: boolean };
   homeTotalMin: number;
   currentSubjectText: string;
@@ -418,7 +419,7 @@ export function HomeOverviewTab({
                           type="button"
                           onClick={() => {
                             if (entry.isCompleted) {
-                              updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false);
+                              updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
                             } else {
                               setPendingPlanId(entry.id);
                               setPendingAmount(entry.dailyAmount ?? 1);
@@ -463,7 +464,7 @@ export function HomeOverviewTab({
                             <button
                               type="button"
                               onClick={() => {
-                                updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount);
+                                updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
                                 setPendingPlanId(null);
                               }}
                               className="flex-1 rounded-full bg-emerald-500 py-1.5 text-[10px] font-black text-white hover:bg-emerald-600 active:scale-[0.97]"

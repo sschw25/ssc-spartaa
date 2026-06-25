@@ -18,6 +18,13 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
   const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false);
   const [isEditingPomoTime, setIsEditingPomoTime] = useState(false);
   const [pomoEditValue, setPomoEditValue] = useState('');
+  const pomodoroSecondsKey = `ssc-pomodoro-seconds:${student.id}`;
+  const pomodoroStateKey = `ssc-pomodoro-state:${student.id}`;
+
+  const clearStoredPomodoro = () => {
+    window.localStorage.removeItem(pomodoroSecondsKey);
+    window.localStorage.removeItem(pomodoroStateKey);
+  };
 
   // 서울 기준 YYYY-MM-DD 날짜 키 구하기
   const getSeoulDateKey = () => {
@@ -142,7 +149,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
     if (!isNaN(mins) && mins > 0 && mins <= 180) {
       const secs = mins * 60;
       setPomodoroSeconds(secs);
-      window.localStorage.setItem(`ssc-pomodoro-seconds:${student.id}`, String(secs));
+      window.localStorage.setItem(pomodoroSecondsKey, String(secs));
       setIsEditingPomoTime(false);
       toast.success(`타이머가 ${mins}분으로 수정되었습니다.`);
     } else {
@@ -156,7 +163,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       let next = prev + diffMinutes * 60;
       if (next < 0) next = 0;
       if (next > 180 * 60) next = 180 * 60;
-      window.localStorage.setItem(`ssc-pomodoro-seconds:${student.id}`, String(next));
+      window.localStorage.setItem(pomodoroSecondsKey, String(next));
       return next;
     });
     toast.success(`${diffMinutes > 0 ? '+' : ''}${diffMinutes}분 조정되었습니다.`);
@@ -196,7 +203,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
         setPomodoroSeconds((prev) => {
           const next = prev - 1;
           if (next % 30 === 0) {
-            window.localStorage.setItem(`ssc-pomodoro-seconds:${student.id}`, String(next));
+            window.localStorage.setItem(pomodoroSecondsKey, String(next));
           }
           return next;
         });
@@ -218,14 +225,50 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
   }, [pomodoroActive, pomodoroSeconds, pomodoroMode]);
 
   useEffect(() => {
-    const saved = window.localStorage.getItem(`ssc-pomodoro-seconds:${student.id}`);
-    if (saved) {
-      const secs = Number(saved);
-      if (Number.isFinite(secs) && secs > 0) {
-        setPomodoroSeconds(secs);
+    const savedState = window.localStorage.getItem(pomodoroStateKey);
+    if (savedState) {
+      try {
+        const parsed = JSON.parse(savedState) as {
+          seconds?: number;
+          mode?: 'focus' | 'rest';
+          active?: boolean;
+          updatedAt?: number;
+        };
+        if (parsed.mode === 'focus' || parsed.mode === 'rest') {
+          const savedSeconds = Number(parsed.seconds);
+          const elapsedSeconds = parsed.active && parsed.updatedAt
+            ? Math.max(0, Math.floor((Date.now() - parsed.updatedAt) / 1000))
+            : 0;
+          const nextSeconds = Number.isFinite(savedSeconds) ? Math.max(0, savedSeconds - elapsedSeconds) : 3000;
+          setPomodoroMode(parsed.mode);
+          setPomodoroSeconds(nextSeconds || (parsed.mode === 'rest' ? 600 : 3000));
+          setPomodoroActive(Boolean(parsed.active && nextSeconds > 0));
+          return;
+        }
+      } catch {
+        // legacy seconds fallback below
       }
     }
-  }, [student.id]);
+
+    const saved = window.localStorage.getItem(pomodoroSecondsKey);
+    if (saved) {
+      const secs = Number(saved);
+      if (Number.isFinite(secs) && secs > 0) setPomodoroSeconds(secs);
+    }
+  }, [pomodoroSecondsKey, pomodoroStateKey]);
+
+  useEffect(() => {
+    window.localStorage.setItem(pomodoroSecondsKey, String(pomodoroSeconds));
+    window.localStorage.setItem(
+      pomodoroStateKey,
+      JSON.stringify({
+        seconds: pomodoroSeconds,
+        mode: pomodoroMode,
+        active: pomodoroActive,
+        updatedAt: Date.now(),
+      }),
+    );
+  }, [pomodoroActive, pomodoroMode, pomodoroSeconds, pomodoroSecondsKey, pomodoroStateKey]);
 
   const totalSecs = pomodoroMode === 'focus' ? 3000 : 600;
   const remaining = pomodoroSeconds;
@@ -402,7 +445,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                   type="button"
                   onClick={async () => {
                     setPomodoroActive(false);
-                    window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                    clearStoredPomodoro();
                     await handlePomodoroComplete(3000 - pomodoroSeconds);
                   }}
                   className="w-full rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/5 hover:bg-[#0071E3]/10 text-[#0071E3] py-2.5 text-xs font-black transition active:scale-95"
@@ -415,7 +458,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                     setPomodoroActive(false);
                     setPomodoroMode('focus');
                     setPomodoroSeconds(3000);
-                    window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                    clearStoredPomodoro();
                   }}
                   className="w-full text-center text-[10px] font-bold text-slate-300 hover:text-slate-400 py-1 transition"
                 >
@@ -429,7 +472,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                   setPomodoroActive(false);
                   setPomodoroMode('focus');
                   setPomodoroSeconds(3000);
-                  window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                  clearStoredPomodoro();
                 }}
                 className="w-full rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-500 py-2.5 text-xs font-bold transition active:scale-95"
               >
@@ -584,7 +627,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                   type="button"
                   onClick={async () => {
                     setPomodoroActive(false);
-                    window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                    clearStoredPomodoro();
                     await handlePomodoroComplete(3000 - pomodoroSeconds);
                   }}
                   className="flex-1 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 py-3.5 text-sm font-black transition active:scale-95"
@@ -599,7 +642,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                   setPomodoroActive(false);
                   setPomodoroMode('focus');
                   setPomodoroSeconds(3000);
-                  window.localStorage.removeItem(`ssc-pomodoro-seconds:${student.id}`);
+                  clearStoredPomodoro();
                 }}
                 className="px-4 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/5 transition active:scale-95"
                 title="리셋"

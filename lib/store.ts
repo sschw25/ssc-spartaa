@@ -26,6 +26,7 @@ import {
   insertManualSessionSupabase,
   checkInSupabase,
   checkOutSupabase,
+  autoCloseSessionSupabase,
   getStudySessionsSupabase,
   getStudyMinutesByStudentSupabase,
   type StudentAuthRecord,
@@ -157,6 +158,10 @@ export async function checkIn(studentId: string, source = 'qr'): Promise<StudySe
 export async function checkOut(session: StudySession, at?: Date): Promise<StudySession> {
   requireSupabase();
   return at ? checkOutSupabase(session, at) : checkOutSupabase(session);
+}
+export async function autoCloseSession(session: StudySession, at: Date): Promise<StudySession> {
+  requireSupabase();
+  return autoCloseSessionSupabase(session, at);
 }
 export async function getStudySessions(studentId: string, sinceDate?: string): Promise<StudySession[]> {
   requireSupabase();

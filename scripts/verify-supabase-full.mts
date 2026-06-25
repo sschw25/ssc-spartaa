@@ -77,7 +77,7 @@ const weekdayOf = (d: string) => { const [y, m, dd] = d.split('-').map(Number); 
 
   // ── D. sweep dry-run (무변경) ──
   console.log('\n── D. sweep dry-run (마감 대상 계산만, 변경 없음) ──');
-  const closeHm = (process.env.ATTEND_CLOSE_TIME || '23:30').trim();
+  const closeHm = (process.env.ATTEND_CLOSE_TIME || '23:59').trim();
   const now = new Date();
   const wouldClose = openSessions.filter((s) => now.getTime() >= new Date(`${s.date}T${closeHm}:00+09:00`).getTime());
   ok('마감 대상은 모두 마감시각 경과', wouldClose.every((s) => now.getTime() >= new Date(`${s.date}T${closeHm}:00+09:00`).getTime()),

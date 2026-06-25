@@ -8,6 +8,8 @@ type UpdatedInfo = {
   total: number;
   planId?: string;
   isCompleted?: boolean;
+  dateKey?: string;
+  actualAmount?: number;
   solvedQuestions?: number;
   incorrectTags?: Record<string, number>;
 };
@@ -27,6 +29,16 @@ const getPlanEndAmount = (plan: DetailedPlan) => {
   return Number(plan.targetAmount || 0);
 };
 
+const getPlanDailyAmount = (plan: DetailedPlan) =>
+  Math.max(0, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6)));
+
+const getActualAmountFromBody = (body: Record<string, unknown>, plan: DetailedPlan) => {
+  const actualAmount = Number(body.actualAmount);
+  return Number.isFinite(actualAmount) && actualAmount >= 0
+    ? Math.round(actualAmount)
+    : getPlanDailyAmount(plan);
+};
+
 function applyProgressMutation(
   student: Student,
   opts: {
@@ -38,13 +50,14 @@ function applyProgressMutation(
     hasPlanCompletion: boolean;
     hasSolvedQuestions: boolean;
     hasIncorrectTags: boolean;
+    dateKey: string;
     body: Record<string, unknown>;
   },
 ): MutationResult {
   const nowIso = new Date().toISOString();
   const {
     materialType, materialId, hasProgressValue, rawValue,
-    planId, hasPlanCompletion, hasSolvedQuestions, hasIncorrectTags, body,
+    planId, hasPlanCompletion, hasSolvedQuestions, hasIncorrectTags, dateKey, body,
   } = opts;
 
   if (materialType === 'book') {
@@ -60,21 +73,58 @@ function applyProgressMutation(
     let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(baseBook.currentPage || 0, total);
 
     let planCompletedVal = false;
+    let planActualAmount: number | undefined;
     let matchedPlan = !hasPlanCompletion;
     if (hasPlanCompletion) {
+      let dailyDeltaApplied = false;
       matchingBooks.forEach((book) => {
         const plan = (book.detailedPlans || []).find((item) => item.id === planId);
         if (plan) {
           matchedPlan = true;
-          plan.isCompleted = Boolean(body.isCompleted);
-          planCompletedVal = plan.isCompleted;
-          if (plan.isCompleted) {
-            nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
-            if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
-              plan.actualAmount = body.actualAmount;
+          const nextCompleted = Boolean(body.isCompleted);
+          planCompletedVal = nextCompleted;
+
+          if (dateKey) {
+            const currentDaily = plan.dailyCompletions?.[dateKey];
+            const previousAmount = currentDaily?.isCompleted && typeof currentDaily.actualAmount === 'number'
+              ? currentDaily.actualAmount
+              : 0;
+
+            if (nextCompleted) {
+              const actualAmount = getActualAmountFromBody(body, plan);
+              planActualAmount = actualAmount;
+              plan.dailyCompletions = {
+                ...(plan.dailyCompletions || {}),
+                [dateKey]: { isCompleted: true, actualAmount, completedAt: nowIso },
+              };
+              if (!dailyDeltaApplied) {
+                nextValue = clampProgressValue(nextValue + actualAmount - previousAmount, total);
+                dailyDeltaApplied = true;
+              }
+            } else {
+              if (plan.dailyCompletions) {
+                const nextDailyCompletions = { ...plan.dailyCompletions };
+                delete nextDailyCompletions[dateKey];
+                plan.dailyCompletions = Object.keys(nextDailyCompletions).length > 0 ? nextDailyCompletions : undefined;
+              }
+              if (!dailyDeltaApplied) {
+                nextValue = clampProgressValue(nextValue - previousAmount, total);
+                dailyDeltaApplied = true;
+              }
+              planActualAmount = undefined;
             }
           } else {
-            plan.actualAmount = undefined;
+            plan.isCompleted = nextCompleted;
+            if (plan.isCompleted) {
+              nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+              if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
+                plan.actualAmount = body.actualAmount;
+                planActualAmount = body.actualAmount;
+              }
+            } else {
+              plan.actualAmount = undefined;
+              planActualAmount = undefined;
+            }
           }
         }
       });
@@ -110,6 +160,7 @@ function applyProgressMutation(
         value: nextValue,
         total,
         ...(hasPlanCompletion ? { planId, isCompleted: planCompletedVal } : {}),
+        ...(hasPlanCompletion && dateKey ? { dateKey, actualAmount: planActualAmount } : {}),
         solvedQuestions: baseBook.solvedQuestions,
         incorrectTags: baseBook.incorrectTags,
       },
@@ -127,21 +178,58 @@ function applyProgressMutation(
     let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(baseLecture.completedLectures || 0, total);
 
     let planCompletedVal = false;
+    let planActualAmount: number | undefined;
     let matchedPlan = !hasPlanCompletion;
     if (hasPlanCompletion) {
+      let dailyDeltaApplied = false;
       matchingLectures.forEach((lecture) => {
         const plan = (lecture.detailedPlans || []).find((item) => item.id === planId);
         if (plan) {
           matchedPlan = true;
-          plan.isCompleted = Boolean(body.isCompleted);
-          planCompletedVal = plan.isCompleted;
-          if (plan.isCompleted) {
-            nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
-            if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
-              plan.actualAmount = body.actualAmount;
+          const nextCompleted = Boolean(body.isCompleted);
+          planCompletedVal = nextCompleted;
+
+          if (dateKey) {
+            const currentDaily = plan.dailyCompletions?.[dateKey];
+            const previousAmount = currentDaily?.isCompleted && typeof currentDaily.actualAmount === 'number'
+              ? currentDaily.actualAmount
+              : 0;
+
+            if (nextCompleted) {
+              const actualAmount = getActualAmountFromBody(body, plan);
+              planActualAmount = actualAmount;
+              plan.dailyCompletions = {
+                ...(plan.dailyCompletions || {}),
+                [dateKey]: { isCompleted: true, actualAmount, completedAt: nowIso },
+              };
+              if (!dailyDeltaApplied) {
+                nextValue = clampProgressValue(nextValue + actualAmount - previousAmount, total);
+                dailyDeltaApplied = true;
+              }
+            } else {
+              if (plan.dailyCompletions) {
+                const nextDailyCompletions = { ...plan.dailyCompletions };
+                delete nextDailyCompletions[dateKey];
+                plan.dailyCompletions = Object.keys(nextDailyCompletions).length > 0 ? nextDailyCompletions : undefined;
+              }
+              if (!dailyDeltaApplied) {
+                nextValue = clampProgressValue(nextValue - previousAmount, total);
+                dailyDeltaApplied = true;
+              }
+              planActualAmount = undefined;
             }
           } else {
-            plan.actualAmount = undefined;
+            plan.isCompleted = nextCompleted;
+            if (plan.isCompleted) {
+              nextValue = Math.max(nextValue, clampProgressValue(getPlanEndAmount(plan), total));
+              if (typeof body.actualAmount === 'number' && body.actualAmount >= 0) {
+                plan.actualAmount = body.actualAmount;
+                planActualAmount = body.actualAmount;
+              }
+            } else {
+              plan.actualAmount = undefined;
+              planActualAmount = undefined;
+            }
           }
         }
       });
@@ -159,6 +247,7 @@ function applyProgressMutation(
         value: nextValue,
         total,
         ...(hasPlanCompletion ? { planId, isCompleted: planCompletedVal } : {}),
+        ...(hasPlanCompletion && dateKey ? { dateKey, actualAmount: planActualAmount } : {}),
       },
     };
   }
@@ -177,6 +266,7 @@ export async function PATCH(req: NextRequest) {
     value?: unknown;
     planId?: unknown;
     isCompleted?: unknown;
+    dateKey?: unknown;
     actualAmount?: unknown;
     solvedQuestions?: unknown;
     incorrectTags?: unknown;
@@ -192,6 +282,7 @@ export async function PATCH(req: NextRequest) {
   const hasProgressValue = body?.value !== undefined;
   const rawValue = hasProgressValue ? Number(body.value) : 0;
   const planId = typeof body?.planId === 'string' ? body.planId : '';
+  const dateKey = typeof body?.dateKey === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.dateKey) ? body.dateKey : '';
   const hasPlanCompletion = planId.length > 0 && typeof body?.isCompleted === 'boolean';
   const hasSolvedQuestions = body?.solvedQuestions !== undefined;
   const hasIncorrectTags = body?.incorrectTags !== undefined;
@@ -218,6 +309,7 @@ export async function PATCH(req: NextRequest) {
     hasPlanCompletion,
     hasSolvedQuestions,
     hasIncorrectTags,
+    dateKey,
     body: body as Record<string, unknown>,
   };
 
@@ -248,6 +340,8 @@ export async function PATCH(req: NextRequest) {
       total: updated.total,
       planId: updated.planId,
       isCompleted: updated.isCompleted,
+      dateKey: updated.dateKey,
+      actualAmount: updated.actualAmount,
       solvedQuestions: updated.solvedQuestions,
       incorrectTags: updated.incorrectTags,
     });

@@ -52,10 +52,17 @@ export async function GET(request: Request) {
       const stu = studentMap.get(sid)!;
       const firstIn = arr.reduce((min, session) => (session.check_in < min ? session.check_in : min), arr[0].check_in);
       const closed = arr.filter((session) => session.check_out);
-      const lastOut = closed.length
-        ? closed.reduce((max, session) => (session.check_out! > max ? session.check_out! : max), closed[0].check_out!)
+      const lastClosed = closed.length
+        ? closed.reduce((max, session) => (session.check_out! > max.check_out! ? session : max), closed[0])
         : null;
-      const minutes = closed.reduce((sum, session) => sum + (session.minutes || 0), 0);
+      const lastOut = lastClosed?.check_out ?? null;
+      const recognizedMinutes = closed
+        .map((session) => session.minutes)
+        .filter((minutes): minutes is number => typeof minutes === 'number');
+      const minutes = recognizedMinutes.length
+        ? recognizedMinutes.reduce((sum, value) => sum + value, 0)
+        : null;
+      const autoClosed = lastClosed?.source === 'auto-sweep' && lastClosed.minutes == null;
       const stillOpen = openIds.has(sid) && arr.some((session) => !session.check_out);
       const ci = seoulHm(firstIn);
       const co = lastOut ? seoulHm(lastOut) : null;
@@ -67,9 +74,10 @@ export async function GET(request: Request) {
         campus: stu.campus,
         checkIn: ci.label,
         checkInMin: ci.min,
-        checkOut: co?.label ?? null,
-        checkOutMin: co?.min ?? null,
+        checkOut: autoClosed ? null : co?.label ?? null,
+        checkOutMin: autoClosed ? null : co?.min ?? null,
         minutes,
+        autoClosed,
         isOpen: stillOpen,
         expectedArrival,
         isLate,
@@ -90,7 +98,8 @@ export async function GET(request: Request) {
               checkInMin: Number.MAX_SAFE_INTEGER,
               checkOut: null,
               checkOutMin: null,
-              minutes: 0,
+              minutes: null,
+              autoClosed: false,
               isOpen: false,
               expectedArrival,
               isLate: false,

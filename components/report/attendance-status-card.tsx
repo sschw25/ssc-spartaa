@@ -114,6 +114,9 @@ export function AttendanceStatusCard() {
           <p className="text-xs font-semibold leading-5 text-[#0F172A]">
             등·하원은 <b>입구 키오스크의 QR</b>을 휴대폰으로 스캔하면 자동 처리돼요.
             <span className="block text-[11px] font-medium text-[#64748B]">한 번 스캔할 때마다 등원 ↔ 하원이 전환됩니다.</span>
+            <span className="block mt-1 text-[11px] font-semibold text-[#F56300]">
+              ※ 하원하려면 QR을 재스캔하거나, 출결태블릿에서 출결번호를 누른 뒤 [하원]을 눌러주세요.
+            </span>
           </p>
         </div>
       </div>

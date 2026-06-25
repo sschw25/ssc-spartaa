@@ -29,7 +29,8 @@ interface Row {
   checkInMin: number;
   checkOut: string | null;
   checkOutMin: number | null;
-  minutes: number;
+  minutes: number | null;
+  autoClosed?: boolean;
   isOpen: boolean;
   expectedArrival: Arrival;
   isLate: boolean;
@@ -63,8 +64,8 @@ const statusOptions: Array<{ key: StatusFilter; label: string }> = [
 ];
 
 const campusLabel = (v: string) => ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' } as Record<string, string>)[v] || '기타';
-const fmtMin = (m: number) => {
-  if (!m || m <= 0) return '-';
+const fmtMin = (m?: number | null) => {
+  if (m == null || m <= 0) return '-';
   const h = Math.floor(m / 60);
   const min = m % 60;
   return h > 0 ? `${h}시간 ${min}분` : `${min}분`;
@@ -212,7 +213,7 @@ function AdminAttendanceContent() {
       .filter((r) => !normalizedQuery || r.name.toLowerCase().includes(normalizedQuery))
       .filter((r) => {
         if (statusFilter === 'present') return r.isOpen;
-        if (statusFilter === 'left') return !r.isAbsent && !!r.checkOut;
+        if (statusFilter === 'left') return !r.isAbsent && (!!r.checkOut || !!r.autoClosed);
         if (statusFilter === 'absent') return !!r.isAbsent;
         if (statusFilter === 'late') return r.isLate;
         return true;
@@ -224,7 +225,7 @@ function AdminAttendanceContent() {
         case 'name': return r.name;
         case 'checkIn': return r.isAbsent ? Number.MAX_SAFE_INTEGER : r.checkInMin;
         case 'checkOut': return r.checkOutMin ?? Number.MAX_SAFE_INTEGER;
-        case 'minutes': return r.minutes;
+        case 'minutes': return r.minutes ?? -1;
         case 'arrival': return DEADLINE[r.expectedArrival];
         case 'late': return (r.isLate ? 1 : 0) * 100000 + (r.isAbsent ? Number.MAX_SAFE_INTEGER : r.checkInMin);
       }
@@ -400,6 +401,8 @@ function AdminAttendanceContent() {
                               <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-slate-600 bg-slate-50 border-slate-200">미등원</span>
                             ) : r.isOpen ? (
                               <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-emerald-700 bg-emerald-50 border-emerald-100">등원중</span>
+                            ) : r.autoClosed ? (
+                              <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-amber-700 bg-amber-50 border-amber-100">자동 하원</span>
                             ) : r.isLate ? (
                               <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-red-700 bg-red-50 border-red-100">지각 ({r.expectedArrival})</span>
                             ) : (

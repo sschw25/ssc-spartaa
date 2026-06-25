@@ -20,6 +20,7 @@ import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } from '@/lib/student-requests';
 import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
+import { getDailyChecklist, getPomodoroStats, getSeoulDateKey } from '@/lib/student-activity';
 import { toast } from 'sonner';
 import { 
   Calendar, User,
@@ -40,6 +41,17 @@ interface StudentDetailSheetProps {
   onDelete: (studentId: string) => void;
   students?: Student[];
 }
+
+type TodayAttendanceStatus = {
+  configured: boolean;
+  today?: string;
+  status: 'present' | 'left' | 'absent' | 'unconfigured' | 'unknown';
+  checkInAt?: string;
+  checkOutAt?: string | null;
+  minutes?: number | null;
+  minutesSoFar?: number;
+  autoClosed?: boolean;
+};
 
 const parseProgressFromConsultationContent = (
   content: string,
@@ -163,6 +175,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [showHistory, setShowHistory] = useState(false);
   // 출결/순공 통계 + 휴가 신청 관련 상태
   const [studyStats, setStudyStats] = useState<any>(null);
+  const [todayAttendanceStatus, setTodayAttendanceStatus] = useState<TodayAttendanceStatus | null>(null);
   const [leaveRequestsLocal, setLeaveRequestsLocal] = useState<LeaveRequest[]>([]);
   const [leaveCouponsLocal, setLeaveCouponsLocal] = useState(0);
   const [leaveActionBusy, setLeaveActionBusy] = useState<Record<string, boolean>>({});
@@ -561,8 +574,72 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return () => window.removeEventListener('beforeunload', handler);
   }, [subjectsState, progressDrafts, isAutoSaving, isConsultationDraftDirty, isConsultationPlanDirty]);
 
+  useEffect(() => {
+    if (!student?.id || !isOpen) return;
+
+    let active = true;
+    const loadTodayAttendance = async () => {
+      try {
+        const res = await fetch('/api/admin/attendance/today', { cache: 'no-store' });
+        const json = await res.json();
+        if (!active) return;
+
+        if (!res.ok || !json.success) {
+          setTodayAttendanceStatus({ configured: false, status: 'unknown' });
+          return;
+        }
+        if (json.configured === false) {
+          setTodayAttendanceStatus({ configured: false, status: 'unconfigured', today: json.today });
+          return;
+        }
+
+        const present = (json.present || []).find((row: any) => row.id === student.id);
+        if (present) {
+          setTodayAttendanceStatus({
+            configured: true,
+            status: 'present',
+            today: json.today,
+            checkInAt: present.checkInAt,
+            minutes: present.todayMinutes ?? present.minutesSoFar ?? 0,
+            minutesSoFar: present.minutesSoFar ?? 0,
+          });
+          return;
+        }
+
+        const left = (json.leftToday || []).find((row: any) => row.id === student.id);
+        if (left) {
+          setTodayAttendanceStatus({
+            configured: true,
+            status: 'left',
+            today: json.today,
+            checkInAt: left.checkInAt,
+            checkOutAt: left.checkOutAt,
+            minutes: left.minutes ?? null,
+            autoClosed: Boolean(left.autoClosed),
+          });
+          return;
+        }
+
+        setTodayAttendanceStatus({ configured: true, status: 'absent', today: json.today, minutes: 0 });
+      } catch {
+        if (active) setTodayAttendanceStatus({ configured: false, status: 'unknown' });
+      }
+    };
+
+    setTodayAttendanceStatus(null);
+    loadTodayAttendance();
+    const timer = setInterval(loadTodayAttendance, 30_000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [student?.id, isOpen]);
+
   if (!student) return null;
 
+  const todayActivityKey = getSeoulDateKey();
+  const todayPomodoroStats = getPomodoroStats(student.specialNote, todayActivityKey);
+  const todayChecklist = getDailyChecklist(student.specialNote, todayActivityKey);
   const learningLogs = student.consultationLogs.filter(log => !log.type || log.type === 'learning');
   const lifeLogs = student.consultationLogs.filter(log => log.type === 'life');
   // 학생 변경 신청(대기중) — consultation_logs 중 type==='request'
@@ -3941,6 +4018,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setStudentLifeComment={setStudentLifeComment}
                 lifeLogs={lifeLogs}
                 studyStats={studyStats}
+                todayAttendanceStatus={todayAttendanceStatus}
+                todayActivityKey={todayActivityKey}
+                todayPomodoroStats={todayPomodoroStats}
+                todayChecklist={todayChecklist}
                 leaveRequests={leaveRequestsLocal}
                 leaveCoupons={leaveCouponsLocal}
                 leaveActionBusy={leaveActionBusy}

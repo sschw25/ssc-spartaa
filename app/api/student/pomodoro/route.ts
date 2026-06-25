@@ -2,21 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { checkAndGrantRewards } from '@/lib/rewards-service';
-
-const getSeoulDateKey = () => {
-  const d = new Date();
-  const formatter = new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  });
-  const parts = formatter.formatToParts(d);
-  const year = parts.find(p => p.type === 'year')?.value;
-  const month = parts.find(p => p.type === 'month')?.value;
-  const day = parts.find(p => p.type === 'day')?.value;
-  return `${year}-${month}-${day}`;
-};
+import { getSeoulDateKey, parseSpecialNoteEnvelope, serializeClientActivityNote } from '@/lib/student-activity';
 
 export async function POST(req: NextRequest) {
   const studentId = await getStudentSessionId();
@@ -29,17 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  let noteObj: any = {};
-  try {
-    if (student.specialNote) {
-      noteObj = JSON.parse(student.specialNote);
-      if (typeof noteObj !== 'object' || noteObj === null) {
-        noteObj = { noteText: student.specialNote };
-      }
-    }
-  } catch {
-    noteObj = { noteText: student.specialNote || '' };
-  }
+  const noteObj = parseSpecialNoteEnvelope(student.specialNote);
 
   const body = await req.json().catch(() => ({}));
   // 1~120분으로 클램프 — 상한이 없으면 임의 큰 값으로 리워드(쿠폰)를 부당 적립할 수 있다.
@@ -67,7 +43,7 @@ export async function POST(req: NextRequest) {
     success: true,
     pomodoroCount: noteObj.pomodoro_sessions[todayKey],
     pomodoroMinutes: noteObj.pomodoro_minutes[todayKey],
-    specialNote: student.specialNote,
+    specialNote: serializeClientActivityNote(updatedStudent?.specialNote || student.specialNote),
     leaveCoupons: updatedStudent?.leaveCoupons || 0,
     rewardGranted: rewardResult.granted,
     rewardReasons: rewardResult.reasons

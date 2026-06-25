@@ -43,22 +43,6 @@ export async function GET() {
     const openIds = new Set(openSessions.map((s) => s.student_id));
     const nowMs = Date.now();
 
-    // 현재 등원 중 (미퇴실 세션 보유)
-    const present = openSessions
-      .filter((s) => studentMap.has(s.student_id))
-      .map((s) => {
-        const stu = studentMap.get(s.student_id)!;
-        return {
-          id: stu.id,
-          name: stu.name,
-          campus: stu.campus,
-          checkInAt: seoulHm(s.check_in),
-          minutesSoFar: Math.max(0, Math.round((nowMs - new Date(s.check_in).getTime()) / 60000)),
-          weekMinutes: weekMinutesByStudent[stu.id] || 0,
-        };
-      });
-
-    // 오늘 하원 완료 — 학생 단위로 묶음 (한 학생이 여러 번 등하원해도 1회만, 순공은 합산)
     const todayByStudent = new Map<string, typeof todaySessions>();
     for (const s of todaySessions) {
       if (!studentMap.has(s.student_id)) continue;
@@ -66,21 +50,51 @@ export async function GET() {
       arr.push(s);
       todayByStudent.set(s.student_id, arr);
     }
+
+    // 현재 등원 중 (미퇴실 세션 보유)
+    const present = openSessions
+      .filter((s) => studentMap.has(s.student_id))
+      .map((s) => {
+        const stu = studentMap.get(s.student_id)!;
+        const completedMinutes = (todayByStudent.get(stu.id) || [])
+          .filter((session) => session.check_out)
+          .reduce((sum, session) => sum + (session.minutes || 0), 0);
+        const minutesSoFar = Math.max(0, Math.round((nowMs - new Date(s.check_in).getTime()) / 60000));
+        return {
+          id: stu.id,
+          name: stu.name,
+          campus: stu.campus,
+          checkInAt: seoulHm(s.check_in),
+          minutesSoFar,
+          todayMinutes: completedMinutes + minutesSoFar,
+          weekMinutes: weekMinutesByStudent[stu.id] || 0,
+        };
+      });
+
+    // 오늘 하원 완료 — 학생 단위로 묶음 (한 학생이 여러 번 등하원해도 1회만, 순공은 합산)
     const leftToday = Array.from(todayByStudent.entries())
       .filter(([sid, arr]) => !openIds.has(sid) && arr.some((s) => s.check_out))
       .map(([sid, arr]) => {
         const stu = studentMap.get(sid)!;
         const closed = arr.filter((s) => s.check_out);
         const firstIn = arr.reduce((min, s) => (s.check_in < min ? s.check_in : min), arr[0].check_in);
-        const lastOut = closed.reduce((max, s) => (s.check_out! > max ? s.check_out! : max), closed[0].check_out!);
-        const todayMinutes = closed.reduce((a, s) => a + (s.minutes || 0), 0);
+        const lastClosed = closed.reduce((max, s) => (s.check_out! > max.check_out! ? s : max), closed[0]);
+        const lastOut = lastClosed.check_out!;
+        const recognizedMinutes = closed
+          .map((s) => s.minutes)
+          .filter((minutes): minutes is number => typeof minutes === 'number');
+        const todayMinutes = recognizedMinutes.length
+          ? recognizedMinutes.reduce((a, minutes) => a + minutes, 0)
+          : null;
+        const autoClosed = lastClosed.source === 'auto-sweep' && lastClosed.minutes == null;
         return {
           id: stu.id,
           name: stu.name,
           campus: stu.campus,
           checkInAt: seoulHm(firstIn),
-          checkOutAt: seoulHm(lastOut),
+          checkOutAt: autoClosed ? null : seoulHm(lastOut),
           minutes: todayMinutes,
+          autoClosed,
           weekMinutes: weekMinutesByStudent[stu.id] || 0,
         };
       });

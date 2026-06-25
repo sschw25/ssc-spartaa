@@ -2,7 +2,7 @@
 // 등원중 버킷 / 순공 등수 / sweep 실마감을 실제 라우트로 확인 후 cascade 삭제로 완전 정리.
 // 실행: npx tsx --env-file=.env.local scripts/verify-write-roundtrip.mts
 // 전제: localhost:3000 dev 서버 가동 중(동일 Supabase 연결).
-import { saveStudent, deleteStudent, getStudentById, getOpenSessions } from '../lib/store';
+import { saveStudent, deleteStudent, getStudentById, getOpenSessions, getStudySessions } from '../lib/store';
 import { checkInSupabase, checkOutSupabase } from '../lib/supabase';
 
 let pass = 0, fail = 0;
@@ -53,6 +53,8 @@ const TID = `__verify_${Date.now()}`;
     const sw = await api('/api/admin/attendance/sweep', { method: 'POST' });
     ok('3b. sweep 실제 마감 closed≥1', sw.closed >= 1, JSON.stringify(sw));
     ok('3c. sweep 후 유휴세션 사라짐', !(await getOpenSessions()).some((s) => s.id === stale.id));
+    const swept = (await getStudySessions(TID)).find((s) => s.id === stale.id);
+    ok('3d. 자동 마감은 순공 미반영(minutes=null)', swept?.source === 'auto-sweep' && swept.minutes === null, JSON.stringify(swept));
   } catch (e: any) {
     ok('예외 없이 진행', false, e?.message || String(e));
   } finally {

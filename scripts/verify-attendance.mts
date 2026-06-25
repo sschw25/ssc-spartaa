@@ -64,13 +64,13 @@ eq('verifyKioskKey 일치', verifyKioskKey('kiosk-secret-xyz'), true);
 eq('verifyKioskKey 불일치', verifyKioskKey('wrong'), false);
 eq('verifyKioskKey 빈값', verifyKioskKey(''), false);
 
-// ── sweep 마감시각 계산 (KST 23:30 → UTC 14:30 같은 날) ──
-const closeAt = new Date(`2026-06-17T23:30:00+09:00`);
-eq('sweep closeAt UTC', closeAt.toISOString(), '2026-06-17T14:30:00.000Z');
+// ── sweep 마감시각 계산 (KST 23:59 → UTC 14:59 같은 날) ──
+const closeAt = new Date(`2026-06-17T23:59:00+09:00`);
+eq('sweep closeAt UTC', closeAt.toISOString(), '2026-06-17T14:59:00.000Z');
 // 오늘 14:00 KST(now)는 아직 마감 전 → 정리 대상 아님
 eq('sweep: 오늘 진행중은 마감 전', now.getTime() >= closeAt.getTime(), false);
 // 전날 세션의 마감시각은 이미 지남 → 정리 대상
-const closeAtPrev = new Date(`2026-06-16T23:30:00+09:00`);
+const closeAtPrev = new Date(`2026-06-16T23:59:00+09:00`);
 eq('sweep: 전날 세션은 마감 대상', now.getTime() >= closeAtPrev.getTime(), true);
 
 console.log(`\n결과: ${pass} pass / ${fail} fail`);

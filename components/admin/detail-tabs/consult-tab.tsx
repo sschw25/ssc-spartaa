@@ -3,10 +3,11 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Calendar, Check, X, Ticket, Minus, Plus, Loader2 } from 'lucide-react';
+import { Calendar, Check, X, Ticket, Minus, Plus, Loader2, Clock, Timer, ClipboardCheck } from 'lucide-react';
 import { ConsultationLog, LeaveRequest } from '@/lib/types/student';
 import { StudyStatsCard } from '@/components/report/study-stats-card';
-import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
+import { LEAVE_TYPES } from '@/lib/leave';
+import type { DailyChecklistEntry } from '@/lib/student-activity';
 
 function leaveStatusChip(status: LeaveRequest['status']) {
   if (status === 'approved') return <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">승인</span>;
@@ -22,6 +23,19 @@ interface ConsultTabProps {
   lifeLogs: ConsultationLog[];
   // 출결/순공 통계
   studyStats?: any;
+  todayAttendanceStatus?: {
+    configured: boolean;
+    today?: string;
+    status: 'present' | 'left' | 'absent' | 'unconfigured' | 'unknown';
+    checkInAt?: string;
+    checkOutAt?: string | null;
+    minutes?: number | null;
+    minutesSoFar?: number;
+    autoClosed?: boolean;
+  } | null;
+  todayActivityKey?: string;
+  todayPomodoroStats?: { sessions: number; minutes: number };
+  todayChecklist?: DailyChecklistEntry | null;
   // 휴가 신청
   leaveRequests?: LeaveRequest[];
   leaveCoupons?: number;
@@ -38,6 +52,10 @@ export function ConsultTab({
   studentLifeComment, setStudentLifeComment,
   lifeLogs,
   studyStats,
+  todayAttendanceStatus,
+  todayActivityKey,
+  todayPomodoroStats = { sessions: 0, minutes: 0 },
+  todayChecklist = null,
   leaveRequests = [],
   leaveCoupons = 0,
   leaveActionBusy = {},
@@ -46,8 +64,105 @@ export function ConsultTab({
   onLeaveAction,
   onCouponAdjust,
 }: ConsultTabProps) {
+  const fmtMin = (min?: number | null) => {
+    if (min == null) return '-';
+    const safeMin = Math.max(0, Math.round(min));
+    const h = Math.floor(safeMin / 60);
+    const m = safeMin % 60;
+    return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
+  };
+
+  const attendanceLabel = (() => {
+    if (!todayAttendanceStatus) return { title: '조회 중', detail: '실시간 출결을 불러오는 중입니다.', tone: 'text-slate-500' };
+    if (!todayAttendanceStatus.configured || todayAttendanceStatus.status === 'unconfigured') {
+      return { title: '출결 연동 없음', detail: 'Supabase 출결 연동이 설정되지 않았습니다.', tone: 'text-slate-500' };
+    }
+    if (todayAttendanceStatus.status === 'present') {
+      return {
+        title: `등원 중 · ${fmtMin(todayAttendanceStatus.minutes)}`,
+        detail: `${todayAttendanceStatus.checkInAt || '-'} 등원 · 현재 세션 ${fmtMin(todayAttendanceStatus.minutesSoFar)}`,
+        tone: 'text-emerald-700',
+      };
+    }
+    if (todayAttendanceStatus.status === 'left') {
+      if (todayAttendanceStatus.autoClosed) {
+        return {
+          title: '자동 하원 · 수동입력 필요',
+          detail: `${todayAttendanceStatus.checkInAt || '-'}~미입력 · 순공 미반영`,
+          tone: 'text-amber-700',
+        };
+      }
+      return {
+        title: `하원 완료 · ${fmtMin(todayAttendanceStatus.minutes)}`,
+        detail: `${todayAttendanceStatus.checkInAt || '-'}~${todayAttendanceStatus.checkOutAt || '-'} 순공`,
+        tone: 'text-[#0071E3]',
+      };
+    }
+    if (todayAttendanceStatus.status === 'absent') {
+      return { title: '미등원', detail: '오늘 출결 기록이 없습니다.', tone: 'text-red-600' };
+    }
+    return { title: '조회 실패', detail: '실시간 출결 상태를 확인하지 못했습니다.', tone: 'text-slate-500' };
+  })();
+
+  const checklistSubmittedAt = todayChecklist?.submitted_at
+    ? new Date(todayChecklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+    : '';
+
   return (
     <>
+      {/* 오늘 실시간 루틴 현황 */}
+      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-[#0071E3]" />
+            오늘 실시간 공부·자가점검 현황
+          </h3>
+          <span className="text-[10px] font-bold text-slate-400">{todayActivityKey || '오늘'}</span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+          <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
+            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-500">
+              <Clock className="w-3.5 h-3.5" />
+              실시간 공부타이머
+            </p>
+            <p className={`mt-1 text-sm font-black ${attendanceLabel.tone}`}>{attendanceLabel.title}</p>
+            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{attendanceLabel.detail}</p>
+          </div>
+
+          <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
+            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-500">
+              <Timer className="w-3.5 h-3.5" />
+              뽀모도로 집중
+            </p>
+            <p className="mt-1 text-sm font-black text-[#0071E3]">
+              {todayPomodoroStats.sessions}세션 · {fmtMin(todayPomodoroStats.minutes)}
+            </p>
+            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">학생 결과지에서 완료한 집중 기록</p>
+          </div>
+
+          <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
+            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-500">
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              자가점검표
+            </p>
+            {todayChecklist ? (
+              <>
+                <p className="mt-1 text-sm font-black text-emerald-700">제출 완료{checklistSubmittedAt ? ` · ${checklistSubmittedAt}` : ''}</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
+                  수면 {todayChecklist.sleep_hours ?? '-'}시간 · 휴대폰 {todayChecklist.phone_submitted ? '제출' : '미제출'}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-1 text-sm font-black text-amber-700">미제출</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-slate-400">오늘 자가점검 기록이 없습니다.</p>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* 출결·순공 현황 */}
       {studyStats && (
         <div className="space-y-2">

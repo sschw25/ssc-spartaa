@@ -10,6 +10,11 @@ export interface DetailedPlan {
   rangeText: string;       // 범위 설명 (예: "1p ~ 40p" 또는 "1강 ~ 8강")
   isCompleted: boolean;    // 완료 여부
   actualAmount?: number;   // 실제 학습량 (완료 시 입력)
+  dailyCompletions?: Record<string, {
+    isCompleted: boolean;
+    actualAmount?: number;
+    completedAt?: string;
+  }>;                      // 날짜별 오늘 할 일 완료 상태 (YYYY-MM-DD)
 }
 
 export interface ReviewPassSetting {

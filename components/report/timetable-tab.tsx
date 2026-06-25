@@ -5,6 +5,7 @@ import { Clock, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE } from '@/lib/academy-timetable';
+import { getPlanDailyCompletion } from '@/lib/student-activity';
 
 type DayKey = NonNullable<SubjectProgress['studyDays']>[number];
 
@@ -100,14 +101,15 @@ export function TimetableTab({
                       const activePlan = (book.detailedPlans || []).find((plan) => plan.startDate <= todayStr && todayStr <= plan.endDate);
                       if (activePlan) {
                         const dailyVal = activePlan.dailyAmount || Math.ceil(activePlan.targetAmount / 6);
+                        const dailyCompletion = getPlanDailyCompletion(activePlan, todayStr);
                         matchedPlans.push({
                           subjectName: subject.name,
                           title: book.title,
                           type: 'book',
                           range: activePlan.rangeText,
                           amount: dailyVal,
-                          isCompleted: activePlan.isCompleted,
-                          actualAmount: activePlan.actualAmount,
+                          isCompleted: dailyCompletion.isCompleted,
+                          actualAmount: dailyCompletion.actualAmount,
                           unit: book.unit || 'p'
                         });
                       }
@@ -117,6 +119,7 @@ export function TimetableTab({
                       const activePlan = (lecture.detailedPlans || []).find((plan) => plan.startDate <= todayStr && todayStr <= plan.endDate);
                       if (activePlan) {
                         const dailyVal = activePlan.dailyAmount || Math.ceil(activePlan.targetAmount / 6);
+                        const dailyCompletion = getPlanDailyCompletion(activePlan, todayStr);
                         matchedPlans.push({
                           subjectName: subject.name,
                           title: lecture.name,
@@ -124,8 +127,8 @@ export function TimetableTab({
                           range: activePlan.rangeText,
                           amount: dailyVal,
                           speed: lecture.speedMultiplier,
-                          isCompleted: activePlan.isCompleted,
-                          actualAmount: activePlan.actualAmount,
+                          isCompleted: dailyCompletion.isCompleted,
+                          actualAmount: dailyCompletion.actualAmount,
                           unit: '강'
                         });
                       }
