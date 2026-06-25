@@ -1,7 +1,10 @@
 import { Metadata } from 'next'
+import { notFound } from 'next/navigation'
 import StreamPage from '@/components/ssc/stream-page'
 import { StreamId } from '@/lib/stream-content'
 import { getStreamMetadata } from '@/lib/seo-utils'
+
+const VALID_STREAMS: StreamId[] = ['gongmuwon', 'suneung', 'imyong', 'professional', 'job', 'managed']
 
 export async function generateMetadata({ params }: { params: Promise<{ stream: string }> }): Promise<Metadata> {
   const resolvedParams = await params
@@ -21,5 +24,11 @@ export function generateStaticParams() {
 
 export default async function Page({ params }: { params: Promise<{ stream: string }> }) {
   const resolvedParams = await params;
-  return <StreamPage campus="wonju" stream={resolvedParams.stream as StreamId} />
+  const stream = resolvedParams.stream as StreamId;
+  
+  if (!VALID_STREAMS.includes(stream)) {
+    notFound();
+  }
+  
+  return <StreamPage campus="wonju" stream={stream} />
 }
