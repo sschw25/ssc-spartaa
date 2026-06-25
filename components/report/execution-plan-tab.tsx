@@ -645,28 +645,39 @@ export function ExecutionPlanTab({
                             <p className="mt-1 rounded-lg bg-[#0071E3]/5 px-2 py-1 text-[8px] font-black text-[#0071E3]">
                               {entry.dailyLabel}
                             </p>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (entry.isCompleted) {
-                                  updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
-                                } else {
-                                  setPendingPlanId(entry.id);
-                                  setPendingAmount(entry.dailyAmount ?? 1);
-                                }
-                              }}
-                              aria-pressed={entry.isCompleted}
-                              className={`mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border text-[10px] font-black transition active:scale-[0.97] ${
-                                entry.isCompleted
-                                  ? 'border-emerald-200 bg-white/80 text-emerald-700'
-                                  : isPending
-                                  ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                  : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
-                              }`}
-                            >
-                              <CheckCircle2 className="h-3 w-3" />
-                              {entry.isCompleted ? (entry.actualAmount !== undefined ? `완료 (${entry.actualAmount}${unit})` : '완료됨') : '완료'}
-                            </button>
+                            {isStudentReport ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (entry.isCompleted) {
+                                    updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
+                                  } else {
+                                    setPendingPlanId(entry.id);
+                                    setPendingAmount(entry.dailyAmount ?? 1);
+                                  }
+                                }}
+                                aria-pressed={entry.isCompleted}
+                                className={`mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border text-[10px] font-black transition active:scale-[0.97] ${
+                                  entry.isCompleted
+                                    ? 'border-emerald-200 bg-white/80 text-emerald-700'
+                                    : isPending
+                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                    : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                }`}
+                              >
+                                <CheckCircle2 className="h-3 w-3" />
+                                {entry.isCompleted ? (entry.actualAmount !== undefined ? `완료 (${entry.actualAmount}${unit})` : '완료됨') : '완료'}
+                              </button>
+                            ) : entry.isCompleted ? (
+                              <span className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {entry.actualAmount !== undefined ? `완료 (${entry.actualAmount}${unit})` : '완료됨'}
+                              </span>
+                            ) : (
+                              <span className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-slate-100 bg-slate-50 text-slate-400 text-[10px] font-black">
+                                미완료
+                              </span>
+                            )}
                             
                             {isPending && (
                               <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-left">

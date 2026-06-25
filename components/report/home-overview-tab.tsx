@@ -415,28 +415,39 @@ export function HomeOverviewTab({
                             {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
                           </p>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (entry.isCompleted) {
-                              updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
-                            } else {
-                              setPendingPlanId(entry.id);
-                              setPendingAmount(entry.dailyAmount ?? 1);
-                            }
-                          }}
-                          aria-pressed={entry.isCompleted}
-                          className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black transition active:scale-[0.96] ${
-                            entry.isCompleted
-                              ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                              : isPending
-                              ? 'border-amber-200 bg-amber-50 text-amber-700'
-                              : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
-                          }`}
-                        >
-                          <CheckCircle2 className="h-3 w-3" />
-                          {entry.isCompleted ? `완료 (${entry.actualAmount ?? '?'}${unit})` : '완료'}
-                        </button>
+                        {isStudentReport ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (entry.isCompleted) {
+                                updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
+                              } else {
+                                setPendingPlanId(entry.id);
+                                setPendingAmount(entry.dailyAmount ?? 1);
+                              }
+                            }}
+                            aria-pressed={entry.isCompleted}
+                            className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black transition active:scale-[0.96] ${
+                              entry.isCompleted
+                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                : isPending
+                                ? 'border-amber-200 bg-amber-50 text-amber-700'
+                                : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                            }`}
+                          >
+                            <CheckCircle2 className="h-3 w-3" />
+                            {entry.isCompleted ? `완료 (${entry.actualAmount ?? '?'}${unit})` : '완료'}
+                          </button>
+                        ) : entry.isCompleted ? (
+                          <span className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 text-[10px] font-black text-emerald-700">
+                            <CheckCircle2 className="h-3 w-3" />
+                            완료 ({entry.actualAmount ?? '?'}{unit})
+                          </span>
+                        ) : (
+                          <span className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-slate-100 bg-slate-50 px-2 text-[10px] font-black text-slate-400">
+                            미완료
+                          </span>
+                        )}
                       </div>
                       {isPending && (
                         <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
