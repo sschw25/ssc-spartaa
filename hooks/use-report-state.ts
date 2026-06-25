@@ -350,6 +350,7 @@ export function useReportState() {
     sinceToday: false,
   });
   const [homeAttendNow, setHomeAttendNow] = useState(0);
+  const [realigningPlans, setRealigningPlans] = useState(false);
 
   // 1. 코치 퀘스트 상태 동기화 로드
   useEffect(() => {
@@ -1457,8 +1458,6 @@ export function useReportState() {
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
       ];
-
-  const [realigningPlans, setRealigningPlans] = useState(false);
 
   const realignStudentPlans = async (mode: 'keepTargetDate' | 'keepPace') => {
     setRealigningPlans(true);
