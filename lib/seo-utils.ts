@@ -62,16 +62,8 @@ const CAMPUS_SEO_CONFIG: Record<CampusKey, SeoContent> = {
 }
 
 export function getStreamMetadata(campus: CampusKey, stream: StreamId): Metadata {
-  const campusConfig = CAMPUS_CONFIG[campus]
-  if (!campusConfig) return {}
-
-  const campusName = campusConfig.name
-  const seoFn = STREAM_SEO_CONFIG[stream]
-  if (!seoFn) {
-    return getCampusMetadata(campus)
-  }
-
-  const config = seoFn(campusName)
+  const campusName = CAMPUS_CONFIG[campus].name
+  const config = STREAM_SEO_CONFIG[stream](campusName)
   const canonical = `${SITE_URL}/${campus}/${stream}`
 
   return {
