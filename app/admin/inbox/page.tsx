@@ -53,6 +53,8 @@ export default function AdminInboxPage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<InboxCategory>('all');
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [inboxSortField, setInboxSortField] = useState<'status' | 'date' | 'name'>('status');
+  const [inboxSortOrder, setInboxSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [processing, setProcessing] = useState(false);
@@ -257,6 +259,38 @@ export default function AdminInboxPage() {
     });
   }, [inboxItems, activeCategory, hideCompleted]);
 
+  // 정렬된 인박스 아이템
+  const sortedInboxItems = React.useMemo(() => {
+    return [...filteredItems].sort((a, b) => {
+      // 접수중 = 0, 처리중 = 1, 완료 = 2
+      const getStatusRank = (item: InboxItem) => {
+        if (item.statusText === '접수중') return 0;
+        if (item.statusText === '처리중') return 1;
+        return 2;
+      };
+
+      let comparison = 0;
+
+      if (inboxSortField === 'status') {
+        const rankA = getStatusRank(a);
+        const rankB = getStatusRank(b);
+        comparison = rankA - rankB;
+        if (comparison === 0) {
+          comparison = b.createdAt.localeCompare(a.createdAt);
+        }
+      } else if (inboxSortField === 'date') {
+        comparison = a.createdAt.localeCompare(b.createdAt);
+      } else if (inboxSortField === 'name') {
+        comparison = a.studentName.localeCompare(b.studentName, 'ko');
+      }
+
+      if (inboxSortOrder === 'desc') {
+        return -comparison;
+      }
+      return comparison;
+    });
+  }, [filteredItems, inboxSortField, inboxSortOrder]);
+
   // 3. 통합 요청 해결 PATCH API 호출
   const handleProcessRequest = async (actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending') => {
     if (!selectedItem) return;
@@ -368,7 +402,65 @@ export default function AdminInboxPage() {
             ))}
           </div>
 
-          <div className="flex items-center justify-end">
+          <div className="flex flex-wrap items-center justify-between gap-2.5">
+            {/* 정렬 셀렉터 */}
+            <div className="flex items-center gap-1 bg-[#F5F5F7] p-0.5 rounded-xl border border-black/[0.02]">
+              <button
+                type="button"
+                onClick={() => {
+                  if (inboxSortField === 'status') {
+                    setInboxSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setInboxSortField('status');
+                    setInboxSortOrder('asc');
+                  }
+                }}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                  inboxSortField === 'status'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                }`}
+              >
+                미처리순 {inboxSortField === 'status' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (inboxSortField === 'date') {
+                    setInboxSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setInboxSortField('date');
+                    setInboxSortOrder('desc');
+                  }
+                }}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                  inboxSortField === 'date'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                }`}
+              >
+                신청일순 {inboxSortField === 'date' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (inboxSortField === 'name') {
+                    setInboxSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+                  } else {
+                    setInboxSortField('name');
+                    setInboxSortOrder('asc');
+                  }
+                }}
+                className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
+                  inboxSortField === 'name'
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                }`}
+              >
+                이름순 {inboxSortField === 'name' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={() => setHideCompleted((v) => !v)}
@@ -389,13 +481,13 @@ export default function AdminInboxPage() {
                 <RefreshCw className="w-6 h-6 animate-spin text-[#0071E3]" />
                 <p className="text-xs text-slate-400 font-bold">요청 목록을 동기화하는 중...</p>
               </div>
-            ) : filteredItems.length === 0 ? (
+            ) : sortedInboxItems.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 flex flex-col items-center justify-center gap-2">
                 <Inbox className="w-8 h-8 text-slate-300" />
                 <p className="text-xs text-slate-400 font-bold">조회 대상 요청이 없습니다.</p>
               </div>
             ) : (
-              filteredItems.map((item) => {
+              sortedInboxItems.map((item) => {
                 const isSelected = selectedItem?.id === item.id;
                 return (
                   <div

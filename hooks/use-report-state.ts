@@ -15,6 +15,7 @@ import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/aca
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import type { StudyStats } from '@/components/report/study-stats-card';
+import { toast } from 'sonner';
 
 const BRIEFING_MESSAGES: Record<string, string[]> = {
   studying: [
@@ -1457,6 +1458,30 @@ export function useReportState() {
         { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
       ];
 
+  const [realigningPlans, setRealigningPlans] = useState(false);
+
+  const realignStudentPlans = async (mode: 'keepTargetDate' | 'keepPace') => {
+    setRealigningPlans(true);
+    try {
+      const res = await fetch('/api/student/progress/realign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setStudent(json.data);
+        toast.success('학습 계획이 현재 진도 기준으로 성공적으로 재조정되었습니다.');
+      } else {
+        toast.error(json.message || '계획 재조정에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    } finally {
+      setRealigningPlans(false);
+    }
+  };
+
   const tabIds = reportNavItems.map((item) => item.href.slice(1));
 
   return {
@@ -1567,6 +1592,8 @@ export function useReportState() {
     isEnrollmentExpiredLocked,
     handleSwipeStart,
     handleSwipeEnd,
+    realignStudentPlans,
+    realigningPlans,
     updateProgress,
     updateBookSolvedQuestions,
     updatePlanCompletion,

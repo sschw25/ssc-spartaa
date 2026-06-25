@@ -61,6 +61,19 @@ function ConsultationContent() {
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [progressSort, setProgressSort] = useState<'shortage' | 'status' | 'name'>('shortage');
 
+  // 학생 목록 정렬 상태 추가
+  const [studentSortField, setStudentSortField] = useState<'name' | 'campus' | 'manager'>('name');
+  const [studentSortOrder, setStudentSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const handleSortStudents = (field: 'name' | 'campus' | 'manager') => {
+    if (studentSortField === field) {
+      setStudentSortOrder(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setStudentSortField(field);
+      setStudentSortOrder('asc');
+    }
+  };
+
   // 300명+ 대비 점진적 렌더링(더 보기)
   const PAGE_SIZE = 50;
   const [studentLimit, setStudentLimit] = useState(PAGE_SIZE);
@@ -455,6 +468,28 @@ function ConsultationContent() {
     return matchesSearch && matchesQuickFilter;
   });
 
+  // 정렬된 학생 목록
+  const sortedStudents = React.useMemo(() => {
+    return [...filteredStudents].sort((a, b) => {
+      let valA = '';
+      let valB = '';
+      
+      if (studentSortField === 'name') {
+        valA = a.name || '';
+        valB = b.name || '';
+      } else if (studentSortField === 'campus') {
+        valA = a.campus || '';
+        valB = b.campus || '';
+      } else if (studentSortField === 'manager') {
+        valA = a.manager || '';
+        valB = b.manager || '';
+      }
+
+      const comparison = valA.localeCompare(valB, 'ko');
+      return studentSortOrder === 'asc' ? comparison : -comparison;
+    });
+  }, [filteredStudents, studentSortField, studentSortOrder]);
+
   // 상태 우선순위 (부족 → 진행중 → 충족 → 계획없음)
   const statusRank: Record<string, number> = { behind: 0, 'on-track': 1, ahead: 2, 'no-plan': 3 };
 
@@ -485,7 +520,7 @@ function ConsultationContent() {
              (statusRank[a.status] ?? 9) - (statusRank[b.status] ?? 9);
     });
 
-  const visibleStudents = filteredStudents.slice(0, studentLimit);
+  const visibleStudents = sortedStudents.slice(0, studentLimit);
   const visibleProgressItems = filteredProgressItems.slice(0, progressLimit);
 
   const getProgressStatusStyle = (status: string) => {
@@ -861,9 +896,30 @@ function ConsultationContent() {
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-black/[0.08] bg-[#F5F5F7] text-[#86868B] font-bold">
-                          <th className="p-3.5 pl-6">원생명</th>
-                          <th className="p-3.5">캠퍼스</th>
-                          <th className="p-3.5">담당 코치</th>
+                          <th 
+                            className="p-3.5 pl-6 cursor-pointer hover:bg-black/[0.03] transition-colors select-none"
+                            onClick={() => handleSortStudents('name')}
+                          >
+                            <div className="flex items-center gap-1">
+                              원생명 {studentSortField === 'name' && (studentSortOrder === 'asc' ? '▲' : '▼')}
+                            </div>
+                          </th>
+                          <th 
+                            className="p-3.5 cursor-pointer hover:bg-black/[0.03] transition-colors select-none"
+                            onClick={() => handleSortStudents('campus')}
+                          >
+                            <div className="flex items-center gap-1">
+                              캠퍼스 {studentSortField === 'campus' && (studentSortOrder === 'asc' ? '▲' : '▼')}
+                            </div>
+                          </th>
+                          <th 
+                            className="p-3.5 cursor-pointer hover:bg-black/[0.03] transition-colors select-none"
+                            onClick={() => handleSortStudents('manager')}
+                          >
+                            <div className="flex items-center gap-1">
+                              담당 코치 {studentSortField === 'manager' && (studentSortOrder === 'asc' ? '▲' : '▼')}
+                            </div>
+                          </th>
                           <th className="p-3.5">진행 중인 학습 (과목별 현황)</th>
                           <th className="p-3.5 text-center">다음 상담일</th>
                         </tr>

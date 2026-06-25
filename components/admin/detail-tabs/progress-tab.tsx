@@ -1504,7 +1504,7 @@ export function ProgressTab() {
                                           />
                                         </div>
 
-                                        <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_96px_96px_92px] gap-2 items-end">
+                                        <div className="grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_96px_96px_86px_92px] gap-2 items-end">
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">설정 방식</Label>
                                             <Select
@@ -1552,13 +1552,28 @@ export function ProgressTab() {
                                             />
                                           </div>
 
+                                          <div className="space-y-1 min-w-0">
+                                            <Label className="text-[9px] text-[#86868B]">배속</Label>
+                                            <select
+                                              value={lec.speedMultiplier || 1.0}
+                                              onChange={(e) => updateLectureGoalField(sub.id, lec.id, 'speedMultiplier', Number(e.target.value))}
+                                              className="w-full rounded-lg border border-black/[0.08] text-[10px] h-8 bg-white px-1.5 focus:outline-none"
+                                            >
+                                              <option value="1.0">1.0배속</option>
+                                              <option value="1.2">1.2배속</option>
+                                              <option value="1.5">1.5배속</option>
+                                              <option value="1.8">1.8배속</option>
+                                              <option value="2.0">2.0배속</option>
+                                            </select>
+                                          </div>
+
                                           <div className="flex items-end col-span-2 sm:col-span-1">
                                             <Button
                                               type="button"
                                               aria-label={loading ? '생성 중' : '계획 생성'}
                                               onClick={() => generateAndSavePlans(sub.id, lec.id, 'lecture')}
                                               disabled={loading}
-                                              className="admin-fit-button w-full h-8 text-[10px] bg-[#0071E3] hover:bg-[#973df8] text-white rounded-lg font-bold generate-plan-btn-lecture flex items-center justify-center gap-1.5"
+                                              className="admin-fit-button w-full h-8 text-[10px] bg-[#0071E3] hover:bg-[#0077ED] text-white rounded-lg font-bold generate-plan-btn-lecture flex items-center justify-center gap-1.5"
                                             >
                                               {loading ? (
                                                 <>

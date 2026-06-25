@@ -122,6 +122,8 @@ function StudentReportInner() {
     studyTimeSlots,
     currentMinutes,
     todayDayKey,
+    realignStudentPlans,
+    realigningPlans,
   } = useReportState();
 
   if (!mounted) return null;
@@ -323,6 +325,8 @@ function StudentReportInner() {
           requestError={requestError}
           activeTab={activeTab}
           studyTimeLabels={studyTimeLabels}
+          realignStudentPlans={realignStudentPlans}
+          realigningPlans={realigningPlans}
         />
 
         {/* 4. 과목별 진도 탭 */}

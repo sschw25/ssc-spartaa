@@ -1215,7 +1215,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           const updatedLec = { ...l, [field]: value };
           const goalType = updatedLec.goalType || 'weeks';
           const goalValue = updatedLec.goalValue || 0;
-          if (goalValue > 0 && (field === 'goalType' || field === 'goalValue')) {
+          if (goalValue > 0 && (field === 'goalType' || field === 'goalValue' || field === 'speedMultiplier' || field === 'estimatedMinutesPerUnit')) {
             const { plans, calculatedTargetDate } = generateDetailedPlansLib(
               lectureId,
               updatedLec.totalLectures,
