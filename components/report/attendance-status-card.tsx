@@ -78,8 +78,9 @@ export function AttendanceStatusCard() {
 
   return (
     <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-5">
-      <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3.5">
+      <div className="flex flex-col gap-4">
+        {/* 상단: 상태 표시 */}
+        <div className="flex items-center gap-3.5 pb-2">
           <span
             className={`grid size-12 shrink-0 place-items-center rounded-2xl ${
               status.loading ? 'bg-slate-100 text-slate-400' : checkedIn ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
@@ -87,37 +88,49 @@ export function AttendanceStatusCard() {
           >
             {status.loading ? <Loader2 className="size-5 animate-spin" /> : checkedIn ? <LogIn className="size-5" /> : <LogOut className="size-5" />}
           </span>
-          <div>
+          <div className="min-w-0 flex-1">
             <p className="text-[11px] font-bold uppercase tracking-wider text-[#86868B]">현재 등하원 상태</p>
             {status.loading ? (
               <p className="mt-0.5 text-lg font-black text-slate-400">확인 중…</p>
             ) : checkedIn ? (
-              <>
-                <p className="mt-0.5 text-lg font-black text-[#1D1D1F]">
-                  등원 중
-                  {status.since && <span className="ml-2 text-sm font-bold text-[#0071E3]">{timeKST(status.since)}부터</span>}
-                </p>
+              <div className="mt-0.5 space-y-1">
+                <div className="flex flex-wrap items-baseline gap-x-1.5">
+                  <span className="text-lg font-black text-[#1D1D1F]">등원 중</span>
+                  {status.since && (
+                    <span className="text-xs font-bold text-[#0071E3] whitespace-nowrap">
+                      {timeKST(status.since)}부터
+                    </span>
+                  )}
+                </div>
                 {elapsedMin > 0 && (
-                  <p className="mt-0.5 inline-flex items-center gap-1 text-xs font-bold text-emerald-600">
-                    <Flame className="size-3.5" /> {fmtMin(elapsedMin)}째 집중 중
-                  </p>
+                  <div className="pt-0.5">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
+                      <Flame className="size-3 shrink-0" />
+                      {fmtMin(elapsedMin)}째 집중 중
+                    </span>
+                  </div>
                 )}
-              </>
+              </div>
             ) : (
               <p className="mt-0.5 text-lg font-black text-[#1D1D1F]">하원 상태</p>
             )}
           </div>
         </div>
 
-        <div className="flex items-start gap-2.5 rounded-2xl bg-[#0071E3]/[0.06] px-4 py-3 ring-1 ring-[#0071E3]/15">
+        {/* 하단: 안내 박스 */}
+        <div className="flex items-start gap-2.5 rounded-2xl bg-[#0071E3]/[0.06] p-4 ring-1 ring-[#0071E3]/15 w-full">
           <ScanLine className="mt-0.5 size-4 shrink-0 text-[#0071E3]" />
-          <p className="text-xs font-semibold leading-5 text-[#0F172A]">
-            등·하원은 <b>입구 키오스크의 QR</b>을 휴대폰으로 스캔하면 자동 처리돼요.
-            <span className="block text-[11px] font-medium text-[#64748B]">한 번 스캔할 때마다 등원 ↔ 하원이 전환됩니다.</span>
-            <span className="block mt-1 text-[11px] font-semibold text-[#F56300]">
+          <div className="space-y-1.5 text-xs text-[#0F172A] leading-normal flex-1">
+            <p className="font-semibold">
+              등·하원은 <b>입구 키오스크의 QR</b>을 휴대폰으로 스캔하면 자동 처리돼요.
+            </p>
+            <p className="text-[11px] text-[#64748B] font-medium">
+              한 번 스캔할 때마다 등원 ↔ 하원이 전환됩니다.
+            </p>
+            <p className="text-[11px] text-[#F56300] font-semibold pt-1.5 border-t border-[#0071E3]/10">
               ※ 하원하려면 QR을 재스캔하거나, 출결태블릿에서 출결번호를 누른 뒤 [하원]을 눌러주세요.
-            </span>
-          </p>
+            </p>
+          </div>
         </div>
       </div>
 
