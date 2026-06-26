@@ -51,10 +51,26 @@ interface Data {
   rows?: Row[];
 }
 
+interface SaturdayExcuseRow {
+  studentId: string;
+  name: string;
+  campus: string;
+  manager?: string;
+  excuseId: string | null;
+  status: 'not_requested' | 'pending' | 'submitted' | 'excused' | 'unexcused_late';
+  requestedAt: string | null;
+  reason: string | null;
+  submittedAt: string | null;
+  resolvedAt: string | null;
+  demeritPoint: number | null;
+}
+
 type SortKey = 'name' | 'checkIn' | 'checkOut' | 'minutes' | 'arrival' | 'late';
 type SortDir = 'asc' | 'desc';
 
 const DEADLINE: Record<Arrival, number> = { '08:20': 500, '09:00': 540 };
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 const statusOptions: Array<{ key: StatusFilter; label: string }> = [
   { key: 'all', label: '전체' },
   { key: 'present', label: '등원 중' },
@@ -110,7 +126,7 @@ function AdminAttendanceContent() {
 
   // 토요 지각 증빙용 상태
   const [satDate, setSatDate] = useState('');
-  const [satData, setSatData] = useState<any[]>([]);
+  const [satData, setSatData] = useState<SaturdayExcuseRow[]>([]);
   const [satLoading, setSatLoading] = useState(false);
   const [selectedSatStudents, setSelectedSatStudents] = useState<string[]>([]);
   const [demeritModal, setDemeritModal] = useState<{ studentId: string; name: string } | null>(null);
@@ -261,8 +277,8 @@ function AdminAttendanceContent() {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || '저장 실패');
       toast.success(`지각 기준을 ${value} 으로 저장했습니다.`);
-    } catch (e: any) {
-      toast.error(e?.message || '지각 기준 저장에 실패했습니다.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '지각 기준 저장에 실패했습니다.'));
       setReloadKey((k) => k + 1);
     }
   };
@@ -286,8 +302,8 @@ function AdminAttendanceContent() {
       if (!res.ok || !json.success) throw new Error(json.message || '저장 실패');
       toast.success(clear ? '출결 기록을 삭제하고 미등원 처리했습니다.' : '출결 시간이 저장되었습니다.');
       setReloadKey((k) => k + 1);
-    } catch (e: any) {
-      toast.error(e?.message || '출결 저장에 실패했습니다.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '출결 저장에 실패했습니다.'));
     } finally {
       setSavingId('');
     }

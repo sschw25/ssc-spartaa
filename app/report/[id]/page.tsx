@@ -13,7 +13,7 @@ import { ConsultationTab } from '@/components/report/consultation-tab';
 import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
-import type { MockExam, PenaltyRecord } from '@/lib/types/student';
+import type { MockExam, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
 function StudentReportInner() {
   const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
@@ -242,6 +242,10 @@ function StudentReportInner() {
     );
   }
 
+  const pendingSaturdayLateExcuses = ((student.saturdayLateExcuses || []) as SaturdayLateExcuse[]).filter(
+    (excuse) => excuse.status === 'pending'
+  );
+
   return (
     <StudentLayout
       student={student}
@@ -296,13 +300,13 @@ function StudentReportInner() {
         )}
 
         {/* 0-2. 토요 지각 증빙 요청 공지 (학생 전용, 미회신 증빙이 있을 때만) */}
-        {isStudentReport && student.saturdayLateExcuses && student.saturdayLateExcuses.filter((e: any) => e.status === 'pending').length > 0 && (
+        {isStudentReport && pendingSaturdayLateExcuses.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
             <SaturdayLateExcuseNotice
-              excuses={student.saturdayLateExcuses.filter((e: any) => e.status === 'pending')}
+              excuses={pendingSaturdayLateExcuses}
               studentId={student.id}
               onResponded={(updatedExcuses) => {
-                setStudent((prev: any) => (prev ? { ...prev, saturdayLateExcuses: updatedExcuses } : prev));
+                setStudent((prev: Student | null) => (prev ? { ...prev, saturdayLateExcuses: updatedExcuses } : prev));
               }}
             />
           </div>

@@ -113,6 +113,15 @@ function nowKst(): { dateStr: string; minOfDay: number } {
 }
 
 type PeriodStatus = 'present' | 'absent' | 'future';
+type ManualLeaveType = 'fullday' | 'morning' | 'afternoon' | 'night' | 'sick';
+const MANUAL_LEAVE_TYPES: ManualLeaveType[] = ['fullday', 'morning', 'afternoon', 'night', 'sick'];
+
+function isManualLeaveType(value: string): value is ManualLeaveType {
+  return MANUAL_LEAVE_TYPES.includes(value as ManualLeaveType);
+}
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 function timeStringToMin(timeStr: string): number {
   if (!timeStr || !timeStr.includes(':')) return -1;
@@ -130,41 +139,44 @@ interface PeriodState {
 
 function computePeriods(
   student: Student | null,
+  sessions: StudySession[],
   todayStr: string,
   nowDateStr: string,
   nowMin: number,
 ): PeriodStatus[] {
   const cmp = todayStr.localeCompare(nowDateStr);
+  const effectiveNow = cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
   
   // 당일 승인된 휴가 신청 목록 필터링
   const approvedLeaves = student
     ? (student.leaveRequests || []).filter((r) => r.date === todayStr && r.status === 'approved')
     : [];
 
-  return PERIODS.map((period, idx) => {
-    if (cmp > 0 || (cmp === 0 && period.start >= nowMin)) return 'future';
-    
-    // 기본 출결 전제 (기본: 출석)
-    let defaultStatus: PeriodStatus = 'present';
-    
-    // 휴가 종류에 따른 자동 결석(absent) 매핑
-    for (const leave of approvedLeaves) {
+  const isLeavePeriod = (idx: number) =>
+    approvedLeaves.some((leave) => {
       const type = leave.type;
-      if (type === 'fullday' || type === 'sick') {
-        defaultStatus = 'absent';
-      } else if (type === 'morning' && idx < 2) {
-        // 오전 반차: 1, 2교시 (index 0, 1) 결석
-        defaultStatus = 'absent';
-      } else if (type === 'afternoon' && idx >= 2 && idx <= 4) {
-        // 오후 반차: 3, 4, 5교시 (index 2, 3, 4) 결석
-        defaultStatus = 'absent';
-      } else if (type === 'night' && idx >= 5 && idx <= 6) {
-        // 야간 반차: 6, 7교시 (index 5, 6) 결석
-        defaultStatus = 'absent';
-      }
-    }
-    
-    return defaultStatus;
+      return (
+        type === 'fullday' ||
+        type === 'sick' ||
+        (type === 'morning' && idx < 2) ||
+        (type === 'afternoon' && idx >= 2 && idx <= 4) ||
+        (type === 'night' && idx >= 5 && idx <= 6)
+      );
+    });
+
+  return PERIODS.map((period, idx) => {
+    const covered = sessions.some((session) => {
+      const inM = kstMin(session.check_in);
+      let outM = session.check_out ? kstMin(session.check_out) : effectiveNow;
+      if (outM < inM) outM += 1440;
+      return inM < period.end && outM > period.start;
+    });
+    if (covered) return 'present';
+
+    const leavePeriod = isLeavePeriod(idx);
+    if (leavePeriod) return 'absent';
+    if (cmp > 0 || (cmp === 0 && period.start >= nowMin)) return 'future';
+    return 'absent';
   });
 }
 
@@ -395,7 +407,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
         const isCheckedIn = student ? openIds.has(student.id) : false;
         const sessions = student ? (sessionMap.get(student.id) ?? []) : [];
         const isLeftToday = student ? (sessions.length > 0 && sessions.every((s) => s.check_out)) : false;
-        const raw = computePeriods(student, today, nowDateStr, nowMin);
+        const raw = computePeriods(student, sessions, today, nowDateStr, nowMin);
         const periods: PeriodState[] = raw.map((s, idx) => {
           const key = student ? `${student.id}:${idx}` : '';
           const override = student ? periodOverrides.get(key) : undefined;
@@ -486,7 +498,7 @@ export default function SeatBoardPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [checkInTime, setCheckInTime] = useState('');
   const [checkOutTime, setCheckOutTime] = useState('');
-  const [leaveType, setLeaveType] = useState<'fullday' | 'morning' | 'afternoon' | 'night' | 'sick'>('fullday');
+  const [leaveType, setLeaveType] = useState<ManualLeaveType>('fullday');
   const [leaveReason, setLeaveReason] = useState('관리자 수동 등록');
   const [submittingAttendance, setSubmittingAttendance] = useState(false);
   const [submittingLeave, setSubmittingLeave] = useState(false);
@@ -612,6 +624,9 @@ export default function SeatBoardPage() {
       arr.push(s);
       m.set(s.student_id, arr);
     }
+    for (const arr of m.values()) {
+      arr.sort((a, b) => a.check_in.localeCompare(b.check_in));
+    }
     return m;
   }, [sessions]);
 
@@ -630,21 +645,17 @@ export default function SeatBoardPage() {
     }
   }
 
-  useEffect(() => {
-    if (selectedStudent) {
-      const studentSessions = sessionMap.get(selectedStudent.id) ?? [];
-      if (studentSessions.length > 0) {
-        const latest = studentSessions[studentSessions.length - 1];
-        setCheckInTime(formatIsoToHM(latest.check_in));
-        setCheckOutTime(latest.check_out ? formatIsoToHM(latest.check_out) : '');
-      } else {
-        setCheckInTime('');
-        setCheckOutTime('');
-      }
-      setLeaveType('fullday');
-      setLeaveReason('관리자 수동 등록');
-    }
-  }, [selectedStudent, sessionMap]);
+  function openAttendanceModal(student: Student) {
+    const studentSessions = sessionMap.get(student.id) ?? [];
+    const latest = studentSessions[studentSessions.length - 1];
+
+    setSelectedStudent(student);
+    setCheckInTime(latest ? formatIsoToHM(latest.check_in) : '');
+    setCheckOutTime(latest?.check_out ? formatIsoToHM(latest.check_out) : '');
+    setLeaveType('fullday');
+    setLeaveReason('관리자 수동 등록');
+    setIsModalOpen(true);
+  }
 
   async function handleSaveAttendance() {
     if (!selectedStudent) return;
@@ -671,8 +682,8 @@ export default function SeatBoardPage() {
       toast.success('수동 출결이 저장되었습니다.');
       await loadData();
       setIsModalOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message || '출결 저장 중 오류가 발생했습니다.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '출결 저장 중 오류가 발생했습니다.'));
     } finally {
       setSubmittingAttendance(false);
     }
@@ -699,8 +710,8 @@ export default function SeatBoardPage() {
       toast.success('당일 출결 기록이 초기화되었습니다.');
       await loadData();
       setIsModalOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message || '출결 삭제 중 오류가 발생했습니다.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '출결 삭제 중 오류가 발생했습니다.'));
     } finally {
       setSubmittingAttendance(false);
     }
@@ -727,8 +738,8 @@ export default function SeatBoardPage() {
       toast.success('수동 휴무(즉시 승인)가 등록되었습니다.');
       await loadData();
       setIsModalOpen(false);
-    } catch (e: any) {
-      toast.error(e?.message || '휴가 등록 중 오류가 발생했습니다.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '휴가 등록 중 오류가 발생했습니다.'));
     } finally {
       setSubmittingLeave(false);
     }
@@ -762,12 +773,14 @@ export default function SeatBoardPage() {
   const rowProps: Omit<RowProps, 'seats'> = {
     seatMap, sessionMap, openIds, today, nowDateStr, nowMin,
     periodOverrides, onTogglePeriod: handleTogglePeriod,
-    onCardClick: (student) => {
-      setSelectedStudent(student);
-      setIsModalOpen(true);
-    },
+    onCardClick: openAttendanceModal,
     onNameClick: (student) => {
-      openStudent(student);
+      openStudent(student, {
+        onUpdate: (updated) => {
+          setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+        },
+        allStudents: students,
+      });
     },
   };
 
@@ -1064,7 +1077,9 @@ export default function SeatBoardPage() {
                     <Label className="text-[10px] font-bold text-slate-400">휴무 구분</Label>
                     <Select
                       value={leaveType}
-                      onValueChange={(val: any) => setLeaveType(val)}
+                      onValueChange={(value) => {
+                        if (isManualLeaveType(value)) setLeaveType(value);
+                      }}
                     >
                       <SelectTrigger className="h-9 rounded-lg text-xs bg-white border-black/[0.08]">
                         <SelectValue placeholder="구분 선택" />

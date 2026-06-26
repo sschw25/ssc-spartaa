@@ -3,6 +3,9 @@ import { isAdmin } from '@/lib/auth';
 import { getStudents, saveStudent, getSessionsByDate } from '@/lib/store';
 import type { SaturdayLateExcuse, PenaltyRecord } from '@/lib/types/student';
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 function getPrevSaturday(refDate = new Date()): string {
   const date = new Date(refDate);
   const day = date.getDay(); // 0: 일, 1: 월, ..., 6: 토
@@ -60,9 +63,9 @@ export async function GET(req: NextRequest) {
     }).filter(Boolean);
 
     return NextResponse.json({ success: true, date, rows });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('saturday-excuse GET error:', error);
-    return NextResponse.json({ success: false, message: error?.message || '조회 실패' }, { status: 500 });
+    return NextResponse.json({ success: false, message: getErrorMessage(error, '조회 실패') }, { status: 500 });
   }
 }
 
@@ -171,8 +174,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: false, message: '올바르지 않은 action입니다.' }, { status: 400 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('saturday-excuse POST error:', error);
-    return NextResponse.json({ success: false, message: error?.message || '처리 실패' }, { status: 500 });
+    return NextResponse.json({ success: false, message: getErrorMessage(error, '처리 실패') }, { status: 500 });
   }
 }

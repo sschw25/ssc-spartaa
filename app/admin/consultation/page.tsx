@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
+import React, { Suspense, useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -490,15 +490,13 @@ function ConsultationContent() {
   };
 
   // 5대 퀵 필터용 실시간 카운트 집계
-  const stagnantCount = useMemo(() => campusScopedStudents.filter(s => isStagnant24h(s)).length, [campusScopedStudents]);
-  const behindCount = useMemo(() => {
-    return campusScopedStudents.filter(s => {
-      const items = allProgressItems.filter(item => item.studentId === s.id);
-      return items.some(item => item.status === 'behind');
-    }).length;
-  }, [campusScopedStudents, allProgressItems]);
-  const missingGradeCount = useMemo(() => campusScopedStudents.filter(s => isWeeklyGradeMissing(s)).length, [campusScopedStudents]);
-  const consultationCount = useMemo(() => pendingConsultationStudents.length, [pendingConsultationStudents]);
+  const stagnantCount = campusScopedStudents.filter(s => isStagnant24h(s)).length;
+  const behindCount = campusScopedStudents.filter(s => {
+    const items = allProgressItems.filter(item => item.studentId === s.id);
+    return items.some(item => item.status === 'behind');
+  }).length;
+  const missingGradeCount = campusScopedStudents.filter(s => isWeeklyGradeMissing(s)).length;
+  const consultationCount = pendingConsultationStudents.length;
 
   // 검색 및 필터링된 학생 목록
   const filteredStudents = campusScopedStudents.filter(s => {
@@ -520,26 +518,24 @@ function ConsultationContent() {
   });
 
   // 정렬된 학생 목록
-  const sortedStudents = React.useMemo(() => {
-    return [...filteredStudents].sort((a, b) => {
-      let valA = '';
-      let valB = '';
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    let valA = '';
+    let valB = '';
       
-      if (studentSortField === 'name') {
-        valA = a.name || '';
-        valB = b.name || '';
-      } else if (studentSortField === 'campus') {
-        valA = a.campus || '';
-        valB = b.campus || '';
-      } else if (studentSortField === 'manager') {
-        valA = a.manager || '';
-        valB = b.manager || '';
-      }
+    if (studentSortField === 'name') {
+      valA = a.name || '';
+      valB = b.name || '';
+    } else if (studentSortField === 'campus') {
+      valA = a.campus || '';
+      valB = b.campus || '';
+    } else if (studentSortField === 'manager') {
+      valA = a.manager || '';
+      valB = b.manager || '';
+    }
 
-      const comparison = valA.localeCompare(valB, 'ko');
-      return studentSortOrder === 'asc' ? comparison : -comparison;
-    });
-  }, [filteredStudents, studentSortField, studentSortOrder]);
+    const comparison = valA.localeCompare(valB, 'ko');
+    return studentSortOrder === 'asc' ? comparison : -comparison;
+  });
 
   // 상태 우선순위 (부족 → 진행중 → 충족 → 계획없음)
   const statusRank: Record<string, number> = { behind: 0, 'on-track': 1, ahead: 2, 'no-plan': 3 };

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export async function POST(req: NextRequest) {
   const sessionStudentId = await getStudentSessionId();
   if (!sessionStudentId) {
@@ -55,8 +58,8 @@ export async function POST(req: NextRequest) {
       message: '사유 증빙 회신이 완료되었습니다.',
       saturdayLateExcuses: student.saturdayLateExcuses 
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('saturday-excuse submit error:', error);
-    return NextResponse.json({ success: false, message: error?.message || '처리 중 오류가 발생했습니다.' }, { status: 500 });
+    return NextResponse.json({ success: false, message: getErrorMessage(error, '처리 중 오류가 발생했습니다.') }, { status: 500 });
   }
 }
