@@ -273,13 +273,13 @@ function PeriodCell({
     );
   }
 
-  // 2) 기본 결석 (미등원): 공란 + 연한 회색 테두리/흰 배경 (수기 체크가 편하도록)
+  // 2) 기본 결석 (미등원): 교시 번호 표시 (future보다 연한 slate-200)
   return (
     <div
       onClick={onClick}
       className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}
     >
-      <span className="text-[10px] leading-none text-slate-300" />
+      <span className="text-[7px] leading-none text-slate-200 font-bold">{label}</span>
     </div>
   );
 }
