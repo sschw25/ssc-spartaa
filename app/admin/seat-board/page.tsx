@@ -888,18 +888,22 @@ export default function SeatBoardPage() {
   }
 
   const { dateStr: nowDateStr, minOfDay: nowMin } = nowKst();
+
+  const openStudentInfo = (student: Student) => {
+    openStudent(student, {
+      defaultTab: 'info',
+      onUpdate: (updated) => {
+        setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      },
+      allStudents: students,
+    });
+  };
+
   const rowProps: Omit<RowProps, 'seats'> = {
     seatMap, sessionMap, openIds, today, nowDateStr, nowMin,
     periodOverrides, onTogglePeriod: handleTogglePeriod,
-    onCardClick: openAttendanceModal,
-    onNameClick: (student) => {
-      openStudent(student, {
-        onUpdate: (updated) => {
-          setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
-        },
-        allStudents: students,
-      });
-    },
+    onCardClick: openStudentInfo,
+    onNameClick: openStudentInfo,
   };
 
   const layoutPages = CAMPUS_LAYOUTS[campus];
