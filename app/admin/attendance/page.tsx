@@ -495,7 +495,7 @@ function AdminAttendanceContent() {
                 토요 지각 증빙 대상자: 총 {satData.length}명 (결석 상태 & 반차/휴가 미승인 학생)
               </span>
               <button
-                onClick={handleRequestSatExcuse}
+                onClick={() => handleRequestSatExcuse()}
                 disabled={selectedSatStudents.length === 0}
                 className="rounded-xl bg-[#0071E3] px-3.5 py-2 text-xs font-black text-white hover:bg-[#0077ED] transition active:scale-[0.98] disabled:opacity-50"
               >
