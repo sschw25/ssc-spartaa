@@ -228,6 +228,15 @@ function PeriodCell({
     );
   }
 
+  // 정기외출 이후 미복귀 — 세션 유무/미래 여부 불문하고 최우선 (8교시 제외)
+  if (isAwayAbsent) {
+    return (
+      <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}>
+        <span className="text-[8px] font-black leading-none text-slate-400">x</span>
+      </div>
+    );
+  }
+
   // 미래 교시
   if (status === 'future') {
     return (
@@ -257,15 +266,6 @@ function PeriodCell({
     return (
       <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
         <span className="text-[10px] font-black leading-none text-amber-600">X</span>
-      </div>
-    );
-  }
-
-  // 결석 — 정기외출 이후 미복귀
-  if (isAwayAbsent) {
-    return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}>
-        <span className="text-[8px] font-black leading-none text-slate-400">x</span>
       </div>
     );
   }
@@ -509,11 +509,10 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             if (matched) awayTime = matched.awayTime;
           }
 
-          // 정기 외출 이탈 이후 미복귀 교시
+          // 정기 외출 이탈 이후 미복귀 교시 — 세션이 덮더라도 x 표시
           const isAwayAbsent =
             awayDepartureMin > 0 &&
-            PERIODS[idx].start >= awayDepartureMin &&
-            s !== 'present';
+            PERIODS[idx].start >= awayDepartureMin;
 
           return {
             status: override ?? s,
