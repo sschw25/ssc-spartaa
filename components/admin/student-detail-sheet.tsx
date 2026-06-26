@@ -25,7 +25,8 @@ import { toast } from 'sonner';
 import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
-  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X
+  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X,
+  CalendarDays, Plus, Trash2
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -175,7 +176,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     if (isOpen) {
       setActiveTab(defaultTab || 'progress');
     }
-  }, [isOpen, defaultTab]);
+  }, [isOpen, defaultTab, student?.id]);
   const [resolvedReqIds, setResolvedReqIds] = useState<string[]>([]);
   const [resolvingReqId, setResolvingReqId] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});
@@ -245,6 +246,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
   const [seatNumber, setSeatNumber] = useState('');
   const [awaySchedules, setAwaySchedules] = useState<AwaySchedule[]>([]);
+  const [studentDdays, setStudentDdays] = useState<Array<{id: string; title: string; date: string; createdAt: string}>>([]);
+  const [ddayAdminTitle, setDdayAdminTitle] = useState('');
+  const [ddayAdminDate, setDdayAdminDate] = useState('');
+  const [ddayAdminAdding, setDdayAdminAdding] = useState(false);
   const [shareToken, setShareToken] = useState<string | undefined>(undefined);
   const [shareTokenExpiresAt, setShareTokenExpiresAt] = useState<string | undefined>(undefined);
   const [sharePassword, setSharePassword] = useState<string | undefined>(undefined);
@@ -439,6 +444,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
       setSeatNumber(student.seatNumber != null ? String(student.seatNumber) : '');
       setAwaySchedules(student.awaySchedules || []);
+      setStudentDdays(student.ddays || []);
       setShareToken(student.shareToken);
       setShareTokenExpiresAt(student.shareTokenExpiresAt);
       setSharePassword(undefined); // PIN은 생성 직후 API 응답에서만 일회성 표시
@@ -2283,6 +2289,44 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     }, 100);
   };
 
+  const scrollToMaterial = (materialId: string, materialType: 'book' | 'lecture') => {
+    setActiveTab('progress');
+    let targetSubjectName = '';
+    
+    for (const subject of subjectsState) {
+      if (materialType === 'book') {
+        if (subject.books?.some((b) => b.id === materialId)) {
+          targetSubjectName = subject.name;
+          break;
+        }
+      } else {
+        if (subject.lectures?.some((l) => l.id === materialId)) {
+          targetSubjectName = subject.name;
+          break;
+        }
+      }
+    }
+
+    if (targetSubjectName) {
+      const targetSubject = subjectsState.find((s) => s.name === targetSubjectName);
+      if (targetSubject) {
+        setCollapsedSubjects((prev) => ({ ...prev, [targetSubject.id]: false }));
+      }
+    }
+
+    setTimeout(() => {
+      const el = document.getElementById(`material-card-${materialId}`) ||
+                 (targetSubjectName ? document.getElementById(`subject-card-${targetSubjectName}`) : null);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('ring-2', 'ring-[#0071E3]', 'ring-offset-2', 'transition-all', 'duration-300');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-[#0071E3]', 'ring-offset-2');
+        }, 1500);
+      }
+    }, 150);
+  };
+
 
 
   // 상담 노션 양식 템플릿 불러오기
@@ -3683,7 +3727,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
 
                     {req.proposedGoal && (
-                      <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[10px] space-y-1 my-1.5">
+                      <div 
+                        onClick={() => scrollToMaterial(req.proposedGoal?.materialId ?? '', req.proposedGoal?.materialType ?? 'book')}
+                        className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[10px] space-y-1 my-1.5 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all active:scale-[0.99] group"
+                        title="클릭하여 학습 현황 확인 및 스크롤"
+                      >
                         <p className="font-black text-[#0071E3] flex items-center gap-1">📋 제안된 학습 계획 변경 사항</p>
                         <p className="font-bold text-slate-600">
                           • 대상: {req.proposedGoal.materialType === 'book' ? '📚 교재' : '💻 인강'}
@@ -3979,6 +4027,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 <span className="hidden sm:inline">벌점 관리</span>
                 <span className="sm:hidden">벌점</span>
               </TabsTrigger>
+              <TabsTrigger id="admin-tab-ddays" value="ddays" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">D-Day</span>
+                <span className="sm:hidden">D-Day</span>
+              </TabsTrigger>
               <TabsTrigger id="admin-tab-info" value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <User className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학생 정보</span>
@@ -4163,6 +4216,110 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                   if (onUpdate) onUpdate(updated);
                 }}
               />
+            </TabsContent>
+
+            {/* TAB D-Day: 학생 D-Day 관리 */}
+            <TabsContent value="ddays" className="space-y-5 outline-none">
+              <div className="rounded-2xl border border-black/[0.06] bg-white shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-black/[0.04] flex items-center gap-2 bg-[#FAFAFA]">
+                  <CalendarDays className="w-4 h-4 text-[#0071E3]" />
+                  <h3 className="text-xs font-black text-[#1D1D1F]">D-Day 목록</h3>
+                </div>
+
+                {/* 현황 */}
+                <div className="px-5 py-3 space-y-2 max-h-60 overflow-y-auto">
+                  {studentDdays.length === 0 ? (
+                    <p className="text-center text-xs text-slate-400 font-bold py-6">등록된 D-Day가 없습니다.</p>
+                  ) : (
+                    [...studentDdays]
+                      .sort((a, b) => a.date.localeCompare(b.date))
+                      .map((d) => {
+                        const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }));
+                        const target = new Date(d.date);
+                        const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+                        const label = diff === 0 ? 'D-Day' : diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+                        const isPast = diff < 0;
+                        return (
+                          <div key={d.id} className="flex items-center gap-3 rounded-xl border border-black/[0.06] bg-white px-3 py-2.5 hover:bg-slate-50/50 transition-colors">
+                            <span className={`shrink-0 text-xs font-black min-w-[3.5rem] text-center ${
+                              diff === 0 ? 'text-emerald-600' : isPast ? 'text-slate-400' : 'text-[#0071E3]'
+                            }`}>{label}</span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs font-bold text-[#1D1D1F] truncate">{d.title}</p>
+                              <p className="text-[10px] font-semibold text-slate-400">{d.date}</p>
+                            </div>
+                            <button
+                              onClick={async () => {
+                                const res = await fetch(`/api/admin/students/${student.id}/ddays?id=${d.id}`, { method: 'DELETE' });
+                                const json = await res.json();
+                                if (json.success) {
+                                  const updated = { ...student, ddays: studentDdays.filter((x) => x.id !== d.id) };
+                                  setStudentDdays(updated.ddays!);
+                                  if (onUpdate) onUpdate(updated as Student);
+                                }
+                              }}
+                              className="shrink-0 text-slate-300 hover:text-red-500 transition-colors"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+
+                {/* 추가 */}
+                <div className="px-5 py-4 border-t border-black/[0.04] bg-[#FAFAFA] space-y-2">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">새 D-Day 추가 (관리자)</p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={ddayAdminTitle}
+                      onChange={(e) => setDdayAdminTitle(e.target.value)}
+                      placeholder="이름 (예: 수능, 기말고사)"
+                      className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                    />
+                    <input
+                      type="date"
+                      value={ddayAdminDate}
+                      onChange={(e) => setDdayAdminDate(e.target.value)}
+                      className="rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                    />
+                  </div>
+                  <button
+                    disabled={ddayAdminAdding || !ddayAdminTitle.trim() || !ddayAdminDate}
+                    onClick={async () => {
+                      if (!ddayAdminTitle.trim() || !ddayAdminDate) return;
+                      setDdayAdminAdding(true);
+                      try {
+                        const res = await fetch(`/api/admin/students/${student.id}/ddays`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ title: ddayAdminTitle.trim(), date: ddayAdminDate }),
+                        });
+                        const json = await res.json();
+                        if (json.success) {
+                          const newDdays = [...studentDdays, json.dday];
+                          setStudentDdays(newDdays);
+                          setDdayAdminTitle('');
+                          setDdayAdminDate('');
+                          if (onUpdate) onUpdate({ ...student, ddays: newDdays } as Student);
+                        }
+                      } finally {
+                        setDdayAdminAdding(false);
+                      }
+                    }}
+                    className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0071E3]/90 text-white text-xs font-black py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                  >
+                    {ddayAdminAdding ? (
+                      <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    ) : (
+                      <Plus className="w-3.5 h-3.5" />
+                    )}
+                    D-Day 추가
+                  </button>
+                </div>
+              </div>
             </TabsContent>
 
             {/* TAB 5: 학생 기본정보 관리 및 회원탈퇴 */}

@@ -889,7 +889,7 @@ export function ProgressTab() {
                                   getMaterialBenchmark(materialBenchmarks, 'book', book.title)
                                 );
                                 return (
-                                  <div key={book.id} className="p-3.5 rounded-xl border border-black/[0.04] bg-white flex flex-col gap-2.5 shadow-sm">
+                                  <div key={book.id} id={`material-card-${book.id}`} className="p-3.5 rounded-xl border border-black/[0.04] bg-white flex flex-col gap-2.5 shadow-sm transition-all duration-300">
                                     {isEditing ? (
                                       <div className="space-y-2.5">
                                         <div className="flex gap-2">
@@ -1267,7 +1267,7 @@ export function ProgressTab() {
                                   getMaterialBenchmark(materialBenchmarks, 'lecture', lec.name)
                                 );
                                 return (
-                                  <div key={lec.id} className="p-3.5 rounded-xl border border-black/[0.04] bg-white flex flex-col gap-2.5 shadow-sm">
+                                  <div key={lec.id} id={`material-card-${lec.id}`} className="p-3.5 rounded-xl border border-black/[0.04] bg-white flex flex-col gap-2.5 shadow-sm transition-all duration-300">
                                     {isEditing ? (
                                       <div className="space-y-2.5">
                                         <div className="flex gap-2">

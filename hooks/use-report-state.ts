@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, BookOpen, FileText } from 'lucide-react';
-import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal } from '@/lib/types/student';
+import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, BookOpen, FileText, Shield } from 'lucide-react';
+import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   MONTHLY_HALFDAY_QUOTA,
@@ -328,6 +328,7 @@ export function useReportState() {
   const [showLeaveHistory, setShowLeaveHistory] = useState(false);
   const [showSuggestionHistory, setShowSuggestionHistory] = useState(false);
 
+  const [mockExams, setMockExams] = useState<MockExam[]>([]);
   const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; date: string; reason: string }>(() => ({
     type: 'morning',
     date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()),
@@ -431,6 +432,7 @@ export function useReportState() {
             setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
             setMaterialBenchmarks(json.materialBenchmarks || {});
             setStudyStats(json.studyStats || null);
+            setMockExams(json.mockExams || []);
           } else {
             setError(true);
           }
@@ -530,6 +532,7 @@ export function useReportState() {
         setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
         setMaterialBenchmarks(json.materialBenchmarks || {});
         setStudyStats(json.studyStats || null);
+        setMockExams(json.mockExams || []);
         setLoading(false);
       } else {
         setSharePasswordError(json.message || '비밀번호가 올바르지 않습니다.');
@@ -1455,6 +1458,14 @@ export function useReportState() {
   const notificationCount = studentNotifications.length;
   const notificationPreview = studentNotifications.slice(0, 5);
 
+  const totalPenaltyPoints = useMemo(() => {
+    if (!student) return 0;
+    return (student.penalties || []).reduce(
+      (sum: number, p: any) => sum + (p.type === 'penalty' ? p.points : -p.points),
+      0
+    );
+  }, [student]);
+
   const reportNavItems = isStudentReport
     ? [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
@@ -1467,6 +1478,7 @@ export function useReportState() {
         { href: '#student-requests', label: '반차 신청', meta: `반차 ${homeHalfLeft}회 남음`, icon: Calendar },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
+        { href: '#student-penalties', label: '벌점', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },
       ]
     : [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
@@ -1474,6 +1486,7 @@ export function useReportState() {
         { href: '#coach-feedback', label: '코칭 소견', meta: '학부모 브리핑', icon: MessageSquare },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
+        { href: '#student-penalties', label: '벌점 내역', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },
       ];
 
   const realignStudentPlans = async (mode: 'keepTargetDate' | 'keepPace') => {
@@ -1517,6 +1530,7 @@ export function useReportState() {
     setStudent,
     materialBenchmarks,
     studyStats,
+    mockExams,
     loading,
     error,
     mounted,

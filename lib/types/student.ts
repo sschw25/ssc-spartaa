@@ -104,7 +104,7 @@ export interface ConsultationLog {
 }
 
 // 휴가/반차/휴식권/병가 신청 (상담 변경신청과 별개의 전용 구조 — 월 한도/쿠폰 차원 존재)
-export type LeaveType = 'morning' | 'afternoon' | 'night' | 'fullday' | 'sick';
+export type LeaveType = 'morning' | 'afternoon' | 'night' | 'fullday' | 'personal_halfday' | 'personal_fullday' | 'sick';
 
 export interface LeaveRequest {
   id: string;
@@ -194,6 +194,13 @@ export interface MockExam {
   notifiedAt?: string;   // 알림 발송 시각 (ISO)
 }
 
+export interface DDayEvent {
+  id: string;
+  title: string;
+  date: string;
+  createdAt: string;
+}
+
 export interface SubjectProgress {
   id: string;
   name: string;            // 과목명 (국어, 수학, 영어, 탐구 등)
@@ -273,6 +280,8 @@ export interface Student {
   awaySchedules?: AwaySchedule[];
   // 휴대폰 제출 방식 신청 내역
   phoneSubmissions?: PhoneSubmission[];
+  // D-Day 목록 (학생 개인 설정)
+  ddays?: DDayEvent[];
 }
 
 export interface AdminAccount {

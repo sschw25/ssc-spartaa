@@ -65,10 +65,17 @@ export async function POST(request: Request) {
       { success: false, message: '아이디 또는 비밀번호가 올바르지 않습니다.' },
       { status: 401 }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login error:', error);
+    const errMsg = error?.message || '';
+    if (errMsg.includes('relation "admin_accounts" does not exist') || error?.code === '42P01') {
+      return NextResponse.json({
+        success: false,
+        message: '데이터베이스에 admin_accounts 테이블이 없습니다. supabase/migration-admin-accounts.sql 스크립트를 Supabase SQL Editor에서 실행해 주세요.'
+      }, { status: 500 });
+    }
     return NextResponse.json(
-      { success: false, message: '서버 에러가 발생했습니다.' },
+      { success: false, message: '서버 에러가 발생했습니다: ' + errMsg },
       { status: 500 }
     );
   }

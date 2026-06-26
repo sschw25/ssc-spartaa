@@ -438,23 +438,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 </div>
               </div>
 
-              <label className="flex items-start gap-2 rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-3 py-2.5 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={weeklyGradeCheck}
-                  onChange={(e) => setWeeklyGradeCheck(e.target.checked)}
-                  className="mt-0.5 h-3.5 w-3.5 accent-[#0071E3]"
-                />
-                <span>
-                  <span className="flex items-center gap-1 text-xs font-semibold text-[#1D1D1F]">
-                    <ClipboardCheck className="w-3.5 h-3.5 text-[#86868B]" />
-                    주간 성적 미입력 알림 대상
-                  </span>
-                  <span className="mt-0.5 block text-[10px] leading-relaxed text-[#86868B]">
-                    매주 성적 입력 대상인데 이번 주 성적이 없으면 관리자/학생 화면에 알림을 띄웁니다.
-                  </span>
-                </span>
-              </label>
+
             </section>
 
             <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
@@ -724,15 +708,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   className="rounded-xl border-black/[0.08] text-xs h-9 bg-white"
                 />
               </div>
-              <label className="flex items-center gap-2 rounded-lg bg-[#F5F5F7] px-3 py-2 sm:col-span-2 lg:col-span-4">
-                <input
-                  type="checkbox"
-                  checked={bulkWeeklyGradeCheck}
-                  onChange={(e) => setBulkWeeklyGradeCheck(e.target.checked)}
-                  className="h-3.5 w-3.5 accent-[#0071E3]"
-                />
-                <span className="text-xs font-semibold text-[#1D1D1F]">일괄 등록 원생을 주간 성적 미입력 알림 대상으로 설정</span>
-              </label>
+
             </div>
 
             {/* 붙여넣기 영역 */}

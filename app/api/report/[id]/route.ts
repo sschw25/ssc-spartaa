@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { compare } from 'bcryptjs';
-import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
+import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams } from '@/lib/store';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
@@ -94,7 +94,10 @@ export async function GET(
       }
       // 학부모용 마스킹 데이터 반환 (학생 전용 정보 제외)
       const maskedStudent = buildMaskedStudent(student, 'parent');
-      const students = await getStudents();
+      const [students, allExams] = await Promise.all([
+        getStudents(),
+        getMockExams().catch(() => []),
+      ]);
       const materialBenchmarks = buildMaterialBenchmarks(students);
       let studyStats = null;
       try {
@@ -105,7 +108,7 @@ export async function GET(
         ]);
         studyStats = buildStudyStats({ sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length });
       } catch { /* 통계 실패 시 무시 */ }
-      return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats });
+      return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams: allExams });
     } catch (error) {
       console.error(`API GET /report/${id} (token) error:`, error);
       return NextResponse.json({ success: false, message: '리포트 로드 중 에러가 발생했습니다.' }, { status: 500 });
@@ -126,7 +129,10 @@ export async function GET(
   }
 
   try {
-    const student = await getStudentById(id);
+    const [student, allExams] = await Promise.all([
+      getStudentById(id),
+      getMockExams().catch(() => []),
+    ]);
 
     if (!student) {
       return NextResponse.json(
@@ -158,7 +164,7 @@ export async function GET(
       console.warn('studyStats 계산 생략:', (e as Error)?.message);
     }
 
-    return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats });
+    return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams: allExams });
   } catch (error) {
     console.error(`API GET /report/${id} error:`, error);
     return NextResponse.json(

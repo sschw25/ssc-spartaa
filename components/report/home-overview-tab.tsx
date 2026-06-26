@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare } from 'lucide-react';
-import { Student } from '@/lib/types/student';
+import React, { useState } from 'react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X } from 'lucide-react';
+import { Student, DDayEvent } from '@/lib/types/student';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
@@ -97,6 +97,56 @@ export function HomeOverviewTab({
   completedQuests,
   setCompletedQuests,
 }: HomeOverviewTabProps) {
+  // D-Day FAB state
+  const [ddayOpen, setDdayOpen] = useState(false);
+  const [ddayTitle, setDdayTitle] = useState('');
+  const [ddayDate, setDdayDate] = useState('');
+  const [ddayAdding, setDdayAdding] = useState(false);
+  const [ddayDeleting, setDdayDeleting] = useState<string | null>(null);
+
+  const ddays: DDayEvent[] = student.ddays || [];
+
+  const calcDiff = (dateStr: string) => {
+    const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }));
+    const target = new Date(dateStr);
+    const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+    if (diff === 0) return 'D-Day';
+    return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
+  };
+
+  const handleAddDday = async () => {
+    if (!ddayTitle.trim() || !ddayDate) return;
+    setDdayAdding(true);
+    try {
+      const res = await fetch('/api/student/ddays', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: ddayTitle.trim(), date: ddayDate }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setStudent((s) => s ? { ...s, ddays: [...(s.ddays || []), json.dday] } : s);
+        setDdayTitle('');
+        setDdayDate('');
+      }
+    } finally {
+      setDdayAdding(false);
+    }
+  };
+
+  const handleDeleteDday = async (id: string) => {
+    setDdayDeleting(id);
+    try {
+      const res = await fetch(`/api/student/ddays?id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setStudent((s) => s ? { ...s, ddays: (s.ddays || []).filter((d) => d.id !== id) } : s);
+      }
+    } finally {
+      setDdayDeleting(null);
+    }
+  };
+
 
   // 서울 기준 YYYY-MM-DD 날짜 키 구하기
   const getSeoulDateKey = () => {
@@ -642,6 +692,107 @@ export function HomeOverviewTab({
 
       {isStudentReport && renderCoachQuestList()}
     </section>
+
+    {/* D-Day 플로팅 버튼 */}
+    {isStudentReport && (
+      <>
+        {/* FAB */}
+        <button
+          onClick={() => setDdayOpen(true)}
+          className="fixed bottom-24 right-4 z-40 flex items-center gap-1.5 rounded-2xl bg-[#1D1D1F] px-4 py-2.5 text-white shadow-xl text-xs font-black hover:scale-105 active:scale-95 transition-transform no-print"
+          aria-label="D-Day 관리"
+        >
+          <CalendarDays className="w-4 h-4" />
+          D-Day
+          {ddays.length > 0 && (
+            <span className="ml-0.5 rounded-full bg-[#0071E3] px-1.5 py-0.5 text-[10px] font-black">{ddays.length}</span>
+          )}
+        </button>
+
+        {/* 모달 오버레이 */}
+        {ddayOpen && (
+          <div className="fixed inset-0 z-50 flex items-end justify-center pb-6 px-4 bg-black/30 backdrop-blur-sm no-print" onClick={() => setDdayOpen(false)}>
+            <div
+              className="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* 헤더 */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.06] bg-[#FAFAFA]">
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-4 h-4 text-[#0071E3]" />
+                  <h3 className="text-sm font-black text-[#1D1D1F]">D-Day 관리</h3>
+                </div>
+                <button onClick={() => setDdayOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* 등록 현황 */}
+              <div className="px-5 py-3 max-h-56 overflow-y-auto space-y-2">
+                {ddays.length === 0 ? (
+                  <p className="text-center text-xs text-slate-400 font-bold py-4">등록된 D-Day가 없습니다.</p>
+                ) : (
+                  [...ddays]
+                    .sort((a, b) => a.date.localeCompare(b.date))
+                    .map((d) => {
+                      const diff = calcDiff(d.date);
+                      const isPast = diff.startsWith('D+');
+                      return (
+                        <div key={d.id} className="flex items-center gap-3 rounded-xl border border-black/[0.06] bg-white px-3 py-2.5">
+                          <span className={`shrink-0 text-xs font-black min-w-[3rem] text-center ${
+                            diff === 'D-Day' ? 'text-emerald-600' : isPast ? 'text-slate-400' : 'text-[#0071E3]'
+                          }`}>{diff}</span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-[#1D1D1F] truncate">{d.title}</p>
+                            <p className="text-[10px] font-semibold text-slate-400">{d.date}</p>
+                          </div>
+                          <button
+                            onClick={() => handleDeleteDday(d.id)}
+                            disabled={ddayDeleting === d.id}
+                            className="shrink-0 text-slate-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* 추가 폼 */}
+              <div className="px-5 py-4 border-t border-black/[0.06] bg-[#FAFAFA] space-y-2">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">새 D-Day 추가</p>
+                <input
+                  type="text"
+                  value={ddayTitle}
+                  onChange={(e) => setDdayTitle(e.target.value)}
+                  placeholder="이름 (예: 수능, 중간고사)"
+                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                />
+                <input
+                  type="date"
+                  value={ddayDate}
+                  onChange={(e) => setDdayDate(e.target.value)}
+                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                />
+                <button
+                  onClick={handleAddDday}
+                  disabled={ddayAdding || !ddayTitle.trim() || !ddayDate}
+                  className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0071E3]/90 text-white text-xs font-black py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                >
+                  {ddayAdding ? (
+                    <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5" />
+                  )}
+                  D-Day 추가
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    )}
     </>
   );
 }

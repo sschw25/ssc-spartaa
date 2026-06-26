@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 type StatusFilter = 'all' | 'pending' | 'approved' | 'rejected';
 
-const LEAVE_TYPE_ORDER: LeaveType[] = ['morning', 'afternoon', 'night', 'fullday', 'sick'];
+const LEAVE_TYPE_ORDER: LeaveType[] = ['morning', 'afternoon', 'night', 'fullday', 'personal_halfday', 'personal_fullday', 'sick'];
 
 function campusLabel(val: string) {
   switch (val) {
@@ -296,6 +296,8 @@ export default function AdminLeaveByDatePage() {
       afternoon: [],
       night: [],
       fullday: [],
+      personal_halfday: [],
+      personal_fullday: [],
       sick: [],
     };
     for (const ev of selectedDateEvents) {
@@ -554,6 +556,8 @@ export default function AdminLeaveByDatePage() {
                           afternoon: 'bg-orange-400',
                           night:     'bg-emerald-500',
                           fullday:   'bg-slate-500',
+                          personal_halfday: 'bg-sky-400',
+                          personal_fullday: 'bg-slate-400',
                           sick:      'bg-rose-500',
                         };
                         const typeChip: Record<LeaveType, string> = {
@@ -561,6 +565,8 @@ export default function AdminLeaveByDatePage() {
                           afternoon: 'bg-orange-50 text-orange-700 border-orange-200/60',
                           night:     'bg-emerald-50 text-emerald-700 border-emerald-200/60',
                           fullday:   'bg-slate-50 text-slate-700 border-slate-200/60',
+                          personal_halfday: 'bg-sky-50 text-sky-600 border-sky-200/40',
+                          personal_fullday: 'bg-slate-50 text-slate-600 border-slate-200/40',
                           sick:      'bg-rose-50 text-rose-700 border-rose-200/60',
                         };
 
@@ -691,6 +697,7 @@ export default function AdminLeaveByDatePage() {
                             onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
                             onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
                             allStudents: students,
+                            defaultTab: 'info',
                           })}
                           className="rounded-xl border border-black/[0.05] border-l-[3px] border-l-emerald-500 overflow-hidden bg-white shadow-sm hover:bg-[#F8F9FA] transition-all duration-200 cursor-pointer p-3.5 space-y-2 hover:scale-[1.01]"
                         >
@@ -737,6 +744,7 @@ export default function AdminLeaveByDatePage() {
                               onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
                               onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
                               allStudents: students,
+                              defaultTab: 'info',
                             })}
                             className={`rounded-xl border border-black/[0.05] border-l-[3px] overflow-hidden bg-white shadow-sm hover:bg-[#F8F9FA] transition-all duration-200 cursor-pointer p-3.5 space-y-2 hover:scale-[1.01] ${isPenalty ? 'border-l-red-500' : 'border-l-emerald-500'}`}
                           >

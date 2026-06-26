@@ -54,9 +54,16 @@ export async function PUT(
     const { passwordHash: _, ...safeData } = saved;
 
     return NextResponse.json({ success: true, data: safeData });
-  } catch (error) {
+  } catch (error: any) {
     console.error(`API PUT /admin/accounts/${id} error:`, error);
-    return NextResponse.json({ success: false, message: '서버 에러가 발생했습니다.' }, { status: 500 });
+    const errMsg = error?.message || '';
+    if (errMsg.includes('relation "admin_accounts" does not exist') || error?.code === '42P01') {
+      return NextResponse.json({
+        success: false,
+        message: '데이터베이스에 admin_accounts 테이블이 없습니다. supabase/migration-admin-accounts.sql 스크립트를 Supabase SQL Editor에서 실행해 주세요.'
+      }, { status: 500 });
+    }
+    return NextResponse.json({ success: false, message: '서버 에러가 발생했습니다: ' + errMsg }, { status: 500 });
   }
 }
 
@@ -83,8 +90,15 @@ export async function DELETE(
       return NextResponse.json({ success: true, message: '계정이 성공적으로 삭제되었습니다.' });
     }
     return NextResponse.json({ success: false, message: '삭제할 계정을 찾을 수 없습니다.' }, { status: 404 });
-  } catch (error) {
+  } catch (error: any) {
     console.error(`API DELETE /admin/accounts/${id} error:`, error);
-    return NextResponse.json({ success: false, message: '서버 에러가 발생했습니다.' }, { status: 500 });
+    const errMsg = error?.message || '';
+    if (errMsg.includes('relation "admin_accounts" does not exist') || error?.code === '42P01') {
+      return NextResponse.json({
+        success: false,
+        message: '데이터베이스에 admin_accounts 테이블이 없습니다. supabase/migration-admin-accounts.sql 스크립트를 Supabase SQL Editor에서 실행해 주세요.'
+      }, { status: 500 });
+    }
+    return NextResponse.json({ success: false, message: '서버 에러가 발생했습니다: ' + errMsg }, { status: 500 });
   }
 }

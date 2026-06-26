@@ -2,7 +2,7 @@
 // 학생 신청 화면(report)·신청 API·관리자 수집 페이지(/admin/leave)가 모두 이 모듈을 사용.
 import type { LeaveRequest, LeaveType } from './types/student';
 
-export type LeaveCategory = 'halfday' | 'fullday' | 'sick';
+export type LeaveCategory = 'halfday' | 'fullday' | 'sick' | 'personal_halfday' | 'personal_fullday';
 
 export const LEAVE_TYPES: Record<
   LeaveType,
@@ -12,10 +12,12 @@ export const LEAVE_TYPES: Record<
   afternoon: { label: '오후반차', slot: '3~5교시', category: 'halfday', icon: '🌤️' },
   night: { label: '야간반차', slot: '6~7교시', category: 'halfday', icon: '🌙' },
   fullday: { label: '휴식권', slot: '하루 종일', category: 'fullday', icon: '🛌' },
+  personal_halfday: { label: '개인사정(반차)', slot: '1~7교시 중 선택', category: 'personal_halfday', icon: '👤' },
+  personal_fullday: { label: '개인사정(휴가)', slot: '하루 종일', category: 'personal_fullday', icon: '👤' },
   sick: { label: '병가', slot: '영수증 증빙 필요', category: 'sick', icon: '🤒' },
 };
 
-export const LEAVE_TYPE_ORDER: LeaveType[] = ['morning', 'afternoon', 'night', 'fullday', 'sick'];
+export const LEAVE_TYPE_ORDER: LeaveType[] = ['morning', 'afternoon', 'night', 'fullday', 'personal_halfday', 'personal_fullday', 'sick'];
 
 export function isLeaveType(v: unknown): v is LeaveType {
   return typeof v === 'string' && v in LEAVE_TYPES;

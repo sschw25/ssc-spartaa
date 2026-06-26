@@ -974,6 +974,8 @@ export default function SeatBoardPage() {
   const [leaveReason, setLeaveReason] = useState('관리자 수동 등록');
   const [submittingAttendance, setSubmittingAttendance] = useState(false);
   const [submittingLeave, setSubmittingLeave] = useState(false);
+  const [unauthorizedMsg, setUnauthorizedMsg] = useState('');
+  const [sendingUnauthorizedMsg, setSendingUnauthorizedMsg] = useState(false);
 
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
   const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1';
@@ -1307,7 +1309,34 @@ export default function SeatBoardPage() {
     setCheckOutTime(latest?.check_out ? formatIsoToHM(latest.check_out) : '');
     setLeaveType('fullday');
     setLeaveReason('관리자 수동 등록');
+    setUnauthorizedMsg(`${student.name} 학생, 미승인 하원이 확인되었습니다. 사유가 있다면 등록해주시고 확인 부탁드립니다.`);
     setIsModalOpen(true);
+  }
+
+  async function handleSendUnauthorizedMsg() {
+    if (!selectedStudent) return;
+    if (!unauthorizedMsg.trim()) {
+      toast.error('전송할 알림 메시지를 입력해 주세요.');
+      return;
+    }
+    setSendingUnauthorizedMsg(true);
+    try {
+      const response = await fetch('/api/admin/messages/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          studentIds: [selectedStudent.id],
+          message: unauthorizedMsg.trim(),
+        }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok || !json.success) throw new Error(json.message || '발송 실패');
+      toast.success('원생 알림 메시지가 성공적으로 발송되었습니다.');
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '메시지 발송에 실패했습니다.'));
+    } finally {
+      setSendingUnauthorizedMsg(false);
+    }
   }
 
   async function handleSaveAttendance() {
@@ -1783,6 +1812,58 @@ export default function SeatBoardPage() {
                   휴무 즉시 승인 등록
                 </Button>
               </div>
+
+              {/* 미승인 하원 알림 섹션 */}
+              {(() => {
+                const selSessions = selectedStudent ? (sessionMap.get(selectedStudent.id) ?? []) : [];
+                const selIsLeftToday = selSessions.length > 0 && selSessions.every((s) => s.check_out);
+                const selLastCheckOutIso = selSessions.reduce((latest: string | null, s) =>
+                  s.check_out && (!latest || s.check_out > latest) ? s.check_out : latest, null);
+                const selLastCheckOutMin = selLastCheckOutIso ? kstMin(selLastCheckOutIso) : -1;
+                const selTodayDow = new Date(today + 'T00:00:00').getDay();
+                const selAwayIntervals = selectedStudent ? getApplicableAwayIntervals(selectedStudent, today, selTodayDow) : [];
+                const { dateStr: selNowDateStr, minOfDay: selNowMin } = nowKst();
+                const isUnauthorized = selectedStudent
+                  ? isUnauthorizedCheckout(
+                      selectedStudent,
+                      selIsLeftToday,
+                      selLastCheckOutMin,
+                      today,
+                      selNowDateStr,
+                      selNowMin,
+                      selAwayIntervals,
+                    )
+                  : false;
+                if (!isUnauthorized) return null;
+                return (
+                  <div className="border border-red-200 rounded-xl p-4 bg-red-50/30">
+                    <h3 className="text-xs font-black text-red-600 mb-3 flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      미승인 하원 원생 알림 전송
+                    </h3>
+                    <div className="flex flex-col gap-1.5 mb-3">
+                      <Label htmlFor="unauthorizedMsg" className="text-[10px] font-bold text-red-500">알림 메시지</Label>
+                      <textarea
+                        id="unauthorizedMsg"
+                        value={unauthorizedMsg}
+                        onChange={(e) => setUnauthorizedMsg(e.target.value)}
+                        placeholder="메시지 내용을 입력하세요."
+                        rows={2}
+                        className="w-full resize-none rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
+                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleSendUnauthorizedMsg}
+                      disabled={sendingUnauthorizedMsg || !unauthorizedMsg.trim()}
+                      className="w-full rounded-xl text-xs font-black bg-[#F56300] hover:bg-[#F56300]/90 text-white h-9"
+                    >
+                      {sendingUnauthorizedMsg ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                      원생알림 즉시 발송
+                    </Button>
+                  </div>
+                );
+              })()}
             </div>
           </DialogContent>
         </Dialog>

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Calendar, Plus, Trash2, MessageSquare } from 'lucide-react';
-import { Student } from '@/lib/types/student';
+import { Student, MockExam } from '@/lib/types/student';
 import { LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ResponsiveContainer, Legend, PieChart, Pie, Cell } from 'recharts';
 
 type GradeForm = {
@@ -40,6 +40,7 @@ interface GradeAnalysisTabProps {
   setActiveTab: (tab: string) => void;
   setRequestForm: React.Dispatch<React.SetStateAction<RequestForm>>;
   setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  mockExams?: MockExam[];
 }
 
 export function GradeAnalysisTab({
@@ -57,7 +58,34 @@ export function GradeAnalysisTab({
   setActiveTab,
   setRequestForm,
   setRequestCustomOpen,
+  mockExams = [],
 }: GradeAnalysisTabProps) {
+  const weeklyMockExams = React.useMemo(() => {
+    if (!mockExams) return [];
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? -6 : 1 - day;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+    monday.setHours(0, 0, 0, 0);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    sunday.setHours(23, 59, 59, 999);
+
+    const getYYYYMMDD = (d: Date) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const dateVal = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dateVal}`;
+    };
+
+    const monStr = getYYYYMMDD(monday);
+    const sunStr = getYYYYMMDD(sunday);
+
+    return mockExams.filter((e) => e.date >= monStr && e.date <= sunStr);
+  }, [mockExams]);
+
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -134,8 +162,14 @@ export function GradeAnalysisTab({
               value={gradeForm.testName}
               onChange={(e) => setGradeForm((f) => ({ ...f, testName: e.target.value }))}
               placeholder="시험명 (예: 6월 모평)"
+              list="weekly-mock-exam-options"
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
             />
+            <datalist id="weekly-mock-exam-options">
+              {weeklyMockExams.map((exam) => (
+                <option key={exam.id} value={exam.name} />
+              ))}
+            </datalist>
             <input
               type="number"
               inputMode="numeric"
