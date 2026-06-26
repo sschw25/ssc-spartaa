@@ -143,9 +143,10 @@ function timeStringToMin(timeStr: string): number {
 interface PeriodState {
   status: PeriodStatus;
   isOverridden: boolean;
-  awayTime?: string;
-  checkInTime?: string;
-  checkOutTime?: string;
+  awayTime?: string;       // 정기 외출 예정 시각 (HH:MM) → 셀 내부 표시
+  checkInTime?: string;    // 실제 등원 시각 (HH:MM) → 등원한 교시 셀 내부
+  checkOutTime?: string;   // 실제 하원 시각 (HH:MM) → 하원한 교시 셀 내부
+  isAwayAbsent?: boolean;  // 외출 후 미복귀로 간주되는 교시 → X 표시
 }
 
 function computePeriods(
@@ -199,97 +200,79 @@ function hasApprovedLeaveToday(student: Student, today: string): boolean {
 
 // ── 교시 셀 ───────────────────────────────────────────────────────────────────
 
+function TimeHM({ hm, cls }: { hm: string; cls: string }) {
+  const [h, m] = hm.split(':');
+  return (
+    <div className={`flex flex-col items-center -space-y-[2px] leading-none select-none ${cls}`}>
+      <span className="text-[7px] font-black tracking-tighter">{h}</span>
+      <span className="text-[7px] font-black tracking-tighter">{m}</span>
+    </div>
+  );
+}
+
 function PeriodCell({
-  status,
-  label,
-  isOverridden,
-  awayTime,
-  onClick,
+  status, label, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent, onClick,
 }: {
-  status: PeriodStatus;
-  label: string;
-  isOverridden?: boolean;
-  awayTime?: string;
-  onClick?: () => void;
+  status: PeriodStatus; label: string; isOverridden?: boolean;
+  awayTime?: string; checkInTime?: string; checkOutTime?: string;
+  isAwayAbsent?: boolean; onClick?: () => void;
 }) {
-  const is8th = label === '8';
-  const clickable = !!onClick;
-  const hoverCls = clickable ? 'cursor-pointer hover:brightness-95 active:scale-90 transition-all' : '';
+  const hoverCls = onClick ? 'cursor-pointer hover:brightness-95 active:scale-90 transition-all' : '';
 
-  // 1. 8교시 렌더링 분기
-  if (is8th) {
+  // 8교시 (심야 A 라벨)
+  if (label === '8') {
     return (
-      <div
-        onClick={onClick}
-        className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${
-          isOverridden
-            ? 'bg-amber-50 border-amber-300 text-amber-600 font-black'
-            : 'bg-slate-50 border-slate-200 text-slate-400 font-bold'
-        }`}
-      >
-        <span className="text-[10px] leading-none">A</span>
+      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+        <span className="text-[10px] font-bold leading-none">A</span>
       </div>
     );
   }
 
-  // 2. 일반교시 렌더링 분기
-  let displayContent: React.ReactNode = label;
-  if (status !== 'future' && awayTime && awayTime.includes(':')) {
-    const [h, m] = awayTime.split(':');
-    displayContent = (
-      <div className="flex flex-col items-center justify-center -space-y-[2px] leading-none shrink-0 select-none">
-        <span className="text-[7.5px] font-black tracking-tighter">{h}</span>
-        <span className="text-[7.5px] font-black tracking-tighter">{m}</span>
-      </div>
-    );
-  }
-
+  // 미래 교시
   if (status === 'future') {
     return (
-      <div className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] flex items-center justify-center bg-white ${onClick ? 'cursor-pointer hover:bg-slate-50 active:scale-90 transition-all' : ''}`}
-        onClick={onClick}
-      >
+      <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
         <span className="text-[7px] text-slate-300 font-bold leading-none">{label}</span>
       </div>
     );
   }
 
+  // 출석 교시 — 우선순위: 정기외출시간 > 실제하원시간 > 실제등원시간 > 슬래시
   if (status === 'present') {
-    const symbol = awayTime ? displayContent : <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>;
+    let inner: React.ReactNode;
+    if (awayTime?.includes(':'))      inner = <TimeHM hm={awayTime} cls="text-amber-500" />;
+    else if (checkOutTime?.includes(':')) inner = <TimeHM hm={checkOutTime} cls="text-[#0071E3]" />;
+    else if (checkInTime?.includes(':'))  inner = <TimeHM hm={checkInTime} cls="text-emerald-600" />;
+    else inner = <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>;
+
     return (
-      <div
-        onClick={onClick}
-        className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${
-          isOverridden
-            ? 'bg-amber-50 border-amber-300 text-amber-600'
-            : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12] text-[#1D1D1F]/70'
-        }`}
-      >
-        {symbol}
+      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]'}`}>
+        {inner}
       </div>
     );
   }
 
-  // status === 'absent'인 경우
-  // 1) 수동 결석 체크: X 표시 + 앰버색
+  // 결석 — 수동 override
   if (isOverridden) {
-    const symbol = awayTime ? displayContent : <span className="text-[10px] font-black leading-none text-amber-600">X</span>;
     return (
-      <div
-        onClick={onClick}
-        className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300 text-amber-600`}
-      >
-        {symbol}
+      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
+        <span className="text-[10px] font-black leading-none text-amber-600">X</span>
       </div>
     );
   }
 
-  // 2) 기본 결석 (미등원): 교시 번호 표시 (future보다 연한 slate-200)
+  // 결석 — 정기외출 이후 미복귀
+  if (isAwayAbsent) {
+    return (
+      <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}>
+        <span className="text-[8px] font-black leading-none text-slate-400">x</span>
+      </div>
+    );
+  }
+
+  // 결석 — 일반 (교시 번호 흐리게)
   return (
-    <div
-      onClick={onClick}
-      className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}
-    >
+    <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
       <span className="text-[7px] leading-none text-slate-200 font-bold">{label}</span>
     </div>
   );
@@ -313,7 +296,7 @@ interface SeatCardProps {
 function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick, onNameClick }: SeatCardProps) {
   if (!student) {
     return (
-      <div className="w-[80px] h-[86px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
+      <div className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
         <span className="text-[9px] font-black text-slate-300">{seatNum}</span>
       </div>
     );
@@ -337,9 +320,9 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
     : 'bg-white';
 
   return (
-    <div 
+    <div
       onClick={onClick}
-      className={`w-[80px] h-[86px] rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col justify-between shrink-0 cursor-pointer hover:border-slate-400 active:scale-[0.98] transition-all`}
+      className={`w-[80px] h-[100px] rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col shrink-0 cursor-pointer hover:border-slate-400 active:scale-[0.98] transition-all`}
     >
       <div className="flex items-center justify-between">
         <span className="text-[9px] font-black text-slate-400">{seatNum}</span>
@@ -390,27 +373,60 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
         )}
       </div>
 
-      <div className="flex flex-col gap-[3px] mt-auto" onClick={(e) => e.stopPropagation()}>
+      {/* 휴대폰 보관 상태 박스 (오전/오후/야간) */}
+      <div className="flex gap-[3px] mt-0.5" onClick={(e) => e.stopPropagation()}>
+        {([
+          { label: '오전', indices: [0, 1] },
+          { label: '오후', indices: [2, 3, 4] },
+          { label: '야간', indices: [5, 6] },
+        ] as const).map(({ label, indices }) => {
+          const allAbsent = indices.every((i) =>
+            periods[i]?.status === 'absent' || periods[i]?.status === 'future' || periods[i]?.isAwayAbsent
+          );
+          return (
+            <div
+              key={label}
+              className={`flex-1 h-[10px] rounded-[2px] flex items-center justify-center border ${
+                allAbsent
+                  ? 'bg-slate-100 border-slate-200'
+                  : 'bg-[#0071E3]/[0.06] border-[#0071E3]/20'
+              }`}
+            >
+              <span className={`text-[6px] font-black leading-none ${allAbsent ? 'text-slate-300' : 'text-[#0071E3]/60'}`}>
+                {allAbsent ? 'x' : label[0]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex flex-col gap-[3px] mt-[3px]" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-[3px]">
-          {periods.slice(0, 4).map(({ status, isOverridden, awayTime }, i) => (
+          {periods.slice(0, 4).map(({ status, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent }, i) => (
             <PeriodCell
               key={i}
               status={status}
               label={String(i + 1)}
               isOverridden={isOverridden}
               awayTime={awayTime}
+              checkInTime={checkInTime}
+              checkOutTime={checkOutTime}
+              isAwayAbsent={isAwayAbsent}
               onClick={onTogglePeriod ? () => onTogglePeriod(i) : undefined}
             />
           ))}
         </div>
         <div className="flex gap-[3px]">
-          {periods.slice(4).map(({ status, isOverridden, awayTime }, i) => (
+          {periods.slice(4).map(({ status, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent }, i) => (
             <PeriodCell
               key={i + 4}
               status={status}
               label={String(i + 5)}
               isOverridden={isOverridden}
               awayTime={awayTime}
+              checkInTime={checkInTime}
+              checkOutTime={checkOutTime}
+              isAwayAbsent={isAwayAbsent}
               onClick={onTogglePeriod ? () => onTogglePeriod(i + 4) : undefined}
             />
           ))}
@@ -449,14 +465,41 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
         const sessions = student ? (sessionMap.get(student.id) ?? []) : [];
         const isLeftToday = student ? (sessions.length > 0 && sessions.every((s) => s.check_out)) : false;
         const raw = computePeriods(student, sessions, today, nowDateStr, nowMin);
+
+        // ── 정기 외출 이탈 시각 (복귀 없는 항목 중 오늘 적용되는 것) ─────────
+        const todayDow = new Date(today + 'T00:00:00').getDay();
+        let awayDepartureMin = -1;
+        if (student && student.awaySchedules && student.awaySchedules.length > 0) {
+          const noReturn = student.awaySchedules.find((sc) => {
+            if (sc.returnTime) return false;
+            if (sc.days && sc.days.length > 0 && !sc.days.includes(todayDow)) return false;
+            if (sc.until && sc.until !== 'forever' && sc.until < today) return false;
+            return true;
+          });
+          if (noReturn) awayDepartureMin = timeStringToMin(noReturn.awayTime);
+        }
+
+        // ── 실제 등원/하원 시각 (첫 세션 등원, 마지막 세션 하원) ─────────────
+        const firstCheckInIso = sessions.length > 0 ? sessions[0].check_in : null;
+        const lastCheckOutIso = sessions.reduce((latest: string | null, s) =>
+          s.check_out && (!latest || s.check_out > latest) ? s.check_out : latest, null);
+        const firstCheckInMin = firstCheckInIso ? kstMin(firstCheckInIso) : -1;
+        const lastCheckOutMin = lastCheckOutIso ? kstMin(lastCheckOutIso) : -1;
+        const checkInTimeStr = firstCheckInIso ? kstTimeStr(firstCheckInIso) : undefined;
+        const checkOutTimeStr = lastCheckOutIso ? kstTimeStr(lastCheckOutIso) : undefined;
+        const checkInPeriodIdx = firstCheckInMin >= 0
+          ? PERIODS.findIndex((p) => firstCheckInMin >= p.start && firstCheckInMin < p.end) : -1;
+        const checkOutPeriodIdx = lastCheckOutMin >= 0
+          ? PERIODS.findIndex((p) => lastCheckOutMin >= p.start && lastCheckOutMin < p.end) : -1;
+
         const periods: PeriodState[] = raw.map((s, idx) => {
           const key = student ? `${student.id}:${idx}` : '';
           const override = student ? periodOverrides.get(key) : undefined;
-          
+
+          // 정기 외출 시각 — 해당 교시에 이탈 예정
           let awayTime: string | undefined = undefined;
           if (student && student.awaySchedules && student.awaySchedules.length > 0) {
             const period = PERIODS[idx];
-            const todayDow = new Date(today + 'T00:00:00').getDay();
             const matched = student.awaySchedules.find((schedule) => {
               if (schedule.days && schedule.days.length > 0 && !schedule.days.includes(todayDow)) return false;
               if (schedule.until && schedule.until !== 'forever' && schedule.until < today) return false;
@@ -466,10 +509,19 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             if (matched) awayTime = matched.awayTime;
           }
 
+          // 정기 외출 이탈 이후 미복귀 교시
+          const isAwayAbsent =
+            awayDepartureMin > 0 &&
+            PERIODS[idx].start >= awayDepartureMin &&
+            s !== 'present';
+
           return {
             status: override ?? s,
             isOverridden: override !== undefined,
             awayTime,
+            checkInTime: idx === checkInPeriodIdx ? checkInTimeStr : undefined,
+            checkOutTime: idx === checkOutPeriodIdx ? checkOutTimeStr : undefined,
+            isAwayAbsent,
           };
         });
         return (

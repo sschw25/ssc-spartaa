@@ -164,18 +164,21 @@ export interface SmsLog {
 export interface MockExamParticipation {
   examId: string;
   status: 'attending' | 'absent' | 'undecided';
-  reason?: string;      // 불참 사유 (학생 직접 입력, 선택)
+  reason?: string;       // 불참 사유
+  score?: number;        // 총점 (학생 직접 입력)
+  subjectScores?: Record<string, number>; // 과목별 점수 { 국어: 90, 수학: 85, ... }
   updatedAt: string;
-  respondedBy?: 'student' | 'admin'; // 응답 주체
+  respondedBy?: 'student' | 'admin';
 }
 
 // 모의고사 일정 마스터 (mock_exams 테이블)
 export interface MockExam {
   id: string;
-  name: string;         // "6월 모의고사"
-  date: string;         // YYYY-MM-DD
+  name: string;          // "6월 모의고사"
+  date: string;          // YYYY-MM-DD
+  targetExamTypes?: string[]; // 대상 목표시험 유형 ([] = 전체, ['수능','모의고사'] 등)
   createdAt: string;
-  notifiedAt?: string;  // 학생에게 알림 발송 시각 (ISO) — 설정되면 학생 리포트에 응답 요청 카드 표시
+  notifiedAt?: string;   // 알림 발송 시각 (ISO)
 }
 
 export interface SubjectProgress {

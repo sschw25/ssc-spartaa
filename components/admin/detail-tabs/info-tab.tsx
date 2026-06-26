@@ -322,28 +322,15 @@ export function InfoTab({
           </p>
         </div>
 
-        <label
-          className={`col-span-2 flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2.5 transition ${
-            weeklyGradeCheck ? 'border-[#0071E3]/30 bg-[#0071E3]/[0.06]' : 'border-black/[0.06] bg-[#F5F5F7]'
-          }`}
-        >
-          <input
-            id="edit-weekly-grade"
-            type="checkbox"
-            checked={weeklyGradeCheck}
-            onChange={(e) => setWeeklyGradeCheck(e.target.checked)}
-            className="mt-0.5 accent-[#0071E3] w-3.5 h-3.5"
-          />
-          <span className="min-w-0">
-            <span className="flex items-center gap-1 text-xs font-semibold text-[#1D1D1F]">
-              <ClipboardCheck className={`w-3.5 h-3.5 ${weeklyGradeCheck ? 'text-[#0071E3]' : 'text-[#86868B]'}`} />
-              매주 성적 입력 대상
-            </span>
-            <span className="mt-0.5 block text-[10px] font-normal leading-relaxed text-[#86868B]">
-              체크 시 이번 주(월~일) 성적 미입력이면 관리자 대시보드와 학생 출결 화면에 알림이 표시됩니다.
-            </span>
+        <div className="col-span-2 rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-3 py-2.5">
+          <span className="flex items-center gap-1 text-xs font-semibold text-[#1D1D1F]">
+            <ClipboardCheck className="w-3.5 h-3.5 text-[#86868B]" />
+            모의고사 성적 입력
           </span>
-        </label>
+          <span className="mt-0.5 block text-[10px] font-normal leading-relaxed text-[#86868B]">
+            모의고사 일정 생성 시 목표시험 유형으로 대상을 선택하면 해당 원생에게 알림이 발송되고, 학생이 직접 성적을 입력합니다.
+          </span>
+        </div>
 
         <div className="col-span-2 space-y-1.5">
           <Label htmlFor="edit-special-note" className="text-xs font-semibold text-[#1D1D1F]">

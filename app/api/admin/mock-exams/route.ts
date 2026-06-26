@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
-  let body: { name?: unknown; date?: unknown };
+  let body: { name?: unknown; date?: unknown; targetExamTypes?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -38,12 +38,16 @@ export async function POST(request: Request) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return NextResponse.json({ success: false, message: '날짜 형식이 올바르지 않습니다.' }, { status: 400 });
   }
+  const targetExamTypes: string[] = Array.isArray(body?.targetExamTypes)
+    ? (body.targetExamTypes as unknown[]).filter((t): t is string => typeof t === 'string')
+    : [];
 
   const nowIso = new Date().toISOString();
   const exam: MockExam = {
     id: `exam_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name,
     date,
+    targetExamTypes,
     createdAt: nowIso,
   };
 

@@ -55,6 +55,7 @@ export default function MockExamPage() {
   // 새 일정 등록 폼
   const [newName, setNewName] = useState('');
   const [newDate, setNewDate] = useState('');
+  const [newTargetTypes, setNewTargetTypes] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
 
   // 불참자 알림 발송
@@ -111,7 +112,7 @@ export default function MockExamPage() {
       const res = await fetch('/api/admin/mock-exams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), date: newDate }),
+        body: JSON.stringify({ name: newName.trim(), date: newDate, targetExamTypes: newTargetTypes }),
       });
       const json = await res.json();
       if (json.success) {
@@ -120,6 +121,7 @@ export default function MockExamPage() {
         setSelectedExamId(json.exam.id);
         setNewName('');
         setNewDate('');
+        setNewTargetTypes([]);
       } else {
         toast.error(json.message || '등록 실패');
       }
@@ -238,11 +240,19 @@ export default function MockExamPage() {
     );
   };
 
-  const scopedStudents = students.filter(
-    (s) => campusFilter === 'all' || s.campus === campusFilter
-  );
-
   const selectedExam = exams.find((e) => e.id === selectedExamId);
+
+  // 학생 목표시험 목록 (중복 제거)
+  const uniqueExamTypes = [...new Set(students.map((s) => s.contact).filter((c): c is string => Boolean(c)))].sort();
+
+  // 선택된 시험의 대상 시험 유형으로 필터링
+  const scopedStudents = students.filter((s) => {
+    if (campusFilter !== 'all' && s.campus !== campusFilter) return false;
+    if (selectedExam?.targetExamTypes?.length) {
+      return selectedExam.targetExamTypes.some((t) => s.contact?.includes(t));
+    }
+    return true;
+  });
 
   const stats = {
     attending: scopedStudents.filter((s) => getStatus(s) === 'attending').length,
@@ -318,6 +328,39 @@ export default function MockExamPage() {
               등록
             </Button>
           </div>
+          {/* 대상 목표시험 유형 선택 */}
+          {uniqueExamTypes.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-black text-slate-500">
+                알림 대상 (선택 안 하면 전체 원생)
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {uniqueExamTypes.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() =>
+                      setNewTargetTypes((prev) =>
+                        prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]
+                      )
+                    }
+                    className={`rounded-xl px-3 py-1 text-[11px] font-black border transition active:scale-95 ${
+                      newTargetTypes.includes(t)
+                        ? 'bg-[#0071E3] text-white border-[#0071E3]'
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+              {newTargetTypes.length > 0 && (
+                <p className="text-[10px] text-[#0071E3] font-semibold">
+                  선택: {newTargetTypes.join(', ')} 목표 원생에게만 알림 발송
+                </p>
+              )}
+            </div>
+          )}
 
           {/* 일정 목록 */}
           {exams.length > 0 && (
@@ -329,20 +372,28 @@ export default function MockExamPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedExamId(exam.id)}
-                    className="flex-1 flex items-center gap-2 text-left"
+                    className="flex-1 flex items-start gap-2 text-left"
                   >
-                    <div>
-                      <span className={`text-xs font-black ${selectedExamId === exam.id ? 'text-[#0071E3]' : 'text-slate-700'}`}>
-                        {exam.name}
-                      </span>
-                      <span className="ml-1.5 text-[11px] font-semibold text-slate-400">{exam.date}</span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`text-xs font-black ${selectedExamId === exam.id ? 'text-[#0071E3]' : 'text-slate-700'}`}>
+                          {exam.name}
+                        </span>
+                        <span className="text-[11px] font-semibold text-slate-400">{exam.date}</span>
+                        {exam.notifiedAt && (
+                          <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
+                            <Bell className="w-2 h-2" /> 알림됨
+                          </span>
+                        )}
+                      </div>
+                      {exam.targetExamTypes && exam.targetExamTypes.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {exam.targetExamTypes.map((t) => (
+                            <span key={t} className="rounded-md bg-[#0071E3]/[0.08] text-[#0071E3] px-1.5 py-0.5 text-[9px] font-black">{t}</span>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                    {exam.notifiedAt ? (
-                      <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-2 py-0.5 text-[10px] font-black">
-                        <Bell className="w-2.5 h-2.5" />
-                        알림 발송됨
-                      </span>
-                    ) : null}
                   </button>
                   <button
                     type="button"
@@ -444,8 +495,9 @@ export default function MockExamPage() {
                     <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                       <tr>
                         <th className="px-5 py-4">원생</th>
-                        <th className="px-5 py-4">담당 코치</th>
-                        <th className="px-5 py-4">참여 여부</th>
+                        <th className="px-4 py-4">목표시험</th>
+                        <th className="px-4 py-4">참여여부</th>
+                        <th className="px-4 py-4">점수 (학생 입력)</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100/60">
@@ -458,6 +510,8 @@ export default function MockExamPage() {
                           : undefined;
                         const absentReason = participation?.status === 'absent' ? participation.reason : undefined;
                         const selfResponded = participation?.respondedBy === 'student';
+                        const score = participation?.score;
+                        const subjectScores = participation?.subjectScores;
                         return (
                           <tr key={s.id}>
                             <td className="px-5 py-3">
@@ -468,8 +522,10 @@ export default function MockExamPage() {
                                 </Badge>
                               </div>
                             </td>
-                            <td className="px-5 py-3 font-bold text-slate-500">{s.manager || '미지정'}</td>
-                            <td className="px-5 py-3">
+                            <td className="px-4 py-3">
+                              <span className="text-[11px] font-semibold text-slate-500">{s.contact || '—'}</span>
+                            </td>
+                            <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-1.5 items-center">
                                 {(['attending', 'absent', 'undecided'] as Status[]).map((st) => {
                                   const cfg = STATUS_CONFIG[st];
@@ -481,28 +537,42 @@ export default function MockExamPage() {
                                       disabled={isUpdating}
                                       onClick={() => setStatus(s.id, st)}
                                       className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${
-                                        active
-                                          ? cfg.cls
-                                          : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                        active ? cfg.cls : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
                                       }`}
                                     >
-                                      {isUpdating && active
-                                        ? <Loader2 className="w-3 h-3 animate-spin" />
-                                        : cfg.icon}
+                                      {isUpdating && active ? <Loader2 className="w-3 h-3 animate-spin" /> : cfg.icon}
                                       {cfg.label}
                                     </button>
                                   );
                                 })}
                                 {selfResponded && (
-                                  <span className="rounded-lg bg-blue-50 text-blue-600 px-2 py-1 text-[10px] font-black">
-                                    학생 직접 응답
-                                  </span>
+                                  <span className="rounded-lg bg-blue-50 text-blue-600 px-2 py-1 text-[10px] font-black">학생응답</span>
                                 )}
                               </div>
                               {absentReason && (
-                                <p className="mt-1.5 text-[11px] font-semibold text-slate-400 leading-snug">
-                                  💬 {absentReason}
-                                </p>
+                                <p className="mt-1 text-[11px] font-semibold text-slate-400">💬 {absentReason}</p>
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {status === 'attending' ? (
+                                <div className="space-y-0.5">
+                                  {score != null ? (
+                                    <span className="text-sm font-black text-[#1D1D1F]">{score}점</span>
+                                  ) : (
+                                    <span className="text-[11px] font-semibold text-slate-300">미입력</span>
+                                  )}
+                                  {subjectScores && Object.keys(subjectScores).length > 0 && (
+                                    <div className="flex flex-wrap gap-1 mt-0.5">
+                                      {Object.entries(subjectScores).map(([subj, sc]) => (
+                                        <span key={subj} className="text-[9px] font-bold bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-slate-500">
+                                          {subj} {sc}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[11px] text-slate-200">—</span>
                               )}
                             </td>
                           </tr>
