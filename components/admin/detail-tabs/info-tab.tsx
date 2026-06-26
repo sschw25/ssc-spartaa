@@ -384,7 +384,16 @@ export function InfoTab({
         {/* 요일 반복 */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-[11px] font-bold text-[#86868B] shrink-0">요일</span>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap">
+            <button
+              type="button"
+              onClick={() => setNewDays([])}
+              className={`px-2.5 h-7 rounded-full text-[10px] font-bold transition-all ${
+                newDays.length === 0 ? 'bg-[#0071E3] text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              }`}
+            >
+              매일
+            </button>
             {DOW_LABELS.map((label, d) => (
               <button
                 key={d}
@@ -400,9 +409,6 @@ export function InfoTab({
               </button>
             ))}
           </div>
-          {newDays.length === 0 && (
-            <span className="text-[10px] text-[#86868B]">매일 반복</span>
-          )}
         </div>
 
         {/* 기간 */}
