@@ -34,6 +34,7 @@ export default function AdminDashboardPage() {
   // 캠퍼스 필터 상태
   const [campusFilter, setCampusFilter] = useState('all');
   const [campusFilterStorageKey, setCampusFilterStorageKey] = useState('');
+  const [adminCampus, setAdminCampus] = useState('all');
 
   // 모달 제어 상태
   const [analysisTarget, setAnalysisTarget] = useState<{ type: 'subject' | 'book'; name: string } | null>(null);
@@ -69,10 +70,18 @@ export default function AdminDashboardPage() {
         const json = await res.json();
         const userKey = json.userId || json.username || json.role || 'admin';
         setAdminId(userKey);
+        
+        const userCampus = json.campus || 'all';
+        setAdminCampus(userCampus);
+        
         const storageKey = `ssc-admin-dashboard-campus-filter:${userKey}`;
-        const savedCampusFilter = window.localStorage.getItem(storageKey);
-        if (isCampusFilterValue(savedCampusFilter)) {
-          setCampusFilter(savedCampusFilter);
+        if (userCampus !== 'all') {
+          setCampusFilter(userCampus);
+        } else {
+          const savedCampusFilter = window.localStorage.getItem(storageKey);
+          if (isCampusFilterValue(savedCampusFilter)) {
+            setCampusFilter(savedCampusFilter);
+          }
         }
         setCampusFilterStorageKey(storageKey);
         // 인증 성공 시 데이터 로드
@@ -155,6 +164,10 @@ export default function AdminDashboardPage() {
 
   const handleCampusFilterChange = (campus: string) => {
     if (!isCampusFilterValue(campus)) return;
+    if (adminCampus !== 'all') {
+      setCampusFilter(adminCampus);
+      return;
+    }
     setCampusFilter(campus);
   };
 
@@ -188,9 +201,10 @@ export default function AdminDashboardPage() {
   }, [checkingAuth]);
 
   // 데이터 가공 및 통계 계산
-  const campusScopedStudents = students.filter(s => campusFilter === 'all' || s.campus === campusFilter);
+  const effectiveFilter = adminCampus !== 'all' ? adminCampus : campusFilter;
+  const campusScopedStudents = students.filter(s => effectiveFilter === 'all' || s.campus === effectiveFilter);
   const totalStudentsCount = campusScopedStudents.length;
-  const selectedCampusLabel = campusFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(campusFilter);
+  const selectedCampusLabel = effectiveFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(effectiveFilter);
   
   // 등록 만료/임박 학생
   const RENEWAL_WARN_DAYS = 5;

@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam } from './types/student';
+import { Student, SharedMaterial, MockExam, AdminAccount } from './types/student';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
@@ -35,6 +35,10 @@ import {
   getStudyMinutesByStudentSupabase,
   type StudentAuthRecord,
   type StudySession,
+  getAdminAccountsSupabase,
+  getAdminAccountByUsernameSupabase,
+  saveAdminAccountSupabase,
+  deleteAdminAccountSupabase,
 } from './supabase';
 
 export type { StudySession } from './supabase';
@@ -45,11 +49,33 @@ import {
   deleteStudentLocal,
   readSharedMaterials as readSharedMaterialsLocal,
   saveSharedMaterial as saveSharedMaterialLocal,
+  readAdminAccountsLocal,
+  getAdminAccountByUsernameLocal,
+  saveAdminAccountLocal,
+  deleteAdminAccountLocal,
 } from './db';
 
 export function activeBackend(): 'supabase' | 'local-json' {
   return isSupabaseConfigured() ? 'supabase' : 'local-json';
 }
+
+// ── 관리자 계정 통합 API ──
+export async function getAdminAccounts(): Promise<AdminAccount[]> {
+  return isSupabaseConfigured() ? getAdminAccountsSupabase() : readAdminAccountsLocal();
+}
+
+export async function getAdminAccountByUsername(username: string): Promise<AdminAccount | null> {
+  return isSupabaseConfigured() ? getAdminAccountByUsernameSupabase(username) : getAdminAccountByUsernameLocal(username);
+}
+
+export async function saveAdminAccount(admin: AdminAccount): Promise<AdminAccount> {
+  return isSupabaseConfigured() ? saveAdminAccountSupabase(admin) : saveAdminAccountLocal(admin);
+}
+
+export async function deleteAdminAccount(id: string): Promise<boolean> {
+  return isSupabaseConfigured() ? deleteAdminAccountSupabase(id) : deleteAdminAccountLocal(id);
+}
+
 
 export async function getStudents(): Promise<Student[]> {
   return isSupabaseConfigured() ? getStudentsSupabase() : getStudentsLocal();

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStudents, saveStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 
 type SmsTarget = 'parent' | 'student';
 
@@ -22,13 +22,18 @@ function normalizeSeatNumber(value: unknown): number | undefined {
 
 // 1. 전체 학생 및 진도/상담/성적 일괄 조회
 export async function GET() {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
   try {
     const students = await getStudents();
-    const sanitized = students.map((student) => {
+    const campusScoped = session.campus === 'all' 
+      ? students 
+      : students.filter(s => s.campus === session.campus);
+
+    const sanitized = campusScoped.map((student) => {
       const next = { ...student };
       delete next.sharePasswordHash;
       return next;
@@ -42,7 +47,8 @@ export async function GET() {
 
 // 2. 신규 학생 추가
 export async function POST(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -50,6 +56,10 @@ export async function POST(request: Request) {
     const studentData = await request.json() as Partial<Student>;
     if (!studentData.name || !studentData.campus) {
       return NextResponse.json({ success: false, message: '원생 이름과 캠퍼스 정보는 필수입니다.' }, { status: 400 });
+    }
+
+    if (session.campus !== 'all' && studentData.campus !== session.campus) {
+      return NextResponse.json({ success: false, message: '담당 캠퍼스 이외의 원생을 추가할 권한이 없습니다.' }, { status: 403 });
     }
 
     // 신규 ID 및 날짜 생성

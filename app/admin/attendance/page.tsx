@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -322,10 +322,16 @@ function AdminAttendanceContent() {
     }
   };
 
+  const prevDateRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (checkingAuth) return;
     let active = true;
-    setLoading(true);
+    const isDateOrFirstChange = prevDateRef.current !== date;
+    prevDateRef.current = date;
+    if (isDateOrFirstChange) {
+      setLoading(true);
+    }
     setError('');
     (async () => {
       try {

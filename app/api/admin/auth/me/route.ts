@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 
 export async function GET() {
-  if (await isAdmin()) {
-    return NextResponse.json({ authenticated: true, role: 'admin' });
+  const session = await getAdminSession();
+  if (session) {
+    return NextResponse.json({
+      authenticated: true,
+      id: session.id,
+      username: session.username,
+      campus: session.campus,
+      role: session.role,
+    });
   }
   return NextResponse.json({ authenticated: false }, { status: 401 });
 }
+

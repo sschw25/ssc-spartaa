@@ -55,10 +55,12 @@ interface InfoTabProps {
   onUpdateInfo: () => void;
   onDeleteStudent: () => void;
   onSetPassword: () => void;
-  initialParentPhone?: string;
-  initialStudentPhone?: string;
-  initialSmsTargets?: SmsTarget[];
-  onSaveNotify: (info: { parentPhone: string; studentPhone: string; smsTargets: SmsTarget[] }) => Promise<void>;
+  parentPhone: string;
+  setParentPhone: (v: string) => void;
+  studentPhone: string;
+  setStudentPhone: (v: string) => void;
+  smsTargets: SmsTarget[];
+  setSmsTargets: React.Dispatch<React.SetStateAction<SmsTarget[]>>;
   studentId?: string;
   shareToken?: string;
   shareTokenExpiresAt?: string;
@@ -87,10 +89,12 @@ export function InfoTab({
   onUpdateInfo,
   onDeleteStudent,
   onSetPassword,
-  initialParentPhone = '',
-  initialStudentPhone = '',
-  initialSmsTargets = ['parent'],
-  onSaveNotify,
+  parentPhone,
+  setParentPhone,
+  studentPhone,
+  setStudentPhone,
+  smsTargets,
+  setSmsTargets,
   studentId,
   shareToken,
   shareTokenExpiresAt,
@@ -100,10 +104,6 @@ export function InfoTab({
   awaySchedules,
   setAwaySchedules,
 }: InfoTabProps) {
-  const [parentPhone, setParentPhone] = useState(initialParentPhone);
-  const [studentPhone, setStudentPhone] = useState(initialStudentPhone);
-  const [smsTargets, setSmsTargets] = useState<SmsTarget[]>(initialSmsTargets.length ? initialSmsTargets : ['parent']);
-  const [savingNotify, setSavingNotify] = useState(false);
   const [sharingLoading, setSharingLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -182,14 +182,7 @@ export function InfoTab({
   const toggleTarget = (t: SmsTarget) =>
     setSmsTargets((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
 
-  const saveNotify = async () => {
-    setSavingNotify(true);
-    try {
-      await onSaveNotify({ parentPhone, studentPhone, smsTargets });
-    } finally {
-      setSavingNotify(false);
-    }
-  };
+
 
   return (
     <>
@@ -521,14 +514,7 @@ export function InfoTab({
               {opt.label}
             </label>
           ))}
-          <Button
-            onClick={saveNotify}
-            disabled={savingNotify}
-            size="sm"
-            className="ml-auto rounded-lg text-xs h-8 px-4 bg-[#0071E3] hover:bg-[#0077ED] text-white font-bold"
-          >
-            {savingNotify ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '알림 설정 저장'}
-          </Button>
+
         </div>
       </div>
 

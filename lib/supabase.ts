@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam } from './types/student';
+import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam, AdminAccount } from './types/student';
 import { mergeOrphanMaterials } from './db';
 
 // ── 환경 변수 ────────────────────────────────────────────────
@@ -511,3 +511,77 @@ export async function saveSharedMaterialSupabase(material: SharedMaterial): Prom
   if (error) throw error;
   return rowToMaterial(data);
 }
+
+// ── 관리자 계정 CRUD ───────────────────────────────────────────
+export async function getAdminAccountsSupabase(): Promise<AdminAccount[]> {
+  const { data, error } = await getClient()
+    .from('admin_accounts')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    username: r.username,
+    passwordHash: r.password,
+    campus: r.campus,
+    role: r.role,
+    createdAt: r.created_at || '',
+    updatedAt: r.updated_at || '',
+  }));
+}
+
+export async function getAdminAccountByUsernameSupabase(username: string): Promise<AdminAccount | null> {
+  const { data, error } = await getClient()
+    .from('admin_accounts')
+    .select('*')
+    .eq('username', username)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    id: data.id,
+    username: data.username,
+    passwordHash: data.password,
+    campus: data.campus,
+    role: data.role,
+    createdAt: data.created_at || '',
+    updatedAt: data.updated_at || '',
+  };
+}
+
+export async function saveAdminAccountSupabase(admin: AdminAccount): Promise<AdminAccount> {
+  const row = {
+    id: admin.id,
+    username: admin.username,
+    password: admin.passwordHash,
+    campus: admin.campus,
+    role: admin.role,
+    updated_at: admin.updatedAt,
+    created_at: admin.createdAt,
+  };
+  const { data, error } = await getClient()
+    .from('admin_accounts')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return {
+    id: data.id,
+    username: data.username,
+    passwordHash: data.password,
+    campus: data.campus,
+    role: data.role,
+    createdAt: data.created_at || '',
+    updatedAt: data.updated_at || '',
+  };
+}
+
+export async function deleteAdminAccountSupabase(id: string): Promise<boolean> {
+  const { error } = await getClient()
+    .from('admin_accounts')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+  return true;
+}
+

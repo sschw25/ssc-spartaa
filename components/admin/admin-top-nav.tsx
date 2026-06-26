@@ -57,6 +57,25 @@ export function AdminTopNav({
   const router = useRouter();
   const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [adminSession, setAdminSession] = useState<{ id: string; username: string; campus: string; role: string } | null>(null);
+
+  React.useEffect(() => {
+    async function fetchSession() {
+      try {
+        const res = await fetch('/api/admin/auth/me', { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated) {
+            setAdminSession(data);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch admin session in nav:', err);
+      }
+    }
+    fetchSession();
+  }, []);
+
 
   const navigate = (href: string) => {
     setIsMenuOpen(false);
@@ -134,22 +153,29 @@ export function AdminTopNav({
           <div className="flex items-center gap-2 rounded-full border border-black/[0.04] bg-[#F5F5F7]/80 p-0.5 shrink-0 shadow-inner">
             <span className="hidden sm:inline pl-3.5 pr-1 text-[10px] font-black text-[#86868B] uppercase tracking-wider">센터</span>
             <div className="flex min-w-0 overflow-hidden gap-0.5">
-              {campusOptions.map((option) => (
-                <Button
-                  key={option.value}
-                  size="sm"
-                  variant={campusValue === option.value ? 'default' : 'ghost'}
-                  onClick={() => onCampusChange(option.value)}
-                  className={cn(
-                    'admin-fit-button h-7 rounded-full px-3 text-[11px] transition-premium',
-                    campusValue === option.value
-                      ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-black border border-black/[0.02]'
-                      : 'text-[#86868B] hover:bg-white/60 hover:text-black'
-                  )}
-                >
-                  {option.label}
-                </Button>
-              ))}
+              {campusOptions
+                .filter((option) => {
+                  if (adminSession && adminSession.campus !== 'all') {
+                    return option.value === adminSession.campus;
+                  }
+                  return true;
+                })
+                .map((option) => (
+                  <Button
+                    key={option.value}
+                    size="sm"
+                    variant={campusValue === option.value ? 'default' : 'ghost'}
+                    onClick={() => onCampusChange(option.value)}
+                    className={cn(
+                      'admin-fit-button h-7 rounded-full px-3 text-[11px] transition-premium',
+                      campusValue === option.value
+                        ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-black border border-black/[0.02]'
+                        : 'text-[#86868B] hover:bg-white/60 hover:text-black'
+                    )}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
             </div>
           </div>
         )}
@@ -294,8 +320,22 @@ export function AdminTopNav({
               className={menuButtonClass(pathname === '/admin/leaderboard')}
             >
               <Trophy className="w-4 h-4 text-[#0071E3]" />
-              순공 랭킹
             </button>
+
+            {/* 설정 (슈퍼 관리자용) */}
+            {adminSession && (adminSession.campus === 'all' || adminSession.role === 'super') && (
+              <>
+                <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">설정</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin/accounts')}
+                  className={menuButtonClass(pathname === '/admin/accounts')}
+                >
+                  <Shield className="w-4 h-4 text-[#0071E3]" />
+                  관리자 계정 관리
+                </button>
+              </>
+            )}
           </div>
 
           <div className="mt-auto border-t border-black/[0.05] p-3">

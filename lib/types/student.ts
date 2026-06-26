@@ -274,3 +274,13 @@ export interface Student {
   // 휴대폰 제출 방식 신청 내역
   phoneSubmissions?: PhoneSubmission[];
 }
+
+export interface AdminAccount {
+  id: string;
+  username: string;
+  passwordHash: string;
+  campus: 'wonju' | 'chuncheon' | 'chungju' | 'all';
+  role: 'super' | 'campus_admin';
+  createdAt: string;
+  updatedAt: string;
+}

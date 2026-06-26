@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
-  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield
+  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -185,6 +185,41 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [studyStats, setStudyStats] = useState<any>(null);
   const [todayAttendanceStatus, setTodayAttendanceStatus] = useState<TodayAttendanceStatus | null>(null);
   const [leaveRequestsLocal, setLeaveRequestsLocal] = useState<LeaveRequest[]>([]);
+
+  // ── 미승인 조기 하원 여부 실시간 계산 ───────────────────────────────
+  const unauthorizedCheckoutText = useMemo(() => {
+    if (!student || !todayAttendanceStatus || todayAttendanceStatus.status !== 'left') return null;
+    const today = todayAttendanceStatus.today || new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+    const checkOutTimeStr = todayAttendanceStatus.checkOutAt; // "HH:MM"
+    if (!checkOutTimeStr) return null;
+    
+    const checkOutMin = timeStringToMin(checkOutTimeStr);
+    
+    // 현재 KST 시각
+    const now = new Date();
+    const kstOffset = 9 * 60 * 60 * 1000;
+    const kstDate = new Date(now.getTime() + kstOffset + now.getTimezoneOffset() * 60 * 1000);
+    const nowDateStr = kstDate.toISOString().split('T')[0];
+    const nowMin = kstDate.getHours() * 60 + kstDate.getMinutes();
+
+    const todayDow = new Date(today + 'T00:00:00').getDay();
+    const awayIntervals = getApplicableAwayIntervals(student, today, todayDow);
+
+    const isUnauth = checkUnauthorizedCheckout(
+      student,
+      true,
+      checkOutMin,
+      today,
+      nowDateStr,
+      nowMin,
+      awayIntervals
+    );
+
+    if (isUnauth) {
+      return `오늘(${today}) ${checkOutTimeStr}에 조기 하원 처리되었으나 승인된 휴가, 반차 또는 정기외출 기록이 없습니다. (미승인 조기 하원)`;
+    }
+    return null;
+  }, [student, todayAttendanceStatus]);
   const [leaveCouponsLocal, setLeaveCouponsLocal] = useState(0);
   const [leaveActionBusy, setLeaveActionBusy] = useState<Record<string, boolean>>({});
   const [leaveReplyDrafts, setLeaveReplyDrafts] = useState<Record<string, string>>({});
@@ -206,6 +241,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [shareToken, setShareToken] = useState<string | undefined>(undefined);
   const [shareTokenExpiresAt, setShareTokenExpiresAt] = useState<string | undefined>(undefined);
   const [sharePassword, setSharePassword] = useState<string | undefined>(undefined);
+
+  const [parentPhone, setParentPhone] = useState('');
+  const [studentPhone, setStudentPhone] = useState('');
+  const [smsTargets, setSmsTargets] = useState<Array<'parent' | 'student'>>(['parent']);
 
   // 등록된 기존 원생들의 목표시험 목록 중복제거 추출
   const uniqueExams = Array.from(
@@ -397,6 +436,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setShareTokenExpiresAt(student.shareTokenExpiresAt);
       setSharePassword(undefined); // PIN은 생성 직후 API 응답에서만 일회성 표시
       setSubjectsState(student.subjects || []);
+      setParentPhone(student.parentPhone || '');
+      setStudentPhone(student.studentPhone || '');
+      setSmsTargets(student.smsTargets || ['parent']);
       setCollapsedSubjects(Object.fromEntries((student.subjects || []).map((sub) => [sub.id, true])));
       if (student.customCategories && student.customCategories.length > 0) {
         setCustomCategories(student.customCategories);
@@ -478,17 +520,20 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const snap = (
       name: string, campus: string, manager: string, contact: string,
       speed: number, note: string, nextDate: string, subjects: SubjectProgress[],
-      enrollEnd: string, weeklyGrade: boolean, aways: AwaySchedule[]
-    ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade, aways });
+      enrollEnd: string, weeklyGrade: boolean, aways: AwaySchedule[],
+      parentPhone: string, studentPhone: string, smsTargets: string[]
+    ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade, aways, parentPhone, studentPhone, smsTargets });
 
     const localSnap = snap(
       name, campus, manager, contact, 1.0, specialNote,
-      nextConsultationDate || '', subjectsState, enrollmentEndDate || '', weeklyGradeCheck, awaySchedules
+      nextConsultationDate || '', subjectsState, enrollmentEndDate || '', weeklyGradeCheck, awaySchedules,
+      parentPhone, studentPhone, smsTargets
     );
     const sourceSnap = snap(
       student.name || '', student.campus || 'wonju', student.manager || '', student.contact || '',
       1.0, extractAdminNote(student.specialNote),
-      student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck), student.awaySchedules || []
+      student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck), student.awaySchedules || [],
+      student.parentPhone || '', student.studentPhone || '', student.smsTargets || ['parent']
     );
 
     if (localSnap === sourceSnap) return; // 변경 없음 → 저장 불필요
@@ -510,6 +555,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           weeklyGradeCheck,
           subjects: subjectsState,
           awaySchedules,
+          parentPhone,
+          studentPhone,
+          smsTargets,
           updatedAt: new Date().toISOString(),
         };
         const res = await fetch(`/api/admin/students/${student.id}`, {
@@ -534,7 +582,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [student, name, campus, manager, contact, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate, awaySchedules]);
+  }, [student, name, campus, manager, contact, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate, awaySchedules, parentPhone, studentPhone, smsTargets]);
 
   useEffect(() => {
     cslContentRef.current = cslContent;
@@ -859,6 +907,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       subjects: latestSubjects,
       consultationLogs: updatedLogs,
       awaySchedules,
+      parentPhone,
+      studentPhone,
+      smsTargets,
       updatedAt: nowStr
     };
 
@@ -967,6 +1018,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
       subjects: subjectsState,
       awaySchedules,
+      parentPhone,
+      studentPhone,
+      smsTargets,
       updatedAt: new Date().toISOString()
     };
 
@@ -977,27 +1031,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setLoading(false);
   };
 
-  const handleUpdateAwaySchedules = async (nextSchedules: AwaySchedule[]) => {
+  const handleUpdateAwaySchedules = (nextSchedules: AwaySchedule[]) => {
     setAwaySchedules(nextSchedules);
-    const updatedStudent: Student = {
-      ...student,
-      name,
-      loginId,
-      campus,
-      manager,
-      contact,
-      lifeComment,
-      studentLifeComment,
-      specialNote: mergeAdminNote(student.specialNote, specialNote),
-      nextConsultationDate: nextConsultationDate || undefined,
-      enrollmentEndDate: enrollmentEndDate || undefined,
-      weeklyGradeCheck,
-      seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
-      subjects: subjectsState,
-      awaySchedules: nextSchedules,
-      updatedAt: new Date().toISOString()
-    };
-    await saveStudentData(updatedStudent);
   };
 
   const handleGenerateShareToken = async () => {
@@ -3531,7 +3566,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         <div className="bg-[#1D1D1F] text-white p-6 md:p-8 relative flex flex-col gap-5">
           {/* Top Row: Title, Metadata, Status */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
-            <div className="min-w-0">
+            <div className="min-w-0 w-full">
+              {unauthorizedCheckoutText && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs font-semibold text-red-400 mb-4 transition-all duration-300">
+                  <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                  <span className="leading-relaxed">{unauthorizedCheckoutText}</span>
+                </div>
+              )}
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                 <span className="text-[9px] font-bold tracking-[0.2em] text-[#86868B] uppercase block">
                   Student Profile Detail
@@ -4137,10 +4178,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 onUpdateInfo={handleUpdateInfo}
                 onDeleteStudent={handleDeleteStudent}
                 onSetPassword={handleSetPassword}
-                initialParentPhone={student.parentPhone || ''}
-                initialStudentPhone={student.studentPhone || ''}
-                initialSmsTargets={student.smsTargets || ['parent']}
-                onSaveNotify={handleSaveNotify}
+                parentPhone={parentPhone}
+                setParentPhone={setParentPhone}
+                studentPhone={studentPhone}
+                setStudentPhone={setStudentPhone}
+                smsTargets={smsTargets}
+                setSmsTargets={setSmsTargets}
                 studentId={student.id}
                 shareToken={shareToken}
                 shareTokenExpiresAt={shareTokenExpiresAt}
@@ -4200,4 +4243,118 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     </AlertDialog>
     </>
   );
+}
+
+// ── 미승인 조기 하원 실시간 계산용 헬퍼 함수 ──────────────────────────
+function timeStringToMin(timeStr?: string): number {
+  if (!timeStr || !timeStr.includes(':')) return -1;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return -1;
+  return h * 60 + m;
+}
+
+function normalizeAwayDays(days: unknown): Array<number | string> {
+  return Array.isArray(days) ? days : [];
+}
+
+type StudentAwaySchedule = NonNullable<Student['awaySchedules']>[number];
+
+function awayScheduleMatchesDow(schedule: StudentAwaySchedule, todayDow: number): boolean {
+  const rawDays = normalizeAwayDays(schedule.days);
+  if (rawDays.length === 0) return true;
+
+  const todayLabels = [
+    ['일', '일요일', 'sun', 'sunday'],
+    ['월', '월요일', 'mon', 'monday'],
+    ['화', '화요일', 'tue', 'tuesday'],
+    ['수', '수요일', 'wed', 'wednesday'],
+    ['목', '목요일', 'thu', 'thursday'],
+    ['금', '금요일', 'fri', 'friday'],
+    ['토', '토요일', 'sat', 'saturday'],
+  ][todayDow];
+  const todayMon0 = todayDow === 0 ? 6 : todayDow - 1;
+
+  return rawDays.some((day) => {
+    if (typeof day === 'number') {
+      if (schedule.dayMode === 'mon0') return day === todayMon0;
+      if (schedule.dayMode === 'sun0') return day === todayDow;
+      return day === todayDow || day === todayMon0;
+    }
+    if (typeof day === 'string') {
+      const normalized = day.trim().toLowerCase();
+      return todayLabels.includes(normalized);
+    }
+    return false;
+  });
+}
+
+function getApplicableAwayIntervals(student: Student | null, today: string, todayDow: number) {
+  if (!student?.awaySchedules?.length) return [];
+
+  return student.awaySchedules
+    .filter((schedule) => {
+      if (!awayScheduleMatchesDow(schedule, todayDow)) return false;
+      if (schedule.until && schedule.until !== 'forever' && schedule.until < today) return false;
+      return timeStringToMin(schedule.awayTime) >= 0;
+    })
+    .map((schedule) => {
+      const startMin = timeStringToMin(schedule.awayTime);
+      const returnMin = schedule.returnTime ? timeStringToMin(schedule.returnTime) : -1;
+      let endMin = returnMin >= 0 ? returnMin : 24 * 60;
+      if (endMin <= startMin) endMin += 24 * 60;
+      return { startMin, endMin, startTime: schedule.awayTime };
+    })
+    .sort((a, b) => a.startMin - b.startMin);
+}
+
+function isApprovedLeaveCheckout(student: Student | null, today: string, checkOutMin: number): boolean {
+  if (!student) return false;
+
+  return (student.leaveRequests || [])
+    .filter((r) => r.date === today && r.status === 'approved')
+    .some((leave) => {
+      switch (leave.type) {
+        case 'fullday':
+        case 'sick':
+          return true;
+        case 'morning':
+          return checkOutMin <= 12 * 60 + 30;
+        case 'afternoon':
+          return checkOutMin >= 12 * 60 + 30 && checkOutMin <= 17 * 60 + 40;
+        case 'night':
+          return checkOutMin >= 17 * 60 + 40;
+        default:
+          return false;
+      }
+    });
+}
+
+function isApprovedAwayCheckout(
+  intervals: any[],
+  checkOutMin: number,
+  effectiveNow: number,
+): boolean {
+  return intervals.some((interval) => {
+    if (checkOutMin < interval.startMin) return false;
+    if (interval.endMin >= 24 * 60) return true;
+    return checkOutMin < interval.endMin && effectiveNow <= interval.endMin;
+  });
+}
+
+function checkUnauthorizedCheckout(
+  student: Student | null,
+  isLeftToday: boolean,
+  checkOutMin: number,
+  today: string,
+  nowDateStr: string,
+  nowMin: number,
+  awayIntervals: any[],
+): boolean {
+  if (!student || !isLeftToday || checkOutMin < 0) return false;
+  if (checkOutMin >= 22 * 60) return false;
+  if (isApprovedLeaveCheckout(student, today, checkOutMin)) return false;
+
+  const cmp = today.localeCompare(nowDateStr);
+  const effectiveNow = cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
+  return !isApprovedAwayCheckout(awayIntervals, checkOutMin, effectiveNow);
 }

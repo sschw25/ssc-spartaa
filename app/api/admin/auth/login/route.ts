@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
+import bcrypt from 'bcryptjs';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { getAdminAccountByUsername } from '@/lib/store';
+import { signAdminSession } from '@/lib/auth';
+
+const SESSION_COOKIE_OPTS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production',
+  sameSite: 'lax' as const,
+  maxAge: 60 * 60 * 24,
+  path: '/',
+};
 
 export async function POST(request: Request) {
   const rl = rateLimit(`admin-login:${clientIp(request)}`, 10, 5 * 60 * 1000);
@@ -20,16 +31,34 @@ export async function POST(request: Request) {
   try {
     const { username, password } = await request.json();
 
+    // 1. 마스터 관리자(환경변수) 검사
     if (username === 'admin' && password === correctPassword) {
-      const cookieStore = await cookies();
-      cookieStore.set('admin-session', sessionSecret, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 60 * 60 * 24,
-        path: '/',
+      const token = signAdminSession({
+        id: 'super_admin',
+        username: 'admin',
+        campus: 'all',
+        role: 'super',
       });
+      const cookieStore = await cookies();
+      cookieStore.set('admin-session', token, SESSION_COOKIE_OPTS);
       return NextResponse.json({ success: true, message: '로그인에 성공했습니다.' });
+    }
+
+    // 2. DB 등록 관리자 검사
+    const dbAdmin = await getAdminAccountByUsername(username);
+    if (dbAdmin && dbAdmin.passwordHash) {
+      const match = await bcrypt.compare(String(password), dbAdmin.passwordHash);
+      if (match) {
+        const token = signAdminSession({
+          id: dbAdmin.id,
+          username: dbAdmin.username,
+          campus: dbAdmin.campus,
+          role: dbAdmin.role,
+        });
+        const cookieStore = await cookies();
+        cookieStore.set('admin-session', token, SESSION_COOKIE_OPTS);
+        return NextResponse.json({ success: true, message: '로그인에 성공했습니다.' });
+      }
     }
 
     return NextResponse.json(
@@ -44,3 +73,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

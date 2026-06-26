@@ -1,18 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getStudentById, saveStudent, deleteStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 
 // 0. 특정 원생 단건 조회
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   try {
     const student = await getStudentById(id);
@@ -32,16 +32,21 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   try {
     const studentData = await request.json() as Student;
     if (studentData.id !== id) {
       return NextResponse.json({ success: false, message: '요청 정보가 일치하지 않습니다.' }, { status: 400 });
+    }
+
+    const session = await getAdminSession();
+    if (session && session.campus !== 'all' && studentData.campus !== session.campus) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스로 원생을 이동시킬 권한이 없습니다.' }, { status: 403 });
     }
 
     const updated = await saveStudent(studentData);
@@ -57,11 +62,11 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   try {
     const success = await deleteStudent(id);

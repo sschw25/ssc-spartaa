@@ -1,7 +1,15 @@
 import { cookies } from 'next/headers';
 import { createHmac, timingSafeEqual } from 'crypto';
+import { getStudentById } from './store';
 
 export const STUDENT_SESSION_COOKIE = 'student-session';
+
+export interface AdminSession {
+  id: string;
+  username: string;
+  campus: string;
+  role: string;
+}
 
 // 학생 세션 서명용 비밀키 (전용 키 우선, 없으면 어드민 키 재사용)
 function studentSessionSecret(): string | null {
@@ -17,16 +25,72 @@ export function signStudentSession(id: string): string {
   return `${id}.${sig}`;
 }
 
-export async function isAdmin(): Promise<boolean> {
+// 관리자 세션 서명 발급: `<id>:<username>:<campus>:<role>.<sig>`
+export function signAdminSession(session: AdminSession): string {
   const secret = process.env.ADMIN_SESSION_SECRET;
-  if (!secret) return false;
+  if (!secret) throw new Error('ADMIN_SESSION_SECRET이 설정되지 않았습니다.');
+  const payload = `${session.id}:${session.username}:${session.campus}:${session.role}`;
+  const sig = createHmac('sha256', secret).update(payload).digest('hex');
+  return `${payload}.${sig}`;
+}
+
+// 관리자 세션 파싱 및 검증
+export async function getAdminSession(): Promise<AdminSession | null> {
+  const secret = process.env.ADMIN_SESSION_SECRET;
+  if (!secret) return null;
   const store = await cookies();
   const value = store.get('admin-session')?.value;
-  if (!value) return false;
-  // 타이밍 사이드채널 완화를 위해 timingSafeEqual 사용
-  const a = Buffer.from(value);
-  const b = Buffer.from(secret);
-  return a.length === b.length && timingSafeEqual(a, b);
+  if (!value) return null;
+
+  // 레거시 세션 폴백 (쿠키가 환경 변수의 세션 시크릿과 완전히 일치하면 마스터 관리자 세션으로 처리)
+  if (value === secret) {
+    return {
+      id: 'super_admin',
+      username: 'admin',
+      campus: 'all',
+      role: 'super',
+    };
+  }
+
+  const dot = value.lastIndexOf('.');
+  if (dot <= 0) return null;
+  const payload = value.slice(0, dot);
+  const sig = value.slice(dot + 1);
+
+  const expected = createHmac('sha256', secret).update(payload).digest('hex');
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+
+  const parts = payload.split(':');
+  if (parts.length < 4) return null;
+  const [id, username, campus, role] = parts;
+  return { id, username, campus, role };
+}
+
+export async function isAdmin(): Promise<boolean> {
+  const session = await getAdminSession();
+  return session !== null;
+}
+
+export async function getAdminCampus(): Promise<string | null> {
+  const session = await getAdminSession();
+  return session ? session.campus : null;
+}
+
+/**
+ * 관리자가 특정 학생에 접근할 권한이 있는지 체크
+ * - 슈퍼 관리자('all')는 전원 접근 가능
+ * - 캠퍼스 관리자는 본인 캠퍼스 소속 학생만 접근 가능
+ */
+export async function canAdminAccessStudent(studentId: string): Promise<boolean> {
+  const session = await getAdminSession();
+  if (!session) return false;
+  if (session.campus === 'all') return true;
+
+  const student = await getStudentById(studentId);
+  if (!student) return false;
+  return student.campus === session.campus;
 }
 
 // 학생 세션에서 검증된 학생 id (서명 불일치/미서명 쿠키는 거부)
@@ -49,7 +113,10 @@ export async function getStudentSessionId(): Promise<string | null> {
 
 // 특정 학생 리소스에 대한 열람 권한: 관리자이거나 본인 학생일 때만 true
 export async function canViewStudent(studentId: string): Promise<boolean> {
-  if (await isAdmin()) return true;
+  if (await isAdmin()) {
+    return canAdminAccessStudent(studentId);
+  }
   const sid = await getStudentSessionId();
   return sid === studentId;
 }
+

@@ -620,51 +620,31 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
   const dday = getEnrollmentDDay(student.enrollmentEndDate, todayStr);
   const attendanceBadge = (() => {
     if (isUnauthorizedCheckout) {
-      const checkOutTime = periods.find((p) => p.checkOutTime)?.checkOutTime;
       return {
         label: '미승인',
         title: '미승인 조기 하원',
-        className: 'text-red-600 bg-red-50 border-red-200 cursor-pointer',
-        onClick: () => {
-          const timeLabel = checkOutTime ? `${checkOutTime} 퇴실` : '퇴실 완료';
-          const msg = `[미승인 조기 하원]\n학생: ${student.name}\n상태: ${timeLabel}\n\n정규 퇴실 시각(22:00) 이전에 퇴실하였으나 승인된 휴가, 반차 또는 정기외출 기록이 없습니다.`;
-          alert(msg);
-        }
+        className: 'text-red-600 bg-red-50 border-red-200',
       };
     }
     if (isOnLeave) {
       return {
         label: '휴가',
         title: '승인된 휴가',
-        className: 'text-blue-500 bg-blue-100 border-blue-100 cursor-pointer',
-        onClick: () => {
-          const msg = `[승인된 휴가]\n학생: ${student.name}\n\n오늘 승인된 휴가, 병가 또는 반차 신청 정보가 존재합니다.`;
-          alert(msg);
-        }
+        className: 'text-blue-500 bg-blue-100 border-blue-100',
       };
     }
     if (isLeftToday) {
-      const checkOutTime = periods.find((p) => p.checkOutTime)?.checkOutTime;
       return {
         label: '하원',
         title: '하원 완료',
-        className: 'text-slate-500 bg-slate-100 border-slate-100 cursor-pointer',
-        onClick: () => {
-          const timeLabel = checkOutTime ? ` (${checkOutTime} 퇴실)` : '';
-          const msg = `[하원 완료]\n학생: ${student.name}\n\n오늘 정상 하원 처리되었습니다.${timeLabel}`;
-          alert(msg);
-        }
+        className: 'text-slate-500 bg-slate-100 border-slate-100',
       };
     }
     if (!isCheckedIn) {
       return {
         label: '미등원',
         title: '미등원',
-        className: 'text-red-500 bg-red-50 border-red-100 cursor-pointer',
-        onClick: () => {
-          const msg = `[미등원]\n학생: ${student.name}\n\n오늘 아직 등원 기록이 존재하지 않습니다.`;
-          alert(msg);
-        }
+        className: 'text-red-500 bg-red-50 border-red-100',
       };
     }
     return null;
@@ -674,22 +654,14 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
       return {
         label: '만료',
         title: '등록 기간 만료',
-        className: 'text-red-600 bg-red-50 border-red-200 cursor-pointer',
-        onClick: () => {
-          const msg = `[등록 기간 만료]\n학생: ${student.name}\n만료일: ${student.enrollmentEndDate || '알 수 없음'}\n\n등록 기간이 만료되었습니다. 기간 연장 및 수강 상태 확인이 필요합니다.`;
-          alert(msg);
-        }
+        className: 'text-red-600 bg-red-50 border-red-200',
       };
     }
     if (dday.status === 'warning') {
       return {
         label: dday.daysLeft === 0 ? 'D0' : `D-${dday.daysLeft}`,
         title: dday.daysLeft === 0 ? '등록 만료 D-Day' : `등록 만료 D-${dday.daysLeft}`,
-        className: 'text-amber-600 bg-amber-50 border-amber-200 cursor-pointer',
-        onClick: () => {
-          const msg = `[등록 만료 임박]\n학생: ${student.name}\n만료일: ${student.enrollmentEndDate || '알 수 없음'}\n\n등록 만료가 임박하였습니다. (${dday.daysLeft === 0 ? '오늘 만료' : `${dday.daysLeft}일 남음`})`;
-          alert(msg);
-        }
+        className: 'text-amber-600 bg-amber-50 border-amber-200',
       };
     }
     return null;
@@ -732,12 +704,6 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
             <span
               key={badge!.title}
               title={badge!.title}
-              onClick={(e) => {
-                if (typeof badge!.onClick === 'function') {
-                  e.stopPropagation();
-                  badge!.onClick();
-                }
-              }}
               className={`text-[7px] font-black border px-[3px] py-0.5 rounded-[3px] leading-none shrink-0 ${badge!.className}`}
             >
               {badge!.label}

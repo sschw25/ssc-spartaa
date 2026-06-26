@@ -40,7 +40,11 @@ export async function GET() {
     ]);
 
     const studentMap = new Map(students.map((s) => [s.id, s]));
-    const openIds = new Set(openSessions.map((s) => s.student_id));
+    const openIds = new Set(
+      openSessions
+        .filter((s) => s.date === todayStr)
+        .map((s) => s.student_id)
+    );
     const nowMs = Date.now();
 
     const todayByStudent = new Map<string, typeof todaySessions>();
@@ -51,9 +55,9 @@ export async function GET() {
       todayByStudent.set(s.student_id, arr);
     }
 
-    // 현재 등원 중 (미퇴실 세션 보유)
+    // 현재 등원 중 (미퇴실 세션 보유, 오늘 날짜인 경우만 등원 중으로 판정)
     const present = openSessions
-      .filter((s) => studentMap.has(s.student_id))
+      .filter((s) => studentMap.has(s.student_id) && s.date === todayStr)
       .map((s) => {
         const stu = studentMap.get(s.student_id)!;
         const completedMinutes = (todayByStudent.get(stu.id) || [])

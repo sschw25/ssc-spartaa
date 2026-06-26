@@ -1,10 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial } from './types/student';
+import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, AdminAccount } from './types/student';
 
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'students.json');
 const SHARED_DB_FILE = path.join(DB_DIR, 'shared_materials.json');
+const ADMIN_DB_FILE = path.join(DB_DIR, 'admin_accounts.json');
 
 const normalizeStudyTime = (value: unknown): SubjectProgress['studyTime'] => {
   return value === 'morning' || value === 'afternoon' || value === 'night' ? value : '';
@@ -255,3 +256,60 @@ export function deleteStudentLocal(id: string): boolean {
   if (students.length === filtered.length) return false;
   return writeDb(filtered);
 }
+
+// ── 관리자 계정 로컬 CRUD ───────────────────────────────────────────
+function initializeAdminDb() {
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+  if (!fs.existsSync(ADMIN_DB_FILE)) {
+    fs.writeFileSync(ADMIN_DB_FILE, JSON.stringify([], null, 2), 'utf-8');
+  }
+}
+
+export function readAdminAccountsLocal(): AdminAccount[] {
+  initializeAdminDb();
+  try {
+    const content = fs.readFileSync(ADMIN_DB_FILE, 'utf-8');
+    return JSON.parse(content) as AdminAccount[];
+  } catch (error) {
+    console.error('Failed to read admin accounts DB:', error);
+    return [];
+  }
+}
+
+export function writeAdminAccountsLocal(data: AdminAccount[]): boolean {
+  initializeAdminDb();
+  try {
+    fs.writeFileSync(ADMIN_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('Failed to write admin accounts DB:', error);
+    return false;
+  }
+}
+
+export function getAdminAccountByUsernameLocal(username: string): AdminAccount | null {
+  const accounts = readAdminAccountsLocal();
+  return accounts.find((a) => a.username.toLowerCase() === username.toLowerCase()) || null;
+}
+
+export function saveAdminAccountLocal(admin: AdminAccount): AdminAccount {
+  const accounts = readAdminAccountsLocal();
+  const index = accounts.findIndex((a) => a.id === admin.id);
+  if (index >= 0) {
+    accounts[index] = admin;
+  } else {
+    accounts.push(admin);
+  }
+  writeAdminAccountsLocal(accounts);
+  return admin;
+}
+
+export function deleteAdminAccountLocal(id: string): boolean {
+  const accounts = readAdminAccountsLocal();
+  const filtered = accounts.filter((a) => a.id !== id);
+  if (accounts.length === filtered.length) return false;
+  return writeAdminAccountsLocal(filtered);
+}
+
