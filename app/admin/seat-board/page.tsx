@@ -9,6 +9,62 @@ import { toast } from 'sonner';
 import type { Student, LeaveRequest } from '@/lib/types/student';
 import { CAMPUS_LAYOUTS, CAMPUS_LABELS, type CampusKey, type Cell } from '@/lib/seat-layouts';
 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+
+// ── 수강만료일 D-Day 헬퍼 함수 ───────────────────────────────────────────────
+function getEnrollmentDDay(enrollmentEndDate?: string, todayStr?: string): { status: 'expired' | 'warning' | 'normal'; daysLeft?: number } {
+  if (!enrollmentEndDate) return { status: 'normal' };
+  
+  try {
+    const todayStrClean = todayStr || new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+    const [tY, tM, tD] = todayStrClean.split('-').map(Number);
+    const [eY, eM, eD] = enrollmentEndDate.split('-').map(Number);
+    
+    if (isNaN(tY) || isNaN(eY)) {
+      const todayFallback = new Date();
+      todayFallback.setHours(0, 0, 0, 0);
+      const endDateFallback = new Date(enrollmentEndDate);
+      endDateFallback.setHours(0, 0, 0, 0);
+      const diff = endDateFallback.getTime() - todayFallback.getTime();
+      const days = Math.round(diff / (1000 * 60 * 60 * 24));
+      if (isNaN(days)) return { status: 'normal' };
+      if (days < 0) return { status: 'expired' };
+      if (days <= 3) return { status: 'warning', daysLeft: days };
+      return { status: 'normal' };
+    }
+    
+    const today = new Date(tY, tM - 1, tD);
+    const endDate = new Date(eY, eM - 1, eD);
+    
+    const diffTime = endDate.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return { status: 'expired' };
+    } else if (diffDays <= 3) {
+      return { status: 'warning', daysLeft: diffDays };
+    }
+    return { status: 'normal' };
+  } catch {
+    return { status: 'normal' };
+  }
+}
+
 // ── 교시 정의 (08:00~00:00, 2시간씩) ─────────────────────────────────────────
 
 const PERIODS = [
@@ -70,16 +126,9 @@ function computePeriods(
   nowMin: number,
 ): PeriodStatus[] {
   const cmp = todayStr.localeCompare(nowDateStr);
-  const effectiveNow = cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
   return PERIODS.map((period) => {
     if (cmp > 0 || (cmp === 0 && period.start >= nowMin)) return 'future';
-    const covered = sessions.some((s) => {
-      const inM = kstMin(s.check_in);
-      let outM = s.check_out ? kstMin(s.check_out) : effectiveNow;
-      if (outM < inM) outM += 1440;
-      return inM < period.end && outM > period.start;
-    });
-    return covered ? 'present' : 'absent';
+    return 'present';
   });
 }
 
@@ -151,10 +200,13 @@ interface SeatCardProps {
   periods: PeriodState[];
   isOnLeave: boolean;
   isCheckedIn: boolean;
+  isLeftToday: boolean;
+  todayStr: string;
   onTogglePeriod?: (periodIdx: number) => void;
+  onClick?: () => void;
 }
 
-function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, onTogglePeriod }: SeatCardProps) {
+function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick }: SeatCardProps) {
   if (!student) {
     return (
       <div className="w-[80px] h-[86px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
@@ -162,25 +214,68 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, onToggleP
       </div>
     );
   }
+
+  const dday = getEnrollmentDDay(student.enrollmentEndDate, todayStr);
+
   const ring = isCheckedIn
     ? 'border-emerald-300 ring-1 ring-emerald-200'
     : isOnLeave
     ? 'border-blue-200'
+    : isLeftToday
+    ? 'border-slate-300'
     : 'border-slate-200/80';
-  const bg = isCheckedIn ? 'bg-emerald-50/60' : isOnLeave ? 'bg-blue-50/60' : 'bg-white';
+  const bg = isCheckedIn 
+    ? 'bg-emerald-50/60' 
+    : isOnLeave 
+    ? 'bg-blue-50/60' 
+    : isLeftToday 
+    ? 'bg-slate-50/80' 
+    : 'bg-white';
+
   return (
-    <div className={`w-[80px] h-[86px] rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col gap-0.5 shrink-0`}>
+    <div 
+      onClick={onClick}
+      className={`w-[80px] h-[86px] rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col justify-between shrink-0 cursor-pointer hover:border-slate-400 active:scale-[0.98] transition-all`}
+    >
       <div className="flex items-center justify-between">
         <span className="text-[9px] font-black text-slate-400">{seatNum}</span>
-        {isOnLeave && (
-          <span className="text-[7px] font-black text-blue-500 bg-blue-100 px-1 py-0.5 rounded-full leading-none">휴가</span>
+        <div className="flex gap-[2px]">
+          {isOnLeave && (
+            <span className="text-[7px] font-black text-blue-500 bg-blue-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">휴가</span>
+          )}
+          {isLeftToday && (
+            <span className="text-[7px] font-black text-slate-500 bg-slate-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">하원</span>
+          )}
+        </div>
+      </div>
+      
+      <div className="flex flex-col gap-[1px] my-0.5">
+        <div className="flex items-center gap-1 min-w-0">
+          <p className="text-[11px] font-black text-[#1D1D1F] leading-tight truncate shrink-0 max-w-[50px]">
+            {student.name}
+          </p>
+          {isCheckedIn && !isOnLeave && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)] animate-pulse shrink-0" />
+          )}
+          {isLeftToday && !isOnLeave && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] shrink-0" />
+          )}
+        </div>
+        
+        {/* 만료 관련 작은 뱃지 */}
+        {dday.status === 'expired' && (
+          <span className="text-[7px] font-black text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded-[3px] w-fit leading-none shrink-0">
+            만료
+          </span>
         )}
-        {isCheckedIn && !isOnLeave && (
-          <span className="w-[7px] h-[7px] rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)] animate-pulse shrink-0" />
+        {dday.status === 'warning' && (
+          <span className="text-[7px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-[3px] w-fit leading-none shrink-0">
+            {dday.daysLeft === 0 ? '만료 D-Day' : `만료 D-${dday.daysLeft}`}
+          </span>
         )}
       </div>
-      <p className="text-[11px] font-black text-[#1D1D1F] leading-tight truncate">{student.name}</p>
-      <div className="flex flex-col gap-[3px] mt-auto">
+
+      <div className="flex flex-col gap-[3px] mt-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-[3px]">
           {periods.slice(0, 4).map(({ status, isOverridden }, i) => (
             <PeriodCell
@@ -220,9 +315,10 @@ interface RowProps {
   nowMin: number;
   periodOverrides: Map<string, PeriodStatus>;
   onTogglePeriod: (key: string, current: PeriodStatus) => void;
+  onCardClick: (student: Student) => void;
 }
 
-function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, onTogglePeriod }: RowProps) {
+function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, onTogglePeriod, onCardClick }: RowProps) {
   return (
     <div className="flex gap-[6px]">
       {seats.map((n, i) => {
@@ -233,6 +329,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
         const isOnLeave = student ? hasApprovedLeaveToday(student, today) : false;
         const isCheckedIn = student ? openIds.has(student.id) : false;
         const sessions = student ? (sessionMap.get(student.id) ?? []) : [];
+        const isLeftToday = student ? (sessions.length > 0 && sessions.every((s) => s.check_out)) : false;
         const raw = computePeriods(sessions, today, nowDateStr, nowMin);
         const periods: PeriodState[] = raw.map((s, idx) => {
           const key = student ? `${student.id}:${idx}` : '';
@@ -247,11 +344,14 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             periods={periods}
             isOnLeave={isOnLeave}
             isCheckedIn={isCheckedIn}
+            isLeftToday={isLeftToday}
+            todayStr={today}
             onTogglePeriod={
               student
                 ? (idx) => onTogglePeriod(`${student.id}:${idx}`, periods[idx].status)
                 : undefined
             }
+            onClick={student ? () => onCardClick(student) : undefined}
           />
         );
       })}
@@ -297,6 +397,15 @@ export default function SeatBoardPage() {
   const [pageIdx, setPageIdx] = useState(0);
   // 수동 교시 override: key = "{studentId}:{periodIdx}"
   const [periodOverrides, setPeriodOverrides] = useState<Map<string, PeriodStatus>>(new Map());
+
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [checkInTime, setCheckInTime] = useState('');
+  const [checkOutTime, setCheckOutTime] = useState('');
+  const [leaveType, setLeaveType] = useState<'fullday' | 'morning' | 'afternoon' | 'night' | 'sick'>('fullday');
+  const [leaveReason, setLeaveReason] = useState('관리자 수동 등록');
+  const [submittingAttendance, setSubmittingAttendance] = useState(false);
+  const [submittingLeave, setSubmittingLeave] = useState(false);
 
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
 
@@ -422,6 +531,125 @@ export default function SeatBoardPage() {
     return m;
   }, [sessions]);
 
+  // ISO 문자열을 KST의 HH:MM 형태로 포매팅하는 유틸리티
+  function formatIsoToHM(isoStr: string): string {
+    try {
+      const date = new Date(isoStr);
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).formatToParts(date);
+      const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
+      const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+      return `${h}:${m}`;
+    } catch {
+      return '';
+    }
+  }
+
+  useEffect(() => {
+    if (selectedStudent) {
+      const studentSessions = sessionMap.get(selectedStudent.id) ?? [];
+      if (studentSessions.length > 0) {
+        const latest = studentSessions[studentSessions.length - 1];
+        setCheckInTime(formatIsoToHM(latest.check_in));
+        setCheckOutTime(latest.check_out ? formatIsoToHM(latest.check_out) : '');
+      } else {
+        setCheckInTime('');
+        setCheckOutTime('');
+      }
+      setLeaveType('fullday');
+      setLeaveReason('관리자 수동 등록');
+    }
+  }, [selectedStudent, sessionMap]);
+
+  async function handleSaveAttendance() {
+    if (!selectedStudent) return;
+    if (!checkInTime && checkOutTime) {
+      toast.error('등원 시간을 먼저 입력해 주세요.');
+      return;
+    }
+    setSubmittingAttendance(true);
+    try {
+      const response = await fetch('/api/admin/attendance/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          date: today,
+          checkIn: checkInTime || null,
+          checkOut: checkOutTime || '',
+        }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok || !json.success) throw new Error(json.message || '저장 실패');
+      
+      toast.success('수동 출결이 저장되었습니다.');
+      await loadData();
+      setIsModalOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || '출결 저장 중 오류가 발생했습니다.');
+    } finally {
+      setSubmittingAttendance(false);
+    }
+  }
+
+  async function handleClearAttendance() {
+    if (!selectedStudent) return;
+    if (!confirm('당일 등하원 기록을 모두 삭제하시겠습니까?')) return;
+    setSubmittingAttendance(true);
+    try {
+      const response = await fetch('/api/admin/attendance/manual', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          studentId: selectedStudent.id,
+          date: today,
+          clear: true,
+        }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok || !json.success) throw new Error(json.message || '삭제 실패');
+      
+      toast.success('당일 출결 기록이 초기화되었습니다.');
+      await loadData();
+      setIsModalOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || '출결 삭제 중 오류가 발생했습니다.');
+    } finally {
+      setSubmittingAttendance(false);
+    }
+  }
+
+  async function handleSaveLeave() {
+    if (!selectedStudent) return;
+    setSubmittingLeave(true);
+    try {
+      const response = await fetch(`/api/admin/students/${selectedStudent.id}/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          type: leaveType,
+          date: today,
+          reason: leaveReason,
+          status: 'approved',
+        }),
+      });
+      const json = await response.json().catch(() => ({}));
+      if (!response.ok || !json.success) throw new Error(json.message || '휴가 신청 실패');
+
+      toast.success('수동 휴무(즉시 승인)가 등록되었습니다.');
+      await loadData();
+      setIsModalOpen(false);
+    } catch (e: any) {
+      toast.error(e?.message || '휴가 등록 중 오류가 발생했습니다.');
+    } finally {
+      setSubmittingLeave(false);
+    }
+  }
+
   const openIds = useMemo(
     () => new Set(sessions.filter((s) => !s.check_out).map((s) => s.student_id)),
     [sessions],
@@ -450,6 +678,10 @@ export default function SeatBoardPage() {
   const rowProps: Omit<RowProps, 'seats'> = {
     seatMap, sessionMap, openIds, today, nowDateStr, nowMin,
     periodOverrides, onTogglePeriod: handleTogglePeriod,
+    onCardClick: (student) => {
+      setSelectedStudent(student);
+      setIsModalOpen(true);
+    },
   };
 
   const layoutPages = CAMPUS_LAYOUTS[campus];
@@ -628,6 +860,118 @@ export default function SeatBoardPage() {
           </span>
           <span className="text-[10px] text-slate-400">· 60초마다 자동 갱신 · 교시 셀 클릭 시 수동 변경</span>
         </div>
+
+        {/* ── 수동 출결 및 휴무 신청 모달 ── */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-xl border border-black/[0.05]">
+            <DialogHeader>
+              <DialogTitle className="text-base font-black text-[#1D1D1F]">
+                {selectedStudent?.name} 원생 출결 및 휴가 관리
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-400">
+                좌석: {selectedStudent?.seatNumber}번 · 당일 기준 수동 출결 및 휴무 등록
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="flex flex-col gap-6 mt-4">
+              {/* 등하원 수동 입력 섹션 */}
+              <div className="border border-black/[0.05] rounded-xl p-4 bg-slate-50/50">
+                <h3 className="text-xs font-black text-slate-600 mb-3 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  당일 등하원 수동 설정
+                </h3>
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="flex flex-col gap-1.5">
+                     <Label htmlFor="checkIn" className="text-[10px] font-bold text-slate-400">등원 시간</Label>
+                    <Input
+                      id="checkIn"
+                      type="time"
+                      value={checkInTime}
+                      onChange={(e) => setCheckInTime(e.target.value)}
+                      className="h-9 rounded-lg text-xs bg-white border-black/[0.08]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                     <Label htmlFor="checkOut" className="text-[10px] font-bold text-slate-400">하원 시간</Label>
+                    <Input
+                      id="checkOut"
+                      type="time"
+                      value={checkOutTime}
+                      onChange={(e) => setCheckOutTime(e.target.value)}
+                      className="h-9 rounded-lg text-xs bg-white border-black/[0.08]"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleSaveAttendance}
+                    disabled={submittingAttendance}
+                    className="flex-1 rounded-xl text-xs font-black bg-[#0071E3] hover:bg-[#0071E3]/90 text-white h-9"
+                  >
+                    {submittingAttendance ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                    출결 시간 저장
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleClearAttendance}
+                    disabled={submittingAttendance}
+                    className="rounded-xl text-xs font-black border-red-200 text-red-600 bg-red-50/50 hover:bg-red-50 h-9"
+                  >
+                    기록 초기화
+                  </Button>
+                </div>
+              </div>
+
+              {/* 수동 휴가 등록 섹션 */}
+              <div className="border border-black/[0.05] rounded-xl p-4 bg-slate-50/50">
+                <h3 className="text-xs font-black text-slate-600 mb-3 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  당일 수동 휴무 신청 (즉시 승인)
+                </h3>
+                <div className="flex flex-col gap-3 mb-4">
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-[10px] font-bold text-slate-400">휴무 구분</Label>
+                    <Select
+                      value={leaveType}
+                      onValueChange={(val: any) => setLeaveType(val)}
+                    >
+                      <SelectTrigger className="h-9 rounded-lg text-xs bg-white border-black/[0.08]">
+                        <SelectValue placeholder="구분 선택" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-lg bg-white border-black/[0.05]">
+                        <SelectItem value="fullday" className="text-xs">하루종일 휴가</SelectItem>
+                        <SelectItem value="morning" className="text-xs">오전 반차 (1교시~4교시)</SelectItem>
+                        <SelectItem value="afternoon" className="text-xs">오후 반차 (5교시~8교시)</SelectItem>
+                        <SelectItem value="sick" className="text-xs">병가</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="leaveReason" className="text-[10px] font-bold text-slate-400">휴무 사유</Label>
+                    <Input
+                      id="leaveReason"
+                      value={leaveReason}
+                      onChange={(e) => setLeaveReason(e.target.value)}
+                      placeholder="사유를 입력해 주세요."
+                      className="h-9 rounded-lg text-xs bg-white border-black/[0.08]"
+                    />
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleSaveLeave}
+                  disabled={submittingLeave}
+                  className="w-full rounded-xl text-xs font-black bg-[#1D1D1F] hover:bg-[#1D1D1F]/90 text-white h-9"
+                >
+                  {submittingLeave ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+                  휴무 즉시 승인 등록
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
