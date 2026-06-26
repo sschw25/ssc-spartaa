@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { Student, LeaveRequest } from '@/lib/types/student';
 import { CAMPUS_LAYOUTS, CAMPUS_LABELS, type CampusKey, type Cell } from '@/lib/seat-layouts';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 import {
   Dialog,
@@ -120,15 +121,42 @@ interface PeriodState {
 }
 
 function computePeriods(
-  sessions: StudySession[],
+  student: Student | null,
   todayStr: string,
   nowDateStr: string,
   nowMin: number,
 ): PeriodStatus[] {
   const cmp = todayStr.localeCompare(nowDateStr);
-  return PERIODS.map((period) => {
+  
+  // 당일 승인된 휴가 신청 목록 필터링
+  const approvedLeaves = student
+    ? (student.leaveRequests || []).filter((r) => r.date === todayStr && r.status === 'approved')
+    : [];
+
+  return PERIODS.map((period, idx) => {
     if (cmp > 0 || (cmp === 0 && period.start >= nowMin)) return 'future';
-    return 'present';
+    
+    // 기본 출결 전제 (기본: 출석)
+    let defaultStatus: PeriodStatus = 'present';
+    
+    // 휴가 종류에 따른 자동 결석(absent) 매핑
+    for (const leave of approvedLeaves) {
+      const type = leave.type;
+      if (type === 'fullday' || type === 'sick') {
+        defaultStatus = 'absent';
+      } else if (type === 'morning' && idx < 2) {
+        // 오전 반차: 1, 2교시 (index 0, 1) 결석
+        defaultStatus = 'absent';
+      } else if (type === 'afternoon' && idx >= 2 && idx <= 4) {
+        // 오후 반차: 3, 4, 5교시 (index 2, 3, 4) 결석
+        defaultStatus = 'absent';
+      } else if (type === 'night' && idx >= 5 && idx <= 6) {
+        // 야간 반차: 6, 7교시 (index 5, 6) 결석
+        defaultStatus = 'absent';
+      }
+    }
+    
+    return defaultStatus;
   });
 }
 
@@ -204,9 +232,10 @@ interface SeatCardProps {
   todayStr: string;
   onTogglePeriod?: (periodIdx: number) => void;
   onClick?: () => void;
+  onNameClick?: () => void;
 }
 
-function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick }: SeatCardProps) {
+function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick, onNameClick }: SeatCardProps) {
   if (!student) {
     return (
       <div className="w-[80px] h-[86px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
@@ -251,7 +280,15 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
       
       <div className="flex flex-col gap-[1px] my-0.5">
         <div className="flex items-center gap-1 min-w-0">
-          <p className="text-[11px] font-black text-[#1D1D1F] leading-tight truncate shrink-0 max-w-[50px]">
+          <p 
+            onClick={(e) => {
+              if (onNameClick) {
+                e.stopPropagation();
+                onNameClick();
+              }
+            }}
+            className="text-[11px] font-black text-[#1D1D1F] leading-tight truncate shrink-0 max-w-[50px] hover:underline decoration-[#1D1D1F]/50 decoration-1"
+          >
             {student.name}
           </p>
           {isCheckedIn && !isOnLeave && (
@@ -316,9 +353,10 @@ interface RowProps {
   periodOverrides: Map<string, PeriodStatus>;
   onTogglePeriod: (key: string, current: PeriodStatus) => void;
   onCardClick: (student: Student) => void;
+  onNameClick: (student: Student) => void;
 }
 
-function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, onTogglePeriod, onCardClick }: RowProps) {
+function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, onTogglePeriod, onCardClick, onNameClick }: RowProps) {
   return (
     <div className="flex gap-[6px]">
       {seats.map((n, i) => {
@@ -330,7 +368,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
         const isCheckedIn = student ? openIds.has(student.id) : false;
         const sessions = student ? (sessionMap.get(student.id) ?? []) : [];
         const isLeftToday = student ? (sessions.length > 0 && sessions.every((s) => s.check_out)) : false;
-        const raw = computePeriods(sessions, today, nowDateStr, nowMin);
+        const raw = computePeriods(student, today, nowDateStr, nowMin);
         const periods: PeriodState[] = raw.map((s, idx) => {
           const key = student ? `${student.id}:${idx}` : '';
           const override = student ? periodOverrides.get(key) : undefined;
@@ -352,6 +390,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
                 : undefined
             }
             onClick={student ? () => onCardClick(student) : undefined}
+            onNameClick={student ? () => onNameClick(student) : undefined}
           />
         );
       })}
@@ -389,6 +428,7 @@ const CAMPUS_KEYS: CampusKey[] = ['wonju', 'chungju', 'chuncheon'];
 
 export default function SeatBoardPage() {
   const router = useRouter();
+  const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
@@ -682,6 +722,9 @@ export default function SeatBoardPage() {
       setSelectedStudent(student);
       setIsModalOpen(true);
     },
+    onNameClick: (student) => {
+      openStudent(student);
+    },
   };
 
   const layoutPages = CAMPUS_LAYOUTS[campus];
@@ -880,6 +923,48 @@ export default function SeatBoardPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                   당일 등하원 수동 설정
                 </h3>
+
+                {/* 오전/오후/야간 퀵 프리셋 버튼 */}
+                <div className="flex flex-col gap-1.5 mb-3">
+                  <Label className="text-[10px] font-bold text-slate-400">시간 프리셋</Label>
+                  <div className="flex gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const expected = selectedStudent?.expectedArrival || '08:20';
+                        setCheckInTime(expected);
+                        setCheckOutTime('22:00');
+                      }}
+                      className="flex-1 rounded-xl text-[10px] h-7 bg-white border-black/[0.06] hover:bg-slate-50 font-bold"
+                    >
+                      오전 ({selectedStudent?.expectedArrival || '08:20'})
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setCheckInTime('13:00');
+                        setCheckOutTime('22:00');
+                      }}
+                      className="flex-1 rounded-xl text-[10px] h-7 bg-white border-black/[0.06] hover:bg-slate-50 font-bold"
+                    >
+                      오후 (13:00)
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        setCheckInTime('18:00');
+                        setCheckOutTime('22:00');
+                      }}
+                      className="flex-1 rounded-xl text-[10px] h-7 bg-white border-black/[0.06] hover:bg-slate-50 font-bold"
+                    >
+                      야간 (18:00)
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-3 mb-4">
                   <div className="flex flex-col gap-1.5">
                      <Label htmlFor="checkIn" className="text-[10px] font-bold text-slate-400">등원 시간</Label>
@@ -942,8 +1027,9 @@ export default function SeatBoardPage() {
                       </SelectTrigger>
                       <SelectContent className="rounded-lg bg-white border-black/[0.05]">
                         <SelectItem value="fullday" className="text-xs">하루종일 휴가</SelectItem>
-                        <SelectItem value="morning" className="text-xs">오전 반차 (1교시~4교시)</SelectItem>
-                        <SelectItem value="afternoon" className="text-xs">오후 반차 (5교시~8교시)</SelectItem>
+                        <SelectItem value="morning" className="text-xs">오전 반차 (1, 2교시)</SelectItem>
+                        <SelectItem value="afternoon" className="text-xs">오후 반차 (3, 4, 5교시)</SelectItem>
+                        <SelectItem value="night" className="text-xs">야간 반차 (6, 7교시)</SelectItem>
                         <SelectItem value="sick" className="text-xs">병가</SelectItem>
                       </SelectContent>
                     </Select>
