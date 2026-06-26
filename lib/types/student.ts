@@ -2,6 +2,7 @@ export interface AwaySchedule {
   awayTime: string;      // "HH:MM"
   returnTime?: string;   // "HH:MM", 미복귀 시 생략
   days: number[];        // [] = 매일, [0]=일 [1]=월 [2]=화 [3]=수 [4]=목 [5]=금 [6]=토
+  dayMode?: 'sun0' | 'mon0'; // 요일 숫자 기준. 기존 데이터에는 없을 수 있음.
   until: string;         // 'forever' 또는 'YYYY-MM-DD'
 }
 

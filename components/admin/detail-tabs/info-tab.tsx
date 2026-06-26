@@ -124,6 +124,7 @@ export function InfoTab({
       awayTime: newAwayTime,
       returnTime: newReturnTime || undefined,
       days: newDays,
+      dayMode: 'sun0',
       until: newUntilForever ? 'forever' : (newUntilDate || 'forever'),
     };
     const isDupe = awaySchedules.some(
@@ -361,22 +362,22 @@ export function InfoTab({
 
         {/* 시간 */}
         <div className="flex items-center gap-2 flex-wrap">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[11px] font-bold text-[#86868B]">외출</span>
             <Input
               type="time"
               value={newAwayTime}
               onChange={(e) => setNewAwayTime(e.target.value)}
-              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[110px]"
+              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white w-[128px] min-w-[128px] shrink-0"
             />
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="text-[11px] font-bold text-[#86868B]">복귀 (선택)</span>
             <Input
               type="time"
               value={newReturnTime}
               onChange={(e) => setNewReturnTime(e.target.value)}
-              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[110px]"
+              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white w-[128px] min-w-[128px] shrink-0"
             />
           </div>
         </div>

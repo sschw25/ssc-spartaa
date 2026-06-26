@@ -91,6 +91,8 @@ const EXCEL_AWAY_PERIOD_RULES = [
   { boundary: 20 * 60 + 31, end: 22 * 60 },
 ] as const;
 
+const REGULAR_CHECKOUT_MIN = 22 * 60;
+
 interface StudySession {
   id: string;
   student_id: string;
@@ -157,12 +159,48 @@ interface AwayInterval {
   startTime: string;
 }
 
+function normalizeAwayDays(days: unknown): Array<number | string> {
+  return Array.isArray(days) ? days : [];
+}
+
+type StudentAwaySchedule = NonNullable<Student['awaySchedules']>[number];
+
+function awayScheduleMatchesDow(schedule: StudentAwaySchedule, todayDow: number): boolean {
+  const rawDays = normalizeAwayDays(schedule.days);
+  if (rawDays.length === 0) return true;
+
+  const todayLabels = [
+    ['일', '일요일', 'sun', 'sunday'],
+    ['월', '월요일', 'mon', 'monday'],
+    ['화', '화요일', 'tue', 'tuesday'],
+    ['수', '수요일', 'wed', 'wednesday'],
+    ['목', '목요일', 'thu', 'thursday'],
+    ['금', '금요일', 'fri', 'friday'],
+    ['토', '토요일', 'sat', 'saturday'],
+  ][todayDow];
+  const todayMon0 = todayDow === 0 ? 6 : todayDow - 1;
+
+  return rawDays.some((day) => {
+    if (typeof day === 'number') {
+      if (schedule.dayMode === 'mon0') return day === todayMon0;
+      if (schedule.dayMode === 'sun0') return day === todayDow;
+      // dayMode가 없는 기존 데이터는 일=0 체계와 월=0 체계를 모두 허용한다.
+      return day === todayDow || day === todayMon0;
+    }
+    if (typeof day === 'string') {
+      const normalized = day.trim().toLowerCase();
+      return todayLabels.includes(normalized);
+    }
+    return false;
+  });
+}
+
 function getApplicableAwayIntervals(student: Student | null, today: string, todayDow: number): AwayInterval[] {
   if (!student?.awaySchedules?.length) return [];
 
   return student.awaySchedules
     .filter((schedule) => {
-      if (schedule.days && schedule.days.length > 0 && !schedule.days.includes(todayDow)) return false;
+      if (!awayScheduleMatchesDow(schedule, todayDow)) return false;
       if (schedule.until && schedule.until !== 'forever' && schedule.until < today) return false;
       return timeStringToMin(schedule.awayTime) >= 0;
     })
@@ -181,18 +219,72 @@ function getAwayPeriodMark(intervals: AwayInterval[], idx: number): { awayTime?:
   if (!rule) return { isAwayAbsent: false };
 
   let awayTime: string | undefined;
+  let isAwayAbsent = false;
   for (const interval of intervals) {
     const overlaps = interval.startMin <= rule.end && interval.endMin > rule.boundary;
     if (!overlaps) continue;
 
-    if (interval.startMin < rule.boundary) {
-      return { isAwayAbsent: true };
-    }
-
-    if (!awayTime) awayTime = interval.startTime;
+    isAwayAbsent = true;
+    if (interval.startMin >= rule.boundary && !awayTime) awayTime = interval.startTime;
   }
 
-  return { awayTime, isAwayAbsent: false };
+  return { awayTime, isAwayAbsent };
+}
+
+function effectiveMinForDate(todayStr: string, nowDateStr: string, nowMin: number): number {
+  const cmp = todayStr.localeCompare(nowDateStr);
+  return cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
+}
+
+function isApprovedLeaveCheckout(student: Student | null, today: string, checkOutMin: number): boolean {
+  if (!student) return false;
+
+  return (student.leaveRequests || [])
+    .filter((r) => r.date === today && r.status === 'approved')
+    .some((leave) => {
+      switch (leave.type) {
+        case 'fullday':
+        case 'sick':
+          return true;
+        case 'morning':
+          return checkOutMin <= 12 * 60 + 30;
+        case 'afternoon':
+          return checkOutMin >= 12 * 60 + 30 && checkOutMin <= 17 * 60 + 40;
+        case 'night':
+          return checkOutMin >= 17 * 60 + 40;
+        default:
+          return false;
+      }
+    });
+}
+
+function isApprovedAwayCheckout(
+  intervals: AwayInterval[],
+  checkOutMin: number,
+  effectiveNow: number,
+): boolean {
+  return intervals.some((interval) => {
+    if (checkOutMin < interval.startMin) return false;
+    if (interval.endMin >= 24 * 60) return true;
+    return checkOutMin < interval.endMin && effectiveNow <= interval.endMin;
+  });
+}
+
+function isUnauthorizedCheckout(
+  student: Student | null,
+  isLeftToday: boolean,
+  checkOutMin: number,
+  today: string,
+  nowDateStr: string,
+  nowMin: number,
+  awayIntervals: AwayInterval[],
+): boolean {
+  if (!student || !isLeftToday || checkOutMin < 0) return false;
+  if (checkOutMin >= REGULAR_CHECKOUT_MIN) return false;
+  if (isApprovedLeaveCheckout(student, today, checkOutMin)) return false;
+
+  const effectiveNow = effectiveMinForDate(today, nowDateStr, nowMin);
+  return !isApprovedAwayCheckout(awayIntervals, checkOutMin, effectiveNow);
 }
 
 // 교시 상태 (computed + 수동 override 여부)
@@ -203,6 +295,25 @@ interface PeriodState {
   checkInTime?: string;    // 실제 등원 시각 (HH:MM) → 등원한 교시 셀 내부
   checkOutTime?: string;   // 실제 하원 시각 (HH:MM) → 하원한 교시 셀 내부
   isAwayAbsent?: boolean;  // 외출 후 미복귀로 간주되는 교시 → X 표시
+  isLeaveAbsent?: boolean; // 승인 휴가/반차로 빠지는 교시 → X 표시
+  isCheckoutAbsent?: boolean; // 실제 하원 이후 비어 있어야 하는 교시 → X 표시
+}
+
+function isApprovedLeavePeriod(student: Student | null, todayStr: string, idx: number): boolean {
+  const approvedLeaves = student
+    ? (student.leaveRequests || []).filter((r) => r.date === todayStr && r.status === 'approved')
+    : [];
+
+  return approvedLeaves.some((leave) => {
+    const type = leave.type;
+    return (
+      type === 'fullday' ||
+      type === 'sick' ||
+      (type === 'morning' && idx < 2) ||
+      (type === 'afternoon' && idx >= 2 && idx <= 4) ||
+      (type === 'night' && idx >= 5 && idx <= 6)
+    );
+  });
 }
 
 function computePeriods(
@@ -214,23 +325,6 @@ function computePeriods(
 ): PeriodStatus[] {
   const cmp = todayStr.localeCompare(nowDateStr);
   const effectiveNow = cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
-  
-  // 당일 승인된 휴가 신청 목록 필터링
-  const approvedLeaves = student
-    ? (student.leaveRequests || []).filter((r) => r.date === todayStr && r.status === 'approved')
-    : [];
-
-  const isLeavePeriod = (idx: number) =>
-    approvedLeaves.some((leave) => {
-      const type = leave.type;
-      return (
-        type === 'fullday' ||
-        type === 'sick' ||
-        (type === 'morning' && idx < 2) ||
-        (type === 'afternoon' && idx >= 2 && idx <= 4) ||
-        (type === 'night' && idx >= 5 && idx <= 6)
-      );
-    });
 
   return PERIODS.map((period, idx) => {
     const covered = sessions.some((session) => {
@@ -241,7 +335,7 @@ function computePeriods(
     });
     if (covered) return 'present';
 
-    const leavePeriod = isLeavePeriod(idx);
+    const leavePeriod = isApprovedLeavePeriod(student, todayStr, idx);
     if (leavePeriod) return 'absent';
     if (cmp > 0 || (cmp === 0 && period.start >= nowMin)) return 'future';
     return 'absent';
@@ -252,6 +346,134 @@ function hasApprovedLeaveToday(student: Student, today: string): boolean {
   return (student.leaveRequests || []).some(
     (r: LeaveRequest) => r.date === today && r.status === 'approved',
   );
+}
+
+function addDateDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(date);
+}
+
+function kstIsoFromHm(dateStr: string, hm: string): string {
+  return new Date(`${dateStr}T${hm}:00+09:00`).toISOString();
+}
+
+function makeDemoStudent(
+  id: string,
+  name: string,
+  seatNumber: number,
+  today: string,
+  extra: Partial<Student> = {},
+): Student {
+  const now = `${today}T00:00:00.000+09:00`;
+  return {
+    id,
+    name,
+    loginId: id,
+    campus: 'wonju',
+    manager: '샘플',
+    contact: '출결판 검증',
+    lifeComment: '',
+    studentLifeComment: '',
+    specialNote: '',
+    createdAt: now,
+    updatedAt: now,
+    books: [],
+    lectures: [],
+    consultationLogs: [],
+    grades: [],
+    subjects: [],
+    seatNumber,
+    ...extra,
+  };
+}
+
+function makeDemoSession(id: string, studentId: string, today: string, checkIn: string, checkOut?: string): StudySession {
+  return {
+    id,
+    student_id: studentId,
+    date: today,
+    check_in: kstIsoFromHm(today, checkIn),
+    check_out: checkOut ? kstIsoFromHm(today, checkOut) : null,
+    minutes: null,
+  };
+}
+
+function createDemoSeatBoardData(today: string): {
+  students: Student[];
+  sessions: StudySession[];
+  periodOverrides: Map<string, PeriodStatus>;
+  phoneNoSubmitMap: Map<string, Set<'D' | 'E' | 'N'>>;
+} {
+  const yesterday = addDateDays(today, -1);
+  const threeDaysLater = addDateDays(today, 3);
+  const nextMonth = addDateDays(today, 30);
+  const nextWeek = addDateDays(today, 7);
+  const now = `${today}T08:00:00.000+09:00`;
+  const leaveBase = { createdAt: now, reviewedAt: now, source: 'admin' as const, status: 'approved' as const };
+
+  const students: Student[] = [
+    makeDemoStudent('demo-new', '신규정상', 1, today, {
+      enrollmentEndDate: nextMonth,
+      parentPhone: '01011112222',
+      studentPhone: '01033334444',
+      smsTargets: ['parent', 'student'],
+      weeklyGradeCheck: true,
+    }),
+    makeDemoStudent('demo-expired-open', '만료등원', 2, today, {
+      enrollmentEndDate: yesterday,
+    }),
+    makeDemoStudent('demo-expired-left', '만료미승인긴이름', 3, today, {
+      enrollmentEndDate: yesterday,
+    }),
+    makeDemoStudent('demo-dday', '만료D데이', 4, today, {
+      enrollmentEndDate: today,
+    }),
+    makeDemoStudent('demo-warning', '임박D3', 5, today, {
+      enrollmentEndDate: threeDaysLater,
+    }),
+    makeDemoStudent('demo-away-return', '금요일외출', 6, today, {
+      enrollmentEndDate: nextMonth,
+      awaySchedules: [{ awayTime: '14:30', days: [4], until: 'forever' }],
+    }),
+    makeDemoStudent('demo-away-leave', '정기외출하원', 7, today, {
+      enrollmentEndDate: nextMonth,
+      awaySchedules: [{ awayTime: '18:30', days: [], until: 'forever' }],
+    }),
+    makeDemoStudent('demo-approved-half', '승인오후하원', 8, today, {
+      enrollmentEndDate: nextMonth,
+      leaveRequests: [{ id: 'leave-demo-approved-half', type: 'afternoon', date: today, reason: '샘플 오후 반차', ...leaveBase }],
+    }),
+    makeDemoStudent('demo-unauthorized', '미승인조기하원', 9, today, {
+      enrollmentEndDate: nextMonth,
+    }),
+    makeDemoStudent('demo-fullday', '휴가하루', 10, today, {
+      enrollmentEndDate: nextWeek,
+      leaveRequests: [{ id: 'leave-demo-fullday', type: 'fullday', date: today, reason: '샘플 휴무', ...leaveBase }],
+    }),
+  ];
+
+  const sessions: StudySession[] = [
+    makeDemoSession('sess-demo-expired-open', 'demo-expired-open', today, '09:02'),
+    makeDemoSession('sess-demo-expired-left', 'demo-expired-left', today, '09:00', '14:10'),
+    makeDemoSession('sess-demo-dday', 'demo-dday', today, '08:50'),
+    makeDemoSession('sess-demo-warning', 'demo-warning', today, '09:12'),
+    makeDemoSession('sess-demo-away-return', 'demo-away-return', today, '09:00'),
+    makeDemoSession('sess-demo-away-leave', 'demo-away-leave', today, '09:00', '18:35'),
+    makeDemoSession('sess-demo-approved-half', 'demo-approved-half', today, '09:00', '13:10'),
+    makeDemoSession('sess-demo-unauthorized', 'demo-unauthorized', today, '09:00', '17:30'),
+  ];
+
+  const periodOverrides = new Map<string, PeriodStatus>([
+    ['demo-new:0', 'present'],
+    ['demo-new:1', 'absent'],
+  ]);
+  const phoneNoSubmitMap = new Map<string, Set<'D' | 'E' | 'N'>>([
+    ['demo-new', new Set(['D'])],
+  ]);
+
+  return { students, sessions, periodOverrides, phoneNoSubmitMap };
 }
 
 // ── 교시 셀 ───────────────────────────────────────────────────────────────────
@@ -267,18 +489,18 @@ function TimeHM({ hm, cls }: { hm: string; cls: string }) {
 }
 
 function PeriodCell({
-  status, label, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent, onClick,
+  status, label, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent, isLeaveAbsent, isCheckoutAbsent, onClick,
 }: {
   status: PeriodStatus; label: string; isOverridden?: boolean;
   awayTime?: string; checkInTime?: string; checkOutTime?: string;
-  isAwayAbsent?: boolean; onClick?: () => void;
+  isAwayAbsent?: boolean; isLeaveAbsent?: boolean; isCheckoutAbsent?: boolean; onClick?: () => void;
 }) {
   const hoverCls = onClick ? 'cursor-pointer hover:brightness-95 active:scale-90 transition-all' : '';
 
   // 8교시 (심야 A 라벨)
   if (label === '8') {
     return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
         <span className="text-[10px] font-bold leading-none">A</span>
       </div>
     );
@@ -287,17 +509,42 @@ function PeriodCell({
   // 수동 결석 override
   if (isOverridden && status === 'absent') {
     return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
+      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
         <span className="text-[10px] font-black leading-none text-amber-600">X</span>
       </div>
     );
   }
 
-  // 정기외출 구간 — 세션 유무/미래 여부 불문하고 엑셀 수식처럼 표시 (8교시 제외)
+  // 승인 휴가/반차 결석 구간 — 미래 교시라도 X를 명시한다.
+  if (isLeaveAbsent) {
+    return (
+      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-blue-50 border-blue-200`}>
+        <span className="text-[10px] font-black leading-none text-blue-500">X</span>
+      </div>
+    );
+  }
+
+  // 정기외출/빠지는 시간대 — 겹치는 교시는 세션 유무/미래 여부와 무관하게 X 표시한다.
   if (isAwayAbsent) {
     return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}>
-        <span className="text-[8px] font-black leading-none text-slate-400">x</span>
+      <div
+        data-period-label={label}
+        data-expected-absent="true"
+        data-away-time={awayTime}
+        title={awayTime ? `정기 외출 ${awayTime}` : undefined}
+        onClick={onClick}
+        className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}
+      >
+        <span className="text-[10px] font-black leading-none text-slate-500">X</span>
+      </div>
+    );
+  }
+
+  // 실제 하원 이후 교시 — 아직 미래 시간이어도 사람이 없어야 하므로 X를 명시한다.
+  if (isCheckoutAbsent) {
+    return (
+      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border border-red-200 rounded-[3px] bg-red-50 flex items-center justify-center ${hoverCls}`}>
+        <span className="text-[10px] font-black leading-none text-red-500">X</span>
       </div>
     );
   }
@@ -305,7 +552,7 @@ function PeriodCell({
   // 정기 외출 시작 시각은 미래 교시라도 엑셀처럼 즉시 표시한다.
   if (awayTime?.includes(':')) {
     return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]`}>
+      <div data-period-label={label} data-away-time={awayTime} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]`}>
         <TimeHM hm={awayTime} cls="text-amber-500" />
       </div>
     );
@@ -314,7 +561,7 @@ function PeriodCell({
   // 미래 교시
   if (status === 'future') {
     return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
         <span className="text-[7px] text-slate-300 font-bold leading-none">{label}</span>
       </div>
     );
@@ -329,7 +576,7 @@ function PeriodCell({
     else inner = <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>;
 
     return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]'}`}>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]'}`}>
         {inner}
       </div>
     );
@@ -337,7 +584,7 @@ function PeriodCell({
 
   // 결석 — 일반 (교시 번호 흐리게)
   return (
-    <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
+    <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
       <span className="text-[7px] leading-none text-slate-200 font-bold">{label}</span>
     </div>
   );
@@ -354,25 +601,76 @@ interface SeatCardProps {
   phoneNoSubmit?: Set<'D' | 'E' | 'N'>;
   onTogglePhone?: (block: 'D' | 'E' | 'N') => void;
   isLeftToday: boolean;
+  isUnauthorizedCheckout: boolean;
   todayStr: string;
   onTogglePeriod?: (periodIdx: number) => void;
   onClick?: () => void;
   onNameClick?: () => void;
 }
 
-function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick, onNameClick, phoneNoSubmit, onTogglePhone }: SeatCardProps) {
+function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, isUnauthorizedCheckout, todayStr, onTogglePeriod, onClick, onNameClick, phoneNoSubmit, onTogglePhone }: SeatCardProps) {
   if (!student) {
     return (
-      <div className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
+      <div data-seat-card="empty" data-seat-num={seatNum} className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
         <span className="text-[9px] font-black text-slate-300">{seatNum}</span>
       </div>
     );
   }
 
   const dday = getEnrollmentDDay(student.enrollmentEndDate, todayStr);
+  const attendanceBadge = (() => {
+    if (isUnauthorizedCheckout) {
+      return {
+        label: '미승인',
+        title: '미승인 조기 하원',
+        className: 'text-red-600 bg-red-50 border-red-200',
+      };
+    }
+    if (isOnLeave) {
+      return {
+        label: '휴가',
+        title: '승인된 휴가',
+        className: 'text-blue-500 bg-blue-100 border-blue-100',
+      };
+    }
+    if (isLeftToday) {
+      return {
+        label: '하원',
+        title: '하원 완료',
+        className: 'text-slate-500 bg-slate-100 border-slate-100',
+      };
+    }
+    if (!isCheckedIn) {
+      return {
+        label: '미등원',
+        title: '미등원',
+        className: 'text-red-500 bg-red-50 border-red-100',
+      };
+    }
+    return null;
+  })();
+  const enrollmentBadge = (() => {
+    if (dday.status === 'expired') {
+      return {
+        label: '만료',
+        title: '등록 기간 만료',
+        className: 'text-red-600 bg-red-50 border-red-200',
+      };
+    }
+    if (dday.status === 'warning') {
+      return {
+        label: dday.daysLeft === 0 ? 'D0' : `D-${dday.daysLeft}`,
+        title: dday.daysLeft === 0 ? '등록 만료 D-Day' : `등록 만료 D-${dday.daysLeft}`,
+        className: 'text-amber-600 bg-amber-50 border-amber-200',
+      };
+    }
+    return null;
+  })();
 
   const ring = isCheckedIn
     ? 'border-emerald-300 ring-1 ring-emerald-200'
+    : isUnauthorizedCheckout
+    ? 'border-red-300 ring-1 ring-red-200'
     : isOnLeave
     ? 'border-blue-200'
     : isLeftToday
@@ -380,6 +678,8 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
     : 'border-slate-200/80';
   const bg = isCheckedIn 
     ? 'bg-emerald-50/60' 
+    : isUnauthorizedCheckout
+    ? 'bg-red-50/70'
     : isOnLeave 
     ? 'bg-blue-50/60' 
     : isLeftToday 
@@ -389,20 +689,26 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
   return (
     <div
       onClick={onClick}
-      className={`w-[80px] h-[100px] rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col shrink-0 cursor-pointer hover:border-slate-400 active:scale-[0.98] transition-all`}
+      data-seat-card="occupied"
+      data-seat-num={seatNum}
+      data-student-id={student.id}
+      data-student-name={student.name}
+      data-enrollment-status={dday.status}
+      data-unauthorized-checkout={isUnauthorizedCheckout ? 'true' : 'false'}
+      className={`w-[80px] h-[100px] overflow-hidden rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col shrink-0 cursor-pointer hover:border-slate-400 active:scale-[0.98] transition-all`}
     >
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-1">
         <span className="text-[9px] font-black text-slate-400">{seatNum}</span>
-        <div className="flex gap-[2px]">
-          {isOnLeave && (
-            <span className="text-[7px] font-black text-blue-500 bg-blue-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">휴가</span>
-          )}
-          {isLeftToday && (
-            <span className="text-[7px] font-black text-slate-500 bg-slate-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">하원</span>
-          )}
-          {!isCheckedIn && !isLeftToday && !isOnLeave && (
-            <span className="text-[7px] font-black text-red-500 bg-red-50 border border-red-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">미등원</span>
-          )}
+        <div className="flex min-w-0 shrink-0 justify-end gap-[2px]">
+          {[attendanceBadge, enrollmentBadge].filter(Boolean).map((badge) => (
+            <span
+              key={badge!.title}
+              title={badge!.title}
+              className={`text-[7px] font-black border px-[3px] py-0.5 rounded-[3px] leading-none shrink-0 ${badge!.className}`}
+            >
+              {badge!.label}
+            </span>
+          ))}
         </div>
       </div>
       
@@ -423,21 +729,9 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)] animate-pulse shrink-0" />
           )}
           {isLeftToday && !isOnLeave && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] shrink-0" />
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isUnauthorizedCheckout ? 'bg-red-500' : 'bg-[#0071E3]'}`} />
           )}
         </div>
-        
-        {/* 만료 관련 작은 뱃지 */}
-        {dday.status === 'expired' && (
-          <span className="text-[7px] font-black text-red-600 bg-red-50 border border-red-200 px-1 py-0.5 rounded-[3px] w-fit leading-none shrink-0">
-            만료
-          </span>
-        )}
-        {dday.status === 'warning' && (
-          <span className="text-[7px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-1 py-0.5 rounded-[3px] w-fit leading-none shrink-0">
-            {dday.daysLeft === 0 ? '만료 D-Day' : `만료 D-${dday.daysLeft}`}
-          </span>
-        )}
       </div>
 
       {/* 휴대폰 보관 상태 박스 (D/E/N) — 클릭으로 미제출 토글 */}
@@ -451,7 +745,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
           // 아니라면 블록 전체가 결석일 때만 x (출석 교시 하나라도 있으면 라벨)
           const hasDeparture = indices.some((i) => {
             const p = periods[i];
-            return !!p && (p.isAwayAbsent || !!p.awayTime);
+            return !!p && (p.isAwayAbsent || p.isLeaveAbsent || p.isCheckoutAbsent || !!p.awayTime);
           });
           const allConfirmedAbsent = indices.every((i) => {
             const p = periods[i];
@@ -485,7 +779,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
 
       <div className="flex flex-col gap-[3px] mt-[3px]" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-[3px]">
-          {periods.slice(0, 4).map(({ status, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent }, i) => (
+          {periods.slice(0, 4).map(({ status, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent, isLeaveAbsent, isCheckoutAbsent }, i) => (
             <PeriodCell
               key={i}
               status={status}
@@ -495,12 +789,14 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
               checkInTime={checkInTime}
               checkOutTime={checkOutTime}
               isAwayAbsent={isAwayAbsent}
+              isLeaveAbsent={isLeaveAbsent}
+              isCheckoutAbsent={isCheckoutAbsent}
               onClick={onTogglePeriod ? () => onTogglePeriod(i) : undefined}
             />
           ))}
         </div>
         <div className="flex gap-[3px]">
-          {periods.slice(4).map(({ status, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent }, i) => (
+          {periods.slice(4).map(({ status, isOverridden, awayTime, checkInTime, checkOutTime, isAwayAbsent, isLeaveAbsent, isCheckoutAbsent }, i) => (
             <PeriodCell
               key={i + 4}
               status={status}
@@ -510,6 +806,8 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
               checkInTime={checkInTime}
               checkOutTime={checkOutTime}
               isAwayAbsent={isAwayAbsent}
+              isLeaveAbsent={isLeaveAbsent}
+              isCheckoutAbsent={isCheckoutAbsent}
               onClick={onTogglePeriod ? () => onTogglePeriod(i + 4) : undefined}
             />
           ))}
@@ -521,6 +819,8 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
 
 // ── 행 렌더 ───────────────────────────────────────────────────────────────────
 
+const EMPTY_PHONE_NO_SUBMIT_MAP = new Map<string, Set<'D' | 'E' | 'N'>>();
+
 interface RowProps {
   seats: Cell[];
   seatMap: Map<number, Student>;
@@ -530,7 +830,7 @@ interface RowProps {
   nowDateStr: string;
   nowMin: number;
   periodOverrides: Map<string, PeriodStatus>;
-  phoneNoSubmitMap: Map<string, Set<'D' | 'E' | 'N'>>;
+  phoneNoSubmitMap?: Map<string, Set<'D' | 'E' | 'N'>>;
   onTogglePeriod: (key: string, current: PeriodStatus) => void;
   onTogglePhone: (studentId: string, block: 'D' | 'E' | 'N') => void;
   onCardClick: (student: Student) => void;
@@ -538,6 +838,7 @@ interface RowProps {
 }
 
 function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, phoneNoSubmitMap, onTogglePeriod, onTogglePhone, onCardClick, onNameClick }: RowProps) {
+  const safePhoneNoSubmitMap = phoneNoSubmitMap ?? EMPTY_PHONE_NO_SUBMIT_MAP;
   return (
     <div className="flex gap-[6px]">
       {seats.map((n, i) => {
@@ -567,12 +868,23 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
           ? PERIODS.findIndex((p) => firstCheckInMin >= p.start && firstCheckInMin < p.end) : -1;
         const checkOutPeriodIdx = lastCheckOutMin >= 0
           ? PERIODS.findIndex((p) => lastCheckOutMin >= p.start && lastCheckOutMin < p.end) : -1;
+        const isUnauthorizedCheckoutToday = isUnauthorizedCheckout(
+          student,
+          isLeftToday,
+          lastCheckOutMin,
+          today,
+          nowDateStr,
+          nowMin,
+          awayIntervals,
+        );
 
         const periods: PeriodState[] = raw.map((s, idx) => {
           const key = student ? `${student.id}:${idx}` : '';
           const override = student ? periodOverrides.get(key) : undefined;
 
           const awayMark = getAwayPeriodMark(awayIntervals, idx);
+          const leaveAbsent = idx < 7 && isApprovedLeavePeriod(student, today, idx);
+          const checkoutAbsent = idx < 7 && isLeftToday && lastCheckOutMin >= 0 && lastCheckOutMin < PERIODS[idx].start;
 
           return {
             status: override ?? s,
@@ -581,6 +893,8 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             checkInTime: idx === checkInPeriodIdx ? checkInTimeStr : undefined,
             checkOutTime: idx === checkOutPeriodIdx ? checkOutTimeStr : undefined,
             isAwayAbsent: awayMark.isAwayAbsent,
+            isLeaveAbsent: leaveAbsent,
+            isCheckoutAbsent: checkoutAbsent,
           };
         });
         return (
@@ -592,6 +906,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             isOnLeave={isOnLeave}
             isCheckedIn={isCheckedIn}
             isLeftToday={isLeftToday}
+            isUnauthorizedCheckout={isUnauthorizedCheckoutToday}
             todayStr={today}
             onTogglePeriod={
               student
@@ -600,7 +915,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             }
             onClick={student ? () => onCardClick(student) : undefined}
             onNameClick={student ? () => onNameClick(student) : undefined}
-            phoneNoSubmit={student ? phoneNoSubmitMap.get(student.id) : undefined}
+            phoneNoSubmit={student ? safePhoneNoSubmitMap.get(student.id) : undefined}
             onTogglePhone={student ? (block) => onTogglePhone(student.id, block) : undefined}
           />
         );
@@ -661,6 +976,8 @@ export default function SeatBoardPage() {
   const [submittingLeave, setSubmittingLeave] = useState(false);
 
   const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1';
+  const demoSeatBoardData = useMemo(() => createDemoSeatBoardData(today), [today]);
 
   function handleCampusChange(c: CampusKey) {
     setCampus(c);
@@ -673,6 +990,27 @@ export default function SeatBoardPage() {
     const studentId = parts[0];
     const periodIdx = parseInt(parts[parts.length - 1], 10);
     const is8th = periodIdx === 7;
+
+    if (isDemoMode) {
+      setPeriodOverrides((previous) => {
+        const next = new Map(previous);
+        if (is8th) {
+          for (let i = 0; i < 8; i++) {
+            next.set(`${studentId}:${i}`, 'absent');
+          }
+          return next;
+        }
+        if (current === 'present') {
+          next.set(key, 'absent');
+        } else if (current === 'absent') {
+          next.delete(key);
+        } else {
+          next.set(key, 'present');
+        }
+        return next;
+      });
+      return;
+    }
 
     if (is8th) {
       let hasNonAbsentOverride = false;
@@ -792,6 +1130,8 @@ export default function SeatBoardPage() {
     if (set.size === 0) next.delete(studentId); else next.set(studentId, set);
     setPhoneNoSubmitMap(next);
 
+    if (isDemoMode) return;
+
     try {
       if (isMarked) {
         await fetch(`/api/admin/seat-status?date=${today}&seatKey=${encodeURIComponent(seatKey)}`, {
@@ -812,6 +1152,12 @@ export default function SeatBoardPage() {
   }
 
   async function clearPeriodOverrides() {
+    if (isDemoMode) {
+      setPeriodOverrides(new Map(demoSeatBoardData.periodOverrides));
+      setPhoneNoSubmitMap(new Map(demoSeatBoardData.phoneNoSubmitMap));
+      return;
+    }
+
     const previous = new Map(periodOverrides);
     setPeriodOverrides(new Map());
 
@@ -830,6 +1176,17 @@ export default function SeatBoardPage() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    if (isDemoMode) {
+      setCampus('wonju');
+      setPageIdx(0);
+      setStudents(demoSeatBoardData.students);
+      setSessions(demoSeatBoardData.sessions);
+      setPeriodOverrides(new Map(demoSeatBoardData.periodOverrides));
+      setPhoneNoSubmitMap(new Map(demoSeatBoardData.phoneNoSubmitMap));
+      setLoading(false);
+      return;
+    }
+
     try {
       const [stuRes, sesRes, statusRes] = await Promise.all([
         fetch('/api/admin/students', { cache: 'no-store', credentials: 'same-origin' }),
@@ -869,10 +1226,16 @@ export default function SeatBoardPage() {
     } finally {
       setLoading(false);
     }
-  }, [today]);
+  }, [today, isDemoMode, demoSeatBoardData]);
 
   useEffect(() => {
     async function verifyAuth() {
+      if (isDemoMode) {
+        await loadData();
+        setCheckingAuth(false);
+        return;
+      }
+
       try {
         const res = await fetch('/api/admin/auth/me');
         if (!res.ok) { router.replace('/admin'); return; }
@@ -884,10 +1247,12 @@ export default function SeatBoardPage() {
       }
     }
     verifyAuth();
-  }, [router, loadData]);
+  }, [router, loadData, isDemoMode]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
+    if (isDemoMode) return;
+
     timerRef.current = setInterval(() => {
       fetch(`/api/admin/seat-board?date=${today}`, { credentials: 'same-origin' })
         .then((r) => r.json())
@@ -895,7 +1260,7 @@ export default function SeatBoardPage() {
         .catch(() => {});
     }, 60_000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [today]);
+  }, [today, isDemoMode]);
 
   const seatMap = useMemo(() => {
     const m = new Map<number, Student>();
@@ -1140,6 +1505,12 @@ export default function SeatBoardPage() {
             <p className="text-sm font-black text-[#1D1D1F]">{today}</p>
           </div>
 
+          {isDemoMode && (
+            <div className="rounded-xl border border-[#0071E3]/20 bg-[#0071E3]/[0.06] px-3 py-1.5">
+              <p className="text-[10px] font-black text-[#0071E3]">샘플 검증 모드</p>
+            </div>
+          )}
+
           <div className="flex gap-4 ml-auto sm:ml-0">
             {[
               { label: '등원중', val: stats.present,                               color: 'text-emerald-600' },
@@ -1248,6 +1619,10 @@ export default function SeatBoardPage() {
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
             <span className="text-[11px] font-bold text-slate-500">현재 등원중</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+            <span className="text-[11px] font-bold text-slate-500">미승인 조기 하원</span>
           </div>
           <span className="text-[10px] text-slate-400">
             1(09~10:50) · 2(11:10~12:30) · 3(13:50~15) · 4(15:10~16:20) · 5(16:30~17:40) · 6(18:50~20:20) · 7(20:30~22) · 심야(22:10~23:20)
