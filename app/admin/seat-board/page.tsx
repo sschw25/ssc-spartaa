@@ -176,7 +176,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, onToggleP
           <span className="text-[7px] font-black text-blue-500 bg-blue-100 px-1 py-0.5 rounded-full leading-none">휴가</span>
         )}
         {isCheckedIn && !isOnLeave && (
-          <span className="w-[6px] h-[6px] rounded-full bg-emerald-400 shrink-0" />
+          <span className="w-[7px] h-[7px] rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)] animate-pulse shrink-0" />
         )}
       </div>
       <p className="text-[11px] font-black text-[#1D1D1F] leading-tight truncate">{student.name}</p>

@@ -4,11 +4,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, X, RefreshCw, Ticket, Minus, Plus, ChevronDown, PenLine } from 'lucide-react';
+import { Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, X, RefreshCw, Ticket, Minus, Plus, ChevronDown, PenLine, MessageSquare, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, LeaveRequest, LeaveType } from '@/lib/types/student';
 import { LEAVE_TYPES, getLeaveTypeLabel, COUPONS_PER_EXTRA_HALFDAY, isLeaveType } from '@/lib/leave';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
@@ -33,6 +34,7 @@ interface LeaveEvent {
 
 export default function AdminLeaveByDatePage() {
   const router = useRouter();
+  const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,6 +163,65 @@ export default function AdminLeaveByDatePage() {
     }
     return map;
   }, [allEvents]);
+
+  // 선택된 날짜의 상담 내역 집계
+  const selectedDateConsultations = useMemo(() => {
+    const list: { student: Student; log: any }[] = [];
+    for (const s of students) {
+      if (campusFilter !== 'all' && s.campus !== campusFilter) continue;
+      for (const log of s.consultationLogs || []) {
+        if (log.date === selectedDate) {
+          list.push({ student: s, log });
+        }
+      }
+    }
+    return list;
+  }, [students, campusFilter, selectedDate]);
+
+  // 선택된 날짜의 벌점/상점 내역 집계
+  const selectedDatePenalties = useMemo(() => {
+    const list: { student: Student; record: any }[] = [];
+    for (const s of students) {
+      if (campusFilter !== 'all' && s.campus !== campusFilter) continue;
+      for (const record of s.penalties || []) {
+        if (record.date === selectedDate) {
+          list.push({ student: s, record });
+        }
+      }
+    }
+    return list;
+  }, [students, campusFilter, selectedDate]);
+
+  // 날짜별 활동 종합 매핑 (달력 표시용)
+  const activitiesByDate = useMemo(() => {
+    const map: Record<string, { leaves: number; consultations: number; penalties: number }> = {};
+    
+    // 1. 휴가 신청 집계
+    for (const ev of allEvents) {
+      const d = ev.request.date;
+      if (!map[d]) map[d] = { leaves: 0, consultations: 0, penalties: 0 };
+      map[d].leaves += 1;
+    }
+    
+    // 2. 상담 및 벌점 집계
+    for (const s of students) {
+      if (campusFilter !== 'all' && s.campus !== campusFilter) continue;
+      
+      for (const log of s.consultationLogs || []) {
+        const d = log.date;
+        if (!map[d]) map[d] = { leaves: 0, consultations: 0, penalties: 0 };
+        map[d].consultations += 1;
+      }
+      
+      for (const p of s.penalties || []) {
+        const d = p.date;
+        if (!map[d]) map[d] = { leaves: 0, consultations: 0, penalties: 0 };
+        map[d].penalties += 1;
+      }
+    }
+    
+    return map;
+  }, [students, allEvents, campusFilter]);
 
   // 달력 일자 계산
   const calendarDays = useMemo(() => {
@@ -398,30 +459,34 @@ export default function AdminLeaveByDatePage() {
                         {date.getDate()}
                       </span>
 
-                      {/* 신청 내역 뱃지 리스트 */}
-                      <div className="flex-1 w-full space-y-0.5 overflow-hidden">
-                        {dayEvents.slice(0, 2).map((ev) => {
-                          const info = LEAVE_TYPES[ev.request.type];
-                          let statusColor = 'bg-slate-50 text-slate-600 border-black/[0.04]';
-                          if (ev.request.status === 'approved') {
-                            statusColor = 'bg-emerald-50 text-emerald-700 border-emerald-100/50';
-                          } else if (ev.request.status === 'pending') {
-                            statusColor = 'bg-amber-50 text-amber-700 border-amber-100/50';
-                          } else if (ev.request.status === 'rejected') {
-                            statusColor = 'bg-red-50 text-red-700 border-red-100/50';
-                          }
-
+                      {/* 통합 활동 뱃지 리스트 */}
+                      <div className="flex-1 w-full flex flex-col gap-1 overflow-hidden mt-1">
+                        {(() => {
+                          const act = activitiesByDate[dateStr];
+                          if (!act) return null;
                           return (
-                            <div key={ev.request.id} className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border truncate ${statusColor}`}>
-                              {ev.student.name} {info?.icon}
+                            <div className="flex flex-col gap-1">
+                              {act.leaves > 0 && (
+                                <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-100/50 truncate flex items-center gap-1">
+                                  <span>🎫</span>
+                                  <span>휴가 {act.leaves}</span>
+                                </div>
+                              )}
+                              {act.consultations > 0 && (
+                                <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/50 truncate flex items-center gap-1">
+                                  <span>💬</span>
+                                  <span>상담 {act.consultations}</span>
+                                </div>
+                              )}
+                              {act.penalties > 0 && (
+                                <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100/50 truncate flex items-center gap-1">
+                                  <span>⚠️</span>
+                                  <span>벌점 {act.penalties}</span>
+                                </div>
+                              )}
                             </div>
                           );
-                        })}
-                        {dayEvents.length > 2 && (
-                          <div className="text-[8px] font-black text-[#86868B] pl-1.5">
-                            +{dayEvents.length - 2}명 더보기
-                          </div>
-                        )}
+                        })()}
                       </div>
                     </button>
                   );
@@ -438,7 +503,13 @@ export default function AdminLeaveByDatePage() {
               <div className="flex-1">
                 <p className="text-sm font-black text-[#1D1D1F] leading-tight">{selectedDate}</p>
                 <p className="text-[10px] text-[#86868B] font-semibold mt-0.5">
-                  {selectedDateEvents.length > 0 ? `신청 ${selectedDateEvents.length}건` : '신청 없음'}
+                  {(() => {
+                    const l = selectedDateEvents.length;
+                    const c = selectedDateConsultations.length;
+                    const p = selectedDatePenalties.length;
+                    if (l === 0 && c === 0 && p === 0) return '기록 없음';
+                    return `휴가 ${l}건 · 상담 ${c}건 · 벌점 ${p}건`;
+                  })()}
                 </p>
               </div>
               <button
@@ -450,154 +521,250 @@ export default function AdminLeaveByDatePage() {
               </button>
             </div>
 
-            {selectedDateEvents.length === 0 ? (
+            {selectedDateEvents.length === 0 && selectedDateConsultations.length === 0 && selectedDatePenalties.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-20 gap-2">
                 <CalendarIcon className="w-8 h-8 text-slate-200" />
-                <p className="text-xs font-semibold text-[#86868B]">이 날짜에 신청된 휴식반차가 없습니다.</p>
+                <p className="text-xs font-semibold text-[#86868B]">이 날짜에 기록된 현황이 없습니다.</p>
               </div>
             ) : (
               <div className="divide-y divide-black/[0.03] max-h-[680px] overflow-y-auto">
-                {LEAVE_TYPE_ORDER.map((type) => {
-                  const typeEvents = groupedEvents[type];
-                  if (typeEvents.length === 0) return null;
+                
+                {/* 1. 휴식반차 신청 목록 */}
+                {selectedDateEvents.length > 0 && (
+                  <div className="pb-4">
+                    <div className="px-5 py-3 flex items-center gap-2 bg-[#FAFAFA] border-b border-black/[0.02]">
+                      <span className="w-1.5 h-5 rounded-full shrink-0 bg-blue-500" />
+                      <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5">
+                        <span>🎫</span>
+                        <span>휴식반차 신청</span>
+                      </span>
+                      <span className="ml-auto text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200/60">
+                        {selectedDateEvents.length}건
+                      </span>
+                    </div>
+                    
+                    <div className="px-3 pb-2 pt-2 space-y-1.5">
+                      {LEAVE_TYPE_ORDER.map((type) => {
+                        const typeEvents = groupedEvents[type];
+                        if (typeEvents.length === 0) return null;
+                        
+                        const typeInfo = LEAVE_TYPES[type];
+                        const typeAccent: Record<LeaveType, string> = {
+                          morning:   'bg-sky-500',
+                          afternoon: 'bg-orange-400',
+                          night:     'bg-emerald-500',
+                          fullday:   'bg-slate-500',
+                          sick:      'bg-rose-500',
+                        };
+                        const typeChip: Record<LeaveType, string> = {
+                          morning:   'bg-sky-50 text-sky-700 border-sky-200/60',
+                          afternoon: 'bg-orange-50 text-orange-700 border-orange-200/60',
+                          night:     'bg-emerald-50 text-emerald-700 border-emerald-200/60',
+                          fullday:   'bg-slate-50 text-slate-700 border-slate-200/60',
+                          sick:      'bg-rose-50 text-rose-700 border-rose-200/60',
+                        };
 
-                  const typeInfo = LEAVE_TYPES[type];
+                        return (
+                          <div key={type} className="space-y-1.5">
+                            <div className="px-2 py-1 text-[10px] font-black text-slate-400 flex items-center gap-1.5">
+                              <span>{typeInfo?.icon}</span>
+                              <span>{getLeaveTypeLabel(type)} ({typeEvents.length}명)</span>
+                            </div>
+                            
+                            {typeEvents.map((ev) => {
+                              const isExpanded = expandedRequestId === ev.request.id;
+                              const revKey = `rev_${ev.request.id}`;
+                              const cpKey = `cp_${ev.student.id}`;
+                              const statusBar =
+                                ev.request.status === 'approved' ? 'border-l-emerald-400' :
+                                ev.request.status === 'rejected' ? 'border-l-red-400' :
+                                'border-l-amber-400';
+                              const statusLabel =
+                                ev.request.status === 'approved'
+                                  ? <span className="flex items-center gap-1 text-[10px] font-black text-emerald-700"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />승인</span>
+                                  : ev.request.status === 'rejected'
+                                  ? <span className="flex items-center gap-1 text-[10px] font-black text-red-600"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />반려</span>
+                                  : <span className="flex items-center gap-1 text-[10px] font-black text-amber-700"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />대기</span>;
 
-                  const typeAccent: Record<LeaveType, string> = {
-                    morning:   'bg-sky-500',
-                    afternoon: 'bg-orange-400',
-                    night:     'bg-emerald-500',
-                    fullday:   'bg-slate-500',
-                    sick:      'bg-rose-500',
-                  };
-                  const typeChip: Record<LeaveType, string> = {
-                    morning:   'bg-sky-50 text-sky-700 border-sky-200/60',
-                    afternoon: 'bg-orange-50 text-orange-700 border-orange-200/60',
-                    night:     'bg-emerald-50 text-emerald-700 border-emerald-200/60',
-                    fullday:   'bg-slate-50 text-slate-700 border-slate-200/60',
-                    sick:      'bg-rose-50 text-rose-700 border-rose-200/60',
-                  };
-
-                  return (
-                    <div key={type}>
-                      {/* 유형 헤더 */}
-                      <div className="px-5 py-3 flex items-center gap-2.5 bg-[#FAFAFA]">
-                        <span className={`w-1.5 h-5 rounded-full shrink-0 ${typeAccent[type]}`} />
-                        <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5">
-                          <span>{typeInfo?.icon}</span>
-                          <span>{getLeaveTypeLabel(type)}</span>
-                        </span>
-                        <span className={`ml-auto text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${typeChip[type]}`}>
-                          {typeEvents.length}명
-                        </span>
-                        <span className="text-[9px] text-[#86868B] font-bold shrink-0">{typeInfo?.slot}</span>
-                      </div>
-
-                      {/* 학생 카드 목록 */}
-                      <div className="px-3 pb-3 pt-1.5 space-y-1.5">
-                        {typeEvents.map((ev) => {
-                          const isExpanded = expandedRequestId === ev.request.id;
-                          const revKey = `rev_${ev.request.id}`;
-                          const cpKey = `cp_${ev.student.id}`;
-
-                          const statusBar =
-                            ev.request.status === 'approved' ? 'border-l-emerald-400' :
-                            ev.request.status === 'rejected' ? 'border-l-red-400' :
-                            'border-l-amber-400';
-                          const statusLabel =
-                            ev.request.status === 'approved'
-                              ? <span className="flex items-center gap-1 text-[10px] font-black text-emerald-700"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />승인</span>
-                              : ev.request.status === 'rejected'
-                              ? <span className="flex items-center gap-1 text-[10px] font-black text-red-600"><span className="w-1.5 h-1.5 rounded-full bg-red-500 inline-block" />반려</span>
-                              : <span className="flex items-center gap-1 text-[10px] font-black text-amber-700"><span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />대기</span>;
-
-                          return (
-                            <div
-                              key={ev.request.id}
-                              className={`rounded-xl border border-black/[0.05] border-l-[3px] overflow-hidden bg-white shadow-sm transition-all duration-200 ${statusBar}`}
-                            >
-                              {/* 한 줄 요약 (클릭 → 확장) */}
-                              <button
-                                type="button"
-                                onClick={() => setExpandedRequestId(isExpanded ? null : ev.request.id)}
-                                className="w-full text-left flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#F8F9FA] transition-colors"
-                              >
-                                <div className="flex-1 min-w-0">
-                                  <span className="font-extrabold text-[13px] text-[#1D1D1F] truncate block">{ev.student.name}</span>
-                                  <span className="text-[10px] text-[#86868B] font-medium">{campusLabel(ev.student.campus)} · {ev.student.manager || '담당 없음'}</span>
-                                </div>
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {statusLabel}
-                                  <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
-                                </div>
-                              </button>
-
-                              {/* 확장 영역 */}
-                              {isExpanded && (
-                                <div className="border-t border-black/[0.04] bg-[#F8F9FA] px-3.5 pb-3.5 pt-2.5 space-y-3">
-                                  {ev.request.reason && (
-                                    <div className="rounded-xl bg-white border border-black/[0.05] px-3 py-2.5">
-                                      <p className="text-[9px] font-extrabold text-[#86868B] uppercase tracking-wide mb-1">신청 사유</p>
-                                      <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-all">{ev.request.reason}</p>
+                              return (
+                                <div key={ev.request.id} className={`rounded-xl border border-black/[0.05] border-l-[3px] overflow-hidden bg-white shadow-sm transition-all duration-200 ${statusBar}`}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setExpandedRequestId(isExpanded ? null : ev.request.id)}
+                                    className="w-full text-left flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#F8F9FA] transition-colors"
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <span className="font-extrabold text-[13px] text-[#1D1D1F] truncate block">{ev.student.name}</span>
+                                      <span className="text-[10px] text-[#86868B] font-medium">{campusLabel(ev.student.campus)} · {ev.student.manager || '담당 없음'}</span>
                                     </div>
-                                  )}
-
-                                  {ev.request.adminReply && (
-                                    <div className="rounded-xl bg-[#0071E3]/[0.04] border border-[#0071E3]/15 px-3 py-2.5">
-                                      <p className="text-[9px] font-extrabold text-[#0071E3] uppercase tracking-wide mb-1">답변</p>
-                                      <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed">{ev.request.adminReply}</p>
+                                    <div className="flex items-center gap-2 shrink-0">
+                                      {statusLabel}
+                                      <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} />
                                     </div>
-                                  )}
+                                  </button>
 
-                                  {/* 승인/반려 조작 */}
-                                  {ev.request.status === 'pending' && (
-                                    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-                                      <input
-                                        value={replyDrafts[ev.request.id] ?? ''}
-                                        onChange={(e) => setReplyDrafts((d) => ({ ...d, [ev.request.id]: e.target.value }))}
-                                        placeholder="답변 코멘트 입력 (선택)"
-                                        className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
-                                      />
-                                      <div className="grid grid-cols-2 gap-2">
-                                        <Button size="sm" disabled={busy[revKey]} onClick={() => reviewRequest(ev, 'approved')}
-                                          className="h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm">
-                                          <Check className="w-3.5 h-3.5 mr-1" /> 승인
-                                        </Button>
-                                        <Button size="sm" variant="outline" disabled={busy[revKey]} onClick={() => reviewRequest(ev, 'rejected')}
-                                          className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold">
-                                          <X className="w-3.5 h-3.5 mr-1" /> 반려
-                                        </Button>
+                                  {isExpanded && (
+                                    <div className="border-t border-black/[0.04] bg-[#F8F9FA] px-3.5 pb-3.5 pt-2.5 space-y-3">
+                                      {ev.request.reason && (
+                                        <div className="rounded-xl bg-white border border-black/[0.05] px-3 py-2.5">
+                                          <p className="text-[9px] font-extrabold text-[#86868B] uppercase tracking-wide mb-1">신청 사유</p>
+                                          <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-all">{ev.request.reason}</p>
+                                        </div>
+                                      )}
+
+                                      {ev.request.adminReply && (
+                                        <div className="rounded-xl bg-[#0071E3]/[0.04] border border-[#0071E3]/15 px-3 py-2.5">
+                                          <p className="text-[9px] font-extrabold text-[#0071E3] uppercase tracking-wide mb-1">답변</p>
+                                          <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed">{ev.request.adminReply}</p>
+                                        </div>
+                                      )}
+
+                                      {ev.request.status === 'pending' && (
+                                        <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                                          <input
+                                            value={replyDrafts[ev.request.id] ?? ''}
+                                            onChange={(e) => setReplyDrafts((d) => ({ ...d, [ev.request.id]: e.target.value }))}
+                                            placeholder="답변 코멘트 입력 (선택)"
+                                            className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                                          />
+                                          <div className="grid grid-cols-2 gap-2">
+                                            <Button size="sm" disabled={busy[revKey]} onClick={() => reviewRequest(ev, 'approved')}
+                                              className="h-9 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm">
+                                              <Check className="w-3.5 h-3.5 mr-1" /> 승인
+                                            </Button>
+                                            <Button size="sm" variant="outline" disabled={busy[revKey]} onClick={() => reviewRequest(ev, 'rejected')}
+                                              className="h-9 rounded-xl border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold">
+                                              <X className="w-3.5 h-3.5 mr-1" /> 반려
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      )}
+
+                                      <div className="flex items-center justify-between rounded-xl bg-white border border-black/[0.05] px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                                        <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#1D1D1F]">
+                                          <Ticket className="w-3 h-3 text-[#86868B]" />
+                                          쿠폰 <b className="text-[#0071E3]">{ev.student.leaveCoupons ?? 0}</b>개
+                                        </span>
+                                        <div className="flex items-center gap-1">
+                                          <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, -1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="차감">
+                                            <Minus className="w-3 h-3" />
+                                          </Button>
+                                          <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, 1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="지급">
+                                            <Plus className="w-3 h-3" />
+                                          </Button>
+                                          <Button size="sm" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, COUPONS_PER_EXTRA_HALFDAY)} className="h-7 rounded-lg border-black/[0.08] text-[10px] px-2 font-bold" title={`+${COUPONS_PER_EXTRA_HALFDAY}개`}>
+                                            +{COUPONS_PER_EXTRA_HALFDAY}
+                                          </Button>
+                                        </div>
                                       </div>
                                     </div>
                                   )}
-
-                                  {/* 쿠폰 관리 */}
-                                  <div className="flex items-center justify-between rounded-xl bg-white border border-black/[0.05] px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                                    <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#1D1D1F]">
-                                      <Ticket className="w-3 h-3 text-[#86868B]" />
-                                      쿠폰 <b className="text-[#0071E3]">{ev.student.leaveCoupons ?? 0}</b>개
-                                    </span>
-                                    <div className="flex items-center gap-1">
-                                      <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, -1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="차감">
-                                        <Minus className="w-3 h-3" />
-                                      </Button>
-                                      <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, 1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="지급">
-                                        <Plus className="w-3 h-3" />
-                                      </Button>
-                                      <Button size="sm" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, COUPONS_PER_EXTRA_HALFDAY)} className="h-7 rounded-lg border-black/[0.08] text-[10px] px-2 font-bold" title={`+${COUPONS_PER_EXTRA_HALFDAY}개`}>
-                                        +{COUPONS_PER_EXTRA_HALFDAY}
-                                      </Button>
-                                    </div>
-                                  </div>
                                 </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  </div>
+                )}
+
+                {/* 2. 상담 일지 내역 */}
+                {selectedDateConsultations.length > 0 && (
+                  <div className="py-4 border-t border-black/[0.03]">
+                    <div className="px-5 py-3 flex items-center gap-2 bg-[#FAFAFA] border-b border-black/[0.02]">
+                      <span className="w-1.5 h-5 rounded-full shrink-0 bg-emerald-500" />
+                      <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>당일 상담 진행 내역</span>
+                      </span>
+                      <span className="ml-auto text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200/60">
+                        {selectedDateConsultations.length}건
+                      </span>
+                    </div>
+
+                    <div className="px-3 pt-2 space-y-2">
+                      {selectedDateConsultations.map(({ student, log }) => (
+                        <div
+                          key={log.id}
+                          onClick={() => openStudent(student, {
+                            onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
+                            onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
+                            allStudents: students,
+                          })}
+                          className="rounded-xl border border-black/[0.05] border-l-[3px] border-l-emerald-500 overflow-hidden bg-white shadow-sm hover:bg-[#F8F9FA] transition-all duration-200 cursor-pointer p-3.5 space-y-2 hover:scale-[1.01]"
+                        >
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <span className="font-extrabold text-[13px] text-[#1D1D1F]">{student.name}</span>
+                              <span className="text-[10px] text-[#86868B] font-medium ml-2">{campusLabel(student.campus)} · 코치 {student.manager || '없음'}</span>
+                            </div>
+                            <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">코치 {log.manager}</span>
+                          </div>
+                          <div className="rounded-lg bg-emerald-50/[0.2] border border-emerald-100/30 p-2.5">
+                            <p className="text-[11px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap break-all">
+                              {log.content}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. 벌점/상점 부여 내역 */}
+                {selectedDatePenalties.length > 0 && (
+                  <div className="py-4 border-t border-black/[0.03]">
+                    <div className="px-5 py-3 flex items-center gap-2 bg-[#FAFAFA] border-b border-black/[0.02]">
+                      <span className="w-1.5 h-5 rounded-full shrink-0 bg-amber-500" />
+                      <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-amber-600" />
+                        <span>당일 벌점·상점 부여 내역</span>
+                      </span>
+                      <span className="ml-auto text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-amber-50 text-amber-700 border-amber-200/60">
+                        {selectedDatePenalties.length}건
+                      </span>
+                    </div>
+
+                    <div className="px-3 pt-2 space-y-2">
+                      {selectedDatePenalties.map(({ student, record }) => {
+                        const isPenalty = record.type === 'penalty';
+                        const badgeColor = isPenalty ? 'bg-red-50 text-red-700 border-red-100/50' : 'bg-emerald-50 text-emerald-700 border-emerald-100/50';
+                        return (
+                          <div
+                            key={record.id}
+                            onClick={() => openStudent(student, {
+                              onUpdate: (updated) => setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s)),
+                              onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
+                              allStudents: students,
+                            })}
+                            className={`rounded-xl border border-black/[0.05] border-l-[3px] overflow-hidden bg-white shadow-sm hover:bg-[#F8F9FA] transition-all duration-200 cursor-pointer p-3.5 space-y-2 hover:scale-[1.01] ${isPenalty ? 'border-l-red-500' : 'border-l-emerald-500'}`}
+                          >
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <span className="font-extrabold text-[13px] text-[#1D1D1F]">{student.name}</span>
+                                <span className="text-[10px] text-[#86868B] font-medium ml-2">{campusLabel(student.campus)}</span>
+                              </div>
+                              <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${badgeColor}`}>
+                                {isPenalty ? '벌점' : '상점'} {record.points}점
+                              </span>
+                            </div>
+                            <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5">
+                              <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-all">
+                                {record.reason}
+                              </p>
+                            </div>
+                            <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold">
+                              <span>부여인: {record.awardedBy || '시스템'}</span>
+                              <span>{new Date(record.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                
               </div>
             )}
           </div>
