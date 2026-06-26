@@ -376,9 +376,9 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
       {/* 휴대폰 보관 상태 박스 (오전/오후/야간) */}
       <div className="flex gap-[3px] mt-0.5" onClick={(e) => e.stopPropagation()}>
         {([
-          { label: '오전', indices: [0, 1] },
-          { label: '오후', indices: [2, 3, 4] },
-          { label: '야간', indices: [5, 6] },
+          { label: 'D', indices: [0, 1] },
+          { label: 'E', indices: [2, 3, 4] },
+          { label: 'N', indices: [5, 6] },
         ] as const).map(({ label, indices }) => {
           const allAbsent = indices.every((i) =>
             periods[i]?.status === 'absent' || periods[i]?.status === 'future' || periods[i]?.isAwayAbsent
