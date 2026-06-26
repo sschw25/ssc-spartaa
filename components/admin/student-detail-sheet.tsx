@@ -977,6 +977,29 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setLoading(false);
   };
 
+  const handleUpdateAwaySchedules = async (nextSchedules: AwaySchedule[]) => {
+    setAwaySchedules(nextSchedules);
+    const updatedStudent: Student = {
+      ...student,
+      name,
+      loginId,
+      campus,
+      manager,
+      contact,
+      lifeComment,
+      studentLifeComment,
+      specialNote: mergeAdminNote(student.specialNote, specialNote),
+      nextConsultationDate: nextConsultationDate || undefined,
+      enrollmentEndDate: enrollmentEndDate || undefined,
+      weeklyGradeCheck,
+      seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
+      subjects: subjectsState,
+      awaySchedules: nextSchedules,
+      updatedAt: new Date().toISOString()
+    };
+    await saveStudentData(updatedStudent);
+  };
+
   const handleGenerateShareToken = async () => {
     const res = await fetch(`/api/admin/students/${student.id}/share-token`, { method: 'POST' });
     const json = await res.json();
@@ -4125,7 +4148,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 onGenerateShareToken={handleGenerateShareToken}
                 onRevokeShareToken={handleRevokeShareToken}
                 awaySchedules={awaySchedules}
-                setAwaySchedules={setAwaySchedules}
+                setAwaySchedules={handleUpdateAwaySchedules}
               />
             </TabsContent>
           </Tabs>
