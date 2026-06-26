@@ -69,14 +69,14 @@ function getEnrollmentDDay(enrollmentEndDate?: string, todayStr?: string): { sta
 // ── 교시 정의 (08:00~00:00, 2시간씩) ─────────────────────────────────────────
 
 const PERIODS = [
-  { label: '1', start: 8 * 60,  end: 10 * 60 },
-  { label: '2', start: 10 * 60, end: 12 * 60 },
-  { label: '3', start: 12 * 60, end: 14 * 60 },
-  { label: '4', start: 14 * 60, end: 16 * 60 },
-  { label: '5', start: 16 * 60, end: 18 * 60 },
-  { label: '6', start: 18 * 60, end: 20 * 60 },
-  { label: '7', start: 20 * 60, end: 22 * 60 },
-  { label: '8', start: 22 * 60, end: 24 * 60 },
+  { label: '1', start:  9 * 60,        end: 10 * 60 + 50 },  // 09:00~10:50
+  { label: '2', start: 11 * 60 + 10,   end: 12 * 60 + 30 },  // 11:10~12:30
+  { label: '3', start: 13 * 60 + 50,   end: 15 * 60      },  // 13:50~15:00
+  { label: '4', start: 15 * 60 + 10,   end: 16 * 60 + 20 },  // 15:10~16:20
+  { label: '5', start: 16 * 60 + 30,   end: 17 * 60 + 40 },  // 16:30~17:40
+  { label: '6', start: 18 * 60 + 50,   end: 20 * 60 + 20 },  // 18:50~20:20
+  { label: '7', start: 20 * 60 + 30,   end: 22 * 60      },  // 20:30~22:00
+  { label: '8', start: 22 * 60 + 10,   end: 23 * 60 + 20 },  // 22:10~23:20 심야
 ] as const;
 
 interface StudySession {
@@ -1074,7 +1074,7 @@ export default function SeatBoardPage() {
             <span className="text-[11px] font-bold text-slate-500">현재 등원중</span>
           </div>
           <span className="text-[10px] text-slate-400">
-            1(08~10) · 2(10~12) · 3(12~14) · 4(14~16) · 5(16~18) · 6(18~20) · 7(20~22) · 8(22~00)
+            1(09~10:50) · 2(11:10~12:30) · 3(13:50~15) · 4(15:10~16:20) · 5(16:30~17:40) · 6(18:50~20:20) · 7(20:30~22) · 심야(22:10~23:20)
           </span>
           <span className="text-[10px] text-slate-400">· 60초마다 자동 갱신 · 교시 셀 클릭 시 수동 변경</span>
         </div>
