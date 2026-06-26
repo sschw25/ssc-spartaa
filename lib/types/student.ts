@@ -106,9 +106,21 @@ export interface LeaveRequest {
   status: 'pending' | 'approved' | 'rejected';
   usedCoupon?: boolean;   // 쿠폰으로 추가 신청한 건 (관리자 표시용)
   source?: 'student' | 'admin'; // 신청 주체 (없으면 student)
+  urgent?: boolean;       // 전날 18:00시 이후 혹은 당일 오전 급작스러운 긴급 신청 여부
   createdAt: string;      // 신청 시각 (ISO)
   reviewedAt?: string;    // 처리(승인/반려) 시각 (ISO)
   adminReply?: string;    // 관리자 코멘트 (학생에게 노출)
+}
+
+export interface SaturdayLateExcuse {
+  id: string;
+  date: string;           // 토요일 날짜 (YYYY-MM-DD)
+  status: 'pending' | 'submitted' | 'excused' | 'unexcused_late';
+  requestedAt: string;    // 관리자가 증빙요청을 보낸 시각 (ISO)
+  reason?: string;        // 학생이 입력한 회신 사유
+  submittedAt?: string;   // 학생이 회신을 제출한 시각 (ISO)
+  resolvedAt?: string;    // 관리자가 승인/벌점처리 완료한 시각 (ISO)
+  demeritPoint?: number;  // 단순 지각 처리 시 부여된 벌점
 }
 
 export interface GradeItem {
@@ -221,6 +233,8 @@ export interface Student {
   leaveRequests?: LeaveRequest[];
   // 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)
   leaveCoupons?: number;
+  // 토요 지각 증빙 내역
+  saturdayLateExcuses?: SaturdayLateExcuse[];
 
   // 학생별 과목 설정 및 계획
   subjects?: SubjectProgress[];
@@ -232,4 +246,6 @@ export interface Student {
   smsLogs?: SmsLog[];
   // 모의고사 참여 상태
   mockExams?: MockExamParticipation[];
+  // 정기 외출/빠지는 시간대 목록 (예: ["14:30", "18:00"])
+  awaySchedules?: string[];
 }

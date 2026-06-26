@@ -64,6 +64,8 @@ interface InfoTabProps {
   sharePassword?: string;
   onGenerateShareToken?: () => Promise<void>;
   onRevokeShareToken?: () => Promise<void>;
+  awaySchedules: string[];
+  setAwaySchedules: (v: string[]) => void;
 }
 
 // 학생 기본정보 탭 (프레젠테이셔널). 상태·핸들러는 부모가 소유하고 props 로 전달.
@@ -94,6 +96,8 @@ export function InfoTab({
   sharePassword,
   onGenerateShareToken,
   onRevokeShareToken,
+  awaySchedules,
+  setAwaySchedules,
 }: InfoTabProps) {
   const [parentPhone, setParentPhone] = useState(initialParentPhone);
   const [studentPhone, setStudentPhone] = useState(initialStudentPhone);
@@ -101,6 +105,20 @@ export function InfoTab({
   const [savingNotify, setSavingNotify] = useState(false);
   const [sharingLoading, setSharingLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const [newAwayTime, setNewAwayTime] = useState('14:30');
+
+  const handleAddAwayTime = () => {
+    if (!newAwayTime) return;
+    if (awaySchedules.includes(newAwayTime)) return;
+    const next = [...awaySchedules, newAwayTime].sort();
+    setAwaySchedules(next);
+  };
+
+  const handleRemoveAwayTime = (time: string) => {
+    const next = awaySchedules.filter((t) => t !== time);
+    setAwaySchedules(next);
+  };
 
   const shareUrl = studentId && shareToken
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/report/${studentId}?token=${shareToken}`
@@ -310,6 +328,53 @@ export function InfoTab({
           <p className="text-[10px] text-[#86868B]">
             내부 관리용 메모이며 학부모용 결과지에는 표시되지 않습니다.
           </p>
+        </div>
+      </div>
+
+      {/* 정기 외출 / 빠지는 시간대 관리 */}
+      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
+        <div className="flex items-center gap-1.5">
+          <CalendarClock className="w-4 h-4 text-[#0071E3]" />
+          <h4 className="text-xs font-bold text-[#1D1D1F]">정기 외출 / 빠지는 시간대 관리</h4>
+        </div>
+        <p className="text-[10px] text-[#86868B]">
+          지정된 시간에 출결판 교시 셀 내부에 외출 예정 시각이 자동으로 표시됩니다. (예: 14:30)
+        </p>
+        <div className="flex gap-2">
+          <Input
+            type="time"
+            value={newAwayTime}
+            onChange={(e) => setNewAwayTime(e.target.value)}
+            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[150px]"
+          />
+          <Button
+            type="button"
+            onClick={handleAddAwayTime}
+            className="rounded-lg text-xs h-9 px-4 bg-[#1D1D1F] hover:bg-[#323236] text-white font-bold"
+          >
+            시간 추가
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-1.5 pt-1">
+          {awaySchedules && awaySchedules.length > 0 ? (
+            awaySchedules.map((time) => (
+              <span
+                key={time}
+                className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] border border-[#0071E3]/20 rounded-full px-2.5 py-1"
+              >
+                {time}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAwayTime(time)}
+                  className="hover:text-red-500 rounded-full focus:outline-none transition-colors ml-1 cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))
+          ) : (
+            <p className="text-[10px] text-slate-400 py-1">등록된 정기 외출 시간대가 없습니다.</p>
+          )}
         </div>
       </div>
 

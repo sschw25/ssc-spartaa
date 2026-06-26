@@ -9,6 +9,7 @@ import {
   exceedsMonthlyQuota,
   isLeaveType,
   yearMonthOf,
+  MONTHLY_HALFDAY_QUOTA,
 } from '@/lib/leave';
 
 // 학생이 휴가/반차/휴식권/병가를 신청
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { type?: unknown; date?: unknown; reason?: unknown };
+  let body: { type?: unknown; date?: unknown; reason?: unknown; urgent?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '사용 희망일을 선택해 주세요.' }, { status: 400 });
   }
   const reason = String(body?.reason ?? '').trim().slice(0, 500);
+  const urgent = !!body?.urgent;
 
   const student = await getStudentById(studentId);
   if (!student) {
@@ -49,23 +51,30 @@ export async function POST(req: NextRequest) {
 
   // 월 한도 검사 (병가는 한도 무관). 초과 시 쿠폰/밴드채팅 안내와 함께 차단.
   const usage = getMonthlyLeaveUsage(existing, yearMonthOf(date));
+  const isHalfday = LEAVE_TYPES[type].category === 'halfday';
+  const halfLeft = isHalfday ? Math.max(0, MONTHLY_HALFDAY_QUOTA - usage.halfday) : 0;
+
   if (exceedsMonthlyQuota(type, usage)) {
     const label = getLeaveTypeLabel(type);
     const guide =
-      LEAVE_TYPES[type].category === 'halfday'
+      isHalfday
         ? '이번 달 반차를 모두 사용했어요. 추가가 필요하면 쿠폰 3개로 신청 가능합니다 — 밴드 채팅으로 문의 후 쿠폰을 제출해 주세요.'
         : '이번 달 휴식권을 모두 사용했어요. 추가가 필요하면 밴드 채팅으로 문의해 주세요.';
     return NextResponse.json({ success: false, code: 'QUOTA_EXCEEDED', message: `${label} · ${guide}` }, { status: 403 });
   }
 
   const nowIso = new Date().toISOString();
+  const autoApprove = isHalfday && halfLeft > 0;
+
   const request: LeaveRequest = {
     id: `leave_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     type,
     date,
     reason: reason || undefined,
-    status: 'pending',
+    status: autoApprove ? 'approved' : 'pending',
+    urgent,
     createdAt: nowIso,
+    ...(autoApprove ? { reviewedAt: nowIso, adminReply: '잔여 반차권이 존재하여 자동 승인되었습니다.' } : {}),
   };
   student.leaveRequests = [...existing, request];
   await saveStudent(student);

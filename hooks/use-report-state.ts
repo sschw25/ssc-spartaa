@@ -914,12 +914,29 @@ export function useReportState() {
       return;
     }
     setLeaveError('');
+
+    const isHalfday = leaveForm.type === 'morning' || leaveForm.type === 'afternoon' || leaveForm.type === 'night';
+    let urgent = false;
+    if (isHalfday) {
+      const targetDate = new Date(`${leaveForm.date}T00:00:00+09:00`);
+      const deadline = new Date(targetDate.getTime() - 24 * 60 * 60 * 1000);
+      deadline.setHours(18, 0, 0, 0);
+      const now = new Date();
+      if (now.getTime() > deadline.getTime()) {
+        urgent = true;
+        const ok = window.confirm(
+          '반차는 기본적으로 사용 전날 18:00까지 신청해야 합니다. 당일 오전 등 급하게 신청하는 경우, 긴급한 상황에만 사용해 주시기 바랍니다. 신청하시겠습니까?'
+        );
+        if (!ok) return;
+      }
+    }
+
     setLeaveSubmitting(true);
     try {
       const res = await fetch('/api/student/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: leaveForm.type, date: leaveForm.date, reason: leaveForm.reason }),
+        body: JSON.stringify({ type: leaveForm.type, date: leaveForm.date, reason: leaveForm.reason, urgent }),
       });
       const json = await res.json();
       if (res.ok && json.success) {

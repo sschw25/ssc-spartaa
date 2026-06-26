@@ -66,6 +66,8 @@ function rowToStudent(r: any): Student {
     penalties: r.penalties || [],
     smsLogs: r.sms_logs || [],
     mockExams: r.mock_exams || [],
+    saturdayLateExcuses: r.saturday_late_excuses || [],
+    awaySchedules: r.away_schedules || [],
     subjects,
   };
 }
@@ -104,6 +106,8 @@ function studentToRow(student: Student, nowIso: string) {
     penalties: student.penalties || [],
     sms_logs: student.smsLogs || [],
     mock_exams: student.mockExams || [],
+    saturday_late_excuses: student.saturdayLateExcuses || [],
+    away_schedules: student.awaySchedules || [],
     // share_token / share_token_expires_at / share_password 는 의도적으로 제외한다.
     // 일반 학생 저장(마스킹된 객체 포함)이 학부모 공유 비밀번호 해시를 null로 덮어쓰던 버그 방지.
     // 공유 컬럼은 share-token 라우트의 patchSupabaseToken 만 전담하며, upsert는 누락 컬럼을 보존한다.
@@ -144,7 +148,7 @@ const SUMMARY_COLS = [
   'parent_phone', 'student_phone', 'sms_targets',
   'life_comment', 'special_note', 'student_life_comment',
   'leave_coupons', 'share_token', 'share_token_expires_at',
-  'expected_arrival', 'seat_number', 'created_at', 'updated_at',
+  'expected_arrival', 'seat_number', 'saturday_late_excuses', 'away_schedules', 'created_at', 'updated_at',
 ].join(', ');
 
 export async function getStudentsSummarySupabase(): Promise<Student[]> {

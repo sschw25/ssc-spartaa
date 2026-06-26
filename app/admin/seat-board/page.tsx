@@ -114,10 +114,18 @@ function nowKst(): { dateStr: string; minOfDay: number } {
 
 type PeriodStatus = 'present' | 'absent' | 'future';
 
+function timeStringToMin(timeStr: string): number {
+  if (!timeStr || !timeStr.includes(':')) return -1;
+  const [h, m] = timeStr.split(':').map(Number);
+  if (isNaN(h) || isNaN(m)) return -1;
+  return h * 60 + m;
+}
+
 // 교시 상태 (computed + 수동 override 여부)
 interface PeriodState {
   status: PeriodStatus;
   isOverridden: boolean;
+  awayTime?: string;
 }
 
 function computePeriods(
@@ -172,15 +180,28 @@ function PeriodCell({
   status,
   label,
   isOverridden,
+  awayTime,
   onClick,
 }: {
   status: PeriodStatus;
   label: string;
   isOverridden?: boolean;
+  awayTime?: string;
   onClick?: () => void;
 }) {
   const clickable = !!onClick && status !== 'future';
   const hoverCls = clickable ? 'cursor-pointer hover:brightness-95 active:scale-90 transition-all' : '';
+
+  let displayContent: React.ReactNode = label;
+  if (status !== 'future' && awayTime && awayTime.includes(':')) {
+    const [h, m] = awayTime.split(':');
+    displayContent = (
+      <div className="flex flex-col items-center justify-center -space-y-[2px] leading-none shrink-0 select-none">
+        <span className="text-[7.5px] font-black tracking-tighter">{h}</span>
+        <span className="text-[7.5px] font-black tracking-tighter">{m}</span>
+      </div>
+    );
+  }
 
   if (status === 'future') {
     return (
@@ -191,31 +212,35 @@ function PeriodCell({
       </div>
     );
   }
+  
   if (status === 'present') {
+    const symbol = awayTime ? displayContent : <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>;
     return (
       <div
         onClick={onClick}
         className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${
           isOverridden
-            ? 'bg-amber-50 border-amber-300'
-            : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]'
+            ? 'bg-amber-50 border-amber-300 text-amber-600'
+            : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12] text-[#1D1D1F]/70'
         }`}
       >
-        <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>
+        {symbol}
       </div>
     );
   }
+  
   // absent
+  const symbol = awayTime ? displayContent : <span className={`text-[10px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-red-400'}`}>X</span>;
   return (
     <div
       onClick={onClick}
       className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${
         isOverridden
-          ? 'bg-amber-50 border-amber-300'
-          : 'bg-red-50 border-red-200/60'
+          ? 'bg-amber-50 border-amber-300 text-amber-600'
+          : 'bg-red-50 border-red-200/60 text-red-400'
       }`}
     >
-      <span className={`text-[10px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-red-400'}`}>X</span>
+      {symbol}
     </div>
   );
 }
@@ -314,23 +339,25 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
 
       <div className="flex flex-col gap-[3px] mt-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-[3px]">
-          {periods.slice(0, 4).map(({ status, isOverridden }, i) => (
+          {periods.slice(0, 4).map(({ status, isOverridden, awayTime }, i) => (
             <PeriodCell
               key={i}
               status={status}
               label={String(i + 1)}
               isOverridden={isOverridden}
+              awayTime={awayTime}
               onClick={onTogglePeriod ? () => onTogglePeriod(i) : undefined}
             />
           ))}
         </div>
         <div className="flex gap-[3px]">
-          {periods.slice(4).map(({ status, isOverridden }, i) => (
+          {periods.slice(4).map(({ status, isOverridden, awayTime }, i) => (
             <PeriodCell
               key={i + 4}
               status={status}
               label={String(i + 5)}
               isOverridden={isOverridden}
+              awayTime={awayTime}
               onClick={onTogglePeriod ? () => onTogglePeriod(i + 4) : undefined}
             />
           ))}
@@ -372,7 +399,24 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
         const periods: PeriodState[] = raw.map((s, idx) => {
           const key = student ? `${student.id}:${idx}` : '';
           const override = student ? periodOverrides.get(key) : undefined;
-          return { status: override ?? s, isOverridden: override !== undefined };
+          
+          let awayTime: string | undefined = undefined;
+          if (student && student.awaySchedules) {
+            const period = PERIODS[idx];
+            const matched = student.awaySchedules.find(time => {
+              const min = timeStringToMin(time);
+              return min >= period.start && min < period.end;
+            });
+            if (matched) {
+              awayTime = matched;
+            }
+          }
+
+          return {
+            status: override ?? s,
+            isOverridden: override !== undefined,
+            awayTime,
+          };
         });
         return (
           <SeatCard

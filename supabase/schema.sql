@@ -76,6 +76,12 @@ alter table students add column if not exists sms_logs jsonb not null default '[
 -- 학생별 모의고사 참여 상태
 alter table students add column if not exists mock_exams jsonb not null default '[]'::jsonb;
 
+-- 토요 지각/결석 증빙 내역
+alter table students add column if not exists saturday_late_excuses jsonb not null default '[]'::jsonb;
+
+-- 정기 외출/빠지는 시간대 목록 (awaySchedules)
+alter table students add column if not exists away_schedules jsonb not null default '[]'::jsonb;
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,

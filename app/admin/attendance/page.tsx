@@ -102,11 +102,106 @@ function AdminAttendanceContent() {
   const [campusFilter, setCampusFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>(statusOptions.some((o) => o.key === initialStatus) ? initialStatus : 'all');
   const [query, setQuery] = useState('');
-  const [mode, setMode] = useState<'daily' | 'weekly'>('daily');
+  const [mode, setMode] = useState<'daily' | 'weekly' | 'saturday-late'>('daily');
   const [sortKey, setSortKey] = useState<SortKey>('checkIn');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [reloadKey, setReloadKey] = useState(0);
   const [edits, setEdits] = useState<Record<string, { checkIn: string; checkOut: string }>>({});
+
+  // 토요 지각 증빙용 상태
+  const [satDate, setSatDate] = useState('');
+  const [satData, setSatData] = useState<any[]>([]);
+  const [satLoading, setSatLoading] = useState(false);
+  const [selectedSatStudents, setSelectedSatStudents] = useState<string[]>([]);
+  const [demeritModal, setDemeritModal] = useState<{ studentId: string; name: string } | null>(null);
+  const [demeritPoints, setDemeritPoints] = useState(1);
+
+  // 토요 지각 증빙 초기 날짜 계산 (직전 토요일)
+  useEffect(() => {
+    const today = new Date();
+    const day = today.getDay();
+    const diff = day === 6 ? 0 : -(day + 1);
+    const sat = new Date(today);
+    sat.setDate(today.getDate() + diff);
+    setSatDate(sat.toISOString().slice(0, 10));
+  }, []);
+
+  const loadSatData = async () => {
+    if (!satDate) return;
+    setSatLoading(true);
+    try {
+      const res = await fetch(`/api/admin/attendance/saturday-excuse?date=${satDate}`);
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSatData(json.rows || []);
+        setSelectedSatStudents([]);
+      } else {
+        toast.error(json.message || '토요 지각 대상자 조회 실패');
+      }
+    } catch {
+      toast.error('네트워크 오류로 토요 지각 대상자를 조회할 수 없습니다.');
+    } finally {
+      setSatLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (mode === 'saturday-late') {
+      loadSatData();
+    }
+  }, [mode, satDate, reloadKey]);
+
+  const handleRequestSatExcuse = async () => {
+    const targets = selectedSatStudents.length > 0 ? selectedSatStudents : [];
+    if (targets.length === 0) return;
+    try {
+      const res = await fetch('/api/admin/attendance/saturday-excuse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'request',
+          date: satDate,
+          studentIds: targets,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message);
+        loadSatData();
+      } else {
+        toast.error(json.message || '요청 실패');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    }
+  };
+
+  const handleResolveSatExcuse = async (studentId: string, decision: 'excused' | 'unexcused_late', demeritPoint?: number) => {
+    try {
+      const res = await fetch('/api/admin/attendance/saturday-excuse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'resolve',
+          date: satDate,
+          studentId,
+          decision,
+          demeritPoint,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message);
+        setDemeritModal(null);
+        setDemeritPoints(1);
+        loadSatData();
+      } else {
+        toast.error(json.message || '처리 실패');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -282,7 +377,7 @@ function AdminAttendanceContent() {
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="inline-flex p-0.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
-                {([['daily', '일별'], ['weekly', '주간 지각']] as const).map(([k, label]) => (
+                {([['daily', '일별'], ['weekly', '주간 지각'], ['saturday-late', '토요 지각 증빙']] as const).map(([k, label]) => (
                   <button key={k} onClick={() => setMode(k)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mode === k ? 'bg-white text-[#1D1D1F] shadow-sm' : 'text-[#86868B]'}`}>{label}</button>
                 ))}
               </div>
@@ -295,6 +390,16 @@ function AdminAttendanceContent() {
                   </div>
                   <button onClick={() => setDate((d) => shiftDate(d, 1))} disabled={date >= todayKST()} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7] disabled:opacity-40">다음</button>
                   <button onClick={() => setDate(todayKST())} className="px-2.5 py-1.5 rounded-lg bg-[#1D1D1F] text-white text-xs font-bold">오늘</button>
+                </>
+              )}
+              {mode === 'saturday-late' && (
+                <>
+                  <button onClick={() => setSatDate((d) => shiftDate(d, -7))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">이전 주</button>
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
+                    <CalendarDays className="w-3.5 h-3.5 text-[#86868B]" />
+                    <input type="date" value={satDate} onChange={(e) => e.target.value && setSatDate(e.target.value)} className="bg-transparent text-xs font-bold outline-none" />
+                  </div>
+                  <button onClick={() => setSatDate((d) => shiftDate(d, 7))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">다음 주</button>
                 </>
               )}
             </div>
@@ -328,6 +433,151 @@ function AdminAttendanceContent() {
 
         {mode === 'weekly' ? (
           <WeeklyTardiness campusFilter={campusFilter} />
+        ) : mode === 'saturday-late' ? (
+          <div className="space-y-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <span className="text-xs font-bold text-[#86868B]">
+                토요 지각 증빙 대상자: 총 {satData.length}명 (결석 상태 & 반차/휴가 미승인 학생)
+              </span>
+              <button
+                onClick={handleRequestSatExcuse}
+                disabled={selectedSatStudents.length === 0}
+                className="rounded-xl bg-[#0071E3] px-3.5 py-2 text-xs font-black text-white hover:bg-[#0077ED] transition active:scale-[0.98] disabled:opacity-50"
+              >
+                선택 학생 {selectedSatStudents.length}명 일괄 증빙 요청 전송
+              </button>
+            </div>
+
+            <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-x-auto">
+              {satLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" />
+                  <span className="text-xs text-[#86868B]">불러오는 중...</span>
+                </div>
+              ) : satData.length === 0 ? (
+                <div className="py-16 text-center text-sm text-[#86868B]">
+                  해당 토요일에 증빙 대상 학생이 없습니다.
+                </div>
+              ) : (
+                <table className="w-full text-xs">
+                  <thead className="bg-[#F5F5F7] text-left border-b border-black/[0.05]">
+                    <tr>
+                      <th className="px-4 py-3 w-10">
+                        <input
+                          type="checkbox"
+                          checked={satData.length > 0 && selectedSatStudents.length === satData.length}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedSatStudents(satData.map((r) => r.studentId));
+                            } else {
+                              setSelectedSatStudents([]);
+                            }
+                          }}
+                          className="rounded border-black/[0.1] text-[#0071E3] focus:ring-[#0071E3]/20"
+                        />
+                      </th>
+                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">이름</th>
+                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">캠퍼스</th>
+                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">담당 코치</th>
+                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">증빙 상태</th>
+                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">지각 사유 회신</th>
+                      <th className="px-4 py-3 font-bold text-[#1D1D1F] text-right">처리</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {satData.map((r) => {
+                      const isSelected = selectedSatStudents.includes(r.studentId);
+                      return (
+                        <tr key={r.studentId} className="border-b border-black/[0.04] hover:bg-[#F5F5F7]/60">
+                          <td className="px-4 py-3 w-10">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedSatStudents([...selectedSatStudents, r.studentId]);
+                                } else {
+                                  setSelectedSatStudents(selectedSatStudents.filter((id) => id !== r.studentId));
+                                }
+                              }}
+                              className="rounded border-black/[0.1] text-[#0071E3] focus:ring-[#0071E3]/20"
+                            />
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap font-bold text-[#1D1D1F]">{r.name}</td>
+                          <td className="px-4 py-3 whitespace-nowrap font-bold text-[#86868B]">{campusLabel(r.campus)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-semibold">{r.manager || '-'}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            {r.status === 'not_requested' && (
+                              <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-slate-500 bg-slate-100 border-slate-200">요청 전</span>
+                            )}
+                            {r.status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-amber-700 bg-amber-50 border-amber-100 animate-pulse">회신 대기</span>
+                            )}
+                            {r.status === 'submitted' && (
+                              <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-blue-700 bg-blue-50 border-blue-100 animate-pulse">회신 완료</span>
+                            )}
+                            {r.status === 'excused' && (
+                              <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-emerald-700 bg-emerald-50 border-emerald-100">참작 완료</span>
+                            )}
+                            {r.status === 'unexcused_late' && (
+                              <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-red-700 bg-red-50 border-red-100">벌점 부여 ({r.demeritPoint}점)</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 max-w-xs truncate font-semibold text-slate-600" title={r.reason || ''}>
+                            {r.reason ? (
+                              <span className="text-slate-800 font-bold">{r.reason}</span>
+                            ) : (
+                              <span className="text-slate-300 italic">회신 없음</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
+                            {r.status === 'submitted' && (
+                              <div className="inline-flex gap-1.5 justify-end">
+                                <button
+                                  onClick={() => handleResolveSatExcuse(r.studentId, 'excused')}
+                                  className="rounded-lg bg-emerald-50 border border-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700 hover:bg-emerald-100 transition"
+                                >
+                                  참작 (Pass)
+                                </button>
+                                <button
+                                  onClick={() => setDemeritModal({ studentId: r.studentId, name: r.name })}
+                                  className="rounded-lg bg-red-50 border border-red-100 px-2.5 py-1 text-[10px] font-black text-red-700 hover:bg-red-100 transition"
+                                >
+                                  벌점 부여
+                                </button>
+                              </div>
+                            )}
+                            {r.status === 'pending' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedSatStudents([r.studentId]);
+                                  setTimeout(handleRequestSatExcuse, 50);
+                                }}
+                                className="rounded-lg border border-black/[0.08] px-2.5 py-1 text-[10px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition"
+                              >
+                                재요청
+                              </button>
+                            )}
+                            {r.status === 'not_requested' && (
+                              <button
+                                onClick={() => {
+                                  setSelectedSatStudents([r.studentId]);
+                                  setTimeout(handleRequestSatExcuse, 50);
+                                }}
+                                className="rounded-lg bg-[#0071E3] px-2.5 py-1 text-[10px] font-black text-white hover:bg-[#0077ED] transition"
+                              >
+                                증빙 요청
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
         ) : (
           <>
             {s && (
@@ -440,6 +690,50 @@ function AdminAttendanceContent() {
               이름 검색, 상태 필터, 등·하원 시간 수정, 결석 처리를 한 화면에서 처리할 수 있습니다.
             </p>
           </>
+        )}
+
+        {/* 벌점 부여 모달 */}
+        {demeritModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm rounded-3xl border border-black/[0.05] bg-white p-6 shadow-2xl space-y-4">
+              <div>
+                <h3 className="text-base font-black text-[#1D1D1F]">지각 벌점 부여</h3>
+                <p className="text-xs text-[#86868B] mt-0.5">
+                  <b>{demeritModal.name}</b> 학생의 증빙 사유를 기각하고 단순 지각 벌점을 부여합니다.
+                </p>
+              </div>
+              
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-black text-[#86868B]">벌점 점수</label>
+                <input
+                  type="number"
+                  min={1}
+                  max={10}
+                  value={demeritPoints}
+                  onChange={(e) => setDemeritPoints(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-bold outline-none focus:border-[#0071E3]"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    setDemeritModal(null);
+                    setDemeritPoints(1);
+                  }}
+                  className="flex-1 rounded-xl border border-black/[0.08] py-2.5 text-xs font-bold text-[#86868B] hover:bg-[#F5F5F7] transition"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={() => handleResolveSatExcuse(demeritModal.studentId, 'unexcused_late', demeritPoints)}
+                  className="flex-1 rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white hover:bg-red-700 transition"
+                >
+                  벌점 부여 및 완료
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </main>
     </div>

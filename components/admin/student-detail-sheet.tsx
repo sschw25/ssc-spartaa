@@ -195,6 +195,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
   const [seatNumber, setSeatNumber] = useState('');
+  const [awaySchedules, setAwaySchedules] = useState<string[]>([]);
   const [shareToken, setShareToken] = useState<string | undefined>(undefined);
   const [shareTokenExpiresAt, setShareTokenExpiresAt] = useState<string | undefined>(undefined);
   const [sharePassword, setSharePassword] = useState<string | undefined>(undefined);
@@ -384,6 +385,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setEnrollmentEndDate(student.enrollmentEndDate || '');
       setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
       setSeatNumber(student.seatNumber != null ? String(student.seatNumber) : '');
+      setAwaySchedules(student.awaySchedules || []);
       setShareToken(student.shareToken);
       setShareTokenExpiresAt(student.shareTokenExpiresAt);
       setSharePassword(undefined); // PIN은 생성 직후 API 응답에서만 일회성 표시
@@ -469,17 +471,17 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const snap = (
       name: string, campus: string, manager: string, contact: string,
       speed: number, note: string, nextDate: string, subjects: SubjectProgress[],
-      enrollEnd: string, weeklyGrade: boolean
-    ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade });
+      enrollEnd: string, weeklyGrade: boolean, aways: string[]
+    ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade, aways });
 
     const localSnap = snap(
       name, campus, manager, contact, 1.0, specialNote,
-      nextConsultationDate || '', subjectsState, enrollmentEndDate || '', weeklyGradeCheck
+      nextConsultationDate || '', subjectsState, enrollmentEndDate || '', weeklyGradeCheck, awaySchedules
     );
     const sourceSnap = snap(
       student.name || '', student.campus || 'wonju', student.manager || '', student.contact || '',
       1.0, extractAdminNote(student.specialNote),
-      student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck)
+      student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck), student.awaySchedules || []
     );
 
     if (localSnap === sourceSnap) return; // 변경 없음 → 저장 불필요
@@ -500,6 +502,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           enrollmentEndDate: enrollmentEndDate || undefined,
           weeklyGradeCheck,
           subjects: subjectsState,
+          awaySchedules,
           updatedAt: new Date().toISOString(),
         };
         const res = await fetch(`/api/admin/students/${student.id}`, {
@@ -524,7 +527,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
     };
-  }, [student, name, campus, manager, contact, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate]);
+  }, [student, name, campus, manager, contact, specialNote, nextConsultationDate, enrollmentEndDate, weeklyGradeCheck, subjectsState, loading, onUpdate, awaySchedules]);
 
   useEffect(() => {
     cslContentRef.current = cslContent;
@@ -848,6 +851,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       weeklyGradeCheck,
       subjects: latestSubjects,
       consultationLogs: updatedLogs,
+      awaySchedules,
       updatedAt: nowStr
     };
 
@@ -955,6 +959,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       weeklyGradeCheck,
       seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
       subjects: subjectsState,
+      awaySchedules,
       updatedAt: new Date().toISOString()
     };
 
@@ -4112,6 +4117,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 sharePassword={sharePassword}
                 onGenerateShareToken={handleGenerateShareToken}
                 onRevokeShareToken={handleRevokeShareToken}
+                awaySchedules={awaySchedules}
+                setAwaySchedules={setAwaySchedules}
               />
             </TabsContent>
           </Tabs>
