@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
-  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle
+  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -185,6 +185,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [studyStats, setStudyStats] = useState<any>(null);
   const [todayAttendanceStatus, setTodayAttendanceStatus] = useState<TodayAttendanceStatus | null>(null);
   const [leaveRequestsLocal, setLeaveRequestsLocal] = useState<LeaveRequest[]>([]);
+  const [isAlertDismissed, setIsAlertDismissed] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsAlertDismissed(false);
+    }
+  }, [isOpen, student?.id]);
 
   // ── 미승인 조기 하원 여부 실시간 계산 ───────────────────────────────
   const unauthorizedCheckoutText = useMemo(() => {
@@ -577,7 +584,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         autoSaveInFlightRef.current = false;
         setIsAutoSaving(false);
       }
-    }, 1200);
+    }, 10000); // 자동 저장 디바운스를 10초로 변경
 
     return () => {
       if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
@@ -3567,10 +3574,18 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           {/* Top Row: Title, Metadata, Status */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
             <div className="min-w-0 w-full">
-              {unauthorizedCheckoutText && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs font-semibold text-red-400 mb-4 transition-all duration-300">
+              {unauthorizedCheckoutText && !isAlertDismissed && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 pr-36 md:pr-40 text-xs font-semibold text-red-400 mb-4 relative transition-all duration-300">
                   <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
                   <span className="leading-relaxed">{unauthorizedCheckoutText}</span>
+                  <button
+                    type="button"
+                    onClick={() => setIsAlertDismissed(true)}
+                    className="absolute right-3.5 bottom-3 text-red-400 hover:text-red-300 hover:bg-red-500/20 p-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center"
+                    title="알림 닫기"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               )}
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
