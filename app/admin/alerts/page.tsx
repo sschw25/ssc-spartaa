@@ -154,11 +154,8 @@ function AdminAlertsContent() {
     const isStagnant24h = hoursSinceUpdate >= 24;
 
     const studentItems = allProgressItems.filter(item => item.studentId === student.id);
-    const slowItems = studentItems.filter(item => {
-      if (!item.expectedToday || item.expectedToday <= 0) return false;
-      const behindAmt = item.expectedToday - item.current;
-      return behindAmt >= item.expectedToday * 0.3; // 30% 이상 뒤처짐
-    });
+    const slowItems = studentItems.filter(item => item.status === 'behind');
+    const worstShortage = slowItems.reduce((max, item) => Math.max(max, item.shortage ?? 0), 0);
 
     return {
       student,
@@ -166,14 +163,17 @@ function AdminAlertsContent() {
       hoursSinceUpdate,
       isStagnant24h,
       isSlow: slowItems.length > 0,
-      slowItems
+      slowItems,
+      worstShortage
     };
   });
 
   // (1) 24시간 초과 정체 (🔴 긴급)
   const stagnantList = stagnantAndSlow.filter(r => r.isStagnant24h);
-  // (2) 30% 이상 진도 지연 (🟠 주의)
-  const delayedList = stagnantAndSlow.filter(r => !r.isStagnant24h && r.isSlow);
+  // (2) 진도 지연 원생 (🟠 주의) - 지연량이 많은 순으로 정렬
+  const delayedList = stagnantAndSlow
+    .filter(r => !r.isStagnant24h && r.isSlow)
+    .sort((a, b) => b.worstShortage - a.worstShortage);
 
   // (3) 상담 도래 원생 (⚪ 중립)
   const todayStr = now.toISOString().split('T')[0];
@@ -233,7 +233,7 @@ function AdminAlertsContent() {
           {/* 정체 카드 🔴 */}
           <button
             onClick={() => setActiveTab('stagnant')}
-            className={`text-left p-5 rounded-3xl border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
+            className={`text-left p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
               activeTab === 'stagnant'
                 ? 'border-red-500/20 bg-red-500/[0.03] shadow-[0_4px_16px_rgba(239,68,68,0.04)]'
                 : 'border-slate-100 bg-white shadow-sm'
@@ -253,7 +253,7 @@ function AdminAlertsContent() {
           {/* 지연 카드 🟠 */}
           <button
             onClick={() => setActiveTab('delayed')}
-            className={`text-left p-5 rounded-3xl border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
+            className={`text-left p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
               activeTab === 'delayed'
                 ? 'border-amber-500/20 bg-amber-50/[0.03] shadow-[0_4px_16px_rgba(245,99,0,0.04)]'
                 : 'border-slate-100 bg-white shadow-sm'
@@ -265,15 +265,15 @@ function AdminAlertsContent() {
               </span>
               <Badge className="bg-amber-100 text-amber-800 border-none font-black rounded-lg">🟠 주의</Badge>
             </div>
-            <h3 className="text-base font-black text-slate-800 mt-4">계획 대비 30% 지연</h3>
-            <p className="text-xs font-bold text-slate-400 mt-0.5">교재/인강 진도가 밀린 원생</p>
+            <h3 className="text-base font-black text-slate-800 mt-4">진도 지연 원생</h3>
+            <p className="text-xs font-bold text-slate-400 mt-0.5">목표 계획 대비 진도가 뒤처진 원생</p>
             <p className="text-2xl font-black text-amber-600 mt-2"><AnimatedNumber value={delayedList.length} suffix="명" /></p>
           </button>
 
           {/* 상담 카드 ⚪ */}
           <button
             onClick={() => setActiveTab('consultation')}
-            className={`text-left p-5 rounded-3xl border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
+            className={`text-left p-5 rounded-2xl border transition-all duration-300 hover:scale-[1.01] hover:shadow-md ${
               activeTab === 'consultation'
                 ? 'border-slate-900/20 bg-slate-50 shadow-[0_4px_16px_rgba(29,29,31,0.04)]'
                 : 'border-slate-100 bg-white shadow-sm'
@@ -292,7 +292,7 @@ function AdminAlertsContent() {
         </div>
 
         {/* 상세 목록 테이블 영역 */}
-        <Card className="rounded-3xl border-slate-100 bg-white shadow-sm">
+        <Card className="rounded-2xl border-slate-100 bg-white shadow-sm">
           <CardHeader className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 pb-4 border-b border-slate-100">
             <div>
               <CardTitle className="text-sm font-black text-slate-800 flex items-center gap-2">
@@ -300,7 +300,7 @@ function AdminAlertsContent() {
                 {activeTab === 'delayed' && <span className="w-2 h-2 rounded-full bg-amber-500" />}
                 {activeTab === 'consultation' && <span className="w-2 h-2 rounded-full bg-slate-400" />}
                 {activeTab === 'stagnant' ? '24시간 동안 진도가 정체된 원생 목록 (🔴 긴급)' : 
-                 activeTab === 'delayed' ? '계획보다 30% 이상 진도가 밀린 원생 목록 (🟠 주의)' : 
+                 activeTab === 'delayed' ? '계획보다 진도가 뒤처진 원생 목록 (🟠 주의)' : 
                  '상담 예정일이 오늘이거나 경과된 원생 목록 (⚪ 중립)'}
               </CardTitle>
               <CardDescription className="text-[11px] font-bold text-slate-400 mt-1">행을 누르면 원생 상세 시트가 열립니다.</CardDescription>

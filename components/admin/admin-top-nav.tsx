@@ -209,15 +209,7 @@ export function AdminTopNav({
               className={menuButtonClass(pathname === '/admin/alerts')}
             >
               <AlertTriangle className="w-4 h-4 text-[#0071E3]" />
-              진도 정체 · 상담 도래
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/progress-delayed')}
-              className={menuButtonClass(pathname === '/admin/progress-delayed')}
-            >
-              <BarChart3 className="w-4 h-4 text-[#0071E3]" />
-              진도 지연 원생
+              원생 케어 알림 (정체/지연/상담)
             </button>
             <button
               type="button"
