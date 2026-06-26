@@ -201,25 +201,6 @@ export function AdminTopNav({
               통합 인박스
             </button>
 
-            {/* 알림 */}
-            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">알림</p>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/alerts')}
-              className={menuButtonClass(pathname === '/admin/alerts')}
-            >
-              <AlertTriangle className="w-4 h-4 text-[#0071E3]" />
-              원생 케어 알림 (정체/지연/상담)
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/grades-missing')}
-              className={menuButtonClass(pathname === '/admin/grades-missing')}
-            >
-              <ClipboardList className="w-4 h-4 text-[#0071E3]" />
-              성적 미입력 원생
-            </button>
-
             {/* 원생 관리 */}
             <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">원생 관리</p>
             <button
@@ -228,7 +209,7 @@ export function AdminTopNav({
               className={menuButtonClass(pathname === '/admin/consultation')}
             >
               <BookOpen className="w-4 h-4 text-[#0071E3]" />
-              상담일지 · 진도 관리
+              원생 종합 관리
             </button>
             <button type="button" onClick={searchStudent} className={menuButtonClass(false)}>
               <Search className="w-4 h-4 text-[#0071E3]" />

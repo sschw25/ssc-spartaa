@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useRef } from 'react';
+import React, { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,42 @@ export default function AdminConsultationPage() {
   );
 }
 
+const getStudentLastUpdate = (s: Student) => {
+  let max = s.updatedAt || s.createdAt || '';
+  if (s.books) {
+    s.books.forEach(b => {
+      if (b.updatedAt && b.updatedAt > max) max = b.updatedAt;
+    });
+  }
+  if (s.lectures) {
+    s.lectures.forEach(l => {
+      if (l.updatedAt && l.updatedAt > max) max = l.updatedAt;
+    });
+  }
+  if (s.subjects) {
+    s.subjects.forEach(sub => {
+      if (sub.books) {
+        sub.books.forEach(b => {
+          if (b.updatedAt && b.updatedAt > max) max = b.updatedAt;
+        });
+      }
+      if (sub.lectures) {
+        sub.lectures.forEach(l => {
+          if (l.updatedAt && l.updatedAt > max) max = l.updatedAt;
+        });
+      }
+    });
+  }
+  return max;
+};
+
+const isStagnant24h = (s: Student) => {
+  const lastUpdateStr = getStudentLastUpdate(s);
+  const lastUpdate = lastUpdateStr ? new Date(lastUpdateStr) : new Date(s.createdAt);
+  const hoursSinceUpdate = (new Date().getTime() - lastUpdate.getTime()) / (1000 * 60 * 60);
+  return hoursSinceUpdate >= 24;
+};
+
 function ConsultationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -56,7 +92,7 @@ function ConsultationContent() {
   const [searchTerm, setSearchTerm] = useState('');
   const [campusFilter, setCampusFilter] = useState('all');
   const [campusFilterStorageKey, setCampusFilterStorageKey] = useState('');
-  const [quickFilter, setQuickFilter] = useState<'all' | 'consultation' | 'behind'>('all');
+  const [quickFilter, setQuickFilter] = useState<'all' | 'consultation' | 'behind' | 'stagnant' | 'missing_grade'>('all');
   const [dashboardTab, setDashboardTab] = useState('cards');
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('table');
   const [progressSort, setProgressSort] = useState<'shortage' | 'status' | 'name'>('shortage');
@@ -215,7 +251,7 @@ function ConsultationContent() {
     setCampusFilter(campus);
   };
 
-  const handleQuickFilterChange = (filter: 'all' | 'consultation' | 'behind') => {
+  const handleQuickFilterChange = (filter: 'all' | 'consultation' | 'behind' | 'stagnant' | 'missing_grade') => {
     setQuickFilter(filter);
   };
 
@@ -453,6 +489,17 @@ function ConsultationContent() {
       .slice(0, 3);
   };
 
+  // 5대 퀵 필터용 실시간 카운트 집계
+  const stagnantCount = useMemo(() => campusScopedStudents.filter(s => isStagnant24h(s)).length, [campusScopedStudents]);
+  const behindCount = useMemo(() => {
+    return campusScopedStudents.filter(s => {
+      const items = allProgressItems.filter(item => item.studentId === s.id);
+      return items.some(item => item.status === 'behind');
+    }).length;
+  }, [campusScopedStudents, allProgressItems]);
+  const missingGradeCount = useMemo(() => campusScopedStudents.filter(s => isWeeklyGradeMissing(s)).length, [campusScopedStudents]);
+  const consultationCount = useMemo(() => pendingConsultationStudents.length, [pendingConsultationStudents]);
+
   // 검색 및 필터링된 학생 목록
   const filteredStudents = campusScopedStudents.filter(s => {
     const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -463,6 +510,10 @@ function ConsultationContent() {
     } else if (quickFilter === 'behind') {
       const studentProgressItems = allProgressItems.filter(item => item.studentId === s.id);
       matchesQuickFilter = studentProgressItems.some(item => item.status === 'behind');
+    } else if (quickFilter === 'stagnant') {
+      matchesQuickFilter = isStagnant24h(s);
+    } else if (quickFilter === 'missing_grade') {
+      matchesQuickFilter = isWeeklyGradeMissing(s);
     }
     
     return matchesSearch && matchesQuickFilter;
@@ -504,6 +555,12 @@ function ConsultationContent() {
         matchesQuickFilter = item.status === 'behind';
       } else if (quickFilter === 'consultation') {
         matchesQuickFilter = pendingConsultationStudents.some(target => target.id === item.studentId);
+      } else if (quickFilter === 'stagnant') {
+        const student = campusScopedStudents.find(s => s.id === item.studentId);
+        matchesQuickFilter = student ? isStagnant24h(student) : false;
+      } else if (quickFilter === 'missing_grade') {
+        const student = campusScopedStudents.find(s => s.id === item.studentId);
+        matchesQuickFilter = student ? isWeeklyGradeMissing(student) : false;
       }
       
       return matchesSearch && matchesQuickFilter;
@@ -640,10 +697,10 @@ function ConsultationContent() {
               </div>
             </div>
 
-            {/* 퀵 필터 (상담/진도) */}
-            <div className="flex items-center gap-2.5">
+            {/* 퀵 필터 (상담/진도/정체/미입력) */}
+            <div className="flex items-center gap-2.5 flex-wrap">
               <span className="font-extrabold text-[#86868B] shrink-0">상태 필터</span>
-              <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
+              <div className="flex flex-wrap items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] gap-0.5">
                 <Button
                   variant={quickFilter === 'all' ? 'default' : 'ghost'}
                   size="sm"
@@ -654,25 +711,61 @@ function ConsultationContent() {
                 >
                   전체
                 </Button>
+                
                 <Button
-                  variant={quickFilter === 'consultation' ? 'default' : 'ghost'}
+                  variant={quickFilter === 'stagnant' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => handleQuickFilterChange('consultation')}
-                  className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
-                    quickFilter === 'consultation' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                  onClick={() => handleQuickFilterChange('stagnant')}
+                  className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'stagnant' 
+                      ? 'bg-red-50 hover:bg-red-50 text-red-600 shadow-sm border border-red-100' 
+                      : 'text-[#86868B] hover:text-red-500 hover:bg-red-50/40'
                   }`}
                 >
-                  상담 대상
+                  <span className="mr-1">🔴</span>
+                  진도 정체 {stagnantCount > 0 && <span className="ml-0.5 bg-red-100 text-red-800 rounded-full px-1.5 py-0.2 text-[9px] font-black">{stagnantCount}</span>}
                 </Button>
+                
                 <Button
                   variant={quickFilter === 'behind' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => handleQuickFilterChange('behind')}
-                  className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
-                    quickFilter === 'behind' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'
+                  className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'behind' 
+                      ? 'bg-orange-50 hover:bg-orange-50 text-orange-600 shadow-sm border border-orange-100' 
+                      : 'text-[#86868B] hover:text-orange-500 hover:bg-orange-50/40'
                   }`}
                 >
-                  진도 부족
+                  <span className="mr-1">🟠</span>
+                  진도 지연 {behindCount > 0 && <span className="ml-0.5 bg-orange-100 text-orange-800 rounded-full px-1.5 py-0.2 text-[9px] font-black">{behindCount}</span>}
+                </Button>
+
+                <Button
+                  variant={quickFilter === 'missing_grade' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleQuickFilterChange('missing_grade')}
+                  className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'missing_grade' 
+                      ? 'bg-amber-50 hover:bg-amber-50 text-amber-600 shadow-sm border border-amber-100' 
+                      : 'text-[#86868B] hover:text-amber-600 hover:bg-amber-50/40'
+                  }`}
+                >
+                  <span className="mr-1">⚠️</span>
+                  성적 미입력 {missingGradeCount > 0 && <span className="ml-0.5 bg-amber-100 text-amber-800 rounded-full px-1.5 py-0.2 text-[9px] font-black">{missingGradeCount}</span>}
+                </Button>
+
+                <Button
+                  variant={quickFilter === 'consultation' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => handleQuickFilterChange('consultation')}
+                  className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
+                    quickFilter === 'consultation' 
+                      ? 'bg-blue-50 hover:bg-blue-50 text-[#0071E3] shadow-sm border border-blue-100' 
+                      : 'text-[#86868B] hover:text-[#0071E3] hover:bg-blue-50/40'
+                  }`}
+                >
+                  <span className="mr-1">💬</span>
+                  상담 대상 {consultationCount > 0 && <span className="ml-0.5 bg-blue-100 text-[#0071E3] rounded-full px-1.5 py-0.2 text-[9px] font-black">{consultationCount}</span>}
                 </Button>
               </div>
             </div>
@@ -726,7 +819,10 @@ function ConsultationContent() {
                   </Button>
                 )}
                 <span className="admin-fit-caption text-[#86868B] font-semibold">
-                  {quickFilter === 'consultation' ? '상담 대상: ' : quickFilter === 'behind' ? '부족 진도: ' : '검색 결과: '}
+                  {quickFilter === 'consultation' ? '상담 대상: ' :
+                   quickFilter === 'behind' ? '진도 지연: ' :
+                   quickFilter === 'stagnant' ? '진도 정체: ' :
+                   quickFilter === 'missing_grade' ? '성적 미입력: ' : '검색 결과: '}
                   {quickFilter === 'behind' ? filteredProgressItems.length : filteredStudents.length}
                   {quickFilter === 'behind' ? '건' : '명'}
                 </span>
