@@ -41,6 +41,7 @@ interface StudentDetailSheetProps {
   onUpdate: (updatedStudent: Student) => void;
   onDelete: (studentId: string) => void;
   students?: Student[];
+  defaultTab?: string;
 }
 
 type TodayAttendanceStatus = {
@@ -160,7 +161,7 @@ function mergeAdminNote(raw: string | undefined, noteText: string): string {
   return noteText;
 }
 
-export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [] }: StudentDetailSheetProps) {
+export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [], defaultTab }: StudentDetailSheetProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -169,6 +170,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [isLearningInputOpen, setIsLearningInputOpen] = useState(false);
   const [learningInputMode, setLearningInputMode] = useState<'quick' | 'material' | null>(null);
   const [activeTab, setActiveTab] = useState('progress');
+
+  useEffect(() => {
+    if (isOpen) {
+      setActiveTab(defaultTab || 'progress');
+    }
+  }, [isOpen, defaultTab]);
   const [resolvedReqIds, setResolvedReqIds] = useState<string[]>([]);
   const [resolvingReqId, setResolvingReqId] = useState('');
   const [replyDrafts, setReplyDrafts] = useState<Record<string, string>>({});

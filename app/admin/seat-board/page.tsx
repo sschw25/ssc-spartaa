@@ -112,7 +112,7 @@ function nowKst(): { dateStr: string; minOfDay: number } {
   return { dateStr, minOfDay: h * 60 + parseInt(get('minute'), 10) };
 }
 
-type PeriodStatus = 'present' | 'absent' | 'future';
+type PeriodStatus = 'present' | 'absent' | 'future' | 'A';
 type ManualLeaveType = 'fullday' | 'morning' | 'afternoon' | 'night' | 'sick';
 const MANUAL_LEAVE_TYPES: ManualLeaveType[] = ['fullday', 'morning', 'afternoon', 'night', 'sick'];
 
@@ -201,9 +201,27 @@ function PeriodCell({
   awayTime?: string;
   onClick?: () => void;
 }) {
-  const clickable = !!onClick && status !== 'future';
+  const is8th = label === '8';
+  const clickable = !!onClick;
   const hoverCls = clickable ? 'cursor-pointer hover:brightness-95 active:scale-90 transition-all' : '';
 
+  // 1. 8교시 렌더링 분기
+  if (is8th) {
+    return (
+      <div
+        onClick={onClick}
+        className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${
+          isOverridden
+            ? 'bg-amber-50 border-amber-300 text-amber-600 font-black'
+            : 'bg-slate-50 border-slate-200 text-slate-400 font-bold'
+        }`}
+      >
+        <span className="text-[10px] leading-none">A</span>
+      </div>
+    );
+  }
+
+  // 2. 일반교시 렌더링 분기
   let displayContent: React.ReactNode = label;
   if (status !== 'future' && awayTime && awayTime.includes(':')) {
     const [h, m] = awayTime.split(':');
@@ -224,7 +242,7 @@ function PeriodCell({
       </div>
     );
   }
-  
+
   if (status === 'present') {
     const symbol = awayTime ? displayContent : <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>;
     return (
@@ -240,19 +258,28 @@ function PeriodCell({
       </div>
     );
   }
-  
-  // absent
-  const symbol = awayTime ? displayContent : <span className={`text-[10px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-red-400'}`}>X</span>;
+
+  // status === 'absent'인 경우
+  // 1) 수동 결석 체크: X 표시 + 앰버색
+  if (isOverridden) {
+    const symbol = awayTime ? displayContent : <span className="text-[10px] font-black leading-none text-amber-600">X</span>;
+    return (
+      <div
+        onClick={onClick}
+        className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300 text-amber-600`}
+      >
+        {symbol}
+      </div>
+    );
+  }
+
+  // 2) 기본 결석 (미등원): 공란 + 연한 회색 테두리/흰 배경 (수기 체크가 편하도록)
   return (
     <div
       onClick={onClick}
-      className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${
-        isOverridden
-          ? 'bg-amber-50 border-amber-300 text-amber-600'
-          : 'bg-red-50 border-red-200/60 text-red-400'
-      }`}
+      className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}
     >
-      {symbol}
+      <span className="text-[10px] leading-none text-slate-300" />
     </div>
   );
 }
@@ -311,6 +338,9 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
           )}
           {isLeftToday && (
             <span className="text-[7px] font-black text-slate-500 bg-slate-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">하원</span>
+          )}
+          {!isCheckedIn && !isLeftToday && !isOnLeave && (
+            <span className="text-[7px] font-black text-red-500 bg-red-50 border border-red-100 px-1 py-0.5 rounded-[3px] leading-none shrink-0">미등원</span>
           )}
         </div>
       </div>
@@ -415,12 +445,13 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
           let awayTime: string | undefined = undefined;
           if (student && student.awaySchedules) {
             const period = PERIODS[idx];
-            const matched = student.awaySchedules.find(time => {
-              const min = timeStringToMin(time);
+            const matched = student.awaySchedules.find(schedule => {
+              const awayTimeStr = schedule.includes('~') ? schedule.split('~')[0].trim() : schedule.trim();
+              const min = timeStringToMin(awayTimeStr);
               return min >= period.start && min < period.end;
             });
             if (matched) {
-              awayTime = matched;
+              awayTime = matched.includes('~') ? matched.split('~')[0].trim() : matched.trim();
             }
           }
 
@@ -512,21 +543,108 @@ export default function SeatBoardPage() {
 
   // 교시 클릭 → 상태 토글 (absent ↔ present)
   async function handleTogglePeriod(key: string, current: PeriodStatus) {
-    const nextStatus: PeriodStatus = current === 'present' ? 'absent' : 'present';
+    const parts = key.split(':');
+    const studentId = parts[0];
+    const periodIdx = parseInt(parts[parts.length - 1], 10);
+    const is8th = periodIdx === 7;
+
+    if (is8th) {
+      let hasNonAbsentOverride = false;
+      for (let i = 0; i < 7; i++) {
+        const k = `${studentId}:${i}`;
+        const ov = periodOverrides.get(k);
+        if (ov !== 'absent') {
+          hasNonAbsentOverride = true;
+          break;
+        }
+      }
+
+      const previous = new Map(periodOverrides);
+      const next = new Map(previous);
+
+      if (hasNonAbsentOverride) {
+        for (let i = 0; i < 8; i++) {
+          next.set(`${studentId}:${i}`, 'absent');
+        }
+        setPeriodOverrides(next);
+
+        try {
+          await Promise.all(
+            Array.from({ length: 8 }).map((_, i) =>
+              fetch('/api/admin/seat-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ date: today, seatKey: `${studentId}:${i}`, status: 'absent' }),
+              })
+            )
+          );
+          toast.success('1~7교시 전체 결석 처리가 저장되었습니다.');
+        } catch {
+          setPeriodOverrides(previous);
+          toast.error('수동 변경 저장에 실패했습니다.');
+        }
+      } else {
+        for (let i = 0; i < 8; i++) {
+          next.delete(`${studentId}:${i}`);
+        }
+        setPeriodOverrides(next);
+
+        try {
+          await Promise.all(
+            Array.from({ length: 8 }).map((_, i) =>
+              fetch(`/api/admin/seat-status?date=${today}&seatKey=${studentId}:${i}`, {
+                method: 'DELETE',
+                credentials: 'same-origin',
+              })
+            )
+          );
+          toast.success('수동 변경이 초기화되었습니다.');
+        } catch {
+          setPeriodOverrides(previous);
+          toast.error('수동 변경 초기화에 실패했습니다.');
+        }
+      }
+      return;
+    }
+
+    let nextStatus: PeriodStatus | 'delete' = 'present';
+    if (current === 'present') {
+      nextStatus = 'absent';
+    } else if (current === 'absent') {
+      nextStatus = 'delete';
+    } else {
+      nextStatus = 'present';
+    }
+
     const previous = new Map(periodOverrides);
     const next = new Map(previous);
-    next.set(key, nextStatus);
+    
+    if (nextStatus === 'delete') {
+      next.delete(key);
+    } else {
+      next.set(key, nextStatus);
+    }
     setPeriodOverrides(next);
 
     try {
-      const response = await fetch('/api/admin/seat-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({ date: today, seatKey: key, status: nextStatus }),
-      });
-      const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json.success) throw new Error(json.message || 'save failed');
+      if (nextStatus === 'delete') {
+        const response = await fetch(`/api/admin/seat-status?date=${today}&seatKey=${key}`, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok || !json.success) throw new Error(json.message || 'delete failed');
+      } else {
+        const response = await fetch('/api/admin/seat-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ date: today, seatKey: key, status: nextStatus }),
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok || !json.success) throw new Error(json.message || 'save failed');
+      }
     } catch {
       setPeriodOverrides(previous);
       toast.error('수동 변경 저장에 실패했습니다.');

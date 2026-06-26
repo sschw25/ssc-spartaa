@@ -22,6 +22,7 @@ function GlobalStudentSheet() {
         sheetCallbacks.onDelete?.(studentId);
       }}
       students={sheetCallbacks.allStudents || []}
+      defaultTab={sheetCallbacks.defaultTab}
     />
   );
 }

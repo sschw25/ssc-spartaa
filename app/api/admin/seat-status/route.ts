@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';
 import path from 'path';
 
-const VALID_STATUSES = ['normal', 'lounge', 'away', 'unclear', 'packing', 'present', 'absent'] as const;
+const VALID_STATUSES = ['normal', 'lounge', 'away', 'unclear', 'packing', 'present', 'absent', 'A'] as const;
 type SeatStatus = (typeof VALID_STATUSES)[number];
 interface SeatStatusRow {
   date: string;

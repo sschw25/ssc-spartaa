@@ -7,6 +7,7 @@ interface SheetCallbacks {
   onUpdate?: (student: Student) => void;
   onDelete?: (studentId: string) => void;
   allStudents?: Student[];
+  defaultTab?: string;
 }
 
 interface AdminGlobalCtx {

@@ -107,12 +107,30 @@ export function InfoTab({
   const [copied, setCopied] = useState(false);
 
   const [newAwayTime, setNewAwayTime] = useState('14:30');
+  const [newReturnTime, setNewReturnTime] = useState('');
+
+  const parseAwaySchedule = (schedule: string) => {
+    if (schedule.includes('~')) {
+      const [away, ret] = schedule.split('~').map(s => s.trim());
+      return {
+        timeStr: `${away} ~ ${ret}`,
+        awayTime: away,
+        returnTime: ret || undefined
+      };
+    }
+    return {
+      timeStr: `${schedule} (하원)`,
+      awayTime: schedule.trim()
+    };
+  };
 
   const handleAddAwayTime = () => {
     if (!newAwayTime) return;
-    if (awaySchedules.includes(newAwayTime)) return;
-    const next = [...awaySchedules, newAwayTime].sort();
+    const scheduleStr = newReturnTime ? `${newAwayTime}~${newReturnTime}` : newAwayTime;
+    if (awaySchedules.includes(scheduleStr)) return;
+    const next = [...awaySchedules, scheduleStr].sort();
     setAwaySchedules(next);
+    setNewReturnTime('');
   };
 
   const handleRemoveAwayTime = (time: string) => {
@@ -340,38 +358,54 @@ export function InfoTab({
         <p className="text-[10px] text-[#86868B]">
           지정된 시간에 출결판 교시 셀 내부에 외출 예정 시각이 자동으로 표시됩니다. (예: 14:30)
         </p>
-        <div className="flex gap-2">
-          <Input
-            type="time"
-            value={newAwayTime}
-            onChange={(e) => setNewAwayTime(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[150px]"
-          />
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-[#86868B]">외출</span>
+            <Input
+              type="time"
+              value={newAwayTime}
+              onChange={(e) => setNewAwayTime(e.target.value)}
+              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[110px]"
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-bold text-[#86868B]">복귀 (선택)</span>
+            <Input
+              type="time"
+              value={newReturnTime}
+              onChange={(e) => setNewReturnTime(e.target.value)}
+              placeholder="미복귀 시 비움"
+              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[110px]"
+            />
+          </div>
           <Button
             type="button"
             onClick={handleAddAwayTime}
             className="rounded-lg text-xs h-9 px-4 bg-[#1D1D1F] hover:bg-[#323236] text-white font-bold"
           >
-            시간 추가
+            추가
           </Button>
         </div>
         <div className="flex flex-wrap gap-1.5 pt-1">
           {awaySchedules && awaySchedules.length > 0 ? (
-            awaySchedules.map((time) => (
-              <span
-                key={time}
-                className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] border border-[#0071E3]/20 rounded-full px-2.5 py-1"
-              >
-                {time}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveAwayTime(time)}
-                  className="hover:text-red-500 rounded-full focus:outline-none transition-colors ml-1 cursor-pointer"
+            awaySchedules.map((time) => {
+              const parsed = parseAwaySchedule(time);
+              return (
+                <span
+                  key={time}
+                  className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] border border-[#0071E3]/20 rounded-full px-2.5 py-1"
                 >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))
+                  {parsed.timeStr}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveAwayTime(time)}
+                    className="hover:text-red-500 rounded-full focus:outline-none transition-colors ml-1 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              );
+            })
           ) : (
             <p className="text-[10px] text-slate-400 py-1">등록된 정기 외출 시간대가 없습니다.</p>
           )}

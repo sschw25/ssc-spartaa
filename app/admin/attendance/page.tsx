@@ -17,6 +17,8 @@ import {
 import { WeeklyTardiness } from '@/components/admin/weekly-tardiness';
 import { Button } from '@/components/ui/button';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { Student } from '@/lib/types/student';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 type Arrival = '08:20' | '09:00';
 type StatusFilter = 'all' | 'present' | 'left' | 'absent' | 'late';
@@ -110,6 +112,8 @@ function AdminAttendanceContent() {
   const initialStatus = (searchParams.get('status') || 'all') as StatusFilter;
 
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const { openStudent } = useAdminGlobalSheet();
+  const [students, setStudents] = useState<Student[]>([]);
   const [date, setDate] = useState(todayKST());
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -167,8 +171,8 @@ function AdminAttendanceContent() {
     }
   }, [mode, satDate, reloadKey]);
 
-  const handleRequestSatExcuse = async () => {
-    const targets = selectedSatStudents.length > 0 ? selectedSatStudents : [];
+  const handleRequestSatExcuse = async (overrideIds?: string[]) => {
+    const targets = overrideIds ?? (selectedSatStudents.length > 0 ? selectedSatStudents : []);
     if (targets.length === 0) return;
     try {
       const res = await fetch('/api/admin/attendance/saturday-excuse', {
@@ -235,6 +239,41 @@ function AdminAttendanceContent() {
       }
     })();
   }, [router]);
+
+  useEffect(() => {
+    if (checkingAuth) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/admin/students', { cache: 'no-store', credentials: 'same-origin' });
+        const json = await res.json();
+        if (res.ok && json.success) {
+          setStudents(json.data || []);
+        }
+      } catch (err) {
+        console.error('Failed to load students list:', err);
+      }
+    })();
+  }, [checkingAuth, reloadKey]);
+
+  const handleOpenStudentInfo = (studentId: string) => {
+    const target = students.find((s) => s.id === studentId);
+    if (target) {
+      openStudent(target, {
+        onUpdate: (updated) => {
+          setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
+          setReloadKey((k) => k + 1);
+        },
+        onDelete: (sid) => {
+          setStudents((prev) => prev.filter((s) => s.id !== sid));
+          setReloadKey((k) => k + 1);
+        },
+        allStudents: students,
+        defaultTab: 'info',
+      });
+    } else {
+      toast.error('학생 상세 정보를 찾을 수 없습니다.');
+    }
+  };
 
   useEffect(() => {
     if (checkingAuth) return;
@@ -519,7 +558,12 @@ function AdminAttendanceContent() {
                               className="rounded border-black/[0.1] text-[#0071E3] focus:ring-[#0071E3]/20"
                             />
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap font-bold text-[#1D1D1F]">{r.name}</td>
+                          <td
+                            onClick={() => handleOpenStudentInfo(r.studentId)}
+                            className="px-4 py-3 whitespace-nowrap cursor-pointer hover:bg-black/[0.02] transition-colors"
+                          >
+                            <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap font-bold text-[#86868B]">{campusLabel(r.campus)}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-semibold">{r.manager || '-'}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
@@ -565,10 +609,7 @@ function AdminAttendanceContent() {
                             )}
                             {r.status === 'pending' && (
                               <button
-                                onClick={() => {
-                                  setSelectedSatStudents([r.studentId]);
-                                  setTimeout(handleRequestSatExcuse, 50);
-                                }}
+                                onClick={() => handleRequestSatExcuse([r.studentId])}
                                 className="rounded-lg border border-black/[0.08] px-2.5 py-1 text-[10px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition"
                               >
                                 재요청
@@ -576,10 +617,7 @@ function AdminAttendanceContent() {
                             )}
                             {r.status === 'not_requested' && (
                               <button
-                                onClick={() => {
-                                  setSelectedSatStudents([r.studentId]);
-                                  setTimeout(handleRequestSatExcuse, 50);
-                                }}
+                                onClick={() => handleRequestSatExcuse([r.studentId])}
                                 className="rounded-lg bg-[#0071E3] px-2.5 py-1 text-[10px] font-black text-white hover:bg-[#0077ED] transition"
                               >
                                 증빙 요청
@@ -631,8 +669,11 @@ function AdminAttendanceContent() {
                       const edit = edits[r.id] || { checkIn: r.checkIn || '', checkOut: r.checkOut || '' };
                       return (
                         <tr key={r.id} className="border-b border-black/[0.04] hover:bg-[#F5F5F7]/60">
-                          <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="font-bold text-[#1D1D1F]">{r.name}</span>
+                          <td
+                            onClick={() => handleOpenStudentInfo(r.id)}
+                            className="px-4 py-3 whitespace-nowrap cursor-pointer hover:bg-black/[0.02] transition-colors"
+                          >
+                            <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
                             <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
