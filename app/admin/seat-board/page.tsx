@@ -286,6 +286,8 @@ interface SeatCardProps {
   periods: PeriodState[];
   isOnLeave: boolean;
   isCheckedIn: boolean;
+  phoneNoSubmit?: Set<'D' | 'E' | 'N'>;
+  onTogglePhone?: (block: 'D' | 'E' | 'N') => void;
   isLeftToday: boolean;
   todayStr: string;
   onTogglePeriod?: (periodIdx: number) => void;
@@ -293,7 +295,7 @@ interface SeatCardProps {
   onNameClick?: () => void;
 }
 
-function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick, onNameClick }: SeatCardProps) {
+function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, todayStr, onTogglePeriod, onClick, onNameClick, phoneNoSubmit, onTogglePhone }: SeatCardProps) {
   if (!student) {
     return (
       <div className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
@@ -373,7 +375,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
         )}
       </div>
 
-      {/* 휴대폰 보관 상태 박스 (오전/오후/야간) */}
+      {/* 휴대폰 보관 상태 박스 (D/E/N) — 클릭으로 미제출 토글 */}
       <div className="flex gap-[3px] mt-0.5" onClick={(e) => e.stopPropagation()}>
         {([
           { label: 'D', indices: [0, 1] },
@@ -383,17 +385,27 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
           const allAbsent = indices.every((i) =>
             periods[i]?.status === 'absent' || periods[i]?.status === 'future' || periods[i]?.isAwayAbsent
           );
+          const manualNoSubmit = phoneNoSubmit?.has(label) ?? false;
+          const showX = allAbsent || manualNoSubmit;
           return (
             <div
               key={label}
-              className={`flex-1 h-[10px] rounded-[2px] flex items-center justify-center border ${
-                allAbsent
+              onClick={onTogglePhone ? () => onTogglePhone(label) : undefined}
+              title={manualNoSubmit ? `${label} 미제출 (클릭해 해제)` : `${label} 미제출 표시`}
+              className={`flex-1 h-[10px] rounded-[2px] flex items-center justify-center border transition-all ${
+                onTogglePhone ? 'cursor-pointer active:scale-90' : ''
+              } ${
+                manualNoSubmit
+                  ? 'bg-red-50 border-red-200'
+                  : allAbsent
                   ? 'bg-slate-100 border-slate-200'
                   : 'bg-[#0071E3]/[0.06] border-[#0071E3]/20'
               }`}
             >
-              <span className={`text-[6px] font-black leading-none ${allAbsent ? 'text-slate-300' : 'text-[#0071E3]/60'}`}>
-                {allAbsent ? 'x' : label[0]}
+              <span className={`text-[6px] font-black leading-none ${
+                manualNoSubmit ? 'text-red-400' : allAbsent ? 'text-slate-300' : 'text-[#0071E3]/60'
+              }`}>
+                {showX ? 'x' : label}
               </span>
             </div>
           );
@@ -447,12 +459,14 @@ interface RowProps {
   nowDateStr: string;
   nowMin: number;
   periodOverrides: Map<string, PeriodStatus>;
+  phoneNoSubmitMap: Map<string, Set<'D' | 'E' | 'N'>>;
   onTogglePeriod: (key: string, current: PeriodStatus) => void;
+  onTogglePhone: (studentId: string, block: 'D' | 'E' | 'N') => void;
   onCardClick: (student: Student) => void;
   onNameClick: (student: Student) => void;
 }
 
-function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, onTogglePeriod, onCardClick, onNameClick }: RowProps) {
+function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, phoneNoSubmitMap, onTogglePeriod, onTogglePhone, onCardClick, onNameClick }: RowProps) {
   return (
     <div className="flex gap-[6px]">
       {seats.map((n, i) => {
@@ -540,6 +554,8 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             }
             onClick={student ? () => onCardClick(student) : undefined}
             onNameClick={student ? () => onNameClick(student) : undefined}
+            phoneNoSubmit={student ? phoneNoSubmitMap.get(student.id) : undefined}
+            onTogglePhone={student ? (block) => onTogglePhone(student.id, block) : undefined}
           />
         );
       })}
@@ -586,6 +602,8 @@ export default function SeatBoardPage() {
   const [pageIdx, setPageIdx] = useState(0);
   // 수동 교시 override: key = "{studentId}:{periodIdx}"
   const [periodOverrides, setPeriodOverrides] = useState<Map<string, PeriodStatus>>(new Map());
+  // 폰 미제출 수동 표시: studentId → Set<'D'|'E'|'N'>
+  const [phoneNoSubmitMap, setPhoneNoSubmitMap] = useState<Map<string, Set<'D' | 'E' | 'N'>>>(new Map());
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -713,6 +731,40 @@ export default function SeatBoardPage() {
     }
   }
 
+  async function handleTogglePhone(studentId: string, block: 'D' | 'E' | 'N') {
+    const previous = new Map(phoneNoSubmitMap);
+    const next = new Map(phoneNoSubmitMap);
+    const set = new Set(next.get(studentId) || []);
+    const seatKey = `${studentId}:phone_${block}`;
+    const isMarked = set.has(block);
+
+    if (isMarked) {
+      set.delete(block);
+    } else {
+      set.add(block);
+    }
+    if (set.size === 0) next.delete(studentId); else next.set(studentId, set);
+    setPhoneNoSubmitMap(next);
+
+    try {
+      if (isMarked) {
+        await fetch(`/api/admin/seat-status?date=${today}&seatKey=${encodeURIComponent(seatKey)}`, {
+          method: 'DELETE', credentials: 'same-origin',
+        });
+      } else {
+        await fetch('/api/admin/seat-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ date: today, seatKey, status: 'absent' }),
+        });
+      }
+    } catch {
+      setPhoneNoSubmitMap(previous);
+      toast.error('휴대폰 미제출 저장에 실패했습니다.');
+    }
+  }
+
   async function clearPeriodOverrides() {
     const previous = new Map(periodOverrides);
     setPeriodOverrides(new Map());
@@ -750,10 +802,20 @@ export default function SeatBoardPage() {
         const j = await statusRes.json();
         if (j.success) {
           const next = new Map<string, PeriodStatus>();
+          const phoneNext = new Map<string, Set<'D' | 'E' | 'N'>>();
           for (const [key, value] of Object.entries(j.statuses || {})) {
-            if (value === 'present' || value === 'absent') next.set(key, value);
+            const phoneMatch = key.match(/^(.+):phone_(D|E|N)$/);
+            if (phoneMatch && value === 'absent') {
+              const sid = phoneMatch[1];
+              const block = phoneMatch[2] as 'D' | 'E' | 'N';
+              if (!phoneNext.has(sid)) phoneNext.set(sid, new Set());
+              phoneNext.get(sid)!.add(block);
+            } else if (value === 'present' || value === 'absent') {
+              next.set(key, value);
+            }
           }
           setPeriodOverrides(next);
+          setPhoneNoSubmitMap(phoneNext);
         }
       }
     } catch {
@@ -963,7 +1025,9 @@ export default function SeatBoardPage() {
 
   const rowProps: Omit<RowProps, 'seats'> = {
     seatMap, sessionMap, openIds, today, nowDateStr, nowMin,
-    periodOverrides, onTogglePeriod: handleTogglePeriod,
+    periodOverrides, phoneNoSubmitMap,
+    onTogglePeriod: handleTogglePeriod,
+    onTogglePhone: handleTogglePhone,
     onCardClick: openStudentInfo,
     onNameClick: openStudentInfo,
   };
