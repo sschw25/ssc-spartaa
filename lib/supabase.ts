@@ -67,6 +67,7 @@ function rowToStudent(r: any): Student {
     smsLogs: r.sms_logs || [],
     mockExams: r.mock_exams || [],
     saturdayLateExcuses: r.saturday_late_excuses || [],
+    phoneSubmissions: r.phone_submissions || [],
     awaySchedules: (r.away_schedules || []).map((item: unknown) => {
       if (typeof item === 'string') {
         // 레거시 문자열 형식 → 객체로 변환
@@ -117,6 +118,7 @@ function studentToRow(student: Student, nowIso: string) {
     mock_exams: student.mockExams || [],
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
+    phone_submissions: student.phoneSubmissions || [],
     // share_token / share_token_expires_at / share_password 는 의도적으로 제외한다.
     // 일반 학생 저장(마스킹된 객체 포함)이 학부모 공유 비밀번호 해시를 null로 덮어쓰던 버그 방지.
     // 공유 컬럼은 share-token 라우트의 patchSupabaseToken 만 전담하며, upsert는 누락 컬럼을 보존한다.

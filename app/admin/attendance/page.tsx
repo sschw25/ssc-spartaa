@@ -17,7 +17,7 @@ import {
 import { WeeklyTardiness } from '@/components/admin/weekly-tardiness';
 import { Button } from '@/components/ui/button';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
-import { Student } from '@/lib/types/student';
+import { Student, PhoneSubmission } from '@/lib/types/student';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 type Arrival = '08:20' | '09:00';
@@ -136,6 +136,12 @@ function AdminAttendanceContent() {
   const [demeritModal, setDemeritModal] = useState<{ studentId: string; name: string } | null>(null);
   const [demeritPoints, setDemeritPoints] = useState(1);
 
+  // 휴대폰 제출 신청 관련 상태
+  type PhoneSubmissionWithStudent = PhoneSubmission & { studentId: string; studentName: string; campus: string };
+  const [phoneSubmissions, setPhoneSubmissions] = useState<PhoneSubmissionWithStudent[]>([]);
+  const [phoneLoading, setPhoneLoading] = useState(false);
+  const [phoneReviewing, setPhoneReviewing] = useState<string | null>(null);
+
   // 토요 지각 증빙 초기 날짜 계산 (직전 토요일)
   useEffect(() => {
     const today = new Date();
@@ -170,6 +176,47 @@ function AdminAttendanceContent() {
       loadSatData();
     }
   }, [mode, satDate, reloadKey]);
+
+  const loadPhoneSubmissions = async (forDate: string) => {
+    setPhoneLoading(true);
+    try {
+      const res = await fetch(`/api/admin/phone-submissions?date=${forDate}`);
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setPhoneSubmissions(json.submissions || []);
+      }
+    } catch {}
+    finally { setPhoneLoading(false); }
+  };
+
+  const handlePhoneReview = async (studentId: string, submissionId: string, status: 'approved' | 'rejected', adminReply?: string) => {
+    setPhoneReviewing(submissionId);
+    try {
+      const res = await fetch('/api/admin/phone-submissions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId, submissionId, status, adminReply }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setPhoneSubmissions((prev) =>
+          prev.map((s) => (s.id === submissionId ? { ...s, status, adminReply } : s)),
+        );
+      } else {
+        toast.error(json.message || '처리 실패');
+      }
+    } catch {
+      toast.error('네트워크 오류가 발생했습니다.');
+    } finally {
+      setPhoneReviewing(null);
+    }
+  };
+
+  useEffect(() => {
+    if (mode === 'daily') {
+      loadPhoneSubmissions(date);
+    }
+  }, [mode, date, reloadKey]);
 
   const handleRequestSatExcuse = async (overrideIds?: string[]) => {
     const targets = overrideIds ?? (selectedSatStudents.length > 0 ? selectedSatStudents : []);
@@ -641,6 +688,53 @@ function AdminAttendanceContent() {
                 <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">08:20 그룹 {s.group0820.total}명(지각 {s.group0820.late})</span>
                 <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">09:00 그룹 {s.group0900.total}명(지각 {s.group0900.late})</span>
                 <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">출석 {data?.attended ?? '-'} / {data?.total ?? '-'}</span>
+              </div>
+            )}
+
+            {/* 📱 휴대폰 제출 신청 현황 */}
+            {phoneSubmissions.length > 0 && (
+              <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-hidden">
+                <div className="px-4 py-3 border-b border-black/[0.05] flex items-center justify-between">
+                  <span className="text-xs font-black text-[#1D1D1F]">📱 휴대폰 제출 방식 신청 <span className="text-[#86868B] font-bold">({phoneSubmissions.filter(s => s.status === 'pending').length}건 검토 대기)</span></span>
+                  {phoneLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#86868B]" />}
+                </div>
+                <div className="divide-y divide-black/[0.04]">
+                  {phoneSubmissions.map((sub) => (
+                    <div key={sub.id} className="flex items-center gap-3 px-4 py-3 flex-wrap">
+                      <span className="text-xs font-bold text-[#1D1D1F] min-w-[80px]">{sub.studentName}</span>
+                      <span className="text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-full">{campusLabel(sub.campus)}</span>
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${sub.type === 'keep' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
+                        {sub.type === 'keep' ? '소지' : '임시보관함'}
+                      </span>
+                      {sub.reason && <span className="text-[10px] text-[#86868B] truncate max-w-[180px]">사유: {sub.reason}</span>}
+                      <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ml-auto ${
+                        sub.status === 'approved' ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
+                        : sub.status === 'rejected' ? 'bg-red-50 border-red-100 text-red-700'
+                        : 'bg-slate-50 border-slate-100 text-slate-500'
+                      }`}>
+                        {sub.status === 'approved' ? '승인' : sub.status === 'rejected' ? '반려' : '검토 중'}
+                      </span>
+                      {sub.status === 'pending' && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handlePhoneReview(sub.studentId, sub.id, 'approved')}
+                            disabled={phoneReviewing === sub.id}
+                            className="rounded-lg bg-emerald-600 text-white text-[10px] font-black px-2.5 py-1 hover:bg-emerald-700 transition disabled:opacity-50"
+                          >
+                            승인
+                          </button>
+                          <button
+                            onClick={() => handlePhoneReview(sub.studentId, sub.id, 'rejected', '관리자 반려')}
+                            disabled={phoneReviewing === sub.id}
+                            className="rounded-lg bg-red-600 text-white text-[10px] font-black px-2.5 py-1 hover:bg-red-700 transition disabled:opacity-50"
+                          >
+                            반려
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
 

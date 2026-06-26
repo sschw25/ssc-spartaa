@@ -7,6 +7,7 @@ import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
+import { PhoneSubmissionCard } from './phone-submission-card';
 
 type DailyPlanEntry = {
   id: string;
@@ -376,6 +377,15 @@ export function HomeOverviewTab({
               );
             })()}
           </div>
+
+          {/* 휴대폰 보관 신청 (학생 보기에서만 노출) */}
+          {isStudentReport && (
+            <PhoneSubmissionCard
+              student={student}
+              setStudent={setStudent}
+              todayDate={getSeoulDateKey()}
+            />
+          )}
 
           <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-4 shadow-sm md:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

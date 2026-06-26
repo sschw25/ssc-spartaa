@@ -119,6 +119,18 @@ export interface LeaveRequest {
   adminReply?: string;    // 관리자 코멘트 (학생에게 노출)
 }
 
+// 학생 휴대폰 제출 방식 신청 (소지 / 임시보관함)
+export interface PhoneSubmission {
+  id: string;
+  date: string;                       // YYYY-MM-DD
+  type: 'keep' | 'locker';            // 소지 | 임시보관함
+  reason?: string;                    // 소지 사유
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  reviewedAt?: string;
+  adminReply?: string;
+}
+
 export interface SaturdayLateExcuse {
   id: string;
   date: string;           // 토요일 날짜 (YYYY-MM-DD)
@@ -258,4 +270,6 @@ export interface Student {
   mockExams?: MockExamParticipation[];
   // 정기 외출/빠지는 시간대 목록
   awaySchedules?: AwaySchedule[];
+  // 휴대폰 제출 방식 신청 내역
+  phoneSubmissions?: PhoneSubmission[];
 }
