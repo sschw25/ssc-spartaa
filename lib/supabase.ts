@@ -67,7 +67,16 @@ function rowToStudent(r: any): Student {
     smsLogs: r.sms_logs || [],
     mockExams: r.mock_exams || [],
     saturdayLateExcuses: r.saturday_late_excuses || [],
-    awaySchedules: r.away_schedules || [],
+    awaySchedules: (r.away_schedules || []).map((item: unknown) => {
+      if (typeof item === 'string') {
+        // 레거시 문자열 형식 → 객체로 변환
+        const [awayTime, returnTime] = item.includes('~')
+          ? item.split('~').map((s: string) => s.trim())
+          : [item.trim(), undefined];
+        return { awayTime, returnTime, days: [], until: 'forever' };
+      }
+      return item;
+    }),
     subjects,
   };
 }

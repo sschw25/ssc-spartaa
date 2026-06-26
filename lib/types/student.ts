@@ -1,3 +1,10 @@
+export interface AwaySchedule {
+  awayTime: string;      // "HH:MM"
+  returnTime?: string;   // "HH:MM", 미복귀 시 생략
+  days: number[];        // [] = 매일, [0]=일 [1]=월 [2]=화 [3]=수 [4]=목 [5]=금 [6]=토
+  until: string;         // 'forever' 또는 'YYYY-MM-DD'
+}
+
 export interface DetailedPlan {
   id: string;
   materialId: string;      // 대상 교재/인강 ID
@@ -246,6 +253,6 @@ export interface Student {
   smsLogs?: SmsLog[];
   // 모의고사 참여 상태
   mockExams?: MockExamParticipation[];
-  // 정기 외출/빠지는 시간대 목록 (예: ["14:30", "18:00"])
-  awaySchedules?: string[];
+  // 정기 외출/빠지는 시간대 목록
+  awaySchedules?: AwaySchedule[];
 }

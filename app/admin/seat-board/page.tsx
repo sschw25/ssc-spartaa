@@ -98,6 +98,15 @@ function kstMin(iso: string): number {
   return h * 60 + m;
 }
 
+function kstTimeStr(iso: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).formatToParts(new Date(iso));
+  const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  return `${h}:${m}`;
+}
+
 function nowKst(): { dateStr: string; minOfDay: number } {
   const now = new Date();
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -135,6 +144,8 @@ interface PeriodState {
   status: PeriodStatus;
   isOverridden: boolean;
   awayTime?: string;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 function computePeriods(
@@ -443,16 +454,16 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
           const override = student ? periodOverrides.get(key) : undefined;
           
           let awayTime: string | undefined = undefined;
-          if (student && student.awaySchedules) {
+          if (student && student.awaySchedules && student.awaySchedules.length > 0) {
             const period = PERIODS[idx];
-            const matched = student.awaySchedules.find(schedule => {
-              const awayTimeStr = schedule.includes('~') ? schedule.split('~')[0].trim() : schedule.trim();
-              const min = timeStringToMin(awayTimeStr);
+            const todayDow = new Date(today + 'T00:00:00').getDay();
+            const matched = student.awaySchedules.find((schedule) => {
+              if (schedule.days && schedule.days.length > 0 && !schedule.days.includes(todayDow)) return false;
+              if (schedule.until && schedule.until !== 'forever' && schedule.until < today) return false;
+              const min = timeStringToMin(schedule.awayTime);
               return min >= period.start && min < period.end;
             });
-            if (matched) {
-              awayTime = matched.includes('~') ? matched.split('~')[0].trim() : matched.trim();
-            }
+            if (matched) awayTime = matched.awayTime;
           }
 
           return {

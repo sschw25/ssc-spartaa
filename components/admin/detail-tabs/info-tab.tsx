@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Loader2, KeyRound, Bell, CalendarClock, ClipboardCheck, Link2, Copy, RotateCcw, X } from 'lucide-react';
+import type { AwaySchedule } from '@/lib/types/student';
 
 type SmsTarget = 'parent' | 'student';
 
@@ -64,8 +65,8 @@ interface InfoTabProps {
   sharePassword?: string;
   onGenerateShareToken?: () => Promise<void>;
   onRevokeShareToken?: () => Promise<void>;
-  awaySchedules: string[];
-  setAwaySchedules: (v: string[]) => void;
+  awaySchedules: AwaySchedule[];
+  setAwaySchedules: (v: AwaySchedule[]) => void;
 }
 
 // 학생 기본정보 탭 (프레젠테이셔널). 상태·핸들러는 부모가 소유하고 props 로 전달.
@@ -108,34 +109,46 @@ export function InfoTab({
 
   const [newAwayTime, setNewAwayTime] = useState('14:30');
   const [newReturnTime, setNewReturnTime] = useState('');
+  const [newDays, setNewDays] = useState<number[]>([]);          // [] = 매일
+  const [newUntilForever, setNewUntilForever] = useState(true);
+  const [newUntilDate, setNewUntilDate] = useState('');
 
-  const parseAwaySchedule = (schedule: string) => {
-    if (schedule.includes('~')) {
-      const [away, ret] = schedule.split('~').map(s => s.trim());
-      return {
-        timeStr: `${away} ~ ${ret}`,
-        awayTime: away,
-        returnTime: ret || undefined
-      };
-    }
-    return {
-      timeStr: `${schedule} (하원)`,
-      awayTime: schedule.trim()
-    };
-  };
+  const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+  const toggleDay = (d: number) =>
+    setNewDays((prev) => prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d].sort());
 
   const handleAddAwayTime = () => {
     if (!newAwayTime) return;
-    const scheduleStr = newReturnTime ? `${newAwayTime}~${newReturnTime}` : newAwayTime;
-    if (awaySchedules.includes(scheduleStr)) return;
-    const next = [...awaySchedules, scheduleStr].sort();
-    setAwaySchedules(next);
+    const entry: AwaySchedule = {
+      awayTime: newAwayTime,
+      returnTime: newReturnTime || undefined,
+      days: newDays,
+      until: newUntilForever ? 'forever' : (newUntilDate || 'forever'),
+    };
+    const isDupe = awaySchedules.some(
+      (s) => s.awayTime === entry.awayTime && s.returnTime === entry.returnTime
+        && JSON.stringify(s.days) === JSON.stringify(entry.days) && s.until === entry.until
+    );
+    if (isDupe) return;
+    setAwaySchedules([...awaySchedules, entry]);
     setNewReturnTime('');
+    setNewDays([]);
+    setNewUntilForever(true);
+    setNewUntilDate('');
   };
 
-  const handleRemoveAwayTime = (time: string) => {
-    const next = awaySchedules.filter((t) => t !== time);
-    setAwaySchedules(next);
+  const handleRemoveAwayTime = (idx: number) => {
+    setAwaySchedules(awaySchedules.filter((_, i) => i !== idx));
+  };
+
+  const formatAwayChip = (s: AwaySchedule) => {
+    const time = s.returnTime ? `${s.awayTime} ~ ${s.returnTime}` : `${s.awayTime} (하원)`;
+    const dayStr = s.days && s.days.length > 0
+      ? s.days.map((d) => DOW_LABELS[d]).join('')
+      : '매일';
+    const untilStr = s.until && s.until !== 'forever' ? `~${s.until}` : '';
+    return `${time} · ${dayStr}${untilStr ? ' · ' + untilStr : ''}`;
   };
 
   const shareUrl = studentId && shareToken
@@ -358,6 +371,8 @@ export function InfoTab({
         <p className="text-[10px] text-[#86868B]">
           지정된 시간에 출결판 교시 셀 내부에 외출 예정 시각이 자동으로 표시됩니다. (예: 14:30)
         </p>
+
+        {/* 시간 */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-bold text-[#86868B]">외출</span>
@@ -374,38 +389,91 @@ export function InfoTab({
               type="time"
               value={newReturnTime}
               onChange={(e) => setNewReturnTime(e.target.value)}
-              placeholder="미복귀 시 비움"
               className="rounded-lg border-black/[0.08] text-xs h-9 bg-white max-w-[110px]"
             />
           </div>
-          <Button
-            type="button"
-            onClick={handleAddAwayTime}
-            className="rounded-lg text-xs h-9 px-4 bg-[#1D1D1F] hover:bg-[#323236] text-white font-bold"
-          >
-            추가
-          </Button>
         </div>
+
+        {/* 요일 반복 */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-[11px] font-bold text-[#86868B] shrink-0">요일</span>
+          <div className="flex gap-1">
+            {DOW_LABELS.map((label, d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => toggleDay(d)}
+                className={`w-7 h-7 rounded-full text-[10px] font-bold transition-all ${
+                  newDays.includes(d)
+                    ? 'bg-[#0071E3] text-white'
+                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {newDays.length === 0 && (
+            <span className="text-[10px] text-[#86868B]">매일 반복</span>
+          )}
+        </div>
+
+        {/* 기간 */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-[11px] font-bold text-[#86868B] shrink-0">기간</span>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              checked={newUntilForever}
+              onChange={() => setNewUntilForever(true)}
+              className="accent-[#0071E3]"
+            />
+            <span className="text-[11px] font-semibold text-[#1D1D1F]">계속 반복</span>
+          </label>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              checked={!newUntilForever}
+              onChange={() => setNewUntilForever(false)}
+              className="accent-[#0071E3]"
+            />
+            <span className="text-[11px] font-semibold text-[#1D1D1F]">종료일 지정</span>
+          </label>
+          {!newUntilForever && (
+            <Input
+              type="date"
+              value={newUntilDate}
+              onChange={(e) => setNewUntilDate(e.target.value)}
+              className="rounded-lg border-black/[0.08] text-xs h-8 bg-white max-w-[140px]"
+            />
+          )}
+        </div>
+
+        <Button
+          type="button"
+          onClick={handleAddAwayTime}
+          className="rounded-lg text-xs h-9 px-4 bg-[#1D1D1F] hover:bg-[#323236] text-white font-bold"
+        >
+          추가
+        </Button>
+
         <div className="flex flex-wrap gap-1.5 pt-1">
           {awaySchedules && awaySchedules.length > 0 ? (
-            awaySchedules.map((time) => {
-              const parsed = parseAwaySchedule(time);
-              return (
-                <span
-                  key={time}
-                  className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] border border-[#0071E3]/20 rounded-full px-2.5 py-1"
+            awaySchedules.map((s, idx) => (
+              <span
+                key={idx}
+                className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] border border-[#0071E3]/20 rounded-full px-2.5 py-1"
+              >
+                {formatAwayChip(s)}
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAwayTime(idx)}
+                  className="hover:text-red-500 rounded-full focus:outline-none transition-colors ml-1 cursor-pointer"
                 >
-                  {parsed.timeStr}
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveAwayTime(time)}
-                    className="hover:text-red-500 rounded-full focus:outline-none transition-colors ml-1 cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              );
-            })
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))
           ) : (
             <p className="text-[10px] text-slate-400 py-1">등록된 정기 외출 시간대가 없습니다.</p>
           )}

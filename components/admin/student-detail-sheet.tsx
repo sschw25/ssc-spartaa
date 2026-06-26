@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest } from '@/lib/types/student';
+import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest, AwaySchedule } from '@/lib/types/student';
 import { getStudentTodayTotalStudyTimeMin, generateDetailedPlans as generateDetailedPlansLib } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
@@ -202,7 +202,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
   const [seatNumber, setSeatNumber] = useState('');
-  const [awaySchedules, setAwaySchedules] = useState<string[]>([]);
+  const [awaySchedules, setAwaySchedules] = useState<AwaySchedule[]>([]);
   const [shareToken, setShareToken] = useState<string | undefined>(undefined);
   const [shareTokenExpiresAt, setShareTokenExpiresAt] = useState<string | undefined>(undefined);
   const [sharePassword, setSharePassword] = useState<string | undefined>(undefined);
@@ -478,7 +478,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const snap = (
       name: string, campus: string, manager: string, contact: string,
       speed: number, note: string, nextDate: string, subjects: SubjectProgress[],
-      enrollEnd: string, weeklyGrade: boolean, aways: string[]
+      enrollEnd: string, weeklyGrade: boolean, aways: AwaySchedule[]
     ) => JSON.stringify({ name, campus, manager, contact, speed, note, nextDate, subjects, enrollEnd, weeklyGrade, aways });
 
     const localSnap = snap(
