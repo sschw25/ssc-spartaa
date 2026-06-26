@@ -79,6 +79,18 @@ const PERIODS = [
   { label: '8', start: 22 * 60 + 10,   end: 23 * 60 + 20 },  // 22:10~23:20 심야
 ] as const;
 
+// 엑셀 '출결판'은 정기 외출/결석 구간을 아래 경계와 비교한다.
+// 8교시는 수식 범위 밖이라 앱에서도 A 표시 전용으로 유지한다.
+const EXCEL_AWAY_PERIOD_RULES = [
+  { boundary:  9 * 60 + 1,  end: 10 * 60 + 50 },
+  { boundary: 11 * 60 + 1,  end: 12 * 60 + 30 },
+  { boundary: 13 * 60 + 51, end: 15 * 60 },
+  { boundary: 15 * 60 + 11, end: 16 * 60 + 20 },
+  { boundary: 16 * 60 + 31, end: 17 * 60 + 40 },
+  { boundary: 18 * 60 + 51, end: 20 * 60 + 20 },
+  { boundary: 20 * 60 + 31, end: 22 * 60 },
+] as const;
+
 interface StudySession {
   id: string;
   student_id: string;
@@ -137,6 +149,50 @@ function timeStringToMin(timeStr: string): number {
   const [h, m] = timeStr.split(':').map(Number);
   if (isNaN(h) || isNaN(m)) return -1;
   return h * 60 + m;
+}
+
+interface AwayInterval {
+  startMin: number;
+  endMin: number;
+  startTime: string;
+}
+
+function getApplicableAwayIntervals(student: Student | null, today: string, todayDow: number): AwayInterval[] {
+  if (!student?.awaySchedules?.length) return [];
+
+  return student.awaySchedules
+    .filter((schedule) => {
+      if (schedule.days && schedule.days.length > 0 && !schedule.days.includes(todayDow)) return false;
+      if (schedule.until && schedule.until !== 'forever' && schedule.until < today) return false;
+      return timeStringToMin(schedule.awayTime) >= 0;
+    })
+    .map((schedule) => {
+      const startMin = timeStringToMin(schedule.awayTime);
+      const returnMin = schedule.returnTime ? timeStringToMin(schedule.returnTime) : -1;
+      let endMin = returnMin >= 0 ? returnMin : 24 * 60;
+      if (endMin <= startMin) endMin += 24 * 60;
+      return { startMin, endMin, startTime: schedule.awayTime };
+    })
+    .sort((a, b) => a.startMin - b.startMin);
+}
+
+function getAwayPeriodMark(intervals: AwayInterval[], idx: number): { awayTime?: string; isAwayAbsent: boolean } {
+  const rule = EXCEL_AWAY_PERIOD_RULES[idx];
+  if (!rule) return { isAwayAbsent: false };
+
+  let awayTime: string | undefined;
+  for (const interval of intervals) {
+    const overlaps = interval.startMin <= rule.end && interval.endMin > rule.boundary;
+    if (!overlaps) continue;
+
+    if (interval.startMin < rule.boundary) {
+      return { isAwayAbsent: true };
+    }
+
+    if (!awayTime) awayTime = interval.startTime;
+  }
+
+  return { awayTime, isAwayAbsent: false };
 }
 
 // 교시 상태 (computed + 수동 override 여부)
@@ -228,11 +284,29 @@ function PeriodCell({
     );
   }
 
-  // 정기외출 이후 미복귀 — 세션 유무/미래 여부 불문하고 최우선 (8교시 제외)
+  // 수동 결석 override
+  if (isOverridden && status === 'absent') {
+    return (
+      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
+        <span className="text-[10px] font-black leading-none text-amber-600">X</span>
+      </div>
+    );
+  }
+
+  // 정기외출 구간 — 세션 유무/미래 여부 불문하고 엑셀 수식처럼 표시 (8교시 제외)
   if (isAwayAbsent) {
     return (
       <div onClick={onClick} className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}>
         <span className="text-[8px] font-black leading-none text-slate-400">x</span>
+      </div>
+    );
+  }
+
+  // 정기 외출 시작 시각은 미래 교시라도 엑셀처럼 즉시 표시한다.
+  if (awayTime?.includes(':')) {
+    return (
+      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]`}>
+        <TimeHM hm={awayTime} cls="text-amber-500" />
       </div>
     );
   }
@@ -257,15 +331,6 @@ function PeriodCell({
     return (
       <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]'}`}>
         {inner}
-      </div>
-    );
-  }
-
-  // 결석 — 수동 override
-  if (isOverridden) {
-    return (
-      <div onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
-        <span className="text-[10px] font-black leading-none text-amber-600">X</span>
       </div>
     );
   }
@@ -382,11 +447,19 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
           { label: 'E', indices: [2, 3, 4] },
           { label: 'N', indices: [5, 6] },
         ] as const).map(({ label, indices }) => {
-          const allAbsent = indices.every((i) =>
-            periods[i]?.status === 'absent' || periods[i]?.status === 'future' || periods[i]?.isAwayAbsent
-          );
+          // 외출 관련(출발/이후) 교시가 하나라도 있으면 폰 가져간 것 → x
+          // 아니라면 블록 전체가 결석일 때만 x (출석 교시 하나라도 있으면 라벨)
+          const hasDeparture = indices.some((i) => {
+            const p = periods[i];
+            return !!p && (p.isAwayAbsent || !!p.awayTime);
+          });
+          const allConfirmedAbsent = indices.every((i) => {
+            const p = periods[i];
+            return !p || p.status === 'absent';
+          });
+          const anyAbsent = hasDeparture || allConfirmedAbsent;
           const manualNoSubmit = phoneNoSubmit?.has(label) ?? false;
-          const showX = allAbsent || manualNoSubmit;
+          const showX = anyAbsent || manualNoSubmit;
           return (
             <div
               key={label}
@@ -395,15 +468,13 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
               className={`flex-1 h-[10px] rounded-[2px] flex items-center justify-center border transition-all ${
                 onTogglePhone ? 'cursor-pointer active:scale-90' : ''
               } ${
-                manualNoSubmit
+                showX
                   ? 'bg-red-50 border-red-200'
-                  : allAbsent
-                  ? 'bg-slate-100 border-slate-200'
                   : 'bg-[#0071E3]/[0.06] border-[#0071E3]/20'
               }`}
             >
               <span className={`text-[6px] font-black leading-none ${
-                manualNoSubmit ? 'text-red-400' : allAbsent ? 'text-slate-300' : 'text-[#0071E3]/60'
+                showX ? 'text-red-400' : 'text-[#0071E3]/60'
               }`}>
                 {showX ? 'x' : label}
               </span>
@@ -480,18 +551,9 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
         const isLeftToday = student ? (sessions.length > 0 && sessions.every((s) => s.check_out)) : false;
         const raw = computePeriods(student, sessions, today, nowDateStr, nowMin);
 
-        // ── 정기 외출 이탈 시각 (복귀 없는 항목 중 오늘 적용되는 것) ─────────
+        // ── 정기 외출/결석 구간 (엑셀 출결판 수식 기준) ─────────────────────
         const todayDow = new Date(today + 'T00:00:00').getDay();
-        let awayDepartureMin = -1;
-        if (student && student.awaySchedules && student.awaySchedules.length > 0) {
-          const noReturn = student.awaySchedules.find((sc) => {
-            if (sc.returnTime) return false;
-            if (sc.days && sc.days.length > 0 && !sc.days.includes(todayDow)) return false;
-            if (sc.until && sc.until !== 'forever' && sc.until < today) return false;
-            return true;
-          });
-          if (noReturn) awayDepartureMin = timeStringToMin(noReturn.awayTime);
-        }
+        const awayIntervals = getApplicableAwayIntervals(student, today, todayDow);
 
         // ── 실제 등원/하원 시각 (첫 세션 등원, 마지막 세션 하원) ─────────────
         const firstCheckInIso = sessions.length > 0 ? sessions[0].check_in : null;
@@ -510,31 +572,15 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
           const key = student ? `${student.id}:${idx}` : '';
           const override = student ? periodOverrides.get(key) : undefined;
 
-          // 정기 외출 시각 — 해당 교시에 이탈 예정
-          let awayTime: string | undefined = undefined;
-          if (student && student.awaySchedules && student.awaySchedules.length > 0) {
-            const period = PERIODS[idx];
-            const matched = student.awaySchedules.find((schedule) => {
-              if (schedule.days && schedule.days.length > 0 && !schedule.days.includes(todayDow)) return false;
-              if (schedule.until && schedule.until !== 'forever' && schedule.until < today) return false;
-              const min = timeStringToMin(schedule.awayTime);
-              return min >= period.start && min < period.end;
-            });
-            if (matched) awayTime = matched.awayTime;
-          }
-
-          // 정기 외출 이탈 이후 미복귀 교시 — 세션이 덮더라도 x 표시
-          const isAwayAbsent =
-            awayDepartureMin > 0 &&
-            PERIODS[idx].start >= awayDepartureMin;
+          const awayMark = getAwayPeriodMark(awayIntervals, idx);
 
           return {
             status: override ?? s,
             isOverridden: override !== undefined,
-            awayTime,
+            awayTime: awayMark.awayTime,
             checkInTime: idx === checkInPeriodIdx ? checkInTimeStr : undefined,
             checkOutTime: idx === checkOutPeriodIdx ? checkOutTimeStr : undefined,
-            isAwayAbsent,
+            isAwayAbsent: awayMark.isAwayAbsent,
           };
         });
         return (
