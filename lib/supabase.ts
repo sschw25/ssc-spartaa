@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Student, SharedMaterial, BookProgress, LectureProgress } from './types/student';
+import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam } from './types/student';
 import { mergeOrphanMaterials } from './db';
 
 // ── 환경 변수 ────────────────────────────────────────────────
@@ -51,6 +51,7 @@ function rowToStudent(r: any): Student {
     expectedArrival: r.expected_arrival === '09:00' ? '09:00' : '08:20',
     enrollmentEndDate: r.enrollment_end_date || undefined,
     weeklyGradeCheck: Boolean(r.weekly_grade_check),
+    seatNumber: r.seat_number != null ? Number(r.seat_number) : undefined,
     shareToken: r.share_token || undefined,
     shareTokenExpiresAt: r.share_token_expires_at || undefined,
     sharePasswordHash: r.share_password || undefined,
@@ -62,6 +63,9 @@ function rowToStudent(r: any): Student {
     grades: r.grades || [],
     leaveRequests: r.leave_requests || [],
     leaveCoupons: Number(r.leave_coupons) || 0,
+    penalties: r.penalties || [],
+    smsLogs: r.sms_logs || [],
+    mockExams: r.mock_exams || [],
     subjects,
   };
 }
@@ -84,6 +88,7 @@ function studentToRow(student: Student, nowIso: string) {
     next_consultation_date: student.nextConsultationDate || null,
     enrollment_end_date: student.enrollmentEndDate || null,
     weekly_grade_check: Boolean(student.weeklyGradeCheck),
+    seat_number: student.seatNumber ?? null,
     parent_phone: student.parentPhone || null,
     student_phone: student.studentPhone || null,
     sms_targets: student.smsTargets && student.smsTargets.length ? student.smsTargets : ['parent'],
@@ -96,6 +101,9 @@ function studentToRow(student: Student, nowIso: string) {
     grades: student.grades || [],
     leave_requests: student.leaveRequests || [],
     leave_coupons: student.leaveCoupons ?? 0,
+    penalties: student.penalties || [],
+    sms_logs: student.smsLogs || [],
+    mock_exams: student.mockExams || [],
     // share_token / share_token_expires_at / share_password 는 의도적으로 제외한다.
     // 일반 학생 저장(마스킹된 객체 포함)이 학부모 공유 비밀번호 해시를 null로 덮어쓰던 버그 방지.
     // 공유 컬럼은 share-token 라우트의 patchSupabaseToken 만 전담하며, upsert는 누락 컬럼을 보존한다.
@@ -136,7 +144,7 @@ const SUMMARY_COLS = [
   'parent_phone', 'student_phone', 'sms_targets',
   'life_comment', 'special_note', 'student_life_comment',
   'leave_coupons', 'share_token', 'share_token_expires_at',
-  'expected_arrival', 'created_at', 'updated_at',
+  'expected_arrival', 'seat_number', 'created_at', 'updated_at',
 ].join(', ');
 
 export async function getStudentsSummarySupabase(): Promise<Student[]> {
@@ -403,6 +411,60 @@ export async function getSessionsInRangeSupabase(start: string, end: string): Pr
     .order('check_in', { ascending: true });
   if (error) throw error;
   return (data || []) as StudySession[];
+}
+
+// ── 모의고사 일정 마스터 ──────────────────────────────────────
+function rowToMockExam(r: any): MockExam {
+  return {
+    id: r.id,
+    name: r.name,
+    date: r.date,
+    createdAt: r.created_at || '',
+    notifiedAt: r.notified_at || undefined,
+  };
+}
+
+export async function getMockExamsSupabase(): Promise<MockExam[]> {
+  const { data, error } = await getClient()
+    .from('mock_exams')
+    .select('*')
+    .order('date', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(rowToMockExam);
+}
+
+export async function saveMockExamSupabase(exam: MockExam): Promise<MockExam> {
+  const row = {
+    id: exam.id,
+    name: exam.name,
+    date: exam.date,
+    created_at: exam.createdAt,
+    notified_at: exam.notifiedAt || null,
+  };
+  const { data, error } = await getClient()
+    .from('mock_exams')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToMockExam(data);
+}
+
+export async function deleteMockExamSupabase(id: string): Promise<void> {
+  const { error } = await getClient().from('mock_exams').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// 모의고사 학생 알림 발송 표시 (notified_at 설정)
+export async function notifyMockExamSupabase(id: string, notifiedAt: string): Promise<MockExam> {
+  const { data, error } = await getClient()
+    .from('mock_exams')
+    .update({ notified_at: notifiedAt })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToMockExam(data);
 }
 
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {

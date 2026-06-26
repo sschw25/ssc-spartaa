@@ -59,6 +59,27 @@ export function SubjectProgressTab({
     return filtered;
   };
 
+  const getCompletedDailyEntries = (plan: DetailedPlan) =>
+    Object.values(plan.dailyCompletions || {}).filter((item) => item?.isCompleted);
+
+  const getPlanActualAmount = (plan: DetailedPlan) => {
+    const dailyTotal = getCompletedDailyEntries(plan).reduce((sum, item) => {
+      const actualAmount = typeof item.actualAmount === 'number' ? item.actualAmount : 0;
+      return sum + actualAmount;
+    }, 0);
+    return dailyTotal > 0 ? dailyTotal : plan.actualAmount;
+  };
+
+  const isPlanCompleted = (plan: DetailedPlan) => {
+    if (plan.isCompleted) return true;
+    const completedDays = getCompletedDailyEntries(plan);
+    if (completedDays.length === 0) return false;
+    const actualAmount = getPlanActualAmount(plan);
+    return plan.targetAmount > 0 && typeof actualAmount === 'number'
+      ? actualAmount >= plan.targetAmount
+      : true;
+  };
+
   const getExpectedAmountFromPlans = (plans?: DetailedPlan[]) => {
     if (!plans || plans.length === 0) return null;
     const today = new Date().toISOString().split('T')[0];
@@ -388,7 +409,7 @@ export function SubjectProgressTab({
                       const percent = b.totalPages > 0 ? Math.round((b.currentPage / b.totalPages) * 100) : 0;
                       const oneMonthPlans = getOneMonthPlans(b.detailedPlans);
                       const totalPlans = oneMonthPlans.length;
-                      const completedPlans = oneMonthPlans.filter(p => p.isCompleted).length;
+                      const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
                       const status = getPlanStatus(b.currentPage, getExpectedAmountFromPlans(b.detailedPlans));
                       const paceComparison = formatPaceComparison(
@@ -513,21 +534,24 @@ export function SubjectProgressTab({
                               </div>
 
                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                                {oneMonthPlans.map(plan => (
-                                  <button
+                                {oneMonthPlans.map(plan => {
+                                  const planCompleted = isPlanCompleted(plan);
+                                  const planActualAmount = getPlanActualAmount(plan);
+                                  return (
+                                    <button
                                     key={plan.id}
                                     type="button"
-                                    onClick={() => updatePlanCompletion('book', b.id, plan.id, !plan.isCompleted)}
-                                    aria-pressed={plan.isCompleted}
+                                    onClick={() => updatePlanCompletion('book', b.id, plan.id, !planCompleted)}
+                                    aria-pressed={planCompleted}
                                     className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
-                                      plan.isCompleted
+                                      planCompleted
                                         ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50'
                                         : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
                                     }`}
                                   >
                                     <div className="flex justify-between items-center font-bold">
                                       <span>{plan.weekNumber}주차</span>
-                                      {plan.isCompleted ? (
+                                      {planCompleted ? (
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                       ) : (
                                         <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
@@ -537,14 +561,15 @@ export function SubjectProgressTab({
                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
                                     <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
                                     <span className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-black ${
-                                      plan.isCompleted
+                                      planCompleted
                                         ? 'border-emerald-200 bg-white/70 text-emerald-700'
                                         : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
                                     }`}>
-                                      {plan.isCompleted ? (plan.actualAmount !== undefined ? `완료 (${plan.actualAmount}${b.unit || 'p'})` : '완료됨') : '완료'}
+                                      {planCompleted ? (planActualAmount !== undefined ? `완료 (${planActualAmount}${b.unit || 'p'})` : '완료됨') : '완료'}
                                     </span>
-                                  </button>
-                                ))}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
@@ -567,7 +592,7 @@ export function SubjectProgressTab({
                       const percent = l.totalLectures > 0 ? Math.round((l.completedLectures / l.totalLectures) * 100) : 0;
                       const oneMonthPlans = getOneMonthPlans(l.detailedPlans);
                       const totalPlans = oneMonthPlans.length;
-                      const completedPlans = oneMonthPlans.filter(p => p.isCompleted).length;
+                      const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
                       const status = getPlanStatus(l.completedLectures, getExpectedAmountFromPlans(l.detailedPlans));
                       const paceComparison = formatPaceComparison(
@@ -638,21 +663,24 @@ export function SubjectProgressTab({
                               </div>
 
                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
-                                {oneMonthPlans.map(plan => (
-                                  <button
+                                {oneMonthPlans.map(plan => {
+                                  const planCompleted = isPlanCompleted(plan);
+                                  const planActualAmount = getPlanActualAmount(plan);
+                                  return (
+                                    <button
                                     key={plan.id}
                                     type="button"
-                                    onClick={() => updatePlanCompletion('lecture', l.id, plan.id, !plan.isCompleted)}
-                                    aria-pressed={plan.isCompleted}
+                                    onClick={() => updatePlanCompletion('lecture', l.id, plan.id, !planCompleted)}
+                                    aria-pressed={planCompleted}
                                     className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
-                                      plan.isCompleted
+                                      planCompleted
                                         ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50'
                                         : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
                                     }`}
                                   >
                                     <div className="flex justify-between items-center font-bold">
                                       <span>{plan.weekNumber}주차</span>
-                                      {plan.isCompleted ? (
+                                      {planCompleted ? (
                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                       ) : (
                                         <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
@@ -662,14 +690,15 @@ export function SubjectProgressTab({
                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
                                     <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
                                     <span className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-black ${
-                                      plan.isCompleted
+                                      planCompleted
                                         ? 'border-emerald-200 bg-white/70 text-emerald-700'
                                         : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
                                     }`}>
-                                      {plan.isCompleted ? (plan.actualAmount !== undefined ? `완료 (${plan.actualAmount}강)` : '완료됨') : '완료'}
+                                      {planCompleted ? (planActualAmount !== undefined ? `완료 (${planActualAmount}강)` : '완료됨') : '완료'}
                                     </span>
-                                  </button>
-                                ))}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}

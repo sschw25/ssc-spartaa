@@ -4,13 +4,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   AlertCircle,
+  ArrowLeft,
   CalendarClock,
   CheckCircle2,
   ClipboardList,
   Delete,
+  Hash,
   Loader2,
   LogOut,
-  Phone,
   RotateCcw,
   ScanLine,
   UserRound,
@@ -64,6 +65,7 @@ export default function AttendKioskPage() {
   const [doneTime, setDoneTime] = useState('');
   const [autoResetIn, setAutoResetIn] = useState<number | null>(null);
   const [clock, setClock] = useState('');
+  const [showKeypad, setShowKeypad] = useState(false);
 
   // 헤더 라이브 시계 (KST)
   useEffect(() => {
@@ -125,6 +127,7 @@ export default function AttendKioskPage() {
     setGradeReminder(false);
     setDoneTime('');
     setAutoResetIn(null);
+    setShowKeypad(false);
   };
 
   // 완료 화면 자동 초기화 카운트다운 (입구 키오스크 회전율 ↑)
@@ -207,126 +210,144 @@ export default function AttendKioskPage() {
   return (
     <main className="min-h-screen bg-[#111827] text-white font-sans flex items-center justify-center p-4">
       <div className="mx-auto flex w-full max-w-[420px] flex-col py-8 md:py-12 gap-8">
-        <header className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-bold tracking-[0.3em] text-slate-400">SSC SPARTA</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight">등하원 체크</h1>
-            {clock && <p className="mt-1 text-xs font-semibold text-slate-500">{clock}</p>}
-          </div>
-          {/* 번호 입력 대신 스캔으로 로그인할 수 있는 작은 QR (상시 노출) */}
-          <div className="flex shrink-0 items-center gap-3 rounded-2xl bg-white/[0.06] p-2.5 ring-1 ring-white/10">
-            <div className="grid size-[108px] shrink-0 place-items-center rounded-xl bg-white p-2.5">
-              {tokenError ? (
-                <ScanLine className="size-8 text-red-400" />
-              ) : url ? (
-                <QRCodeSVG value={url} size={88} level="M" includeMargin={false} />
-              ) : (
-                <Loader2 className="size-6 animate-spin text-slate-400" />
-              )}
-            </div>
-            <div className="pr-1">
-              <p className="flex items-center gap-1.5 text-sm font-black text-white">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
-                </span>
-                QR로도 로그인
-              </p>
-              <p className="mt-1 text-[11px] leading-4 text-slate-400">
-                번호 입력 대신<br />휴대폰으로 스캔해<br />로그인·등하원하세요
-              </p>
-            </div>
-          </div>
+        <header className="text-center">
+          <p className="text-[11px] font-bold tracking-[0.3em] text-slate-400">SSC SPARTA</p>
+          <h1 className="mt-1 text-3xl font-black tracking-tight">등하원 체크</h1>
+          {clock && <p className="mt-1 text-xs font-semibold text-slate-500">{clock}</p>}
         </header>
 
         <section className="w-full">
           <div className="w-full transition-all duration-300">
             {!showResult ? (
-              <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
-                <div className="flex items-center justify-between px-1 pb-3">
-                  <p className="text-sm font-black text-slate-900">번호로 등·하원</p>
-                  <p className="text-xs font-bold text-slate-400">전화번호 끝 4자리</p>
-                </div>
-                <div className="flex h-16 items-center justify-center rounded-xl bg-slate-100 text-3xl font-black tracking-[0.18em]">
-                  {phone || '----'}
-                </div>
+              !showKeypad ? (
+                /* ── QR 메인 카드 ── */
+                <div className="rounded-[28px] bg-slate-900 border border-white/10 p-6 text-white shadow-2xl flex flex-col items-center gap-5 animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="relative flex size-2.5 mb-1">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex size-2.5 rounded-full bg-emerald-400" />
+                    </span>
+                    <p className="text-base font-black text-white">휴대폰으로 스캔해서 체크</p>
+                    <p className="text-xs font-semibold text-slate-400">카메라로 QR을 스캔하면 바로 등·하원됩니다</p>
+                  </div>
 
-                <div className="mt-4 grid grid-cols-3 gap-2">
-                  {keypad.map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => pressKey(key)}
-                      className="grid aspect-[1.35] place-items-center rounded-xl bg-slate-100 text-2xl font-black transition hover:bg-slate-200 active:scale-[0.98]"
-                    >
-                      {key === 'clear' ? (
-                        <RotateCcw className="size-6" />
-                      ) : key === 'back' ? (
-                        <Delete className="size-6" />
-                      ) : (
-                        key
-                      )}
-                    </button>
-                  ))}
-                </div>
+                  <div className="grid size-[220px] place-items-center rounded-2xl bg-white p-4 shadow-lg">
+                    {tokenError ? (
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <ScanLine className="size-10 text-red-400" />
+                        <p className="text-xs text-red-500 font-semibold leading-4">{tokenError}</p>
+                      </div>
+                    ) : url ? (
+                      <QRCodeSVG value={url} size={188} level="M" includeMargin={false} />
+                    ) : (
+                      <Loader2 className="size-8 animate-spin text-slate-400" />
+                    )}
+                  </div>
 
-                {submitState === 'submitting' ? (
                   <button
                     type="button"
-                    disabled
-                    className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-slate-700 text-base font-black text-white transition"
+                    onClick={() => setShowKeypad(true)}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.06] border border-white/10 h-12 text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-white active:scale-[0.98]"
                   >
-                    <Loader2 className="animate-spin size-6" />
+                    <Hash className="size-4" />
+                    휴대폰이 없다면 번호로 체크
                   </button>
-                ) : (
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                </div>
+              ) : (
+                /* ── 번호 키패드 카드 ── */
+                <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+                  <div className="flex items-center justify-between px-1 pb-3">
                     <button
                       type="button"
-                      onClick={() => {
-                        setSelectedAction('check-in');
-                        submitPhone(undefined, 'check-in');
-                      }}
-                      disabled={phone.length < 4}
-                      className="flex h-14 items-center justify-center rounded-xl bg-emerald-600 text-base font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                      onClick={() => { resetPhoneFlow(); }}
+                      className="flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-slate-700 transition"
                     >
-                      등원
+                      <ArrowLeft className="size-3.5" />
+                      QR로 돌아가기
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedAction('check-out');
-                        submitPhone(undefined, 'check-out');
-                      }}
-                      disabled={phone.length < 4}
-                      className="flex h-14 items-center justify-center rounded-xl bg-sky-600 text-base font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
-                    >
-                      하원
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedAction('outing');
-                        submitPhone(undefined, 'outing');
-                      }}
-                      disabled={phone.length < 4}
-                      className="flex h-14 items-center justify-center rounded-xl bg-amber-600 text-base font-black text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
-                    >
-                      외출
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedAction('return');
-                        submitPhone(undefined, 'return');
-                      }}
-                      disabled={phone.length < 4}
-                      className="flex h-14 items-center justify-center rounded-xl bg-blue-600 text-base font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
-                    >
-                      복귀
-                    </button>
+                    <p className="text-xs font-bold text-slate-400">전화번호 끝 4자리</p>
                   </div>
-                )}
-              </div>
+                  <div className="flex h-16 items-center justify-center rounded-xl bg-slate-100 text-3xl font-black tracking-[0.18em]">
+                    {phone || '----'}
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-3 gap-2">
+                    {keypad.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => pressKey(key)}
+                        className="grid aspect-[1.35] place-items-center rounded-xl bg-slate-100 text-2xl font-black transition hover:bg-slate-200 active:scale-[0.98]"
+                      >
+                        {key === 'clear' ? (
+                          <RotateCcw className="size-6" />
+                        ) : key === 'back' ? (
+                          <Delete className="size-6" />
+                        ) : (
+                          key
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {submitState === 'submitting' ? (
+                    <button
+                      type="button"
+                      disabled
+                      className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-slate-700 text-base font-black text-white transition"
+                    >
+                      <Loader2 className="animate-spin size-6" />
+                    </button>
+                  ) : (
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAction('check-in');
+                          submitPhone(undefined, 'check-in');
+                        }}
+                        disabled={phone.length < 4}
+                        className="flex h-14 items-center justify-center rounded-xl bg-emerald-600 text-base font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                      >
+                        등원
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAction('check-out');
+                          submitPhone(undefined, 'check-out');
+                        }}
+                        disabled={phone.length < 4}
+                        className="flex h-14 items-center justify-center rounded-xl bg-sky-600 text-base font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                      >
+                        하원
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAction('outing');
+                          submitPhone(undefined, 'outing');
+                        }}
+                        disabled={phone.length < 4}
+                        className="flex h-14 items-center justify-center rounded-xl bg-amber-600 text-base font-black text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                      >
+                        외출
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedAction('return');
+                          submitPhone(undefined, 'return');
+                        }}
+                        disabled={phone.length < 4}
+                        className="flex h-14 items-center justify-center rounded-xl bg-blue-600 text-base font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                      >
+                        복귀
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )
             ) : (
               <div className="min-h-[480px] rounded-[24px] bg-slate-900 border border-white/10 p-6 text-white shadow-2xl flex flex-col justify-center animate-in fade-in zoom-in-95 duration-300">
                 {submitState === 'done' ? (

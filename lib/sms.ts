@@ -98,6 +98,31 @@ async function sendSolapiSms(recipients: string[], message: string): Promise<num
   return Math.max(0, recipients.length - failedCount);
 }
 
+// 관리자 커스텀 메시지 발송. 이미 정제된 수신번호 배열과 임의 텍스트를 직접 받습니다.
+export async function sendCustomSms(
+  recipients: string[],
+  message: string,
+): Promise<{ sent: number; skipped?: string; failed?: string }> {
+  if (!API_KEY || !API_SECRET || !SENDER) {
+    console.log('[sms] 솔라피 환경변수 미설정으로 발송 생략, 수신자:', recipients.length);
+    return { sent: 0, skipped: 'not-configured' };
+  }
+  const clean = Array.from(new Set(recipients.map((p) => p.replace(/\D/g, '')).filter((p) => p.length >= 10)));
+  if (clean.length === 0) return { sent: 0, skipped: 'no-recipient' };
+  if (TEST_MODE) {
+    console.log('[sms] SOLAPI_TEST_MODE=Y 발송 생략:', clean, message);
+    return { sent: clean.length, skipped: 'test-mode' };
+  }
+  try {
+    const sent = await sendSolapiSms(clean, message);
+    return { sent };
+  } catch (error) {
+    const messageText = (error as Error)?.message || 'send failed';
+    console.warn('[sms] 커스텀 메시지 발송 예외:', messageText);
+    return { sent: 0, failed: messageText };
+  }
+}
+
 // 등하원 알림 발송. 실패해도 등하원 처리는 막지 않도록 호출부에서 예외를 삼킵니다.
 export async function notifyAttendance(input: AttendNotifyInput): Promise<{ sent: number; skipped?: string }> {
   if (!API_KEY || !API_SECRET || !SENDER) {

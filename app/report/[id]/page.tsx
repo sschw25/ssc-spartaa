@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense } from 'react';
+import React, { Suspense, useState, useEffect, useCallback } from 'react';
 import { useReportState } from '@/hooks/use-report-state';
 import { StudentLayout } from '@/components/report/student-layout';
 import { NotificationsSection } from '@/components/report/notifications-section';
@@ -10,9 +10,36 @@ import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab } from '@/components/report/consultation-tab';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { MockExamNotice } from '@/components/report/mock-exam-notice';
+import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
+import type { MockExam, PenaltyRecord } from '@/lib/types/student';
 
 function StudentReportInner() {
+  const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPendingExams() {
+      try {
+        const res = await fetch('/api/student/mock-exams', { credentials: 'same-origin' });
+        if (res.ok) {
+          const json = await res.json();
+          if (!cancelled && json.success) setPendingMockExams(json.exams || []);
+        }
+      } catch {}
+    }
+
+    loadPendingExams();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleMockExamResponded = useCallback((examId: string) => {
+    setPendingMockExams((prev) => prev.filter((e) => e.id !== examId));
+  }, []);
+
   const {
     shareTokenParam,
     isStudentReport,
@@ -257,6 +284,16 @@ function StudentReportInner() {
           />
         )}
 
+        {/* 0-1. 모의고사 참여 여부 응답 카드 (학생 전용, 미응답 시험이 있을 때만) */}
+        {isStudentReport && pendingMockExams.length > 0 && (
+          <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
+            <MockExamNotice
+              exams={pendingMockExams}
+              onResponded={handleMockExamResponded}
+            />
+          </div>
+        )}
+
         {/* 1. 홈 탭 (Overview) */}
         <HomeOverviewTab
           student={student}
@@ -386,6 +423,50 @@ function StudentReportInner() {
           homeLeaveCoupons={homeLeaveCoupons}
         />
       </div>
+
+      {/* 7. 벌점 내역 (벌점이 있는 경우만 표시) */}
+      {isStudentReport && student && (student.penalties || []).length > 0 && (
+        <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5 pb-6 no-print">
+          <div className="rounded-3xl border border-black/[0.06] bg-white shadow-sm overflow-hidden">
+            <div className="px-5 py-4 border-b border-black/[0.04] flex items-center gap-2">
+              <Shield className="w-4 h-4 text-slate-400" />
+              <h3 className="text-sm font-black text-[#1D1D1F]">벌점 · 상점 내역</h3>
+              {(() => {
+                const total = (student.penalties || []).reduce(
+                  (sum: number, p: PenaltyRecord) => sum + (p.type === 'penalty' ? p.points : -p.points), 0
+                );
+                return (
+                  <span className={`ml-auto text-sm font-black ${
+                    total > 0 ? 'text-red-500' : total < 0 ? 'text-emerald-500' : 'text-slate-400'
+                  }`}>
+                    누적 {total > 0 ? `+${total}` : total}점
+                  </span>
+                );
+              })()}
+            </div>
+            <div className="divide-y divide-black/[0.04]">
+              {[...(student.penalties || [])]
+                .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+                .map((p) => (
+                  <div key={p.id} className="flex items-center gap-3 px-5 py-3">
+                    <span className={`shrink-0 grid w-9 h-9 place-items-center rounded-xl text-xs font-black ${
+                      p.type === 'penalty' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+                    }`}>
+                      {p.type === 'penalty' ? '+' : '-'}{p.points}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-[#1D1D1F]">{p.reason}</p>
+                      <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{p.date}</p>
+                    </div>
+                    {p.type === 'penalty'
+                      ? <TrendingDown className="w-3.5 h-3.5 text-red-400 shrink-0" />
+                      : <TrendingUp className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 하단 카피라이트 */}
       <div className="no-print text-center text-[10px] text-slate-400 pb-8">

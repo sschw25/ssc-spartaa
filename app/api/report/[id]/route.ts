@@ -37,6 +37,12 @@ function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
     leaveCoupons: student.leaveCoupons ?? 0,
     grades: student.grades,
     subjects: student.subjects || [],
+    ...(audience === 'student'
+      ? {
+          penalties: student.penalties || [],
+          mockExams: student.mockExams || [],
+        }
+      : {}),
   };
 }
 

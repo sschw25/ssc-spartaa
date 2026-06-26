@@ -47,6 +47,8 @@ interface InfoTabProps {
   setWeeklyGradeCheck: (v: boolean) => void;
   specialNote: string;
   setSpecialNote: (v: string) => void;
+  seatNumber: string;
+  setSeatNumber: (v: string) => void;
   uniqueExams: string[];
   loading: boolean;
   onUpdateInfo: () => void;
@@ -75,6 +77,8 @@ export function InfoTab({
   enrollmentEndDate, setEnrollmentEndDate,
   weeklyGradeCheck, setWeeklyGradeCheck,
   specialNote, setSpecialNote,
+  seatNumber,
+  setSeatNumber,
   uniqueExams,
   loading,
   onUpdateInfo,
@@ -211,6 +215,22 @@ export function InfoTab({
               <option key={exam} value={exam} />
             ))}
           </datalist>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="edit-seat-number" className="text-xs font-semibold text-[#1D1D1F]">
+            좌석 번호
+          </Label>
+          <Input
+            id="edit-seat-number"
+            type="number"
+            min={1}
+            max={99}
+            value={seatNumber}
+            onChange={(e) => setSeatNumber(e.target.value)}
+            placeholder="예: 7"
+            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+          />
         </div>
 
         <div className="space-y-1.5">

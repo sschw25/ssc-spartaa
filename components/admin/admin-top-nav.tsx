@@ -6,13 +6,17 @@ import {
   BookOpen,
   Calendar,
   CalendarDays,
+  ClipboardCheck,
   ClipboardList,
   Home,
+  LayoutGrid,
   LogOut,
   Menu,
+  MessageSquare,
   Plus,
   ScanLine,
   Search,
+  Shield,
   Trophy,
   Inbox,
   AlertTriangle,
@@ -253,9 +257,33 @@ export function AdminTopNav({
               <ClipboardList className="w-4 h-4 text-[#0071E3]" />
               출결 상세
             </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/seat-board')}
+              className={menuButtonClass(pathname === '/admin/seat-board')}
+            >
+              <LayoutGrid className="w-4 h-4 text-[#0071E3]" />
+              좌석 현황판
+            </button>
             <button type="button" onClick={openKiosk} className={menuButtonClass(false)}>
               <ScanLine className="w-4 h-4 text-[#0071E3]" />
               등하원 체크 ↗
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/mock-exam')}
+              className={menuButtonClass(pathname === '/admin/mock-exam')}
+            >
+              <ClipboardCheck className="w-4 h-4 text-[#0071E3]" />
+              모의고사 참여 체크
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/penalties')}
+              className={menuButtonClass(pathname === '/admin/penalties')}
+            >
+              <Shield className="w-4 h-4 text-[#0071E3]" />
+              벌점 · 상점 관리
             </button>
             <button
               type="button"
@@ -272,6 +300,17 @@ export function AdminTopNav({
             >
               <CalendarDays className="w-4 h-4 text-[#0071E3]" />
               날짜별 현황
+            </button>
+
+            {/* 소통 */}
+            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">소통</p>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/messages')}
+              className={menuButtonClass(pathname === '/admin/messages')}
+            >
+              <MessageSquare className="w-4 h-4 text-[#0071E3]" />
+              메시지 발송
             </button>
 
             {/* 통계 */}

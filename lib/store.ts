@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial } from './types/student';
+import { Student, SharedMaterial, MockExam } from './types/student';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
@@ -17,6 +17,10 @@ import {
   setStudentPasswordHashSupabase,
   setStudentNotifyInfoSupabase,
   setStudentExpectedArrivalSupabase,
+  getMockExamsSupabase,
+  saveMockExamSupabase,
+  deleteMockExamSupabase,
+  notifyMockExamSupabase,
   type NotifyInfo,
   getOpenSessionSupabase,
   getOpenSessionsSupabase,
@@ -171,3 +175,26 @@ export async function getStudyMinutesByStudent(sinceDate: string): Promise<Recor
   requireSupabase();
   return getStudyMinutesByStudentSupabase(sinceDate);
 }
+
+// ── 모의고사 일정 ──
+export async function getMockExams(): Promise<MockExam[]> {
+  requireSupabase();
+  return getMockExamsSupabase();
+}
+
+export async function saveMockExam(exam: MockExam): Promise<MockExam> {
+  requireSupabase();
+  return saveMockExamSupabase(exam);
+}
+
+export async function deleteMockExam(id: string): Promise<void> {
+  requireSupabase();
+  return deleteMockExamSupabase(id);
+}
+
+export async function notifyMockExam(id: string, notifiedAt: string): Promise<MockExam> {
+  requireSupabase();
+  return notifyMockExamSupabase(id, notifiedAt);
+}
+
+export type { MockExam };

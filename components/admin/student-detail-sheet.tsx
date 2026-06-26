@@ -22,15 +22,16 @@ import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } 
 import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
 import { getDailyChecklist, getPomodoroStats, getSeoulDateKey } from '@/lib/student-activity';
 import { toast } from 'sonner';
-import { 
+import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
-  ArrowLeft, Home, ChevronDown, ChevronUp, History
+  ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
 import { ProgressTab } from '@/components/admin/detail-tabs/progress-tab';
 import { ConsultTab } from '@/components/admin/detail-tabs/consult-tab';
+import { PenaltyTab } from '@/components/admin/detail-tabs/penalty-tab';
 import { DetailSheetProvider } from '@/components/admin/detail-tabs/detail-sheet-context';
 
 interface StudentDetailSheetProps {
@@ -193,6 +194,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [nextConsultationDate, setNextConsultationDate] = useState('');
   const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
+  const [seatNumber, setSeatNumber] = useState('');
   const [shareToken, setShareToken] = useState<string | undefined>(undefined);
   const [shareTokenExpiresAt, setShareTokenExpiresAt] = useState<string | undefined>(undefined);
   const [sharePassword, setSharePassword] = useState<string | undefined>(undefined);
@@ -381,6 +383,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setNextConsultationDate(student.nextConsultationDate || '');
       setEnrollmentEndDate(student.enrollmentEndDate || '');
       setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
+      setSeatNumber(student.seatNumber != null ? String(student.seatNumber) : '');
       setShareToken(student.shareToken);
       setShareTokenExpiresAt(student.shareTokenExpiresAt);
       setSharePassword(undefined); // PIN은 생성 직후 API 응답에서만 일회성 표시
@@ -950,6 +953,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       nextConsultationDate: nextConsultationDate || undefined,
       enrollmentEndDate: enrollmentEndDate || undefined,
       weeklyGradeCheck,
+      seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
       subjects: subjectsState,
       updatedAt: new Date().toISOString()
     };
@@ -3394,6 +3398,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setNextConsultationDate(student.nextConsultationDate || '');
     setEnrollmentEndDate(student.enrollmentEndDate || '');
     setWeeklyGradeCheck(Boolean(student.weeklyGradeCheck));
+    setSeatNumber(student.seatNumber != null ? String(student.seatNumber) : '');
     setSubjectsState(student.subjects || []);
     setProgressDrafts({});
     setCslContent('');
@@ -3862,7 +3867,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           })()}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-4 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
+            <TabsList className="grid grid-cols-5 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger id="admin-tab-progress" value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학습 관리</span>
@@ -3877,6 +3882,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 <Award className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">성적 관리</span>
                 <span className="sm:hidden">성적</span>
+              </TabsTrigger>
+              <TabsTrigger id="admin-tab-penalty" value="penalty" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+                <Shield className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">벌점 관리</span>
+                <span className="sm:hidden">벌점</span>
               </TabsTrigger>
               <TabsTrigger id="admin-tab-info" value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <User className="w-3.5 h-3.5" />
@@ -4054,7 +4064,17 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               />
             </TabsContent>
 
-            {/* TAB 4: 학생 기본정보 관리 및 회원탈퇴 */}
+            {/* TAB 4: 벌점 · 상점 관리 */}
+            <TabsContent value="penalty" className="space-y-5 outline-none">
+              <PenaltyTab
+                student={student}
+                onUpdate={(updated) => {
+                  if (onUpdate) onUpdate(updated);
+                }}
+              />
+            </TabsContent>
+
+            {/* TAB 5: 학생 기본정보 관리 및 회원탈퇴 */}
             <TabsContent value="info" className="space-y-5 outline-none">
               <InfoTab
                 name={name}
@@ -4075,6 +4095,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setWeeklyGradeCheck={setWeeklyGradeCheck}
                 specialNote={specialNote}
                 setSpecialNote={setSpecialNote}
+                seatNumber={seatNumber}
+                setSeatNumber={setSeatNumber}
                 uniqueExams={uniqueExams}
                 loading={loading}
                 onUpdateInfo={handleUpdateInfo}

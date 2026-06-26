@@ -120,6 +120,45 @@ export interface GradeItem {
   source?: 'student' | 'admin'; // 입력 주체 (학생 직접 입력 여부 — 미지정은 관리자 입력으로 간주)
 }
 
+// 벌점/상점 내역 — 관리자 부여, 학생 리포트에 노출
+export interface PenaltyRecord {
+  id: string;
+  date: string;         // 부여일 (YYYY-MM-DD)
+  points: number;       // 양수로 저장, 의미는 type으로 구분
+  reason: string;       // 사유
+  type: 'penalty' | 'bonus'; // 벌점 / 상점(차감)
+  awardedBy: string;    // 부여 관리자
+  createdAt: string;    // ISO
+}
+
+// 관리자 발송 SMS 이력
+export interface SmsLog {
+  id: string;
+  sentAt: string;       // ISO
+  message: string;
+  targets: Array<'parent' | 'student'>;
+  sentCount: number;
+  sentBy: string;
+}
+
+// 모의고사별 학생 참여 상태
+export interface MockExamParticipation {
+  examId: string;
+  status: 'attending' | 'absent' | 'undecided';
+  reason?: string;      // 불참 사유 (학생 직접 입력, 선택)
+  updatedAt: string;
+  respondedBy?: 'student' | 'admin'; // 응답 주체
+}
+
+// 모의고사 일정 마스터 (mock_exams 테이블)
+export interface MockExam {
+  id: string;
+  name: string;         // "6월 모의고사"
+  date: string;         // YYYY-MM-DD
+  createdAt: string;
+  notifiedAt?: string;  // 학생에게 알림 발송 시각 (ISO) — 설정되면 학생 리포트에 응답 요청 카드 표시
+}
+
 export interface SubjectProgress {
   id: string;
   name: string;            // 과목명 (국어, 수학, 영어, 탐구 등)
@@ -162,6 +201,7 @@ export interface Student {
   expectedArrival?: '08:20' | '09:00'; // 지각 기준(등원 마감) — 학생별 그룹, 기본 08:20
   enrollmentEndDate?: string; // 등록(수강) 종료일 (YYYY-MM-DD) — 출결 시 D-3부터 학생에게 안내
   weeklyGradeCheck?: boolean; // 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
+  seatNumber?: number;          // 지정 좌석 번호 (좌석 현황판 연동)
   shareToken?: string;          // 학부모 리포트 공유 임시 토큰
   shareTokenExpiresAt?: string; // 공유 토큰 만료 시각 (ISO)
   sharePasswordHash?: string;   // 학부모 리포트 접근 비밀번호 bcrypt 해시 (서버 내부 전용 — 클라이언트 응답에서 제외)
@@ -185,4 +225,11 @@ export interface Student {
   // 학생별 과목 설정 및 계획
   subjects?: SubjectProgress[];
   customCategories?: string[];
+
+  // 벌점/상점 내역
+  penalties?: PenaltyRecord[];
+  // 관리자 발송 SMS 이력
+  smsLogs?: SmsLog[];
+  // 모의고사 참여 상태
+  mockExams?: MockExamParticipation[];
 }
