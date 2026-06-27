@@ -1176,8 +1176,11 @@ export default function SeatBoardPage() {
     }
   }
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
+  // silent=true 면 로딩 스피너(보드 전체 blank)를 띄우지 않고 데이터만 조용히 갱신한다.
+  // 수동 출결/휴무 저장 직후 보드 전체가 깜빡이는 것을 막기 위함.
+  const loadData = useCallback(async (opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
+    if (!silent) setLoading(true);
     if (isDemoMode) {
       setCampus('wonju');
       setPageIdx(0);
@@ -1185,7 +1188,7 @@ export default function SeatBoardPage() {
       setSessions(demoSeatBoardData.sessions);
       setPeriodOverrides(new Map(demoSeatBoardData.periodOverrides));
       setPhoneNoSubmitMap(new Map(demoSeatBoardData.phoneNoSubmitMap));
-      setLoading(false);
+      if (!silent) setLoading(false);
       return;
     }
 
@@ -1226,7 +1229,7 @@ export default function SeatBoardPage() {
     } catch {
       toast.error('데이터를 불러오지 못했습니다.');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [today, isDemoMode, demoSeatBoardData]);
 
@@ -1362,8 +1365,8 @@ export default function SeatBoardPage() {
       if (!response.ok || !json.success) throw new Error(json.message || '저장 실패');
       
       toast.success('수동 출결이 저장되었습니다.');
-      await loadData();
       setIsModalOpen(false);
+      await loadData({ silent: true });
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, '출결 저장 중 오류가 발생했습니다.'));
     } finally {
@@ -1390,8 +1393,8 @@ export default function SeatBoardPage() {
       if (!response.ok || !json.success) throw new Error(json.message || '삭제 실패');
       
       toast.success('당일 출결 기록이 초기화되었습니다.');
-      await loadData();
       setIsModalOpen(false);
+      await loadData({ silent: true });
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, '출결 삭제 중 오류가 발생했습니다.'));
     } finally {
@@ -1418,8 +1421,8 @@ export default function SeatBoardPage() {
       if (!response.ok || !json.success) throw new Error(json.message || '휴가 신청 실패');
 
       toast.success('수동 휴무(즉시 승인)가 등록되었습니다.');
-      await loadData();
       setIsModalOpen(false);
+      await loadData({ silent: true });
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, '휴가 등록 중 오류가 발생했습니다.'));
     } finally {
@@ -1500,7 +1503,7 @@ export default function SeatBoardPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={loadData}
+            onClick={() => loadData()}
             disabled={loading}
             className="rounded-2xl border-black/[0.05] text-xs h-9 bg-white px-3"
           >

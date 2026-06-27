@@ -3,6 +3,14 @@
     {
       "path": "/api/admin/attendance/sweep",
       "schedule": "59 14 * * *"
+    },
+    {
+      "path": "/api/admin/missions/settle?scope=weekly",
+      "schedule": "59 14 * * 0"
+    },
+    {
+      "path": "/api/admin/missions/settle?scope=monthly&prev=1",
+      "schedule": "30 15 1 * *"
     }
   ]
 }

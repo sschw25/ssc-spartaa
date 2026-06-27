@@ -1458,13 +1458,12 @@ export function useReportState() {
   const notificationCount = studentNotifications.length;
   const notificationPreview = studentNotifications.slice(0, 5);
 
-  const totalPenaltyPoints = useMemo(() => {
-    if (!student) return 0;
-    return (student.penalties || []).reduce(
-      (sum: number, p: any) => sum + (p.type === 'penalty' ? p.points : -p.points),
-      0
-    );
-  }, [student]);
+  // student 은 위 `if (!student) return` 가드 이후라 항상 존재 — 훅이 아닌 일반 연산이어야
+  // 조건부 훅 호출(Rules of Hooks 위반)이 발생하지 않는다.
+  const totalPenaltyPoints = (student.penalties || []).reduce(
+    (sum: number, p: any) => sum + (p.type === 'penalty' ? p.points : -p.points),
+    0
+  );
 
   const reportNavItems = isStudentReport
     ? [

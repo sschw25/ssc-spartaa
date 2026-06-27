@@ -6,6 +6,28 @@ const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'students.json');
 const SHARED_DB_FILE = path.join(DB_DIR, 'shared_materials.json');
 const ADMIN_DB_FILE = path.join(DB_DIR, 'admin_accounts.json');
+const SETTINGS_FILE = path.join(DB_DIR, 'app_settings.json');
+
+// ── 전역 설정(key/value) 로컬 폴백 ──
+export function getAppSettingLocal(key: string): any | null {
+  try {
+    if (!fs.existsSync(SETTINGS_FILE)) return null;
+    const all = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8'));
+    return all && typeof all === 'object' ? (all[key] ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setAppSettingLocal(key: string, value: any): void {
+  if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+  let all: Record<string, any> = {};
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) all = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf-8')) || {};
+  } catch { all = {}; }
+  all[key] = value;
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(all, null, 2), 'utf-8');
+}
 
 const normalizeStudyTime = (value: unknown): SubjectProgress['studyTime'] => {
   return value === 'morning' || value === 'afternoon' || value === 'night' ? value : '';

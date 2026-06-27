@@ -201,6 +201,26 @@ export interface DDayEvent {
   createdAt: string;
 }
 
+// OT(오리엔테이션/특별 세션) 참여 — 미션 쿠폰 연동
+export interface OtParticipation {
+  eventId: string;
+  status: 'attending' | 'absent' | 'undecided';
+  reason?: string;       // 불참 사유
+  updatedAt: string;
+  respondedBy?: 'student' | 'admin';
+  rewarded?: boolean;    // 참여 쿠폰 지급 완료 여부 (중복지급 방지 보조 플래그)
+}
+
+// OT 일정 마스터 (ot_events 테이블)
+export interface OtEvent {
+  id: string;
+  name: string;          // "신학기 OT"
+  date: string;          // YYYY-MM-DD
+  targetExamTypes?: string[];
+  createdAt: string;
+  notifiedAt?: string;   // 알림 발송 시각 (ISO)
+}
+
 export interface SubjectProgress {
   id: string;
   name: string;            // 과목명 (국어, 수학, 영어, 탐구 등)
@@ -276,6 +296,7 @@ export interface Student {
   smsLogs?: SmsLog[];
   // 모의고사 참여 상태
   mockExams?: MockExamParticipation[];
+  otEvents?: OtParticipation[];
   // 정기 외출/빠지는 시간대 목록
   awaySchedules?: AwaySchedule[];
   // 휴대폰 제출 방식 신청 내역

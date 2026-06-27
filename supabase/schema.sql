@@ -82,6 +82,15 @@ alter table students add column if not exists saturday_late_excuses jsonb not nu
 -- 정기 외출/빠지는 시간대 목록 (awaySchedules)
 alter table students add column if not exists away_schedules jsonb not null default '[]'::jsonb;
 
+-- 휴대폰 보관/미제출 내역 (phoneSubmissions)
+alter table students add column if not exists phone_submissions jsonb not null default '[]'::jsonb;
+
+-- D-Day(시험/목표일) 멀티셋 (ddays)
+alter table students add column if not exists ddays jsonb not null default '[]'::jsonb;
+
+-- OT(특별 세션) 참여 내역 (otEvents)
+alter table students add column if not exists ot_events jsonb not null default '[]'::jsonb;
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,
@@ -111,6 +120,18 @@ create table if not exists mock_exams (
 
 create index if not exists idx_mock_exams_date on mock_exams (date desc);
 
+-- OT 일정 마스터
+create table if not exists ot_events (
+  id                text primary key,
+  name              text not null,
+  date              date not null,
+  target_exam_types jsonb not null default '[]'::jsonb,
+  created_at        timestamptz not null default now(),
+  notified_at       timestamptz
+);
+
+create index if not exists idx_ot_events_date on ot_events (date desc);
+
 -- 좌석 현황판 수동 상태
 create table if not exists seat_statuses (
   date        text not null,
@@ -118,6 +139,13 @@ create table if not exists seat_statuses (
   status      text not null default 'normal',
   updated_at  timestamptz not null default now(),
   primary key (date, seat_key)
+);
+
+-- 전역 설정(key/value JSONB) — 쿠폰 미션 설정 등
+create table if not exists app_settings (
+  key         text primary key,
+  value       jsonb not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now()
 );
 
 -- 서비스 롤 키로만 접근하므로(RLS 미사용) 별도 정책 불필요.

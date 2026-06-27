@@ -6,6 +6,7 @@ import {
   BookOpen,
   Calendar,
   CalendarDays,
+  CalendarClock,
   ClipboardCheck,
   ClipboardList,
   Home,
@@ -21,6 +22,7 @@ import {
   Inbox,
   AlertTriangle,
   BarChart3,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
@@ -278,6 +280,14 @@ export function AdminTopNav({
             </button>
             <button
               type="button"
+              onClick={() => navigate('/admin/ot-events')}
+              className={menuButtonClass(pathname === '/admin/ot-events')}
+            >
+              <CalendarClock className="w-4 h-4 text-[#0071E3]" />
+              OT 참여 관리
+            </button>
+            <button
+              type="button"
               onClick={() => navigate('/admin/penalties')}
               className={menuButtonClass(pathname === '/admin/penalties')}
             >
@@ -290,7 +300,7 @@ export function AdminTopNav({
               className={menuButtonClass(pathname === '/admin/leave')}
             >
               <Calendar className="w-4 h-4 text-[#0071E3]" />
-              휴가 · 반차 관리
+              휴가 쿠폰 관리
             </button>
             <button
               type="button"
@@ -298,7 +308,7 @@ export function AdminTopNav({
               className={menuButtonClass(pathname === '/admin/leave/by-date')}
             >
               <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-              날짜별 현황
+              날짜별 휴식·반차
             </button>
 
             {/* 소통 */}
@@ -320,6 +330,15 @@ export function AdminTopNav({
               className={menuButtonClass(pathname === '/admin/leaderboard')}
             >
               <Trophy className="w-4 h-4 text-[#0071E3]" />
+              순공 랭킹
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/admin/missions')}
+              className={menuButtonClass(pathname === '/admin/missions')}
+            >
+              <Sparkles className="w-4 h-4 text-[#0071E3]" />
+              쿠폰 미션 설정
             </button>
 
             {/* 설정 (슈퍼 관리자용) */}

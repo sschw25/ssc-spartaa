@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam, AdminAccount } from './types/student';
+import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam, OtEvent, AdminAccount } from './types/student';
 import { mergeOrphanMaterials } from './db';
 
 // ── 환경 변수 ────────────────────────────────────────────────
@@ -66,6 +66,7 @@ function rowToStudent(r: any): Student {
     penalties: r.penalties || [],
     smsLogs: r.sms_logs || [],
     mockExams: r.mock_exams || [],
+    otEvents: r.ot_events || [],
     saturdayLateExcuses: r.saturday_late_excuses || [],
     phoneSubmissions: r.phone_submissions || [],
     awaySchedules: (r.away_schedules || []).map((item: unknown) => {
@@ -117,6 +118,7 @@ function studentToRow(student: Student, nowIso: string) {
     penalties: student.penalties || [],
     sms_logs: student.smsLogs || [],
     mock_exams: student.mockExams || [],
+    ot_events: student.otEvents || [],
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
     phone_submissions: student.phoneSubmissions || [],
@@ -192,7 +194,12 @@ export async function saveStudentSupabase(student: Student): Promise<Student> {
     .upsert(row, { onConflict: 'id' })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    // Supabase 에러 객체는 Error 인스턴스가 아니라 로그에 `{}` 로만 찍힌다.
+    // 누락 컬럼(미실행 마이그레이션) 등을 진단할 수 있도록 메시지를 풀어서 던진다.
+    console.error('[saveStudentSupabase] students upsert 실패:', error.message, error.details || '', error.hint || '', error.code || '');
+    throw new Error(`학생 저장 실패(students upsert): ${error.message}${error.details ? ` — ${error.details}` : ''}${error.hint ? ` [${error.hint}]` : ''}`);
+  }
   return rowToStudent(data);
 }
 
@@ -484,6 +491,61 @@ export async function notifyMockExamSupabase(id: string, notifiedAt: string): Pr
   return rowToMockExam(data);
 }
 
+// ── OT 일정 마스터 (ot_events 테이블) ─────────────────────────
+function rowToOtEvent(r: any): OtEvent {
+  return {
+    id: r.id,
+    name: r.name,
+    date: r.date,
+    targetExamTypes: r.target_exam_types || [],
+    createdAt: r.created_at || '',
+    notifiedAt: r.notified_at || undefined,
+  };
+}
+
+export async function getOtEventsSupabase(): Promise<OtEvent[]> {
+  const { data, error } = await getClient()
+    .from('ot_events')
+    .select('*')
+    .order('date', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(rowToOtEvent);
+}
+
+export async function saveOtEventSupabase(event: OtEvent): Promise<OtEvent> {
+  const row = {
+    id: event.id,
+    name: event.name,
+    date: event.date,
+    target_exam_types: event.targetExamTypes || [],
+    created_at: event.createdAt,
+    notified_at: event.notifiedAt || null,
+  };
+  const { data, error } = await getClient()
+    .from('ot_events')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToOtEvent(data);
+}
+
+export async function deleteOtEventSupabase(id: string): Promise<void> {
+  const { error } = await getClient().from('ot_events').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function notifyOtEventSupabase(id: string, notifiedAt: string): Promise<OtEvent> {
+  const { data, error } = await getClient()
+    .from('ot_events')
+    .update({ notified_at: notifiedAt })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToOtEvent(data);
+}
+
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {
   const client = getClient();
   // 기존 db.ts 동작 유지: id 또는 (name+type) 동일하면 갱신, 아니면 신규
@@ -585,5 +647,31 @@ export async function deleteAdminAccountSupabase(id: string): Promise<boolean> {
     .eq('id', id);
   if (error) throw error;
   return true;
+}
+
+// ── 전역 설정(app_settings) — key/value JSONB ────────────────
+// 미션 설정 등 소규모 전역 설정 저장용. 테이블 미생성(마이그레이션 미실행) 시
+// 읽기는 null 로 graceful 폴백(호출부가 기본값 사용), 쓰기는 명확한 에러를 던진다.
+export async function getAppSettingSupabase(key: string): Promise<any | null> {
+  const { data, error } = await getClient()
+    .from('app_settings')
+    .select('value')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) {
+    console.warn('[getAppSettingSupabase] 조회 실패(테이블 미생성 가능):', error.message);
+    return null;
+  }
+  return data?.value ?? null;
+}
+
+export async function setAppSettingSupabase(key: string, value: any): Promise<void> {
+  const { error } = await getClient()
+    .from('app_settings')
+    .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+  if (error) {
+    console.error('[setAppSettingSupabase] 저장 실패:', error.message, error.details || '', error.hint || '');
+    throw new Error(`설정 저장 실패(app_settings): ${error.message}${error.hint ? ` [${error.hint}]` : ''}`);
+  }
 }
 

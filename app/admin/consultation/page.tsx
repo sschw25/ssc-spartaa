@@ -176,6 +176,12 @@ function ConsultationContent() {
       } else if (filterParam === 'behind') {
         setQuickFilter('behind');
         setDashboardTab('db');
+      } else if (filterParam === 'stagnant') {
+        setQuickFilter('stagnant');
+        setDashboardTab('cards');
+      } else if (filterParam === 'missing_grade') {
+        setQuickFilter('missing_grade');
+        setDashboardTab('cards');
       } else if (filterParam === 'all') {
         setQuickFilter('all');
       }
@@ -380,7 +386,7 @@ function ConsultationContent() {
       clearTimeout(debounceTimersRef.current[studentId]);
     }
 
-    // 0.5초 디바운스 대기 후 구글 시트에 최종 데이터 전송
+    // 0.5초 디바운스 대기 후 서버에 최종 데이터 저장
     debounceTimersRef.current[studentId] = setTimeout(async () => {
       const currentStudent = studentsRef.current.find(s => s.id === studentId);
       if (!currentStudent) return;
@@ -393,11 +399,11 @@ function ConsultationContent() {
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          toast.error('구글 시트 진도 동기화에 실패했습니다.');
+          toast.error('진도 저장에 실패했습니다.');
           loadStudents(); // 실패 시 롤백
         }
       } catch (err) {
-        toast.error('네트워크 에러로 구글 시트 동기화에 실패했습니다.');
+        toast.error('네트워크 오류로 진도 저장에 실패했습니다.');
         loadStudents();
       }
     }, 500);

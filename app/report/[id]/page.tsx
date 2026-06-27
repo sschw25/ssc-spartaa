@@ -12,27 +12,37 @@ import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab } from '@/components/report/consultation-tab';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
 import { MockExamNotice } from '@/components/report/mock-exam-notice';
+import { OtEventNotice } from '@/components/report/ot-event-notice';
+import { MissionsCard } from '@/components/report/missions-card';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
-import type { MockExam, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
+import type { MockExam, OtEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
 function StudentReportInner() {
   const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
+  const [pendingOtEvents, setPendingOtEvents] = useState<OtEvent[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadPendingExams() {
+    async function loadPending() {
       try {
-        const res = await fetch('/api/student/mock-exams', { credentials: 'same-origin' });
-        if (res.ok) {
-          const json = await res.json();
+        const [examRes, otRes] = await Promise.all([
+          fetch('/api/student/mock-exams', { credentials: 'same-origin' }),
+          fetch('/api/student/ot-events', { credentials: 'same-origin' }),
+        ]);
+        if (examRes.ok) {
+          const json = await examRes.json();
           if (!cancelled && json.success) setPendingMockExams(json.exams || []);
+        }
+        if (otRes.ok) {
+          const json = await otRes.json();
+          if (!cancelled && json.success) setPendingOtEvents(json.events || []);
         }
       } catch {}
     }
 
-    loadPendingExams();
+    loadPending();
     return () => {
       cancelled = true;
     };
@@ -40,6 +50,10 @@ function StudentReportInner() {
 
   const handleMockExamResponded = useCallback((examId: string) => {
     setPendingMockExams((prev) => prev.filter((e) => e.id !== examId));
+  }, []);
+
+  const handleOtEventResponded = useCallback((eventId: string) => {
+    setPendingOtEvents((prev) => prev.filter((e) => e.id !== eventId));
   }, []);
 
   const {
@@ -301,6 +315,16 @@ function StudentReportInner() {
           </div>
         )}
 
+        {/* 0-1b. OT 참여 여부 응답 카드 (학생 전용, 미응답 OT가 있을 때만) */}
+        {isStudentReport && pendingOtEvents.length > 0 && (
+          <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
+            <OtEventNotice
+              events={pendingOtEvents}
+              onResponded={handleOtEventResponded}
+            />
+          </div>
+        )}
+
         {/* 0-2. 토요 지각 증빙 요청 공지 (학생 전용, 미회신 증빙이 있을 때만) */}
         {isStudentReport && pendingSaturdayLateExcuses.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
@@ -311,6 +335,13 @@ function StudentReportInner() {
                 setStudent((prev: Student | null) => (prev ? { ...prev, saturdayLateExcuses: updatedExcuses } : prev));
               }}
             />
+          </div>
+        )}
+
+        {/* 0-3. 쿠폰 미션 카드 (학생 전용, 홈 탭) */}
+        {isStudentReport && activeTab === 'report-overview' && (
+          <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
+            <MissionsCard />
           </div>
         )}
 

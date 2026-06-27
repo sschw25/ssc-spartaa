@@ -58,6 +58,9 @@ export default function AdminInboxPage() {
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [processing, setProcessing] = useState(false);
+  // 다중 선택 일괄 승인
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -291,59 +294,82 @@ export default function AdminInboxPage() {
     });
   }, [filteredItems, inboxSortField, inboxSortOrder]);
 
-  // 3. 통합 요청 해결 PATCH API 호출
+  // 3. 통합 요청 해결 PATCH API 호출 (단건 코어) — 성공 시 resolve, 실패 시 throw
+  const processRequestItem = async (
+    item: InboxItem,
+    actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending',
+    reply?: string,
+  ) => {
+    let apiUrl = `/api/admin/students/${item.studentId}`;
+    let body: any = {};
+
+    if (item.type === 'leave') {
+      apiUrl += '/leave';
+      body = { requestId: item.id, status: actionStatus === 'resolved' ? 'approved' : actionStatus, reply: reply?.trim() || null };
+    } else if (item.type === 'request') {
+      apiUrl += '/requests';
+      body = { requestId: item.id, status: actionStatus === 'approved' ? 'resolved' : actionStatus, reply: reply?.trim() || null };
+    } else {
+      apiUrl += '/suggestions';
+      body = { suggestionId: item.id, status: actionStatus === 'approved' ? 'resolved' : actionStatus, reply: reply?.trim() || null };
+    }
+
+    const res = await fetch(apiUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) throw new Error(json.message || '요청 처리 실패');
+  };
+
   const handleProcessRequest = async (actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending') => {
     if (!selectedItem) return;
     setProcessing(true);
-
-    let apiUrl = `/api/admin/students/${selectedItem.studentId}`;
-    let body: any = {};
-
-    if (selectedItem.type === 'leave') {
-      apiUrl += '/leave';
-      body = {
-        requestId: selectedItem.id,
-        status: actionStatus === 'resolved' ? 'approved' : actionStatus,
-        reply: replyText.trim() || null,
-      };
-    } else if (selectedItem.type === 'request') {
-      apiUrl += '/requests';
-      body = {
-        requestId: selectedItem.id,
-        status: actionStatus === 'approved' ? 'resolved' : actionStatus,
-        reply: replyText.trim() || null,
-      };
-    } else if (selectedItem.type === 'suggestion') {
-      apiUrl += '/suggestions';
-      body = {
-        suggestionId: selectedItem.id,
-        status: actionStatus === 'approved' ? 'resolved' : actionStatus,
-        reply: replyText.trim() || null,
-      };
-    }
-
     try {
-      const res = await fetch(apiUrl, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-
-      const json = await res.json();
-      if (res.ok && json.success) {
-        toast.success('신청이 성공적으로 처리되었습니다.');
-        // 목록 새로고침 및 선택 해제
-        await loadStudents();
-        setSelectedItem(null);
-        setReplyText('');
-      } else {
-        toast.error(json.message || '요청 처리 실패');
-      }
-    } catch {
-      toast.error('네트워크 에러가 발생했습니다.');
+      await processRequestItem(selectedItem, actionStatus, replyText);
+      toast.success('신청이 성공적으로 처리되었습니다.');
+      await loadStudents();
+      setSelectedItem(null);
+      setReplyText('');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '네트워크 에러가 발생했습니다.');
     } finally {
       setProcessing(false);
     }
+  };
+
+  // 다중 선택 일괄 승인 (완료되지 않은 건만 대상)
+  const handleBulkApprove = async () => {
+    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료');
+    if (targets.length === 0) return;
+    if (!confirm(`선택한 ${targets.length}건을 일괄 승인 처리할까요?`)) return;
+    setBulkProcessing(true);
+    let ok = 0;
+    let fail = 0;
+    for (const item of targets) {
+      try {
+        await processRequestItem(item, 'approved');
+        ok++;
+      } catch {
+        fail++;
+      }
+    }
+    await loadStudents();
+    setSelectedIds(new Set());
+    setSelectedItem(null);
+    setBulkProcessing(false);
+    if (fail === 0) toast.success(`${ok}건을 일괄 승인했습니다.`);
+    else toast.error(`${ok}건 승인 완료, ${fail}건 실패. 목록을 확인해 주세요.`);
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   };
 
   // 선택 변경 시 폼 바인딩
@@ -390,6 +416,7 @@ export default function AdminInboxPage() {
                 onClick={() => {
                   setActiveCategory(tab.value);
                   setSelectedItem(null);
+                  setSelectedIds(new Set());
                 }}
                 className={`flex-1 rounded-xl py-2 px-3 text-xs font-bold transition-all text-center whitespace-nowrap ${
                   activeCategory === tab.value
@@ -475,6 +502,35 @@ export default function AdminInboxPage() {
             </button>
           </div>
 
+          {/* 일괄 승인 바 — 미처리(완료 아님) 건이 있을 때만 */}
+          {!loading && sortedInboxItems.some((i) => i.statusText !== '완료') && (() => {
+            const approvable = sortedInboxItems.filter((i) => i.statusText !== '완료');
+            const selCount = approvable.filter((i) => selectedIds.has(i.id)).length;
+            const allSel = approvable.length > 0 && selCount === approvable.length;
+            return (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={allSel}
+                    onChange={() => setSelectedIds(allSel ? new Set() : new Set(approvable.map((i) => i.id)))}
+                    className="h-4 w-4 rounded border-slate-300 accent-[#0071E3] cursor-pointer"
+                  />
+                  미처리 전체 선택 <span className="text-slate-400 font-semibold">({selCount}/{approvable.length})</span>
+                </label>
+                <Button
+                  size="sm"
+                  disabled={selCount === 0 || bulkProcessing}
+                  onClick={handleBulkApprove}
+                  className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3.5 h-8.5 disabled:opacity-40"
+                >
+                  {bulkProcessing ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+                  선택 {selCount}건 일괄 승인
+                </Button>
+              </div>
+            );
+          })()}
+
           <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
             {loading ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 flex flex-col items-center justify-center gap-2">
@@ -501,6 +557,15 @@ export default function AdminInboxPage() {
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="flex items-center gap-2 min-w-0">
+                        {item.statusText !== '완료' && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(item.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={() => toggleSelectOne(item.id)}
+                            className="h-4 w-4 rounded border-slate-300 accent-[#0071E3] cursor-pointer shrink-0"
+                          />
+                        )}
                         <span className="font-black text-sm text-slate-800">{item.studentName}</span>
                         <Badge className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-[#86868B]">
                           {getCampusLabel(item.campus)}

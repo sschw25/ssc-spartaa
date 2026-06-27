@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam, AdminAccount } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, AdminAccount } from './types/student';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
@@ -21,6 +21,10 @@ import {
   saveMockExamSupabase,
   deleteMockExamSupabase,
   notifyMockExamSupabase,
+  getOtEventsSupabase,
+  saveOtEventSupabase,
+  deleteOtEventSupabase,
+  notifyOtEventSupabase,
   type NotifyInfo,
   getOpenSessionSupabase,
   getOpenSessionsSupabase,
@@ -39,6 +43,8 @@ import {
   getAdminAccountByUsernameSupabase,
   saveAdminAccountSupabase,
   deleteAdminAccountSupabase,
+  getAppSettingSupabase,
+  setAppSettingSupabase,
 } from './supabase';
 
 export type { StudySession } from './supabase';
@@ -53,6 +59,8 @@ import {
   getAdminAccountByUsernameLocal,
   saveAdminAccountLocal,
   deleteAdminAccountLocal,
+  getAppSettingLocal,
+  setAppSettingLocal,
 } from './db';
 
 export function activeBackend(): 'supabase' | 'local-json' {
@@ -74,6 +82,16 @@ export async function saveAdminAccount(admin: AdminAccount): Promise<AdminAccoun
 
 export async function deleteAdminAccount(id: string): Promise<boolean> {
   return isSupabaseConfigured() ? deleteAdminAccountSupabase(id) : deleteAdminAccountLocal(id);
+}
+
+// ── 전역 설정(app_settings) ──
+export async function getAppSetting(key: string): Promise<any | null> {
+  return isSupabaseConfigured() ? getAppSettingSupabase(key) : getAppSettingLocal(key);
+}
+
+export async function setAppSetting(key: string, value: any): Promise<void> {
+  if (isSupabaseConfigured()) return setAppSettingSupabase(key, value);
+  return setAppSettingLocal(key, value);
 }
 
 
@@ -223,4 +241,25 @@ export async function notifyMockExam(id: string, notifiedAt: string): Promise<Mo
   return notifyMockExamSupabase(id, notifiedAt);
 }
 
-export type { MockExam };
+// ── OT 일정 ──
+export async function getOtEvents(): Promise<OtEvent[]> {
+  requireSupabase();
+  return getOtEventsSupabase();
+}
+
+export async function saveOtEvent(event: OtEvent): Promise<OtEvent> {
+  requireSupabase();
+  return saveOtEventSupabase(event);
+}
+
+export async function deleteOtEvent(id: string): Promise<void> {
+  requireSupabase();
+  return deleteOtEventSupabase(id);
+}
+
+export async function notifyOtEvent(id: string, notifiedAt: string): Promise<OtEvent> {
+  requireSupabase();
+  return notifyOtEventSupabase(id, notifiedAt);
+}
+
+export type { MockExam, OtEvent };
