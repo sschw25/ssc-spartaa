@@ -16,6 +16,7 @@ import { getManagedProgressItems } from '@/lib/progress-plan';
 import { isWeeklyGradeMissing, enrollmentDaysLeft } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
+import { MissionSummaryWidget } from '@/components/admin/mission-summary-widget';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { AnimatedNumber } from '@/components/admin/animated-number';
@@ -886,6 +887,9 @@ export default function AdminDashboardPage() {
             refreshSignal={attendanceRefresh}
             onSelectStudentId={handleOpenStudentById}
           />
+        </div>
+        <div className="mt-5">
+          <MissionSummaryWidget />
         </div>
         </div>{/* /섹션3 */}
 
