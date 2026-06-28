@@ -203,9 +203,10 @@ export interface DDayEvent {
 
 // OT(오리엔테이션/특별 세션) 참여 — 미션 쿠폰 연동
 export interface OtParticipation {
+  // OT는 필수 참석. 불참은 학생이 사유와 함께 신청(absent_requested) → 관리자 승인 시 absent.
   eventId: string;
-  status: 'attending' | 'absent' | 'undecided';
-  reason?: string;       // 불참 사유
+  status: 'attending' | 'absent' | 'undecided' | 'absent_requested';
+  reason?: string;       // 불참 사유 (불참 신청 시 필수)
   updatedAt: string;
   respondedBy?: 'student' | 'admin';
   rewarded?: boolean;    // 참여 쿠폰 지급 완료 여부 (중복지급 방지 보조 플래그)

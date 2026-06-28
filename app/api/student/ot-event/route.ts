@@ -25,8 +25,13 @@ export async function POST(req: NextRequest) {
   if (!validStatuses.includes(body?.status as (typeof validStatuses)[number])) {
     return NextResponse.json({ success: false, message: '참여 여부를 선택해주세요.' }, { status: 400 });
   }
-  const status = body.status as 'attending' | 'absent';
-  const reason = status === 'absent' ? String(body?.reason ?? '').trim().slice(0, 200) : undefined;
+  const chosen = body.status as 'attending' | 'absent';
+  // OT는 필수 참석 — 불참은 사유 필수 + 관리자 승인 대기(absent_requested)로 접수
+  const reason = chosen === 'absent' ? String(body?.reason ?? '').trim().slice(0, 200) : undefined;
+  if (chosen === 'absent' && !reason) {
+    return NextResponse.json({ success: false, message: '불참 사유를 입력해주세요. (OT는 필수 참석입니다)' }, { status: 400 });
+  }
+  const status: OtParticipation['status'] = chosen === 'absent' ? 'absent_requested' : 'attending';
 
   const student = await getStudentById(studentId);
   if (!student) {
