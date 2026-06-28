@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
-import { parseSpecialNoteEnvelope, serializeClientActivityNote } from '@/lib/student-activity';
+import { readActivityEnvelope, writeActivityEnvelope, serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 
 function sanitizeNotificationIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -29,19 +29,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  const noteObj = parseSpecialNoteEnvelope(student.specialNote);
+  const noteObj = readActivityEnvelope(student);
   if (dismissedNotificationIds.length > 0) {
     noteObj.dismissed_notifications = dismissedNotificationIds;
   } else {
     delete noteObj.dismissed_notifications;
   }
 
-  student.specialNote = JSON.stringify(noteObj);
+  writeActivityEnvelope(student, noteObj);
   await saveStudent(student);
 
   return NextResponse.json({
     success: true,
     dismissedNotificationIds,
-    specialNote: serializeClientActivityNote(student.specialNote),
+    specialNote: serializeClientActivityNoteFromStudent(student),
   });
 }

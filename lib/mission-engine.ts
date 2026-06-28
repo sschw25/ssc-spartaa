@@ -10,6 +10,7 @@ import {
   MISSION_META,
   normalizeMissionConfig,
 } from './missions';
+import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
 
 const MISSION_CONFIG_KEY = 'mission_config';
 
@@ -20,17 +21,6 @@ export async function getMissionConfig() {
 
 export async function saveMissionConfig(cfg: ReturnType<typeof normalizeMissionConfig>) {
   await setAppSetting(MISSION_CONFIG_KEY, cfg);
-}
-
-// specialNote JSON 봉투에서 rewards_log 를 안전하게 읽고 쓰기 위한 헬퍼
-function parseNote(note: string | undefined): any {
-  if (!note) return {};
-  try {
-    const obj = JSON.parse(note);
-    return obj && typeof obj === 'object' ? obj : { noteText: note };
-  } catch {
-    return { noteText: note };
-  }
 }
 
 function hasReward(noteObj: any, periodKey: string, missionName: string): boolean {
@@ -91,7 +81,9 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
     monthly_no_penalty: 0,
     weekend_study: 0,
     weekly_top_rank: 0,
-    ot_attendance: 0, // 이벤트 기반 — settle 에서 지급하지 않음(참여 처리 시 즉시 지급)
+    ot_attendance: 0,    // 이벤트 기반 — settle 에서 지급하지 않음(참여 처리 시 즉시 지급)
+    daily_pomodoro: 0,   // 일일 — 뽀모도로 완료 시 즉시 지급(rewards-service)
+    punctual_checkin: 0, // 일일 — 등원 시 즉시 지급(rewards-service)
   };
   const skipped: string[] = [];
 
@@ -171,7 +163,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   for (const [sid, list] of grants) {
     const student = studentMap.get(sid);
     if (!student) continue;
-    const noteObj = parseNote(student.specialNote);
+    const noteObj: any = readActivityEnvelope(student);
     if (!Array.isArray(noteObj.rewards_log)) noteObj.rewards_log = [];
 
     let couponsForStudent = 0;
@@ -190,7 +182,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
 
     if (couponsForStudent > 0) {
       student.leaveCoupons = (student.leaveCoupons || 0) + couponsForStudent;
-      student.specialNote = JSON.stringify(noteObj);
+      writeActivityEnvelope(student, noteObj);
       await saveStudent(student);
       totalCoupons += couponsForStudent;
       totalStudents += 1;
@@ -206,13 +198,13 @@ export async function grantOtAttendance(student: Student, eventId: string): Prom
   const config = await getMissionConfig();
   const m = config.ot_attendance;
   if (!m.enabled) return 0;
-  const noteObj = parseNote(student.specialNote);
+  const noteObj: any = readActivityEnvelope(student);
   if (!Array.isArray(noteObj.rewards_log)) noteObj.rewards_log = [];
   const periodKey = `OT:${eventId}`;
   const missionName = MISSION_META.ot_attendance.name;
   if (hasReward(noteObj, periodKey, missionName)) return 0;
   noteObj.rewards_log.push({ date: periodKey, missionName, status: 'completed', rewardGranted: m.coupons });
   student.leaveCoupons = (student.leaveCoupons || 0) + m.coupons;
-  student.specialNote = JSON.stringify(noteObj);
+  writeActivityEnvelope(student, noteObj);
   return m.coupons;
 }

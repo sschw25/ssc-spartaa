@@ -297,6 +297,8 @@ export interface Student {
   // 모의고사 참여 상태
   mockExams?: MockExamParticipation[];
   otEvents?: OtParticipation[];
+  // 학생 활동 상태(뽀모도로/체크리스트/리워드/알림숨김) — specialNote(어드민 메모)와 분리된 컬럼
+  studentState?: Record<string, unknown>;
   // 정기 외출/빠지는 시간대 목록
   awaySchedules?: AwaySchedule[];
   // 휴대폰 제출 방식 신청 내역

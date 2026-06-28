@@ -91,6 +91,9 @@ alter table students add column if not exists ddays jsonb not null default '[]':
 -- OT(특별 세션) 참여 내역 (otEvents)
 alter table students add column if not exists ot_events jsonb not null default '[]'::jsonb;
 
+-- 학생 활동 상태(뽀모도로/체크리스트/리워드/알림숨김) — specialNote(어드민 메모)와 분리
+alter table students add column if not exists student_state jsonb not null default '{}'::jsonb;
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,

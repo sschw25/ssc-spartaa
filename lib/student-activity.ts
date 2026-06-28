@@ -69,10 +69,8 @@ function copyStringArray(value: unknown): string[] | undefined {
   return output.length > 0 ? output : undefined;
 }
 
-export function serializeClientActivityNote(specialNote?: string | null): string | undefined {
-  const note = parseSpecialNoteEnvelope(specialNote);
+function buildClientNote(note: SpecialNoteEnvelope): string | undefined {
   const clientNote: SpecialNoteEnvelope = {};
-
   const pomodoroSessions = copyNumberRecord(note.pomodoro_sessions);
   const pomodoroMinutes = copyNumberRecord(note.pomodoro_minutes);
   const dailyChecklist = copyChecklistRecord(note.daily_checklist);
@@ -84,6 +82,49 @@ export function serializeClientActivityNote(specialNote?: string | null): string
   if (dismissedNotifications) clientNote.dismissed_notifications = dismissedNotifications;
 
   return Object.keys(clientNote).length > 0 ? JSON.stringify(clientNote) : undefined;
+}
+
+export function serializeClientActivityNote(specialNote?: string | null): string | undefined {
+  return buildClientNote(parseSpecialNoteEnvelope(specialNote));
+}
+
+// ─── 학생 활동 상태 분리 (specialNote ↔ student_state) ────────────────────────
+// noteText(어드민 메모)는 specialNote에, 학생 활동 상태(뽀모도로/체크리스트/리워드/알림숨김)는
+// student_state 컬럼에 둔다. 어드민 메모 저장이 학생 상태를 덮어쓰는 사고를 원천 차단.
+// 마이그레이션 안전: 읽기 시 legacy specialNote 봉투 + student_state 를 머지(student_state 우선)하므로
+// student_state 가 비어있던 기존 학생도 손실 없이 점진 이관된다.
+type StudentLike = { specialNote?: string | null; studentState?: Record<string, unknown> | null };
+const ACTIVITY_STATE_KEYS = [
+  'pomodoro_sessions', 'pomodoro_minutes', 'daily_checklist', 'dismissed_notifications', 'rewards_log',
+];
+
+export function readActivityEnvelope(student: StudentLike): SpecialNoteEnvelope {
+  const legacy = parseSpecialNoteEnvelope(student.specialNote);
+  const out: SpecialNoteEnvelope = {};
+  // 1) legacy specialNote 의 상태 키 (noteText 제외)
+  for (const k of ACTIVITY_STATE_KEYS) if (legacy[k] !== undefined) out[k] = legacy[k];
+  // 2) student_state 우선 적용
+  const st = student.studentState;
+  if (st && typeof st === 'object') {
+    for (const [k, v] of Object.entries(st)) if (k !== 'noteText') out[k] = v;
+  }
+  return out;
+}
+
+// 상태 봉투를 student_state 컬럼에 기록(noteText 제외). specialNote 는 건드리지 않아 어드민 메모 보존.
+export function writeActivityEnvelope(student: StudentLike, env: SpecialNoteEnvelope): void {
+  const stateOnly: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(env)) if (k !== 'noteText') stateOnly[k] = v;
+  student.studentState = stateOnly;
+}
+
+export function serializeClientActivityNoteFromStudent(student: StudentLike): string | undefined {
+  return buildClientNote(readActivityEnvelope(student));
+}
+
+export function getPomodoroStatsFromStudent(student: StudentLike, dateKey = getSeoulDateKey()) {
+  const note = readActivityEnvelope(student);
+  return { sessions: note.pomodoro_sessions?.[dateKey] || 0, minutes: note.pomodoro_minutes?.[dateKey] || 0 };
 }
 
 export function getPomodoroStats(specialNote?: string | null, dateKey = getSeoulDateKey()) {

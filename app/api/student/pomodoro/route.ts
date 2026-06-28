@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { checkAndGrantRewards } from '@/lib/rewards-service';
-import { getSeoulDateKey, parseSpecialNoteEnvelope, serializeClientActivityNote } from '@/lib/student-activity';
+import { getSeoulDateKey, readActivityEnvelope, writeActivityEnvelope, serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 
 export async function POST(req: NextRequest) {
   const studentId = await getStudentSessionId();
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  const noteObj = parseSpecialNoteEnvelope(student.specialNote);
+  const noteObj = readActivityEnvelope(student);
 
   const body = await req.json().catch(() => ({}));
   // 1~120분으로 클램프 — 상한이 없으면 임의 큰 값으로 리워드(쿠폰)를 부당 적립할 수 있다.
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   noteObj.pomodoro_sessions[todayKey] = (noteObj.pomodoro_sessions[todayKey] || 0) + 1;
   noteObj.pomodoro_minutes[todayKey] = (noteObj.pomodoro_minutes[todayKey] || 0) + minutes;
 
-  student.specialNote = JSON.stringify(noteObj);
+  writeActivityEnvelope(student, noteObj);
   await saveStudent(student);
 
   // 리워드 조건 스크리닝 진행
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     success: true,
     pomodoroCount: noteObj.pomodoro_sessions[todayKey],
     pomodoroMinutes: noteObj.pomodoro_minutes[todayKey],
-    specialNote: serializeClientActivityNote(updatedStudent?.specialNote || student.specialNote),
+    specialNote: serializeClientActivityNoteFromStudent(updatedStudent || student),
     leaveCoupons: updatedStudent?.leaveCoupons || 0,
     rewardGranted: rewardResult.granted,
     rewardReasons: rewardResult.reasons

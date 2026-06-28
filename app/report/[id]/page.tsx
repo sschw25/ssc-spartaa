@@ -338,9 +338,12 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 0-3. 쿠폰 미션 카드 (학생 전용, 홈 탭) */}
-        {isStudentReport && activeTab === 'report-overview' && (
-          <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
+        {/* 쿠폰 미션 탭 (학생 전용, 독립 탭) */}
+        {isStudentReport && (
+          <div
+            id="student-missions"
+            className={`scroll-mt-24 mx-auto w-full max-w-[680px] px-4 sm:px-5 ${activeTab === 'student-missions' ? 'block' : 'hidden print:block'}`}
+          >
             <MissionsCard />
           </div>
         )}

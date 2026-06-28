@@ -8,18 +8,22 @@ export type MissionId =
   | 'monthly_no_penalty' // 한 달 벌점 0점
   | 'weekend_study'      // 한 달 내 주말 N시간↑ 학습 M회
   | 'weekly_top_rank'    // 주간 순공 상위 N명
-  | 'ot_attendance';     // OT 참여 (이벤트 기반 — 참여 처리 시 즉시 지급)
+  | 'ot_attendance'      // OT 참여 (이벤트 기반 — 참여 처리 시 즉시 지급)
+  | 'daily_pomodoro'     // 하루 뽀모도로 N세션 (일일 — 달성 즉시 지급)
+  | 'punctual_checkin';  // 지각 없이 정시 등원 (일일 — 달성 즉시 지급)
 
-export type MissionPeriod = 'weekly' | 'monthly' | 'event';
+export type MissionPeriod = 'weekly' | 'monthly' | 'event' | 'daily';
 
 export interface MissionConfig {
   id: MissionId;
   enabled: boolean;
   coupons: number; // 달성 시 지급 쿠폰 수
   // 미션별 파라미터 (해당 미션에서만 사용)
-  weekendHours?: number; // weekend_study: 주말 1일 기준 학습 시간(시간)
-  weekendCount?: number; // weekend_study: 한 달 내 충족 횟수
-  topN?: number;         // weekly_top_rank: 상위 몇 명까지 지급
+  weekendHours?: number;     // weekend_study: 주말 1일 기준 학습 시간(시간)
+  weekendCount?: number;     // weekend_study: 한 달 내 충족 횟수
+  topN?: number;             // weekly_top_rank: 상위 몇 명까지 지급
+  pomodoroSessions?: number; // daily_pomodoro: 하루 필요 세션 수
+  checkinByHour?: number;    // punctual_checkin: 등원 마감 시각(시)
 }
 
 export interface MissionMeta {
@@ -72,15 +76,35 @@ export const MISSION_META: Record<MissionId, MissionMeta> = {
     describe: (c) => `OT(특별 세션)에 참여하면 쿠폰 ${c.coupons}장을 즉시 지급합니다. (OT별 1회)`,
     params: [],
   },
+  daily_pomodoro: {
+    id: 'daily_pomodoro',
+    name: '하루 뽀모도로 집중',
+    period: 'daily',
+    settleHint: '학생이 뽀모도로 타이머로 집중 세션을 완료하면 자동 평가·지급됩니다(정산 불필요).',
+    describe: (c) => `하루 뽀모도로 집중 세션을 ${c.pomodoroSessions ?? 2}회 이상 완료하면 쿠폰 ${c.coupons}장을 지급합니다. (하루 1회)`,
+    params: [{ key: 'pomodoroSessions', label: '필요 세션', unit: '회', min: 1, max: 10 }],
+  },
+  punctual_checkin: {
+    id: 'punctual_checkin',
+    name: '정시 등원 (지각 0)',
+    period: 'daily',
+    settleHint: '학생이 정시 이전에 QR 등원하면 자동 평가·지급됩니다(정산 불필요).',
+    describe: (c) => `지각 없이 ${c.checkinByHour ?? 11}시 이전에 등원하면 쿠폰 ${c.coupons}장을 지급합니다. (하루 1회)`,
+    params: [{ key: 'checkinByHour', label: '등원 마감 시각', unit: '시', min: 6, max: 12 }],
+  },
 };
 
-export const MISSION_ORDER: MissionId[] = ['monthly_no_penalty', 'weekend_study', 'weekly_top_rank', 'ot_attendance'];
+export const MISSION_ORDER: MissionId[] = [
+  'monthly_no_penalty', 'weekend_study', 'weekly_top_rank', 'ot_attendance', 'daily_pomodoro', 'punctual_checkin',
+];
 
 export const DEFAULT_MISSION_CONFIG: Record<MissionId, MissionConfig> = {
   monthly_no_penalty: { id: 'monthly_no_penalty', enabled: true, coupons: 1 },
   weekend_study: { id: 'weekend_study', enabled: true, coupons: 1, weekendHours: 3, weekendCount: 2 },
   weekly_top_rank: { id: 'weekly_top_rank', enabled: true, coupons: 1, topN: 3 },
   ot_attendance: { id: 'ot_attendance', enabled: true, coupons: 1 },
+  daily_pomodoro: { id: 'daily_pomodoro', enabled: true, coupons: 1, pomodoroSessions: 2 },
+  punctual_checkin: { id: 'punctual_checkin', enabled: true, coupons: 1, checkinByHour: 11 },
 };
 
 /** 저장된 부분 설정을 기본값과 병합해 항상 완전한 설정을 반환 (누락 키 안전) */

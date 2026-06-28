@@ -6,9 +6,11 @@ import { Trophy, Ticket, Loader2, CheckCircle2, CalendarClock } from 'lucide-rea
 interface Mission {
   id: string;
   name: string;
-  period: 'weekly' | 'monthly' | 'event';
+  period: 'weekly' | 'monthly' | 'event' | 'daily';
   coupons: number;
   describe: string;
+  earned: boolean;
+  progress: string | null;
 }
 interface RecentReward { missionName: string; rewardGranted: number; date: string }
 interface MissionsData {
@@ -18,9 +20,12 @@ interface MissionsData {
   recent: RecentReward[];
 }
 
-const periodLabel = (p: Mission['period']) => (p === 'weekly' ? '매주' : p === 'monthly' ? '매월' : 'OT');
+const periodLabel = (p: Mission['period']) => (p === 'weekly' ? '매주' : p === 'monthly' ? '매월' : p === 'daily' ? '매일' : 'OT');
 const periodCls = (p: Mission['period']) =>
-  p === 'weekly' ? 'bg-blue-50 text-blue-600' : p === 'monthly' ? 'bg-purple-50 text-purple-600' : 'bg-amber-50 text-amber-600';
+  p === 'weekly' ? 'bg-blue-50 text-blue-600'
+  : p === 'monthly' ? 'bg-purple-50 text-purple-600'
+  : p === 'daily' ? 'bg-emerald-50 text-emerald-600'
+  : 'bg-amber-50 text-amber-600';
 
 export function MissionsCard() {
   const [data, setData] = useState<MissionsData | null>(null);
@@ -75,9 +80,9 @@ export function MissionsCard() {
 
       <div className="space-y-2.5">
         {data.missions.map((m) => (
-          <div key={m.id} className="rounded-2xl border border-slate-100 bg-white p-3.5 flex items-start gap-3">
-            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-amber-100 text-amber-700">
-              {m.period === 'event' ? <CalendarClock className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
+          <div key={m.id} className={`rounded-2xl border p-3.5 flex items-start gap-3 ${m.earned ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white'}`}>
+            <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl ${m.earned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+              {m.earned ? <CheckCircle2 className="w-4 h-4" /> : m.period === 'event' ? <CalendarClock className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -86,8 +91,16 @@ export function MissionsCard() {
                 <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 text-amber-600 px-1.5 py-0.5 text-[9px] font-black">
                   <Ticket className="w-2.5 h-2.5" /> +{m.coupons}
                 </span>
+                {m.earned && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
+                    <CheckCircle2 className="w-2.5 h-2.5" /> 달성
+                  </span>
+                )}
               </div>
               <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{m.describe}</p>
+              {!m.earned && m.progress && (
+                <p className="text-[11px] font-bold text-[#0071E3] mt-1">📊 {m.progress}</p>
+              )}
             </div>
           </div>
         ))}

@@ -202,9 +202,10 @@ export default function MissionsPage() {
                         <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${
                           meta.period === 'weekly' ? 'bg-blue-50 text-blue-600'
                           : meta.period === 'monthly' ? 'bg-purple-50 text-purple-600'
+                          : meta.period === 'daily' ? 'bg-emerald-50 text-emerald-600'
                           : 'bg-amber-50 text-amber-600'
                         }`}>
-                          {meta.period === 'weekly' ? '주간' : meta.period === 'monthly' ? '월간' : 'OT'}
+                          {meta.period === 'weekly' ? '주간' : meta.period === 'monthly' ? '월간' : meta.period === 'daily' ? '매일' : 'OT'}
                         </span>
                       </div>
                       <p className="text-[11px] font-semibold text-slate-500 mt-1.5 leading-relaxed">{meta.describe(c)}</p>

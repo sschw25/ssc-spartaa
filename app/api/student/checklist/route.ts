@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
-import { getSeoulDateKey, parseSpecialNoteEnvelope, serializeClientActivityNote } from '@/lib/student-activity';
+import { getSeoulDateKey, readActivityEnvelope, writeActivityEnvelope, serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 
 export async function POST(req: NextRequest) {
   const studentId = await getStudentSessionId();
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
 
-  const noteObj = parseSpecialNoteEnvelope(student.specialNote);
+  const noteObj = readActivityEnvelope(student);
 
   if (!noteObj.daily_checklist) {
     noteObj.daily_checklist = {};
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     submitted_at: new Date().toISOString()
   };
 
-  student.specialNote = JSON.stringify(noteObj);
+  writeActivityEnvelope(student, noteObj);
   await saveStudent(student);
 
   // 리워드 미션 체크
@@ -53,10 +53,10 @@ export async function POST(req: NextRequest) {
   const rewardResult = await checkAndGrantRewards(studentId);
   const updatedStudent = await getStudentById(studentId);
 
-  return NextResponse.json({ 
-    success: true, 
-    checklist: noteObj.daily_checklist, 
-    specialNote: serializeClientActivityNote(updatedStudent?.specialNote || student.specialNote),
+  return NextResponse.json({
+    success: true,
+    checklist: noteObj.daily_checklist,
+    specialNote: serializeClientActivityNoteFromStudent(updatedStudent || student),
     leaveCoupons: updatedStudent?.leaveCoupons || 0,
     rewardGranted: rewardResult.granted,
     rewardReasons: rewardResult.reasons

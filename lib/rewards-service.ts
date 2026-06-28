@@ -1,5 +1,8 @@
 import { Student } from './types/student';
 import { getStudentById, saveStudent, getStudySessions, activeBackend } from './store';
+import { getMissionConfig } from './mission-engine';
+import { MISSION_META } from './missions';
+import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
 
 const getSeoulDateKey = () => {
   const d = new Date();
@@ -20,51 +23,44 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
   const student = await getStudentById(studentId);
   if (!student) return { granted: false, reasons: [] };
 
-  let noteObj: any = {};
-  try {
-    if (student.specialNote) {
-      noteObj = JSON.parse(student.specialNote);
-      if (typeof noteObj !== 'object' || noteObj === null) {
-        noteObj = { noteText: student.specialNote };
-      }
-    }
-  } catch {
-    noteObj = { noteText: student.specialNote || '' };
-  }
-
+  const noteObj: any = readActivityEnvelope(student);
   if (!noteObj.rewards_log) {
     noteObj.rewards_log = [];
   }
 
+  const config = await getMissionConfig();
   const todayKey = getSeoulDateKey();
   const grantedMissions: string[] = [];
   let couponsToGrant = 0;
 
-  // 1. 뽀모도로 2시간 달성 미션 (하루 2세션 이상 집중 성공)
+  // 1. 하루 뽀모도로 N세션 미션 (설정형)
+  const pomodoroCfg = config.daily_pomodoro;
   const todayPomodoroCount = noteObj.pomodoro_sessions?.[todayKey] || 0;
-  const pomodoroMissionName = '오전 뽀모도로 2시간 달성';
+  const pomodoroMissionName = MISSION_META.daily_pomodoro.name;
   const hasPomodoroRewardToday = noteObj.rewards_log.some(
     (log: any) => log.date === todayKey && log.missionName === pomodoroMissionName
   );
 
-  if (todayPomodoroCount >= 2 && !hasPomodoroRewardToday) {
-    couponsToGrant += 1;
+  if (pomodoroCfg.enabled && todayPomodoroCount >= (pomodoroCfg.pomodoroSessions ?? 2) && !hasPomodoroRewardToday) {
+    couponsToGrant += pomodoroCfg.coupons;
     noteObj.rewards_log.push({
       date: todayKey,
       missionName: pomodoroMissionName,
       status: 'completed',
-      rewardGranted: 1
+      rewardGranted: pomodoroCfg.coupons,
     });
     grantedMissions.push(pomodoroMissionName);
   }
 
-  // 2. 지각 0회 & 11시 등원 완료 미션
-  const attendanceMissionName = '지각 0회 및 등원 완료';
+  // 2. 정시 등원(지각 0) 미션 (설정형)
+  const checkinCfg = config.punctual_checkin;
+  const attendanceMissionName = MISSION_META.punctual_checkin.name;
+  const checkinByHour = checkinCfg.checkinByHour ?? 11;
   const hasAttendanceRewardToday = noteObj.rewards_log.some(
     (log: any) => log.date === todayKey && log.missionName === attendanceMissionName
   );
 
-  if (!hasAttendanceRewardToday) {
+  if (checkinCfg.enabled && !hasAttendanceRewardToday) {
     let checkInOnTime = false;
     if (activeBackend() === 'supabase') {
       try {
@@ -82,7 +78,7 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
           
           const checkInTotalMin = adjustedHours * 60 + minutes;
           const limitTotalMin = limitHour * 60 + limitMin;
-          const maxLimitTotalMin = 11 * 60; // 11시 등원 완료 조건
+          const maxLimitTotalMin = checkinByHour * 60; // 설정된 등원 마감 시각 조건
 
           if (checkInTotalMin <= limitTotalMin && checkInTotalMin <= maxLimitTotalMin) {
             checkInOnTime = true;
@@ -98,19 +94,19 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
         const checkInDate = new Date(todayChecklist.submitted_at);
         const seoulHours = checkInDate.getUTCHours() + 9;
         const adjustedHours = seoulHours >= 24 ? seoulHours - 24 : seoulHours;
-        if (adjustedHours < 11) {
+        if (adjustedHours < checkinByHour) {
           checkInOnTime = true;
         }
       }
     }
 
     if (checkInOnTime) {
-      couponsToGrant += 1;
+      couponsToGrant += checkinCfg.coupons;
       noteObj.rewards_log.push({
         date: todayKey,
         missionName: attendanceMissionName,
         status: 'completed',
-        rewardGranted: 1
+        rewardGranted: checkinCfg.coupons,
       });
       grantedMissions.push(attendanceMissionName);
     }
@@ -118,7 +114,7 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
 
   if (couponsToGrant > 0) {
     student.leaveCoupons = (student.leaveCoupons || 0) + couponsToGrant;
-    student.specialNote = JSON.stringify(noteObj);
+    writeActivityEnvelope(student, noteObj);
     await saveStudent(student);
     return { granted: true, reasons: grantedMissions };
   }

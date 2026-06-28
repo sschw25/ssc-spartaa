@@ -67,6 +67,7 @@ function rowToStudent(r: any): Student {
     smsLogs: r.sms_logs || [],
     mockExams: r.mock_exams || [],
     otEvents: r.ot_events || [],
+    studentState: r.student_state || {},
     saturdayLateExcuses: r.saturday_late_excuses || [],
     phoneSubmissions: r.phone_submissions || [],
     awaySchedules: (r.away_schedules || []).map((item: unknown) => {
@@ -119,6 +120,7 @@ function studentToRow(student: Student, nowIso: string) {
     sms_logs: student.smsLogs || [],
     mock_exams: student.mockExams || [],
     ot_events: student.otEvents || [],
+    student_state: student.studentState || {},
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
     phone_submissions: student.phoneSubmissions || [],
