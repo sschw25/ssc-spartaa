@@ -122,6 +122,8 @@ create table if not exists mock_exams (
 );
 
 create index if not exists idx_mock_exams_date on mock_exams (date desc);
+-- 기존 mock_exams 테이블에 알림 발송 시각 컬럼 보강 (누락 시 일정 저장 실패)
+alter table mock_exams add column if not exists notified_at timestamptz;
 
 -- OT 일정 마스터
 create table if not exists ot_events (

@@ -472,7 +472,10 @@ export async function saveMockExamSupabase(exam: MockExam): Promise<MockExam> {
     .upsert(row, { onConflict: 'id' })
     .select()
     .single();
-  if (error) throw error;
+  if (error) {
+    console.error('[saveMockExamSupabase] mock_exams upsert 실패:', error.message, error.details || '', error.hint || '', error.code || '');
+    throw new Error(`모의고사 저장 실패: ${error.message}`);
+  }
   return rowToMockExam(data);
 }
 

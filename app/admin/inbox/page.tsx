@@ -25,7 +25,7 @@ interface InboxItem {
   studentId: string;
   studentName: string;
   campus: string;
-  type: 'leave' | 'request' | 'suggestion';
+  type: 'leave' | 'request' | 'suggestion' | 'ot_absence' | 'mock_absence';
   category: 'living' | 'counsel' | 'facility';
   title: string;
   content: string;
@@ -61,6 +61,8 @@ export default function AdminInboxPage() {
   // 다중 선택 일괄 승인
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
+  // OT/모의고사 일정 이름 매핑 (불참 신청 표시용)
+  const [eventNames, setEventNames] = useState<Record<string, { name: string; date: string }>>({});
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -85,7 +87,11 @@ export default function AdminInboxPage() {
   const loadStudents = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/admin/students', { cache: 'no-store' });
+      const [res, otRes, mockRes] = await Promise.all([
+        fetch('/api/admin/students', { cache: 'no-store' }),
+        fetch('/api/admin/ot-events', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/admin/mock-exams', { cache: 'no-store' }).catch(() => null),
+      ]);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -94,6 +100,16 @@ export default function AdminInboxPage() {
       } else {
         toast.error('원생 정보를 불러오지 못했습니다.');
       }
+      const names: Record<string, { name: string; date: string }> = {};
+      if (otRes && otRes.ok) {
+        const j = await otRes.json();
+        for (const e of (j.events || [])) names[e.id] = { name: e.name, date: e.date };
+      }
+      if (mockRes && mockRes.ok) {
+        const j = await mockRes.json();
+        for (const e of (j.exams || [])) names[e.id] = { name: e.name, date: e.date };
+      }
+      setEventNames(names);
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
     } finally {
@@ -247,11 +263,57 @@ export default function AdminInboxPage() {
           rawItem: r,
         });
       });
+
+      // 4) OT 불참 신청 (승인 대기)
+      (student.otEvents || []).forEach((e) => {
+        if (e.status !== 'absent_requested') return;
+        const ev = eventNames[e.eventId];
+        items.push({
+          id: `ot:${e.eventId}`,
+          studentId: student.id,
+          studentName: student.name,
+          campus: student.campus,
+          type: 'ot_absence',
+          category: 'living',
+          title: `OT 불참 신청: ${ev?.name || 'OT'}`,
+          content: e.reason || '(사유 없음)',
+          date: ev?.date || (e.updatedAt || '').slice(0, 10),
+          status: 'pending',
+          statusText: '접수중',
+          tone: 'amber',
+          adminReply: '',
+          createdAt: e.updatedAt || '',
+          rawItem: { eventId: e.eventId },
+        });
+      });
+
+      // 5) 모의고사 불참 신청 (승인 대기)
+      (student.mockExams || []).forEach((e) => {
+        if (e.status !== 'absent_requested') return;
+        const ev = eventNames[e.examId];
+        items.push({
+          id: `mock:${e.examId}`,
+          studentId: student.id,
+          studentName: student.name,
+          campus: student.campus,
+          type: 'mock_absence',
+          category: 'living',
+          title: `모의고사 불참 신청: ${ev?.name || '모의고사'}`,
+          content: e.reason || '(사유 없음)',
+          date: ev?.date || (e.updatedAt || '').slice(0, 10),
+          status: 'pending',
+          statusText: '접수중',
+          tone: 'amber',
+          adminReply: '',
+          createdAt: e.updatedAt || '',
+          rawItem: { examId: e.examId },
+        });
+      });
     });
 
     // 최신 신청일자 순 정렬
     return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [students]);
+  }, [students, eventNames]);
 
   // 카테고리 필터링 반영
   const filteredItems = React.useMemo(() => {
@@ -300,6 +362,20 @@ export default function AdminInboxPage() {
     actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending',
     reply?: string,
   ) => {
+    // OT/모의고사 불참 신청 — POST(participation) 로 처리. 승인=불참확정(absent), 반려=참석요청(undecided)
+    if (item.type === 'ot_absence' || item.type === 'mock_absence') {
+      const isOt = item.type === 'ot_absence';
+      const nextStatus = (actionStatus === 'approved' || actionStatus === 'resolved') ? 'absent' : 'undecided';
+      const res = await fetch(`/api/admin/students/${item.studentId}/${isOt ? 'ot-event' : 'mock-exam'}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(isOt ? { eventId: item.rawItem.eventId, status: nextStatus } : { examId: item.rawItem.examId, status: nextStatus }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.success) throw new Error(j.message || '불참 처리 실패');
+      return;
+    }
+
     let apiUrl = `/api/admin/students/${item.studentId}`;
     let body: any = {};
 
@@ -750,7 +826,24 @@ export default function AdminInboxPage() {
                 })()}
 
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  {selectedItem.type === 'leave' ? (
+                  {selectedItem.type === 'ot_absence' || selectedItem.type === 'mock_absence' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        disabled={processing}
+                        onClick={() => handleProcessRequest('approved')}
+                        className="rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                      >
+                        <Check className="w-3.5 h-3.5 mr-1" /> 불참 승인
+                      </Button>
+                      <Button
+                        disabled={processing}
+                        onClick={() => handleProcessRequest('rejected')}
+                        className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" /> 반려(참석 요청)
+                      </Button>
+                    </div>
+                  ) : selectedItem.type === 'leave' ? (
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         disabled={processing}

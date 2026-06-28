@@ -18,7 +18,7 @@ const getCampusLabel = (c: string) =>
 
 type Status = MockExamParticipation['status'];
 
-const STATUS_CONFIG: Record<Status, { label: string; cls: string; icon: React.ReactNode }> = {
+const STATUS_CONFIG: Record<'attending' | 'absent' | 'undecided', { label: string; cls: string; icon: React.ReactNode }> = {
   attending: {
     label: '참여',
     cls: 'bg-emerald-600 text-white border-emerald-600',
@@ -257,6 +257,7 @@ export default function MockExamPage() {
   const stats = {
     attending: scopedStudents.filter((s) => getStatus(s) === 'attending').length,
     absent: scopedStudents.filter((s) => getStatus(s) === 'absent').length,
+    pending: scopedStudents.filter((s) => getStatus(s) === 'absent_requested').length,
     undecided: scopedStudents.filter((s) => getStatus(s) === 'undecided').length,
   };
 
@@ -428,12 +429,13 @@ export default function MockExamPage() {
         {selectedExam && (
           <>
             {/* 통계 요약 */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {([
-                ['attending', '참여', 'bg-emerald-50 border-emerald-200/70 text-emerald-800', stats.attending],
-                ['absent', '불참', 'bg-red-50 border-red-200/70 text-red-800', stats.absent],
-                ['undecided', '미정', 'bg-slate-50 border-slate-200/70 text-slate-600', stats.undecided],
-              ] as [Status, string, string, number][]).map(([, label, cls, count]) => (
+                ['참여', 'bg-emerald-50 border-emerald-200/70 text-emerald-800', stats.attending],
+                ['불참 승인대기', 'bg-amber-50 border-amber-200/70 text-amber-800', stats.pending],
+                ['불참(승인)', 'bg-red-50 border-red-200/70 text-red-800', stats.absent],
+                ['미정', 'bg-slate-50 border-slate-200/70 text-slate-600', stats.undecided],
+              ] as [string, string, number][]).map(([label, cls, count]) => (
                 <div key={label} className={`rounded-2xl border px-4 py-3 ${cls}`}>
                   <p className="text-2xl font-black">{count}</p>
                   <p className="text-[11px] font-bold opacity-70 mt-0.5">{label}</p>
@@ -508,8 +510,9 @@ export default function MockExamPage() {
                         const participation = selectedExamId
                           ? (s.mockExams || []).find((e) => e.examId === selectedExamId)
                           : undefined;
-                        const absentReason = participation?.status === 'absent' ? participation.reason : undefined;
+                        const absentReason = (status === 'absent' || status === 'absent_requested') ? participation?.reason : undefined;
                         const selfResponded = participation?.respondedBy === 'student';
+                        const pendingAbsence = status === 'absent_requested';
                         const score = participation?.score;
                         const subjectScores = participation?.subjectScores;
                         return (
@@ -527,7 +530,7 @@ export default function MockExamPage() {
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-1.5 items-center">
-                                {(['attending', 'absent', 'undecided'] as Status[]).map((st) => {
+                                {(['attending', 'absent', 'undecided'] as Array<'attending' | 'absent' | 'undecided'>).map((st) => {
                                   const cfg = STATUS_CONFIG[st];
                                   const active = status === st;
                                   return (
@@ -545,12 +548,27 @@ export default function MockExamPage() {
                                     </button>
                                   );
                                 })}
-                                {selfResponded && (
+                                {pendingAbsence && (
+                                  <span className="rounded-lg bg-amber-100 text-amber-700 px-2 py-1 text-[10px] font-black animate-pulse">불참 승인대기</span>
+                                )}
+                                {selfResponded && !pendingAbsence && (
                                   <span className="rounded-lg bg-blue-50 text-blue-600 px-2 py-1 text-[10px] font-black">학생응답</span>
                                 )}
                               </div>
                               {absentReason && (
                                 <p className="mt-1 text-[11px] font-semibold text-slate-400">💬 {absentReason}</p>
+                              )}
+                              {pendingAbsence && (
+                                <div className="mt-1.5 flex gap-1.5">
+                                  <button type="button" disabled={isUpdating} onClick={() => setStatus(s.id, 'absent')}
+                                    className="flex items-center gap-1 rounded-lg bg-red-500 text-white px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 disabled:opacity-50">
+                                    <XCircle className="w-3 h-3" /> 불참 승인
+                                  </button>
+                                  <button type="button" disabled={isUpdating} onClick={() => setStatus(s.id, 'undecided')}
+                                    className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white text-slate-600 px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 hover:border-slate-300 disabled:opacity-50">
+                                    반려
+                                  </button>
+                                </div>
                               )}
                             </td>
                             <td className="px-4 py-3">

@@ -1,11 +1,18 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById } from '@/lib/store';
+import { getStudentById, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
 import { getMissionConfig } from '@/lib/mission-engine';
 import { readActivityEnvelope } from '@/lib/student-activity';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { MISSION_ORDER, MISSION_META, type MissionId } from '@/lib/missions';
 import { COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
+
+const weekdayOfYmd = (ymd: string) => new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=일 6=토
+const fmtMin = (m: number) => {
+  const h = Math.floor(m / 60);
+  const mm = m % 60;
+  return h > 0 ? `${h}시간 ${mm}분` : `${mm}분`;
+};
 
 // 학생: 활성 미션 목록(+진행 상태) + 내 쿠폰 잔액 + 최근 적립 내역
 export async function GET() {
@@ -46,6 +53,34 @@ export async function GET() {
     .reduce((sum, p) => sum + (p.points || 0), 0);
   const todayPomodoro = note.pomodoro_sessions?.[todayStr] || 0;
 
+  // 세션 기반 진행도 (주말 집중 / 주간 순공 랭킹) — 활성 미션일 때만 조회
+  let weekendHits = 0;
+  let weeklyMinutes = 0;
+  let weeklyRank: number | null = null;
+  try {
+    if (config.weekend_study.enabled) {
+      const needMin = (config.weekend_study.weekendHours ?? 3) * 60;
+      const monthSessions = await getStudySessions(studentId, monthStart);
+      const perDay = new Map<string, number>();
+      for (const s of monthSessions) {
+        if (s.minutes == null) continue;
+        perDay.set(s.date, (perDay.get(s.date) || 0) + s.minutes);
+      }
+      for (const [date, min] of perDay) {
+        const dow = weekdayOfYmd(date);
+        if ((dow === 0 || dow === 6) && min >= needMin) weekendHits++;
+      }
+    }
+    if (config.weekly_top_rank.enabled) {
+      const weekMin = await getStudyMinutesByStudent(weekStart);
+      weeklyMinutes = weekMin[studentId] || 0;
+      if (weeklyMinutes > 0) {
+        const ranked = Object.values(weekMin).filter((m) => m > 0).sort((a, b) => b - a);
+        weeklyRank = ranked.indexOf(weeklyMinutes) + 1; // 동점이면 상위 등수
+      }
+    }
+  } catch { /* 세션 백엔드 미설정 등 — 진행도 생략 */ }
+
   const progressOf = (id: MissionId): string | null => {
     const c = config[id];
     switch (id) {
@@ -53,6 +88,11 @@ export async function GET() {
         return monthPenalty === 0 ? '이번 달 벌점 0점 — 유지 중' : `이번 달 벌점 ${monthPenalty}점`;
       case 'daily_pomodoro':
         return `오늘 ${todayPomodoro}/${c.pomodoroSessions ?? 2} 세션`;
+      case 'weekend_study':
+        return `이번 달 주말 ${weekendHits}/${c.weekendCount ?? 2}회 달성`;
+      case 'weekly_top_rank':
+        if (weeklyMinutes <= 0) return '이번 주 순공 기록 없음';
+        return `이번 주 순공 ${fmtMin(weeklyMinutes)} · 현재 ${weeklyRank}등 (상위 ${c.topN ?? 3}명 지급)`;
       default:
         return null;
     }

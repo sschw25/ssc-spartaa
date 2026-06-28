@@ -176,8 +176,8 @@ export interface SmsLog {
 // 모의고사별 학생 참여 상태
 export interface MockExamParticipation {
   examId: string;
-  status: 'attending' | 'absent' | 'undecided';
-  reason?: string;       // 불참 사유
+  status: 'attending' | 'absent' | 'undecided' | 'absent_requested';
+  reason?: string;       // 불참 사유 (불참 신청 시 필수)
   score?: number;        // 총점 (학생 직접 입력)
   subjectScores?: Record<string, number>; // 과목별 점수 { 국어: 90, 수학: 85, ... }
   updatedAt: string;

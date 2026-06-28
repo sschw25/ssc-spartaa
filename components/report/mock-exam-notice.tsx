@@ -14,6 +14,7 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
+  const [doneAbsent, setDoneAbsent] = useState(false);
   const [showReason, setShowReason] = useState(false);
 
   const submit = async (chosen: 'attending' | 'absent') => {
@@ -23,6 +24,7 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
       setShowReason(true);
       return;
     }
+    if (chosen === 'absent' && !reason.trim()) return;
     setSubmitting(true);
     try {
       const res = await fetch('/api/student/mock-exam', {
@@ -32,8 +34,9 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
       });
       const json = await res.json();
       if (json.success) {
+        setDoneAbsent(chosen === 'absent');
         setDone(true);
-        setTimeout(() => onResponded(exam.id), 1200);
+        setTimeout(() => onResponded(exam.id), 1400);
       }
     } catch {
       setStatus(null);
@@ -47,7 +50,8 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
       <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3.5 border border-slate-100">
         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
         <p className="text-xs font-bold text-slate-500">
-          <span className="font-black text-slate-700">{exam.name}</span> 응답 완료
+          <span className="font-black text-slate-700">{exam.name}</span>{' '}
+          {doneAbsent ? '불참 신청 접수 — 관리자 승인 대기' : '응답 완료'}
         </p>
       </div>
     );
@@ -64,7 +68,7 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
             {exam.name} · {exam.date} 참여 여부를 알려주세요
           </p>
           <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
-            선생님이 확인합니다. 불참 시 사유를 남기면 더 좋아요.
+            참여 여부를 선택해 주세요. 불참은 사유를 적어 신청하면 선생님이 확인 후 처리해요.
           </p>
         </div>
       </div>
@@ -108,19 +112,19 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="불참 사유를 적어주세요 (선택 사항)"
+              placeholder="불참 사유를 반드시 적어주세요"
               rows={2}
               maxLength={200}
               className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-red-300 focus:outline-none resize-none"
             />
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || !reason.trim()}
               onClick={() => submit('absent')}
-              className="w-full rounded-xl bg-red-500 py-2.5 text-xs font-black text-white hover:bg-red-600 transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+              className="w-full rounded-xl bg-red-500 py-2.5 text-xs font-black text-white hover:bg-red-600 transition disabled:opacity-40 flex items-center justify-center gap-1.5"
             >
               {submitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
-              불참으로 제출
+              불참 신청 (승인 대기)
             </button>
           </div>
         )}
