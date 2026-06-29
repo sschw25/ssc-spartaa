@@ -13,9 +13,9 @@ const SITE_URL = 'https://www.sscsparta.com'
 
 const STREAM_SEO_CONFIG: Record<StreamId, (region: string) => SeoContent> = {
   gongmuwon: (region: string) => ({
-    title: `${region} 공무원학원 | 2026 국가직·지방직 합격관리반 - SSC스파르타`,
-    description: `${region} 공무원학원 대표 SSC스파르타. 2026 국가직 9급(4.4)·지방직 9급(6.20), 현행 5과목 체제의 마지막 시즌을 단번에 끝내는 관리형 학원. 노량진 커넥츠프랩 전국 평가·2중 출결·순공시간 집계·면접 코칭까지 관리합니다.`,
-    keywords: [`${region} 공무원학원`, `${region}공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 공무원준비`, `${region} 커넥츠프랩`, `${region} 공단기`, `${region} 스파르타`, `2026 공무원시험`, `공무원기숙학원`],
+    title: `${region} 공무원학원 | 2027 국가직·지방직 개편 대비 합격관리반 - SSC스파르타`,
+    description: `${region} 공무원학원 대표 SSC스파르타. 2027 국가직·지방직 9급 개편 체제에 맞춰 한능검 대체, 과목당 25문항, 직무형 국어·영어를 관리하는 학원. 노량진 커넥츠프랩 전국 평가·2중 출결·순공시간 집계·면접 코칭까지 관리합니다.`,
+    keywords: [`${region} 공무원학원`, `${region}공무원학원`, `${region} 경찰학원`, `${region} 소방학원`, `${region} 공무원준비`, `${region} 커넥츠프랩`, `${region} 공단기`, `${region} 스파르타`, `2027 공무원시험`, `공무원기숙학원`],
   }),
   suneung: (region: string) => ({
     title: `${region} 독학재수학원 | 2027 수능(통합수능 마지막) 생활·학습 통제 - SSC스파르타`,

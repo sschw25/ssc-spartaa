@@ -269,6 +269,7 @@ function ConsultationContent() {
     const target = students.find((s) => s.id === studentId);
     if (!target) return;
     openStudent(target, {
+      defaultTab: 'info',
       onUpdate: (updated) => {
         setStudents((prev) => prev.map((s) => s.id === updated.id ? updated : s));
       },
@@ -277,6 +278,47 @@ function ConsultationContent() {
       },
       allStudents: students,
     });
+  };
+
+  const handleInlineStudentUpdate = async (
+    student: Student,
+    patch: Partial<Pick<Student, 'manager' | 'contact' | 'studentPhone' | 'parentPhone' | 'seatNumber'>>
+  ) => {
+    const normalizedPatch = { ...patch };
+    if (normalizedPatch.seatNumber !== undefined && !Number.isFinite(Number(normalizedPatch.seatNumber))) {
+      normalizedPatch.seatNumber = undefined;
+    }
+
+    const hasChange = Object.entries(normalizedPatch).some(([key, value]) => {
+      const current = student[key as keyof Student];
+      return String(current ?? '') !== String(value ?? '');
+    });
+    if (!hasChange) return;
+
+    const previous = student;
+    const updatedStudent: Student = {
+      ...student,
+      ...normalizedPatch,
+      updatedAt: new Date().toISOString(),
+    };
+
+    setStudents((prev) => prev.map((item) => item.id === student.id ? updatedStudent : item));
+    try {
+      const res = await fetch(`/api/admin/students/${student.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedStudent),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || '저장 실패');
+      if (json.data) {
+        setStudents((prev) => prev.map((item) => item.id === student.id ? json.data : item));
+      }
+      toast.success('원생 정보가 저장되었습니다.');
+    } catch (error) {
+      setStudents((prev) => prev.map((item) => item.id === student.id ? previous : item));
+      toast.error(error instanceof Error ? error.message : '원생 정보 저장에 실패했습니다.');
+    }
   };
 
   useEffect(() => {
@@ -976,8 +1018,9 @@ function ConsultationContent() {
                         <div className="admin-fit-row mt-4 pt-3.5 border-t border-black/[0.03] flex justify-between items-center gap-2">
                           <span className="admin-fit-caption text-[#86868B] shrink-0">다음 상담일</span>
                           {student.nextConsultationDate ? (
-                            <span className={`admin-fit-text admin-fit-caption font-bold px-2 py-0.5 rounded-md ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse-slow' : 'bg-[#F5F5F7] text-[#1D1D1F]'}`}>
-                              📅 {student.nextConsultationDate}
+                            <span className={`admin-fit-text admin-fit-caption font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse-slow' : 'bg-[#F5F5F7] text-[#1D1D1F]'}`}>
+                              <Calendar className="h-3 w-3" aria-hidden="true" />
+                              {student.nextConsultationDate}
                             </span>
                           ) : (
                             <span className="admin-fit-text admin-fit-caption text-[#86868B] italic">상담일 미지정</span>
@@ -991,7 +1034,7 @@ function ConsultationContent() {
                 /* 표 뷰 (간략히) */
                 <div className="bg-white border border-black/[0.05] rounded-2xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-xs">
+                    <table className="min-w-[1120px] w-full text-left border-collapse text-xs">
                       <thead>
                         <tr className="border-b border-black/[0.08] bg-[#F5F5F7] text-[#86868B] font-bold">
                           <th 
@@ -1018,6 +1061,9 @@ function ConsultationContent() {
                               담당 코치 {studentSortField === 'manager' && (studentSortOrder === 'asc' ? '▲' : '▼')}
                             </div>
                           </th>
+                          <th className="p-3.5 text-center">좌석</th>
+                          <th className="p-3.5">목표시험</th>
+                          <th className="p-3.5">연락처</th>
                           <th className="p-3.5">진행 중인 학습 (과목별 현황)</th>
                           <th className="p-3.5 text-center">다음 상담일</th>
                         </tr>
@@ -1043,8 +1089,14 @@ function ConsultationContent() {
                                   {getCampusLabel(student.campus)}
                                 </Badge>
                               </td>
-                              <td className="p-3.5 text-[#434345]">
-                                <div>{student.manager || '담당 코치'}</div>
+                              <td className="p-3.5 text-[#434345]" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  defaultValue={student.manager || ''}
+                                  placeholder="담당 코치"
+                                  onBlur={(event) => handleInlineStudentUpdate(student, { manager: event.currentTarget.value.trim() })}
+                                  onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                                  className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"
+                                />
                                 <div className="text-[10px] text-[#86868B] mt-0.5 flex flex-wrap gap-1 items-center">
                                   {(() => {
                                     const todayMin = getStudentTodayTotalStudyTimeMin(student);
@@ -1057,6 +1109,47 @@ function ConsultationContent() {
                                       </span>
                                     );
                                   })()}
+                                </div>
+                              </td>
+                              <td className="p-3.5 text-center" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  defaultValue={student.seatNumber ?? ''}
+                                  placeholder="-"
+                                  onBlur={(event) => {
+                                    const value = event.currentTarget.value.trim();
+                                    handleInlineStudentUpdate(student, { seatNumber: value ? Number(value) : undefined });
+                                  }}
+                                  onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                                  className="h-8 w-16 rounded-lg border border-black/[0.06] bg-white px-2 text-center text-[11px] font-semibold text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"
+                                />
+                              </td>
+                              <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
+                                <input
+                                  defaultValue={student.contact || ''}
+                                  placeholder="목표시험"
+                                  onBlur={(event) => handleInlineStudentUpdate(student, { contact: event.currentTarget.value.trim() })}
+                                  onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                                  className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"
+                                />
+                              </td>
+                              <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
+                                <div className="grid grid-cols-1 gap-1.5">
+                                  <input
+                                    defaultValue={student.studentPhone || ''}
+                                    placeholder="본인전화"
+                                    onBlur={(event) => handleInlineStudentUpdate(student, { studentPhone: event.currentTarget.value.trim() })}
+                                    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                                    className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"
+                                  />
+                                  <input
+                                    defaultValue={student.parentPhone || ''}
+                                    placeholder="부모전화"
+                                    onBlur={(event) => handleInlineStudentUpdate(student, { parentPhone: event.currentTarget.value.trim() })}
+                                    onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
+                                    className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"
+                                  />
                                 </div>
                               </td>
                               <td className="p-3.5 min-w-[280px]">
@@ -1088,8 +1181,9 @@ function ConsultationContent() {
                               </td>
                               <td className="p-3.5 text-center">
                                 {student.nextConsultationDate ? (
-                                  <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] inline-block ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-[#F5F5F7] text-[#1D1D1F]'}`}>
-                                    📅 {student.nextConsultationDate}
+                                  <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] inline-flex items-center gap-1 ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-[#F5F5F7] text-[#1D1D1F]'}`}>
+                                    <Calendar className="h-3 w-3" aria-hidden="true" />
+                                    {student.nextConsultationDate}
                                   </span>
                                 ) : (
                                   <span className="text-[#86868B] italic">상담일 미지정</span>

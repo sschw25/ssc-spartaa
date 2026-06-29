@@ -45,8 +45,8 @@ export const suneungContent: StreamContent = {
       },
     ],
     timeline: [
-      { date: '2026-06', label: '6월 모의평가 (재학생+N수생 첫 합동 평가)' },
-      { date: '2026-09', label: '9월 모의평가 · 수능 원서접수' },
+      { date: '2026-08~09', label: '수능 원서접수 및 9월 모의평가 대비' },
+      { date: '2026-09', label: '9월 모의평가 · 최종 약점 점검' },
       { date: '2026-11-19', label: '2027학년도 수능 본시험' },
       { date: '2026-12-11', label: '수능 성적 통지' },
       { date: '2028~', label: '문·이과 통합형 수능 + 내신 5등급제 도입' },

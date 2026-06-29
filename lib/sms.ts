@@ -48,7 +48,7 @@ function buildMessage(name: string, action: AttendAction, time: string, minutes?
 }
 
 function resolveRecipients(input: AttendNotifyInput): string[] {
-  const targets = input.targets && input.targets.length ? input.targets : ['parent'];
+  const targets = Array.isArray(input.targets) ? input.targets : ['parent'];
   const recipients: string[] = [];
 
   if (targets.includes('parent')) recipients.push(onlyDigits(input.parentPhone));

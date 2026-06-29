@@ -88,14 +88,15 @@ export async function POST(request: Request) {
   }
 }
 
-// 관리자: 알림 발송(notifiedAt) 또는 휴무 요일(closedDays) 수정.
+// 관리자: 알림 발송/취소(notifiedAt) 또는 휴무 요일(closedDays) 수정.
 //  - { planId, closedDays } → 휴무 요일 갱신
 //  - { planId }            → 학생 알림 발송
+//  - { planId, action:'cancel' } → 학생 알림 취소
 export async function PATCH(request: Request) {
   if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
-  let body: { planId?: unknown; closedDays?: unknown };
+  let body: { planId?: unknown; closedDays?: unknown; action?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -111,8 +112,9 @@ export async function PATCH(request: Request) {
       const saved = await saveMealPlan({ ...plan, closedDays: sanitizeClosedDays(body.closedDays) });
       return NextResponse.json({ success: true, plan: saved });
     }
-    // 학생 알림 발송
-    const plan = await notifyMealPlan(planId, new Date().toISOString());
+    // 학생 알림 발송/취소
+    const cancel = body?.action === 'cancel';
+    const plan = await notifyMealPlan(planId, cancel ? null : new Date().toISOString());
     return NextResponse.json({ success: true, plan });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '처리 실패' }, { status: 500 });

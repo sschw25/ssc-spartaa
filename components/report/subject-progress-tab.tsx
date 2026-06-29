@@ -16,7 +16,7 @@ interface SubjectProgressTabProps {
   updateProgress: (materialType: 'book' | 'lecture', materialId: string, value: number) => void;
   updateBookSolvedQuestions: (materialId: string, solvedQuestions: number) => void;
   incrementBookIncorrectTag: (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => void;
-  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number) => void;
+  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
   materialBenchmarks: MaterialBenchmarkMap;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -33,6 +33,39 @@ export function SubjectProgressTab({
   activeTab,
   setActiveTab,
 }: SubjectProgressTabProps) {
+  const [pendingPlanKey, setPendingPlanKey] = React.useState<string | null>(null);
+  const [pendingAmount, setPendingAmount] = React.useState(0);
+
+  const getSeoulDateKey = () =>
+    new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+
+  const todayKey = getSeoulDateKey();
+
+  const getPlanActionKey = (materialType: 'book' | 'lecture', materialId: string, planId: string) =>
+    `${materialType}:${materialId}:${planId}`;
+
+  const getPlanDailyAmount = (plan: DetailedPlan) =>
+    Math.max(0, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6)));
+
+  const getPlanTodayCompletion = (plan: DetailedPlan) => plan.dailyCompletions?.[todayKey];
+
+  const getDisplayUnit = (materialType: 'book' | 'lecture', unit: string | undefined, rangeText: string) => {
+    if (materialType === 'lecture') return '강';
+    if (unit) return unit;
+    if (rangeText.includes('문제')) return '문제';
+    if (rangeText.includes('회')) return '회';
+    return 'p';
+  };
+
+  const startPlanCompletion = (materialType: 'book' | 'lecture', materialId: string, plan: DetailedPlan) => {
+    setPendingPlanKey(getPlanActionKey(materialType, materialId, plan.id));
+    setPendingAmount(getPlanDailyAmount(plan));
+  };
+
+  const cancelPlanCompletion = () => {
+    setPendingPlanKey(null);
+    setPendingAmount(0);
+  };
 
   // 오늘 기준 1개월치 상세 계획 필터링 (지난 1주 ~ 향후 3주, 약 4~5주 분량)
   const getOneMonthPlans = (plans: DetailedPlan[] | undefined) => {
@@ -512,41 +545,120 @@ export function SubjectProgressTab({
                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                                 {oneMonthPlans.map(plan => {
                                   const planCompleted = isPlanCompleted(plan);
+                                  const todayCompletion = getPlanTodayCompletion(plan);
+                                  const todayCompleted = Boolean(todayCompletion?.isCompleted);
+                                  const displayCompleted = planCompleted || todayCompleted;
                                   const planActualAmount = getPlanActualAmount(plan);
+                                  const planKey = getPlanActionKey('book', b.id, plan.id);
+                                  const isPending = pendingPlanKey === planKey;
+                                  const unit = getDisplayUnit('book', b.unit, plan.rangeText);
                                   return (
-                                    <button
-                                    key={plan.id}
-                                    type="button"
-                                    onClick={() => updatePlanCompletion('book', b.id, plan.id, !planCompleted)}
-                                    aria-pressed={planCompleted}
-                                    className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
-                                      planCompleted
-                                        ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50'
-                                        : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
-                                    }`}
-                                  >
-                                    <div className="flex justify-between items-center font-bold">
-                                      <span>{plan.weekNumber}주차</span>
-                                      {planCompleted ? (
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                      ) : (
-                                        <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                                    <div
+                                     key={plan.id}
+                                     className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
+                                       displayCompleted
+                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                         : isPending
+                                         ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                         : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
+                                     }`}
+                                   >
+                                     <div className="flex justify-between items-center font-bold">
+                                       <span>{plan.weekNumber}주차</span>
+                                       {displayCompleted ? (
+                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                       ) : (
+                                         <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
                                       )}
                                     </div>
-                                    <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
-                                    <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
-                                    <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
-                                    <span className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-black ${
-                                      planCompleted
-                                        ? 'border-emerald-200 bg-white/70 text-emerald-700'
-                                        : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
-                                    }`}>
-                                      {planCompleted ? (planActualAmount !== undefined ? `완료 (${planActualAmount}${b.unit || 'p'})` : '완료됨') : '완료'}
-                                    </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                                     <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
+                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
+                                     <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
+                                     {isPending ? (
+                                       <div className="mt-1 space-y-2 rounded-lg border border-amber-200 bg-white/80 p-2">
+                                         <p className="text-[8px] font-bold text-amber-700">오늘 실제 학습량</p>
+                                         <div className="flex items-center gap-1.5">
+                                           <button
+                                             type="button"
+                                             onClick={() => setPendingAmount((value) => Math.max(0, value - 1))}
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                           >
+                                             -
+                                           </button>
+                                           <input
+                                             type="number"
+                                             inputMode="numeric"
+                                             min={0}
+                                             value={pendingAmount}
+                                             onChange={(e) => setPendingAmount(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+                                             onKeyDown={(e) => {
+                                               if (e.key === 'Enter') {
+                                                 updatePlanCompletion('book', b.id, plan.id, true, pendingAmount, todayKey);
+                                                 cancelPlanCompletion();
+                                               }
+                                             }}
+                                             className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                             aria-label="오늘 실제 학습량"
+                                           />
+                                           <span className="shrink-0 text-[9px] font-semibold text-slate-500">{unit}</span>
+                                           <button
+                                             type="button"
+                                             onClick={() => setPendingAmount((value) => value + 1)}
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                           >
+                                             +
+                                           </button>
+                                         </div>
+                                         <div className="grid grid-cols-2 gap-1.5">
+                                           <button
+                                             type="button"
+                                             onClick={() => {
+                                               updatePlanCompletion('book', b.id, plan.id, true, pendingAmount, todayKey);
+                                               cancelPlanCompletion();
+                                             }}
+                                             className="rounded-full bg-emerald-500 px-2 py-1.5 text-[8px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                           >
+                                             완료 확인
+                                           </button>
+                                           <button
+                                             type="button"
+                                             onClick={cancelPlanCompletion}
+                                             className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[8px] font-semibold text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                           >
+                                             취소
+                                           </button>
+                                         </div>
+                                       </div>
+                                     ) : (
+                                       <button
+                                         type="button"
+                                         onClick={() => {
+                                           if (todayCompleted) {
+                                             updatePlanCompletion('book', b.id, plan.id, false, undefined, todayKey);
+                                           } else if (plan.isCompleted && !plan.dailyCompletions) {
+                                             updatePlanCompletion('book', b.id, plan.id, false);
+                                           } else {
+                                             startPlanCompletion('book', b.id, plan);
+                                           }
+                                         }}
+                                         aria-pressed={displayCompleted}
+                                         className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] ${
+                                           displayCompleted
+                                             ? 'border-emerald-200 bg-white/70 text-emerald-700'
+                                             : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                         }`}
+                                       >
+                                         {todayCompleted
+                                           ? `오늘 완료 (${todayCompletion?.actualAmount ?? getPlanDailyAmount(plan)}${unit})`
+                                           : planCompleted
+                                           ? (planActualAmount !== undefined ? `주차 완료 (${planActualAmount}${unit})` : '주차 완료')
+                                           : '오늘 완료'}
+                                       </button>
+                                     )}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
                             </div>
                           )}
                         </div>
@@ -641,41 +753,120 @@ export function SubjectProgressTab({
                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                                 {oneMonthPlans.map(plan => {
                                   const planCompleted = isPlanCompleted(plan);
+                                  const todayCompletion = getPlanTodayCompletion(plan);
+                                  const todayCompleted = Boolean(todayCompletion?.isCompleted);
+                                  const displayCompleted = planCompleted || todayCompleted;
                                   const planActualAmount = getPlanActualAmount(plan);
+                                  const planKey = getPlanActionKey('lecture', l.id, plan.id);
+                                  const isPending = pendingPlanKey === planKey;
+                                  const unit = getDisplayUnit('lecture', undefined, plan.rangeText);
                                   return (
-                                    <button
-                                    key={plan.id}
-                                    type="button"
-                                    onClick={() => updatePlanCompletion('lecture', l.id, plan.id, !planCompleted)}
-                                    aria-pressed={planCompleted}
-                                    className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
-                                      planCompleted
-                                        ? 'border-emerald-100 bg-emerald-50/40 text-emerald-800 hover:bg-emerald-50'
-                                        : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
-                                    }`}
-                                  >
-                                    <div className="flex justify-between items-center font-bold">
-                                      <span>{plan.weekNumber}주차</span>
-                                      {planCompleted ? (
-                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                      ) : (
-                                        <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                                    <div
+                                     key={plan.id}
+                                     className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
+                                       displayCompleted
+                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                         : isPending
+                                         ? 'border-amber-200 bg-amber-50 text-amber-800'
+                                         : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
+                                     }`}
+                                   >
+                                     <div className="flex justify-between items-center font-bold">
+                                       <span>{plan.weekNumber}주차</span>
+                                       {displayCompleted ? (
+                                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                       ) : (
+                                         <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
                                       )}
                                     </div>
-                                    <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
-                                    <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
-                                    <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
-                                    <span className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-black ${
-                                      planCompleted
-                                        ? 'border-emerald-200 bg-white/70 text-emerald-700'
-                                        : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3]'
-                                    }`}>
-                                      {planCompleted ? (planActualAmount !== undefined ? `완료 (${planActualAmount}강)` : '완료됨') : '완료'}
-                                    </span>
-                                    </button>
-                                  );
-                                })}
-                              </div>
+                                     <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
+                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
+                                     <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
+                                     {isPending ? (
+                                       <div className="mt-1 space-y-2 rounded-lg border border-amber-200 bg-white/80 p-2">
+                                         <p className="text-[8px] font-bold text-amber-700">오늘 실제 수강량</p>
+                                         <div className="flex items-center gap-1.5">
+                                           <button
+                                             type="button"
+                                             onClick={() => setPendingAmount((value) => Math.max(0, value - 1))}
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                           >
+                                             -
+                                           </button>
+                                           <input
+                                             type="number"
+                                             inputMode="numeric"
+                                             min={0}
+                                             value={pendingAmount}
+                                             onChange={(e) => setPendingAmount(Math.max(0, Math.round(Number(e.target.value) || 0)))}
+                                             onKeyDown={(e) => {
+                                               if (e.key === 'Enter') {
+                                                 updatePlanCompletion('lecture', l.id, plan.id, true, pendingAmount, todayKey);
+                                                 cancelPlanCompletion();
+                                               }
+                                             }}
+                                             className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                             aria-label="오늘 실제 수강량"
+                                           />
+                                           <span className="shrink-0 text-[9px] font-semibold text-slate-500">{unit}</span>
+                                           <button
+                                             type="button"
+                                             onClick={() => setPendingAmount((value) => value + 1)}
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                           >
+                                             +
+                                           </button>
+                                         </div>
+                                         <div className="grid grid-cols-2 gap-1.5">
+                                           <button
+                                             type="button"
+                                             onClick={() => {
+                                               updatePlanCompletion('lecture', l.id, plan.id, true, pendingAmount, todayKey);
+                                               cancelPlanCompletion();
+                                             }}
+                                             className="rounded-full bg-emerald-500 px-2 py-1.5 text-[8px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                           >
+                                             완료 확인
+                                           </button>
+                                           <button
+                                             type="button"
+                                             onClick={cancelPlanCompletion}
+                                             className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[8px] font-semibold text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                           >
+                                             취소
+                                           </button>
+                                         </div>
+                                       </div>
+                                     ) : (
+                                       <button
+                                         type="button"
+                                         onClick={() => {
+                                           if (todayCompleted) {
+                                             updatePlanCompletion('lecture', l.id, plan.id, false, undefined, todayKey);
+                                           } else if (plan.isCompleted && !plan.dailyCompletions) {
+                                             updatePlanCompletion('lecture', l.id, plan.id, false);
+                                           } else {
+                                             startPlanCompletion('lecture', l.id, plan);
+                                           }
+                                         }}
+                                         aria-pressed={displayCompleted}
+                                         className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] ${
+                                           displayCompleted
+                                             ? 'border-emerald-200 bg-white/70 text-emerald-700'
+                                             : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                         }`}
+                                       >
+                                         {todayCompleted
+                                           ? `오늘 완료 (${todayCompletion?.actualAmount ?? getPlanDailyAmount(plan)}${unit})`
+                                           : planCompleted
+                                           ? (planActualAmount !== undefined ? `주차 완료 (${planActualAmount}${unit})` : '주차 완료')
+                                           : '오늘 완료'}
+                                       </button>
+                                     )}
+                                     </div>
+                                   );
+                                 })}
+                               </div>
                             </div>
                           )}
                         </div>

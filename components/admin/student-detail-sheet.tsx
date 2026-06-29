@@ -26,7 +26,7 @@ import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
   ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X,
-  CalendarDays, Plus, Trash2
+  CalendarDays, Plus, Trash2, Send
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -43,6 +43,10 @@ interface StudentDetailSheetProps {
   onDelete: (studentId: string) => void;
   students?: Student[];
   defaultTab?: string;
+}
+
+function normalizeSmsTargetsForState(value: Student['smsTargets']): Array<'parent' | 'student'> {
+  return Array.isArray(value) ? value : ['parent'];
 }
 
 type TodayAttendanceStatus = {
@@ -160,6 +164,136 @@ function mergeAdminNote(raw: string | undefined, noteText: string): string {
     } catch { /* JSON 아님 → 평문으로 저장 */ }
   }
   return noteText;
+}
+
+interface QuickAwayEntry {
+  lineNo: number;
+  name: string;
+  nameKey: string;
+  awayTime: string;
+  returnTime?: string;
+}
+
+interface QuickAwayApplyResult {
+  applied: number;
+  skippedNoMatch: number;
+  skippedDuplicateName: number;
+  skippedInvalid: number;
+  skippedDuplicateSchedule: number;
+  failed: number;
+}
+
+function normalizeQuickAwayName(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
+}
+
+function formatQuickAwayTime(hour: number, minute: number): string {
+  if (!Number.isInteger(hour) || !Number.isInteger(minute)) return '';
+  if (hour < 0 || hour > 23 || minute < 0 || minute > 59) return '';
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function isCheckoutReturnValue(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return normalized === '' || ['-', 'x', '하원', '퇴실', '미복귀', '없음', '없슴'].includes(normalized);
+}
+
+function normalizeQuickAwayTime(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed || isCheckoutReturnValue(trimmed)) return '';
+
+  const koreanMatch = trimmed.match(/^(\d{1,2})\s*시(?:\s*(\d{1,2})\s*분?)?$/);
+  if (koreanMatch) {
+    return formatQuickAwayTime(Number(koreanMatch[1]), Number(koreanMatch[2] || 0));
+  }
+
+  const colonMatch = trimmed.match(/^(\d{1,2})[:：](\d{1,2})$/);
+  if (colonMatch) {
+    return formatQuickAwayTime(Number(colonMatch[1]), Number(colonMatch[2]));
+  }
+
+  if (/^\d{3,4}$/.test(trimmed)) {
+    const hour = trimmed.length === 3 ? Number(trimmed.slice(0, 1)) : Number(trimmed.slice(0, 2));
+    const minute = Number(trimmed.slice(-2));
+    return formatQuickAwayTime(hour, minute);
+  }
+
+  if (/^\d{1,2}$/.test(trimmed)) {
+    return formatQuickAwayTime(Number(trimmed), 0);
+  }
+
+  if (/^\d+(\.\d+)?$/.test(trimmed)) {
+    const numeric = Number(trimmed);
+    if (numeric > 0 && numeric < 24 && trimmed.includes('.')) {
+      const hour = Math.floor(numeric);
+      const minute = Math.round((numeric - hour) * 60);
+      return formatQuickAwayTime(hour, minute);
+    }
+    const fraction = numeric - Math.floor(numeric);
+    if (fraction > 0) {
+      const totalMinutes = Math.round(fraction * 24 * 60) % (24 * 60);
+      return formatQuickAwayTime(Math.floor(totalMinutes / 60), totalMinutes % 60);
+    }
+  }
+
+  return '';
+}
+
+function splitQuickAwayLine(line: string): string[] {
+  if (line.includes('\t')) return line.split('\t');
+  if (line.includes(',')) return line.split(',');
+  return line.trim().split(/\s+/);
+}
+
+function parseQuickAwayInput(text: string): { entries: QuickAwayEntry[]; invalidCount: number } {
+  const entries: QuickAwayEntry[] = [];
+  let invalidCount = 0;
+
+  text.split(/\r?\n/).forEach((rawLine, index) => {
+    const line = rawLine.trim();
+    if (!line) return;
+
+    const columns = splitQuickAwayLine(rawLine);
+    const rawName = (columns[0] ?? '').trim();
+    const rawAwayTime = (columns[1] ?? '').trim();
+    const rawReturnTime = (columns[2] ?? '').trim();
+
+    if (rawName.includes('이름') && (rawAwayTime.includes('나가') || rawAwayTime.includes('외출'))) return;
+    if (!rawName || !rawAwayTime) {
+      invalidCount += 1;
+      return;
+    }
+
+    const awayTime = normalizeQuickAwayTime(rawAwayTime);
+    if (!awayTime) {
+      invalidCount += 1;
+      return;
+    }
+
+    const returnTime = rawReturnTime ? normalizeQuickAwayTime(rawReturnTime) : '';
+    if (rawReturnTime && !returnTime && !isCheckoutReturnValue(rawReturnTime)) {
+      invalidCount += 1;
+      return;
+    }
+
+    const name = normalizeQuickAwayName(rawName);
+    entries.push({
+      lineNo: index + 1,
+      name,
+      nameKey: name,
+      awayTime,
+      returnTime: returnTime || undefined,
+    });
+  });
+
+  return { entries, invalidCount };
+}
+
+function isSameAwaySchedule(a: AwaySchedule, b: AwaySchedule): boolean {
+  return a.awayTime === b.awayTime
+    && (a.returnTime || '') === (b.returnTime || '')
+    && JSON.stringify(a.days || []) === JSON.stringify(b.days || [])
+    && (a.until || 'forever') === (b.until || 'forever');
 }
 
 export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [], defaultTab }: StudentDetailSheetProps) {
@@ -453,7 +587,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setSubjectsState(student.subjects || []);
       setParentPhone(student.parentPhone || '');
       setStudentPhone(student.studentPhone || '');
-      setSmsTargets(student.smsTargets || ['parent']);
+      setSmsTargets(normalizeSmsTargetsForState(student.smsTargets));
       setCollapsedSubjects(Object.fromEntries((student.subjects || []).map((sub) => [sub.id, true])));
       if (student.customCategories && student.customCategories.length > 0) {
         setCustomCategories(student.customCategories);
@@ -548,7 +682,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       student.name || '', student.campus || 'wonju', student.manager || '', student.contact || '',
       1.0, extractAdminNote(student.specialNote),
       student.nextConsultationDate || '', student.subjects || [], student.enrollmentEndDate || '', Boolean(student.weeklyGradeCheck), student.awaySchedules || [],
-      student.parentPhone || '', student.studentPhone || '', student.smsTargets || ['parent']
+      student.parentPhone || '', student.studentPhone || '', normalizeSmsTargetsForState(student.smsTargets)
     );
 
     if (localSnap === sourceSnap) return; // 변경 없음 → 저장 불필요
@@ -725,7 +859,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const pendingSuggestions = getPendingSuggestions(student).filter(
     log => !resolvedReqIds.includes(log.id)
   );
-  const QUICK_REPLIES = ['상담 신청 바랍니다 🙏', '확인했어요, 반영할게요 👍', '조금만 더 분발해요 💪', '계획대로 잘하고 있어요 ✅'];
+  const QUICK_REPLIES = ['상담 신청 바랍니다', '확인했어요, 반영할게요', '조금만 더 분발해요', '계획대로 잘하고 있어요'];
   const actOnRequest = async (reqId: string, opts: { status?: 'resolved'; reply?: string }) => {
     setResolvingReqId(reqId);
     try {
@@ -1048,6 +1182,132 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const handleUpdateAwaySchedules = (nextSchedules: AwaySchedule[]) => {
     setAwaySchedules(nextSchedules);
+  };
+
+  const handleApplyQuickAwaySchedules = async (text: string): Promise<QuickAwayApplyResult> => {
+    const parsed = parseQuickAwayInput(text);
+    const result: QuickAwayApplyResult = {
+      applied: 0,
+      skippedNoMatch: 0,
+      skippedDuplicateName: 0,
+      skippedInvalid: parsed.invalidCount,
+      skippedDuplicateSchedule: 0,
+      failed: 0,
+    };
+
+    if (parsed.entries.length === 0) {
+      toast.error('적용할 빠른 입력 항목이 없습니다.');
+      return result;
+    }
+
+    const currentStudentSnapshot: Student = {
+      ...student,
+      name: name || student.name,
+      loginId,
+      campus,
+      manager,
+      contact,
+      lifeComment,
+      studentLifeComment,
+      specialNote: mergeAdminNote(student.specialNote, specialNote),
+      nextConsultationDate: nextConsultationDate || undefined,
+      enrollmentEndDate: enrollmentEndDate || undefined,
+      weeklyGradeCheck,
+      seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
+      subjects: subjectsState,
+      awaySchedules,
+      parentPhone,
+      studentPhone,
+      smsTargets,
+    };
+
+    const roster = [
+      ...students.filter((item) => item.id !== student.id),
+      currentStudentSnapshot,
+    ];
+
+    const byName = new Map<string, Student[]>();
+    roster.forEach((item) => {
+      const key = normalizeQuickAwayName(item.name || '');
+      if (!key) return;
+      byName.set(key, [...(byName.get(key) || []), item]);
+    });
+
+    const grouped = new Map<string, { target: Student; entries: QuickAwayEntry[] }>();
+    parsed.entries.forEach((entry) => {
+      const matches = byName.get(entry.nameKey) || [];
+      if (matches.length === 0) {
+        result.skippedNoMatch += 1;
+        return;
+      }
+      if (matches.length > 1) {
+        result.skippedDuplicateName += 1;
+        return;
+      }
+      const target = matches[0];
+      const existing = grouped.get(target.id);
+      if (existing) {
+        existing.entries.push(entry);
+      } else {
+        grouped.set(target.id, { target, entries: [entry] });
+      }
+    });
+
+    for (const { target, entries } of grouped.values()) {
+      const nextSchedules = [...(target.id === student.id ? awaySchedules : (target.awaySchedules || []))];
+      let addedCount = 0;
+
+      entries.forEach((entry) => {
+        const nextSchedule: AwaySchedule = {
+          awayTime: entry.awayTime,
+          returnTime: entry.returnTime,
+          days: [],
+          dayMode: 'sun0',
+          until: 'forever',
+        };
+        if (nextSchedules.some((schedule) => isSameAwaySchedule(schedule, nextSchedule))) {
+          result.skippedDuplicateSchedule += 1;
+          return;
+        }
+        nextSchedules.push(nextSchedule);
+        addedCount += 1;
+      });
+
+      if (addedCount === 0) continue;
+
+      const nowIso = new Date().toISOString();
+      const updatedStudent: Student = target.id === student.id
+        ? { ...currentStudentSnapshot, awaySchedules: nextSchedules, updatedAt: nowIso }
+        : { ...target, awaySchedules: nextSchedules, updatedAt: nowIso };
+
+      try {
+        const res = await fetch(`/api/admin/students/${target.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updatedStudent),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          result.applied += addedCount;
+          if (target.id === student.id) {
+            setAwaySchedules(nextSchedules);
+            onUpdate(data.data);
+          }
+        } else {
+          result.failed += addedCount;
+        }
+      } catch {
+        result.failed += addedCount;
+      }
+    }
+
+    if (result.applied > 0) {
+      toast.success(`${result.applied}건의 정기 외출 시간이 적용되었습니다.`);
+    } else {
+      toast.error('적용된 정기 외출 시간이 없습니다.');
+    }
+
+    return result;
   };
 
   const handleGenerateShareToken = async () => {
@@ -3791,6 +4051,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                       <input
                         value={replyDrafts[req.id] ?? ''}
                         onChange={(e) => setReplyDrafts((d) => ({ ...d, [req.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (replyDrafts[req.id] || '').trim()) {
+                            e.preventDefault();
+                            actOnRequest(req.id, { reply: (replyDrafts[req.id] || '').trim() });
+                          }
+                        }}
                         placeholder="답변 직접 입력..."
                         className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
                       />
@@ -3801,7 +4067,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         onClick={() => actOnRequest(req.id, { reply: (replyDrafts[req.id] || '').trim() })}
                         className="h-8 shrink-0 rounded-lg px-2.5 text-[11px] font-bold"
                       >
-                        답변
+                        <Send className="h-3.5 w-3.5" />
+                        <span className="sr-only">답변 전송</span>
                       </Button>
                       
                       {req.proposedGoal ? (
@@ -3868,6 +4135,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                       <input
                         value={replyDrafts[req.id] ?? ''}
                         onChange={(e) => setReplyDrafts((d) => ({ ...d, [req.id]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (replyDrafts[req.id] || '').trim()) {
+                            e.preventDefault();
+                            actOnSuggestion(req.id, { reply: (replyDrafts[req.id] || '').trim() });
+                          }
+                        }}
                         placeholder="답변 직접 입력..."
                         className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
                       />
@@ -3878,7 +4151,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         onClick={() => actOnSuggestion(req.id, { reply: (replyDrafts[req.id] || '').trim() })}
                         className="h-8 shrink-0 rounded-lg px-2.5 text-[11px] font-bold"
                       >
-                        답변
+                        <Send className="h-3.5 w-3.5" />
+                        <span className="sr-only">답변 전송</span>
                       </Button>
                       <Button
                         size="sm"
@@ -4380,6 +4654,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 onRevokeShareToken={handleRevokeShareToken}
                 awaySchedules={awaySchedules}
                 setAwaySchedules={handleUpdateAwaySchedules}
+                onApplyQuickAwaySchedules={handleApplyQuickAwaySchedules}
               />
             </TabsContent>
           </Tabs>

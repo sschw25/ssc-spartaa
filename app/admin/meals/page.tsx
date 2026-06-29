@@ -9,13 +9,30 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, MealPlan, MealKind, MealDay, MealOrder, MealAddRequest } from '@/lib/types/student';
+import type { MealPlanRoutineTemplate } from '@/lib/meal-routines';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import {
   MEAL_DAYS, MEAL_DAY_LABELS, MEAL_KIND_LABELS, CAMPUSES, getCampusLabel,
-  weekRangeLabel, formatDeadline, isPastDeadline, isClosedDay, eatsOn, orderHasMeal, mealCounts, withSelection,
+  weekRangeLabel, formatDeadline, isPastDeadline, isClosedDay, eatsOn, orderHasMeal, mealCounts, withSelection, mondayOf,
 } from '@/lib/meal';
 
 const CAMPUS_FILTERS = ['all', ...CAMPUSES];
+const DAY_OPTIONS: Array<{ value: number; label: string }> = [
+  { value: 1, label: '월' },
+  { value: 2, label: '화' },
+  { value: 3, label: '수' },
+  { value: 4, label: '목' },
+  { value: 5, label: '금' },
+  { value: 6, label: '토' },
+  { value: 0, label: '일' },
+];
+
+function addDaysYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
 
 // 이번 주 월요일 (date input 기본값)
 function thisMonday(): string {
@@ -24,6 +41,43 @@ function thisMonday(): string {
   const diff = dow === 0 ? -6 : 1 - dow;
   d.setDate(d.getDate() + diff);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function nextMonday(): string {
+  return addDaysYmd(thisMonday(), 7);
+}
+
+function deadlineForMealWeek(weekStart: string): string {
+  return `${addDaysYmd(weekStart, -3)}T14:00`;
+}
+
+function toKstIsoFromDateTimeLocal(value: string): string | undefined {
+  if (!value) return undefined;
+  return new Date(`${value}:00+09:00`).toISOString();
+}
+
+function createRoutineDraft(campus = 'all'): MealPlanRoutineTemplate {
+  const now = new Date().toISOString();
+  const scopedCampus = campus === 'all' ? undefined : campus;
+  return {
+    id: `meal_tpl_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    name: scopedCampus ? `${getCampusLabel(scopedCampus)} 다음 주 도시락` : '다음 주 도시락',
+    active: true,
+    campus: scopedCampus,
+    meals: ['lunch'],
+    closedDays: [],
+    createDay: 1,
+    createTime: '14:00',
+    targetWeekOffset: 1,
+    deadlineBase: 'create',
+    deadlineDay: 5,
+    deadlineTime: '14:00',
+    notifyMode: 'none',
+    notifyDay: 1,
+    notifyTime: '14:00',
+    createdAt: now,
+    updatedAt: now,
+  };
 }
 
 export default function MealsPage() {
@@ -38,13 +92,18 @@ export default function MealsPage() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [notifyingId, setNotifyingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [routineTemplates, setRoutineTemplates] = useState<MealPlanRoutineTemplate[]>([]);
+  const [routineForm, setRoutineForm] = useState<MealPlanRoutineTemplate>(() => createRoutineDraft());
+  const [routineSaving, setRoutineSaving] = useState(false);
+  const [routineRunning, setRoutineRunning] = useState(false);
 
   // 라운드 등록 폼
-  const [newWeek, setNewWeek] = useState(thisMonday());
+  const [newWeek, setNewWeek] = useState(nextMonday());
   const [newMeals, setNewMeals] = useState<Record<MealKind, boolean>>({ lunch: true, dinner: false });
-  const [newDeadline, setNewDeadline] = useState('');
+  const [newDeadline, setNewDeadline] = useState(() => deadlineForMealWeek(nextMonday()));
   const [newLunchPrice, setNewLunchPrice] = useState('');
   const [newDinnerPrice, setNewDinnerPrice] = useState('');
+  const [newClosedDays, setNewClosedDays] = useState<MealDay[]>([]);
   const [newCampus, setNewCampus] = useState('all');
 
   const handleLogout = async () => {
@@ -55,14 +114,19 @@ export default function MealsPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [stuRes, planRes] = await Promise.all([
+      const [stuRes, planRes, routineRes] = await Promise.all([
         fetch('/api/admin/students', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/admin/meal-plans', { cache: 'no-store', credentials: 'same-origin' }),
+        fetch('/api/admin/meal-routines', { cache: 'no-store', credentials: 'same-origin' }),
       ]);
       if (stuRes.ok) { const j = await stuRes.json(); if (j.success) setStudents(j.data || []); }
       if (planRes.ok) {
         const j = await planRes.json();
         if (j.success) { setPlans(j.plans || []); setSelectedPlanId((cur) => cur || j.plans?.[0]?.id || null); }
+      }
+      if (routineRes.ok) {
+        const j = await routineRes.json();
+        if (j.success) setRoutineTemplates(j.templates || []);
       }
     } catch {
       toast.error('데이터를 불러오지 못했습니다.');
@@ -78,26 +142,40 @@ export default function MealsPage() {
         if (!res.ok) { router.replace('/admin'); return; }
         try {
           const me = await res.json();
-          if (me?.campus && me.campus !== 'all') { setAdminCampus(me.campus); setNewCampus(me.campus); }
+          if (me?.campus && me.campus !== 'all') {
+            setAdminCampus(me.campus);
+            setNewCampus(me.campus);
+            setRoutineForm(createRoutineDraft(me.campus));
+          }
         } catch { /* noop */ }
         loadAll();
       } catch { router.replace('/admin'); } finally { setCheckingAuth(false); }
     })();
   }, [router, loadAll]);
 
-  const addPlan = async () => {
-    const meals = (Object.keys(newMeals) as MealKind[]).filter((k) => newMeals[k]);
-    if (!newWeek) { toast.error('주차(월요일)를 선택해주세요.'); return; }
-    if (meals.length === 0) { toast.error('점심/저녁 중 하나 이상 선택해주세요.'); return; }
+  const createPlan = async (input: {
+    weekStart: string;
+    meals: MealKind[];
+    campus: string;
+    deadline: string;
+    lunchPrice?: string;
+    dinnerPrice?: string;
+    closedDays: MealDay[];
+  }) => {
+    if (!input.weekStart) { toast.error('주차(월요일)를 선택해주세요.'); return; }
+    if (input.meals.length === 0) { toast.error('점심/저녁 중 하나 이상 선택해주세요.'); return; }
     setAdding(true);
     try {
       const res = await fetch('/api/admin/meal-plans', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          weekStart: newWeek, meals, campus: newCampus,
-          deadline: newDeadline || undefined,
-          lunchPrice: newLunchPrice || undefined,
-          dinnerPrice: newDinnerPrice || undefined,
+          weekStart: input.weekStart,
+          meals: input.meals,
+          campus: input.campus,
+          deadline: toKstIsoFromDateTimeLocal(input.deadline),
+          lunchPrice: input.lunchPrice || undefined,
+          dinnerPrice: input.dinnerPrice || undefined,
+          closedDays: input.closedDays,
         }),
       });
       const json = await res.json();
@@ -108,6 +186,32 @@ export default function MealsPage() {
         setNewDeadline(''); setNewLunchPrice(''); setNewDinnerPrice('');
       } else { toast.error(json.message || '등록 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setAdding(false); }
+  };
+
+  const addPlan = async () => {
+    const meals = (Object.keys(newMeals) as MealKind[]).filter((k) => newMeals[k]);
+    await createPlan({
+      weekStart: newWeek,
+      meals,
+      campus: newCampus,
+      deadline: newDeadline,
+      lunchPrice: newLunchPrice,
+      dinnerPrice: newDinnerPrice,
+      closedDays: newClosedDays,
+    });
+  };
+
+  const quickCreateNextWeek = async () => {
+    const weekStart = nextMonday();
+    await createPlan({
+      weekStart,
+      meals: ['lunch'],
+      campus: newCampus,
+      deadline: deadlineForMealWeek(weekStart),
+      lunchPrice: newLunchPrice,
+      dinnerPrice: '',
+      closedDays: [],
+    });
   };
 
   const deletePlan = async (planId: string) => {
@@ -123,20 +227,85 @@ export default function MealsPage() {
     } catch { toast.error('네트워크 에러'); }
   };
 
-  const notifyToStudents = async (planId: string) => {
+  const notifyToStudents = async (planId: string, action: 'send' | 'cancel' = 'send') => {
     if (notifyingId) return;
+    if (action === 'cancel' && !confirm('발송된 도시락 신청 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
     setNotifyingId(planId);
     try {
       const res = await fetch('/api/admin/meal-plans', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId }),
+        body: JSON.stringify({ planId, action }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success('학생들에게 도시락 신청 알림을 발송했습니다.');
+        toast.success(action === 'cancel' ? '도시락 신청 알림을 취소했습니다.' : '학생들에게 도시락 신청 알림을 발송했습니다.');
         setPlans((prev) => prev.map((p) => (p.id === planId ? json.plan : p)));
-      } else { toast.error(json.message || '발송 실패'); }
+      } else { toast.error(json.message || '처리 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setNotifyingId(null); }
+  };
+
+  const saveRoutineTemplate = async (template: MealPlanRoutineTemplate = routineForm) => {
+    setRoutineSaving(true);
+    try {
+      const res = await fetch('/api/admin/meal-routines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(template),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setRoutineTemplates((prev) => {
+          const exists = prev.some((item) => item.id === json.template.id);
+          return exists ? prev.map((item) => item.id === json.template.id ? json.template : item) : [...prev, json.template];
+        });
+        setRoutineForm(createRoutineDraft(adminCampus !== 'all' ? adminCampus : newCampus));
+        toast.success('도시락 반복 템플릿을 저장했습니다.');
+      } else {
+        toast.error(json.message || '템플릿 저장 실패');
+      }
+    } catch {
+      toast.error('네트워크 에러');
+    } finally {
+      setRoutineSaving(false);
+    }
+  };
+
+  const deleteRoutineTemplate = async (id: string) => {
+    if (!confirm('이 반복 템플릿을 삭제할까요? 이미 생성된 도시락 라운드는 유지됩니다.')) return;
+    try {
+      const res = await fetch(`/api/admin/meal-routines?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        setRoutineTemplates((prev) => prev.filter((item) => item.id !== id));
+        toast.success('반복 템플릿을 삭제했습니다.');
+      } else {
+        toast.error(json.message || '템플릿 삭제 실패');
+      }
+    } catch {
+      toast.error('네트워크 에러');
+    }
+  };
+
+  const toggleRoutineActive = async (template: MealPlanRoutineTemplate) => {
+    await saveRoutineTemplate({ ...template, active: !template.active });
+  };
+
+  const runRoutinesNow = async () => {
+    setRoutineRunning(true);
+    try {
+      const res = await fetch('/api/admin/meal-routines/run', { method: 'POST' });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`반복 실행 완료: 생성 ${json.created || 0}건, 알림 ${json.notified || 0}건`);
+        await loadAll();
+      } else {
+        toast.error(json.message || '반복 실행 실패');
+      }
+    } catch {
+      toast.error('네트워크 에러');
+    } finally {
+      setRoutineRunning(false);
+    }
   };
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId) || null;
@@ -241,6 +410,58 @@ export default function MealsPage() {
     return out;
   }, [scopedStudents, selectedPlanId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const weeklyComparison = React.useMemo(() => {
+    const todayYmd = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Seoul',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date());
+    const currentWeekStart = mondayOf(todayYmd);
+    const nextWeekStart = addDaysYmd(currentWeekStart, 7);
+
+    const summarize = (weekStart: string, label: string) => {
+      const weekPlans = plans.filter((plan) => {
+        if (plan.weekStart !== weekStart) return false;
+        if (campusFilter === 'all') return true;
+        return !plan.campus || plan.campus === 'all' || plan.campus === campusFilter;
+      });
+      let totalStudents = 0;
+      let responded = 0;
+      let lunch = 0;
+      let dinner = 0;
+      for (const plan of weekPlans) {
+        const planStudents = students.filter((student) => {
+          if (campusFilter !== 'all' && student.campus !== campusFilter) return false;
+          return !plan.campus || plan.campus === 'all' || student.campus === plan.campus;
+        });
+        totalStudents += planStudents.length;
+        for (const student of planStudents) {
+          const order = (student.mealOrders || []).find((item) => item.planId === plan.id);
+          if (order) responded += 1;
+          const counts = mealCounts(order, plan.closedDays || []);
+          lunch += counts.lunch;
+          dinner += counts.dinner;
+        }
+      }
+      return {
+        label,
+        weekStart,
+        plans: weekPlans,
+        totalStudents,
+        responded,
+        missing: Math.max(0, totalStudents - responded),
+        lunch,
+        dinner,
+      };
+    };
+
+    return [
+      summarize(currentWeekStart, '이번 주 신청내역'),
+      summarize(nextWeekStart, '다음 주 신청현황'),
+    ];
+  }, [campusFilter, plans, students]);
+
   if (checkingAuth) {
     return <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center"><Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" /></div>;
   }
@@ -278,7 +499,10 @@ export default function MealsPage() {
           <div className="flex flex-wrap items-end gap-3">
             <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
               주 (월요일)
-              <input type="date" value={newWeek} onChange={(e) => setNewWeek(e.target.value)}
+              <input type="date" value={newWeek} onChange={(e) => {
+                setNewWeek(e.target.value);
+                setNewDeadline(deadlineForMealWeek(e.target.value));
+              }}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
             </label>
             <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
@@ -299,6 +523,22 @@ export default function MealsPage() {
               <input type="datetime-local" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
             </label>
+            <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+              신청 안 받는 요일
+              <div className="flex gap-1.5">
+                {MEAL_DAYS.map((day) => {
+                  const off = newClosedDays.includes(day);
+                  return (
+                    <button key={day} type="button" onClick={() => setNewClosedDays((cur) => off ? cur.filter((d) => d !== day) : [...cur, day])}
+                      className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
+                        off ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400'
+                      }`}>
+                      {MEAL_DAY_LABELS[day]}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {newMeals.lunch && (
               <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
                 점심 단가(원)
@@ -325,6 +565,10 @@ export default function MealsPage() {
             <Button onClick={addPlan} disabled={adding}
               className="rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-10 px-4">
               {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} 등록
+            </Button>
+            <Button onClick={quickCreateNextWeek} disabled={adding} variant="outline"
+              className="rounded-xl border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-black h-10 px-4">
+              다음 주 빠른 생성
             </Button>
           </div>
 
@@ -355,13 +599,13 @@ export default function MealsPage() {
                       )}
                     </div>
                   </button>
-                  <button type="button" disabled={!!notifyingId || !!plan.notifiedAt} onClick={() => notifyToStudents(plan.id)}
-                    title={plan.notifiedAt ? `발송: ${new Date(plan.notifiedAt).toLocaleString('ko-KR')}` : '학생에게 신청 알림 발송'}
+                  <button type="button" disabled={!!notifyingId} onClick={() => notifyToStudents(plan.id, plan.notifiedAt ? 'cancel' : 'send')}
+                    title={plan.notifiedAt ? `발송: ${new Date(plan.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 신청 알림 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
-                      plan.notifiedAt ? 'bg-slate-100 text-slate-400 cursor-default' : 'bg-blue-600 text-white hover:bg-blue-700'
+                      plan.notifiedAt ? 'border border-red-100 bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}>
-                    {notifyingId === plan.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
-                    {plan.notifiedAt ? '발송됨' : '학생 알림'}
+                    {notifyingId === plan.id ? <Loader2 className="w-3 h-3 animate-spin" /> : plan.notifiedAt ? <X className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                    {plan.notifiedAt ? '알림 취소' : '학생 알림'}
                   </button>
                   <button type="button" onClick={() => deletePlan(plan.id)}
                     className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition shrink-0" title="삭제">
@@ -371,6 +615,263 @@ export default function MealsPage() {
               ))}
             </div>
           )}
+        </div>
+
+        <div className="no-print rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <div>
+              <h2 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F]">센터별 반복 템플릿</h2>
+              <p className="text-[12px] font-medium text-[#86868B] mt-0.5">생성 · 마감 · 알림 시각</p>
+            </div>
+            <Button onClick={runRoutinesNow} disabled={routineRunning} variant="outline"
+              className="ml-auto rounded-xl border-slate-200 bg-white text-xs font-black h-9">
+              {routineRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+              지금 실행
+            </Button>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr]">
+            <div className="rounded-2xl border border-black/[0.05] bg-[#FAFAFA] p-4 space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  템플릿명
+                  <input value={routineForm.name} onChange={(e) => setRoutineForm((f) => ({ ...f, name: e.target.value }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  센터
+                  <select value={routineForm.campus || 'all'} disabled={adminCampus !== 'all'}
+                    onChange={(e) => setRoutineForm((f) => ({ ...f, campus: e.target.value === 'all' ? undefined : e.target.value }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
+                    <option value="all">전체 센터</option>
+                    {CAMPUSES.map((c) => <option key={c} value={c}>{getCampusLabel(c)}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  생성 요일
+                  <select value={routineForm.createDay} onChange={(e) => setRoutineForm((f) => ({ ...f, createDay: Number(e.target.value) }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    {DAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  생성 시각
+                  <input type="time" value={routineForm.createTime} onChange={(e) => setRoutineForm((f) => ({ ...f, createTime: e.target.value }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  대상 주
+                  <select value={routineForm.targetWeekOffset} onChange={(e) => setRoutineForm((f) => ({ ...f, targetWeekOffset: Number(e.target.value) }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    <option value={0}>이번 주</option>
+                    <option value={1}>다음 주</option>
+                    <option value={2}>2주 뒤</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-4">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  마감 기준
+                  <select value={routineForm.deadlineBase} onChange={(e) => setRoutineForm((f) => ({ ...f, deadlineBase: e.target.value as MealPlanRoutineTemplate['deadlineBase'] }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    <option value="create">생성 주</option>
+                    <option value="target">대상 주</option>
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  마감 요일
+                  <select value={routineForm.deadlineDay} onChange={(e) => setRoutineForm((f) => ({ ...f, deadlineDay: Number(e.target.value) }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    {DAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  마감 시각
+                  <input type="time" value={routineForm.deadlineTime} onChange={(e) => setRoutineForm((f) => ({ ...f, deadlineTime: e.target.value }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  알림
+                  <select value={routineForm.notifyMode} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyMode: e.target.value as MealPlanRoutineTemplate['notifyMode'] }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    <option value="none">보내지 않음</option>
+                    <option value="on_create">생성 즉시</option>
+                    <option value="scheduled">예약 발송</option>
+                  </select>
+                </label>
+              </div>
+
+              {routineForm.notifyMode === 'scheduled' && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                    알림 요일
+                    <select value={routineForm.notifyDay ?? routineForm.createDay} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyDay: Number(e.target.value) }))}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                      {DAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                    알림 시각
+                    <input type="time" value={routineForm.notifyTime || routineForm.createTime} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyTime: e.target.value }))}
+                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                  </label>
+                </div>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  끼니
+                  <div className="flex gap-1.5">
+                    {(['lunch', 'dinner'] as MealKind[]).map((kind) => {
+                      const on = routineForm.meals.includes(kind);
+                      return (
+                        <button key={kind} type="button" onClick={() => setRoutineForm((f) => ({
+                          ...f,
+                          meals: on ? f.meals.filter((m) => m !== kind) : [...f.meals, kind],
+                        }))}
+                          className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
+                            on ? 'border-[#0071E3] bg-[#0071E3] text-white' : 'border-slate-200 bg-white text-slate-400'
+                          }`}>
+                          {MEAL_KIND_LABELS[kind]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  신청 안 받는 요일
+                  <div className="flex gap-1.5">
+                    {MEAL_DAYS.map((day) => {
+                      const off = routineForm.closedDays.includes(day);
+                      return (
+                        <button key={day} type="button" onClick={() => setRoutineForm((f) => ({
+                          ...f,
+                          closedDays: off ? f.closedDays.filter((d) => d !== day) : [...f.closedDays, day],
+                        }))}
+                          className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
+                            off ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400'
+                          }`}>
+                          {MEAL_DAY_LABELS[day]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  점심 단가
+                  <input type="number" min={0} value={routineForm.lunchPrice ?? ''} onChange={(e) => setRoutineForm((f) => ({ ...f, lunchPrice: e.target.value ? Number(e.target.value) : undefined }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                </label>
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  저녁 단가
+                  <input type="number" min={0} value={routineForm.dinnerPrice ?? ''} onChange={(e) => setRoutineForm((f) => ({ ...f, dinnerPrice: e.target.value ? Number(e.target.value) : undefined }))}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                </label>
+                <Button onClick={() => saveRoutineTemplate()} disabled={routineSaving}
+                  className="self-end rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-10 px-4">
+                  {routineSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  템플릿 저장
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {routineTemplates.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+                  등록된 반복 템플릿이 없습니다.
+                </div>
+              ) : routineTemplates.map((template) => (
+                <div key={template.id} className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+                  <div className="flex items-start gap-3">
+                    <button type="button" onClick={() => toggleRoutineActive(template)}
+                      className={`mt-0.5 h-6 w-11 rounded-full border p-0.5 transition ${
+                        template.active ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200 bg-slate-100'
+                      }`}>
+                      <span className={`block h-4 w-4 rounded-full bg-white transition ${template.active ? 'translate-x-5' : ''}`} />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-xs font-black text-slate-800">{template.name}</p>
+                        <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">
+                          {template.campus ? getCampusLabel(template.campus) : '전체 센터'}
+                        </span>
+                        <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${template.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                          {template.active ? '반복중' : '중지'}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                        {DAY_OPTIONS.find((d) => d.value === template.createDay)?.label} {template.createTime} 생성 · {template.targetWeekOffset === 1 ? '다음 주' : template.targetWeekOffset === 0 ? '이번 주' : `${template.targetWeekOffset}주 뒤`}
+                      </p>
+                      <p className="text-[11px] font-semibold text-slate-400">
+                        마감 {template.deadlineBase === 'create' ? '생성 주' : '대상 주'} {DAY_OPTIONS.find((d) => d.value === template.deadlineDay)?.label} {template.deadlineTime} · 알림 {template.notifyMode === 'none' ? '없음' : template.notifyMode === 'on_create' ? '생성 즉시' : '예약'}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => setRoutineForm(template)}
+                      className="rounded-lg px-2 py-1.5 text-[11px] font-black text-[#0071E3] hover:bg-[#0071E3]/10">
+                      수정
+                    </button>
+                    <button type="button" onClick={() => deleteRoutineTemplate(template.id)}
+                      className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="no-print grid gap-3 md:grid-cols-2">
+          {weeklyComparison.map((summary, index) => {
+            const isNext = index === 1;
+            return (
+              <div key={summary.weekStart}
+                className={`rounded-2xl border px-5 py-4 shadow-sm ${
+                  isNext ? 'border-amber-200 bg-amber-50' : 'border-[#0071E3]/20 bg-[#0071E3]/[0.06]'
+                }`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className={`text-xs font-black ${isNext ? 'text-amber-700' : 'text-[#0071E3]'}`}>{summary.label}</p>
+                    <h2 className="mt-1 text-[17px] font-semibold tracking-tight text-[#1D1D1F]">
+                      {weekRangeLabel(summary.weekStart)} 주
+                    </h2>
+                  </div>
+                  <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                    summary.plans.length > 0
+                      ? isNext ? 'bg-amber-100 text-amber-700' : 'bg-[#0071E3]/10 text-[#0071E3]'
+                      : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {summary.plans.length > 0 ? `${summary.plans.length}개 라운드` : '아직 없음'}
+                  </span>
+                </div>
+                <div className="mt-4 grid grid-cols-4 gap-2 text-center">
+                  <div className="rounded-xl bg-white px-2 py-2">
+                    <p className="text-[18px] font-semibold tabular-nums text-[#1D1D1F]">{summary.responded}</p>
+                    <p className="text-[11px] font-medium text-[#86868B]">응답</p>
+                  </div>
+                  <div className="rounded-xl bg-white px-2 py-2">
+                    <p className="text-[18px] font-semibold tabular-nums text-orange-600">{summary.missing}</p>
+                    <p className="text-[11px] font-medium text-[#86868B]">미응답</p>
+                  </div>
+                  <div className="rounded-xl bg-white px-2 py-2">
+                    <p className="text-[18px] font-semibold tabular-nums text-amber-700">{summary.lunch}</p>
+                    <p className="text-[11px] font-medium text-[#86868B]">점심</p>
+                  </div>
+                  <div className="rounded-xl bg-white px-2 py-2">
+                    <p className="text-[18px] font-semibold tabular-nums text-indigo-600">{summary.dinner}</p>
+                    <p className="text-[11px] font-medium text-[#86868B]">저녁</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {selectedPlan && (

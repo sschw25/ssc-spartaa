@@ -48,7 +48,7 @@ alter table students add column if not exists login_id text unique;
 -- 출결 알림 문자 수신 정보 (PII — 리포트엔 노출 안 함)
 alter table students add column if not exists parent_phone text;
 alter table students add column if not exists student_phone text;
--- 수신 대상: ["parent"], ["student"], ["parent","student"] 중 선택
+-- 수신 대상: ["parent"], ["student"], ["parent","student"], [] 중 선택 ([] = 자동 발송 안 함)
 alter table students add column if not exists sms_targets jsonb not null default '["parent"]'::jsonb;
 
 -- 지각 기준(등원 마감): '08:20' 또는 '09:00' 그룹

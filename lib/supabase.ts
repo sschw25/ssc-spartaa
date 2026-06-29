@@ -3,6 +3,13 @@ import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam, OtEve
 import { mergeOrphanMaterials } from './db';
 import { normalizeArrival } from './attendance-time';
 
+type SmsTarget = 'parent' | 'student';
+
+function normalizeSmsTargets(value: unknown): SmsTarget[] {
+  if (!Array.isArray(value)) return ['parent'];
+  return value.filter((target): target is SmsTarget => target === 'parent' || target === 'student');
+}
+
 // ── 환경 변수 ────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -48,7 +55,7 @@ function rowToStudent(r: any): Student {
     nextConsultationDate: r.next_consultation_date || undefined,
     parentPhone: r.parent_phone || undefined,
     studentPhone: r.student_phone || undefined,
-    smsTargets: Array.isArray(r.sms_targets) ? r.sms_targets : ['parent'],
+    smsTargets: normalizeSmsTargets(r.sms_targets),
     expectedArrival: normalizeArrival(r.expected_arrival),
     enrollmentEndDate: r.enrollment_end_date || undefined,
     weeklyGradeCheck: Boolean(r.weekly_grade_check),
@@ -110,7 +117,7 @@ function studentToRow(student: Student, nowIso: string) {
     seat_number: student.seatNumber ?? null,
     parent_phone: student.parentPhone || null,
     student_phone: student.studentPhone || null,
-    sms_targets: student.smsTargets && student.smsTargets.length ? student.smsTargets : ['parent'],
+    sms_targets: normalizeSmsTargets(student.smsTargets),
     speed_multiplier: 1.0,
     life_comment: student.lifeComment || '',
     special_note: student.specialNote || '',
@@ -279,7 +286,7 @@ export async function setStudentNotifyInfoSupabase(studentId: string, info: Noti
     .update({
       parent_phone: info.parentPhone || null,
       student_phone: info.studentPhone || null,
-      sms_targets: info.smsTargets && info.smsTargets.length ? info.smsTargets : ['parent'],
+      sms_targets: normalizeSmsTargets(info.smsTargets),
     })
     .eq('id', studentId);
   if (error) throw error;
@@ -494,7 +501,7 @@ export async function deleteMockExamSupabase(id: string): Promise<void> {
 }
 
 // 모의고사 학생 알림 발송 표시 (notified_at 설정)
-export async function notifyMockExamSupabase(id: string, notifiedAt: string): Promise<MockExam> {
+export async function notifyMockExamSupabase(id: string, notifiedAt: string | null): Promise<MockExam> {
   const { data, error } = await getClient()
     .from('mock_exams')
     .update({ notified_at: notifiedAt })
@@ -553,7 +560,7 @@ export async function deleteOtEventSupabase(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function notifyOtEventSupabase(id: string, notifiedAt: string): Promise<OtEvent> {
+export async function notifyOtEventSupabase(id: string, notifiedAt: string | null): Promise<OtEvent> {
   const { data, error } = await getClient()
     .from('ot_events')
     .update({ notified_at: notifiedAt })
@@ -632,7 +639,7 @@ export async function deleteCampusEventSupabase(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function notifyCampusEventSupabase(id: string, notifiedAt: string): Promise<CampusEvent> {
+export async function notifyCampusEventSupabase(id: string, notifiedAt: string | null): Promise<CampusEvent> {
   const { data, error } = await getClient()
     .from('campus_events')
     .update({ notified_at: notifiedAt })
@@ -707,7 +714,7 @@ export async function deleteMealPlanSupabase(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function notifyMealPlanSupabase(id: string, notifiedAt: string): Promise<MealPlan> {
+export async function notifyMealPlanSupabase(id: string, notifiedAt: string | null): Promise<MealPlan> {
   const { data, error } = await getClient()
     .from('meal_plans')
     .update({ notified_at: notifiedAt })

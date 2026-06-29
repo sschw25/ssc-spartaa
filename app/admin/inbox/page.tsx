@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User, Search
+  Target, BookOpen, Tv, User, Search, Send
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, LeaveType, ProposedGoal } from '@/lib/types/student';
@@ -61,6 +61,7 @@ export default function AdminInboxPage() {
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
   const [replyText, setReplyText] = useState('');
   const [processing, setProcessing] = useState(false);
+  const [replySending, setReplySending] = useState(false);
   // 다중 선택 일괄 승인
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkProcessing, setBulkProcessing] = useState(false);
@@ -188,7 +189,7 @@ export default function AdminInboxPage() {
           if (r.status === 'approved' || r.status === 'rejected') {
             statusText = '완료';
             tone = 'emerald';
-          } else if (r.status === 'pending' && r.adminReply) {
+          } else if (r.status === 'pending' && (r.adminReply || (r as any).acknowledgedAt)) {
             statusText = '처리중';
             tone = 'blue';
           }
@@ -229,7 +230,7 @@ export default function AdminInboxPage() {
         if (r.status === 'resolved') {
           statusText = '완료';
           tone = 'emerald';
-        } else if (r.status === 'pending' && r.adminReply) {
+        } else if (r.status === 'pending' && (r.adminReply || (r as any).acknowledgedAt)) {
           statusText = '처리중';
           tone = 'blue';
         }
@@ -267,7 +268,7 @@ export default function AdminInboxPage() {
         if (r.status === 'resolved') {
           statusText = '완료';
           tone = 'emerald';
-        } else if (r.status === 'pending' && r.adminReply) {
+        } else if (r.status === 'pending' && (r.adminReply || (r as any).acknowledgedAt)) {
           statusText = '처리중';
           tone = 'blue';
         }
@@ -539,19 +540,30 @@ export default function AdminInboxPage() {
     reply?: string,
   ) => {
     const replyTrim = reply?.trim() || '';
+    const nowIso = new Date().toISOString();
     setStudents((prev) => prev.map((s) => {
       if (s.id !== item.studentId) return s;
       const next: Student = { ...s };
       if (item.type === 'leave') {
         next.leaveRequests = (s.leaveRequests || []).map((r) =>
           r.id === item.id
-            ? { ...r, status: (actionStatus === 'resolved' ? 'approved' : actionStatus) as any, adminReply: replyTrim || r.adminReply }
+            ? {
+                ...r,
+                status: (actionStatus === 'resolved' ? 'approved' : actionStatus) as any,
+                adminReply: replyTrim || r.adminReply,
+                ...(actionStatus === 'pending' ? { acknowledgedAt: nowIso } : {}),
+              } as any
             : r);
       } else if (item.type === 'request' || item.type === 'suggestion') {
         const nextStatus = actionStatus === 'approved' || actionStatus === 'resolved' ? 'resolved' : actionStatus;
         next.consultationLogs = (s.consultationLogs || []).map((l) =>
           l.id === item.id
-            ? { ...l, status: nextStatus as any, adminReply: replyTrim || l.adminReply }
+            ? {
+                ...l,
+                status: nextStatus as any,
+                adminReply: replyTrim || l.adminReply,
+                ...(nextStatus === 'pending' ? { acknowledgedAt: nowIso } : {}),
+              } as any
             : l);
       } else if (item.type === 'ot_absence') {
         const ns = (actionStatus === 'approved' || actionStatus === 'resolved') ? 'absent' : 'undecided';
@@ -574,6 +586,100 @@ export default function AdminInboxPage() {
       }
       return next;
     }));
+  };
+
+  const canSendReply = (item: InboxItem | null) =>
+    item?.type === 'leave' || item?.type === 'request' || item?.type === 'suggestion';
+
+  const processReplyOnly = async (item: InboxItem, reply: string) => {
+    let apiUrl = `/api/admin/students/${item.studentId}`;
+    let body: any = {};
+
+    if (item.type === 'leave') {
+      apiUrl += '/leave';
+      body = { requestId: item.id, reply };
+    } else if (item.type === 'request') {
+      apiUrl += '/requests';
+      body = { requestId: item.id, reply };
+    } else if (item.type === 'suggestion') {
+      apiUrl += '/suggestions';
+      body = { suggestionId: item.id, reply };
+    } else {
+      throw new Error('이 요청에는 답변을 보낼 수 없습니다.');
+    }
+
+    const res = await fetch(apiUrl, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok || !json.success) throw new Error(json.message || '답변 전송 실패');
+  };
+
+  const appendLocalAdminReply = (rawItem: any, reply: string) => {
+    const nowIso = new Date().toISOString();
+    const thread = Array.isArray(rawItem?.thread) ? [...rawItem.thread] : [];
+    if (thread.length === 0 && rawItem?.adminReply) {
+      thread.push({
+        id: `legacy_local_${Date.now()}`,
+        from: 'admin',
+        text: rawItem.adminReply,
+        at: rawItem.repliedAt || '',
+      });
+    }
+    thread.push({
+      id: `local_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      from: 'admin',
+      text: reply,
+      at: nowIso,
+      author: '코치',
+    });
+    return { ...(rawItem || {}), adminReply: reply, repliedAt: nowIso, thread };
+  };
+
+  const applyReplyOptimistic = (item: InboxItem, reply: string) => {
+    const nextRawItem = appendLocalAdminReply(item.rawItem, reply);
+    setStudents((prev) => prev.map((student) => {
+      if (student.id !== item.studentId) return student;
+      if (item.type === 'leave') {
+        return {
+          ...student,
+          leaveRequests: (student.leaveRequests || []).map((request) =>
+            request.id === item.id ? { ...request, ...nextRawItem } : request),
+        };
+      }
+      if (item.type === 'request' || item.type === 'suggestion') {
+        return {
+          ...student,
+          consultationLogs: (student.consultationLogs || []).map((log) =>
+            log.id === item.id ? { ...log, ...nextRawItem } : log),
+        };
+      }
+      return student;
+    }));
+    setSelectedItem((prev) => prev && prev.id === item.id
+      ? { ...prev, adminReply: reply, rawItem: nextRawItem }
+      : prev);
+  };
+
+  const handleSendReply = async () => {
+    const target = selectedItem;
+    const reply = replyText.trim();
+    if (!target || !reply || !canSendReply(target)) return;
+
+    setReplySending(true);
+    try {
+      await processReplyOnly(target, reply);
+      applyReplyOptimistic(target, reply);
+      setReplyText('');
+      toast.success('답변을 보냈습니다.');
+      loadStudents(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '답변 전송 중 오류가 발생했습니다.');
+    } finally {
+      setReplySending(false);
+    }
   };
 
   const handleProcessRequest = async (actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending') => {
@@ -975,14 +1081,32 @@ export default function AdminInboxPage() {
 
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코치 답변 / 재답변 작성</label>
-                  <textarea
-                    value={replyText}
-                    onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="원생에게 보여질 코치 코멘트를 입력하세요. 보낼 때마다 대화에 누적됩니다."
-                    rows={4}
-                    className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
-                  />
-                  <p className="text-[9px] font-bold text-slate-400">답변을 입력하면 실시간으로 '처리중' 또는 '완료' 상태로 학생 화면에 표시됩니다.</p>
+                  <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 focus-within:border-[#0071E3] focus-within:ring-2 focus-within:ring-[#0071E3]/20">
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendReply();
+                        }
+                      }}
+                      placeholder="원생에게 보낼 메시지를 입력하세요."
+                      rows={3}
+                      className="min-h-[76px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSendReply}
+                      disabled={!canSendReply(selectedItem) || !replyText.trim() || replySending}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-white shadow-sm transition hover:bg-[#0077ED] active:scale-[0.96] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                      aria-label="답변 전송"
+                      title="답변 전송"
+                    >
+                      {replySending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[9px] font-bold text-slate-400">Enter 전송 · Shift+Enter 줄바꿈. 처리완료와 확인 처리는 아래 버튼으로 따로 기록합니다.</p>
                 </div>
 
                 {/* proposedGoal 제안 계획 표시 */}
@@ -1157,7 +1281,7 @@ export default function AdminInboxPage() {
                         onClick={() => handleProcessRequest('pending')}
                         className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
                       >
-                        <Clock className="w-3.5 h-3.5 mr-1" /> 처리중 상태로 전환
+                        <Clock className="w-3.5 h-3.5 mr-1" /> 확인했어요
                       </Button>
                     </div>
                   )}

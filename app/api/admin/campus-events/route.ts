@@ -100,12 +100,12 @@ export async function POST(request: Request) {
   }
 }
 
-// 관리자: 참여 미션 알림 발송 (notifiedAt 설정)
+// 관리자: 참여 미션 알림 발송/취소 (notifiedAt 설정/해제)
 export async function PATCH(request: Request) {
   if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
-  let body: { eventId?: unknown };
+  let body: { eventId?: unknown; action?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -114,10 +114,11 @@ export async function PATCH(request: Request) {
   const eventId = String(body?.eventId ?? '').trim();
   if (!eventId) return NextResponse.json({ success: false, message: 'eventId가 필요합니다.' }, { status: 400 });
   try {
-    const event = await notifyCampusEvent(eventId, new Date().toISOString());
+    const cancel = body?.action === 'cancel';
+    const event = await notifyCampusEvent(eventId, cancel ? null : new Date().toISOString());
     return NextResponse.json({ success: true, event });
   } catch (error: unknown) {
-    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '발송 실패' }, { status: 500 });
+    return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '처리 실패' }, { status: 500 });
   }
 }
 

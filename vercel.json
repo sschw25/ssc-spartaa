@@ -11,6 +11,10 @@
     {
       "path": "/api/admin/missions/settle?scope=monthly&prev=1",
       "schedule": "30 15 1 * *"
+    },
+    {
+      "path": "/api/admin/meal-routines/run",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

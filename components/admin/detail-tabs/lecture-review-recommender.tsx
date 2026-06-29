@@ -8,13 +8,25 @@ import React from 'react';
 export function LectureReviewRecommender({
   estimatedMinutesPerUnit,
   speedMultiplier,
+  studyTime,
 }: {
   estimatedMinutesPerUnit?: number | null;
   speedMultiplier?: number | null;
+  studyTime?: 'morning' | 'afternoon' | 'night' | '';
 }) {
   const [open, setOpen] = React.useState(false);
   const [reviewMin, setReviewMin] = React.useState<number>(20);
-  const [sessionMin, setSessionMin] = React.useState<number>(210);
+  const sessionPresets = [
+    { key: 'morning', label: '오전', value: 190 },
+    { key: 'afternoon', label: '오후', value: 210 },
+    { key: 'night', label: '야간', value: 250 },
+  ] as const;
+  const defaultSessionMin = sessionPresets.find((preset) => preset.key === studyTime)?.value ?? 210;
+  const [sessionMin, setSessionMin] = React.useState<number>(defaultSessionMin);
+
+  React.useEffect(() => {
+    setSessionMin(defaultSessionMin);
+  }, [defaultSessionMin]);
 
   const lectureMin = estimatedMinutesPerUnit && estimatedMinutesPerUnit > 0 ? estimatedMinutesPerUnit : 60;
   const speed = speedMultiplier && speedMultiplier > 0 ? speedMultiplier : 1.0;
@@ -25,13 +37,6 @@ export function LectureReviewRecommender({
   const usedMin = Math.round(recommendedCount * perLecture);
   const leftover = Math.max(0, sessionMin - usedMin);
 
-  const SESSION_PRESETS = [
-    { label: '오전 180', value: 180 },
-    { label: '오후 210', value: 210 },
-    { label: '야간 180', value: 180 },
-    { label: '종일 420', value: 420 },
-  ];
-
   return (
     <div className="rounded-lg border border-[#0071E3]/15 bg-[#F8FBFF] p-2.5 text-[10px]">
       <button
@@ -39,7 +44,7 @@ export function LectureReviewRecommender({
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center justify-between font-bold text-[#0071E3]"
       >
-        <span>🎬 복습 포함 추천 (배속·강의·복습 고려)</span>
+        <span>복습 포함 추천 (배속·강의·복습 고려)</span>
         <span>{open ? '▲' : '▼'}</span>
       </button>
 
@@ -69,9 +74,9 @@ export function LectureReviewRecommender({
           </div>
 
           <div className="flex flex-wrap gap-1">
-            {SESSION_PRESETS.map((p) => (
+            {sessionPresets.map((p) => (
               <button
-                key={p.label}
+                key={p.key}
                 type="button"
                 onClick={() => setSessionMin(p.value)}
                 className={`rounded-full border px-2 py-0.5 font-bold transition-colors ${
@@ -80,7 +85,7 @@ export function LectureReviewRecommender({
                     : 'border-black/[0.08] bg-white text-[#86868B] hover:border-[#0071E3]/40'
                 }`}
               >
-                {p.label}
+                {p.label} {p.value}
               </button>
             ))}
           </div>

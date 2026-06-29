@@ -245,7 +245,7 @@ export async function deleteMockExam(id: string): Promise<void> {
   return deleteMockExamSupabase(id);
 }
 
-export async function notifyMockExam(id: string, notifiedAt: string): Promise<MockExam> {
+export async function notifyMockExam(id: string, notifiedAt: string | null): Promise<MockExam> {
   requireSupabase();
   return notifyMockExamSupabase(id, notifiedAt);
 }
@@ -266,7 +266,7 @@ export async function deleteOtEvent(id: string): Promise<void> {
   return deleteOtEventSupabase(id);
 }
 
-export async function notifyOtEvent(id: string, notifiedAt: string): Promise<OtEvent> {
+export async function notifyOtEvent(id: string, notifiedAt: string | null): Promise<OtEvent> {
   requireSupabase();
   return notifyOtEventSupabase(id, notifiedAt);
 }
@@ -287,7 +287,7 @@ export async function deleteCampusEvent(id: string): Promise<void> {
   return deleteCampusEventSupabase(id);
 }
 
-export async function notifyCampusEvent(id: string, notifiedAt: string): Promise<CampusEvent> {
+export async function notifyCampusEvent(id: string, notifiedAt: string | null): Promise<CampusEvent> {
   requireSupabase();
   return notifyCampusEventSupabase(id, notifiedAt);
 }
@@ -313,7 +313,7 @@ export async function deleteMealPlan(id: string): Promise<void> {
   return deleteMealPlanSupabase(id);
 }
 
-export async function notifyMealPlan(id: string, notifiedAt: string): Promise<MealPlan> {
+export async function notifyMealPlan(id: string, notifiedAt: string | null): Promise<MealPlan> {
   requireSupabase();
   return notifyMealPlanSupabase(id, notifiedAt);
 }

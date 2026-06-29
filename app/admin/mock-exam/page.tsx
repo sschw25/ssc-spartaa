@@ -160,21 +160,22 @@ export default function MockExamPage() {
     }
   };
 
-  const notifyExamToStudents = async (examId: string) => {
+  const notifyExamToStudents = async (examId: string, action: 'send' | 'cancel' = 'send') => {
     if (notifyingExamId) return;
+    if (action === 'cancel' && !confirm('발송된 모의고사 참여 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
     setNotifyingExamId(examId);
     try {
       const res = await fetch('/api/admin/mock-exams', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examId }),
+        body: JSON.stringify({ examId, action }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success('학생들에게 참여 확인 알림을 발송했습니다.');
+        toast.success(action === 'cancel' ? '모의고사 참여 알림을 취소했습니다.' : '학생들에게 참여 확인 알림을 발송했습니다.');
         setExams((prev) => prev.map((e) => (e.id === examId ? json.exam : e)));
       } else {
-        toast.error(json.message || '발송 실패');
+        toast.error(json.message || '처리 실패');
       }
     } catch {
       toast.error('네트워크 에러');
@@ -424,19 +425,19 @@ export default function MockExamPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={!!notifyingExamId || !!exam.notifiedAt}
-                    onClick={() => notifyExamToStudents(exam.id)}
-                    title={exam.notifiedAt ? `발송: ${new Date(exam.notifiedAt).toLocaleString('ko-KR')}` : '학생에게 참여 확인 알림 발송'}
+                    disabled={!!notifyingExamId}
+                    onClick={() => notifyExamToStudents(exam.id, exam.notifiedAt ? 'cancel' : 'send')}
+                    title={exam.notifiedAt ? `발송: ${new Date(exam.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
                       exam.notifiedAt
-                        ? 'bg-slate-100 text-slate-400 cursor-default'
+                        ? 'border border-red-100 bg-red-50 text-red-600 hover:bg-red-100'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
                     {notifyingExamId === exam.id
                       ? <Loader2 className="w-3 h-3 animate-spin" />
-                      : <MessageSquare className="w-3 h-3" />}
-                    {exam.notifiedAt ? '발송됨' : '학생 알림'}
+                      : exam.notifiedAt ? <XCircle className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                    {exam.notifiedAt ? '알림 취소' : '학생 알림'}
                   </button>
                   <button
                     type="button"

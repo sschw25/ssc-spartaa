@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { canAdminAccessStudent } from '@/lib/auth';
 import { setStudentNotifyInfo } from '@/lib/store';
 
 // 관리자: 등하원 알림 수신 연락처/대상 설정
@@ -7,11 +7,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   try {
     const { parentPhone, studentPhone, smsTargets } = await request.json();
@@ -21,7 +21,7 @@ export async function POST(
     await setStudentNotifyInfo(id, {
       parentPhone: (parentPhone || '').replace(/[^\d]/g, ''),
       studentPhone: (studentPhone || '').replace(/[^\d]/g, ''),
-      smsTargets: targets.length ? targets : ['parent'],
+      smsTargets: targets,
     });
 
     return NextResponse.json({ success: true, message: '등하원 알림 설정이 저장되었습니다.' });

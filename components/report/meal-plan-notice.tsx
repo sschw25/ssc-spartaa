@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Utensils, CheckCircle2, Loader2, Lock, Clock } from 'lucide-react';
+import { Utensils, CheckCircle2, Loader2, Lock, Clock, XCircle } from 'lucide-react';
 import type { MealPlan, MealOrder, MealKind, MealDay } from '@/lib/types/student';
 import {
   MEAL_DAYS, MEAL_DAY_LABELS, MEAL_KIND_LABELS,
@@ -30,20 +30,29 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
     setSel((cur) => withSelection(cur, day, kind, !eatsOn({ planId: plan.id, selections: cur, updatedAt: '' }, day, kind)));
   };
 
-  const save = async () => {
+  const persistSelections = async (nextSelections: MealOrder['selections']) => {
     if (saving) return;
     setSaving(true);
     try {
       const res = await fetch('/api/student/meal-order', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId: plan.id, selections: sel }),
+        body: JSON.stringify({ planId: plan.id, selections: nextSelections }),
       });
       const json = await res.json();
       if (json.success) {
+        setSel(nextSelections);
         setSavedAt(json.order?.updatedAt || new Date().toISOString());
         onSaved(plan.id, json.order);
       }
     } catch {} finally { setSaving(false); }
+  };
+
+  const save = async () => {
+    await persistSelections(sel);
+  };
+
+  const saveNone = async () => {
+    await persistSelections({});
   };
 
   const submitAdd = async () => {
@@ -121,11 +130,19 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
               </tbody>
             </table>
           </div>
-          <button type="button" disabled={saving} onClick={save}
-            className="w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#B45309] py-2.5 text-xs font-black text-white hover:bg-[#92400E] transition disabled:opacity-50">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-            {savedAt ? '신청 수정 저장' : '도시락 신청 저장'}
-          </button>
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <button type="button" disabled={saving} onClick={save}
+              className="flex min-h-11 items-center justify-center gap-1.5 rounded-full bg-[#B45309] px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-[#92400E] disabled:opacity-50">
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              {savedAt ? '신청 수정 저장' : '도시락 신청 저장'}
+            </button>
+            <button type="button" disabled={saving} onClick={saveNone}
+              className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-[#F1DFC0] bg-white px-4 py-2.5 text-xs font-semibold text-[#B45309] transition hover:bg-[#FFF3E0] disabled:opacity-50"
+              title="이번 주 도시락을 먹지 않는 것으로 저장">
+              <XCircle className="w-3.5 h-3.5" />
+              미신청
+            </button>
+          </div>
           {savedAt && <p className="text-center text-[10px] font-bold text-emerald-600">저장됨 — 마감 전까지 자유롭게 수정할 수 있어요</p>}
         </div>
       ) : (

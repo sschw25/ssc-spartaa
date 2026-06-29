@@ -77,14 +77,13 @@ export async function POST(request: Request) {
   }
 }
 
-// 관리자: 모의고사 일정 삭제
-// 관리자: 학생에게 모의고사 알림 발송 (notifiedAt 설정)
+// 관리자: 학생에게 모의고사 알림 발송/취소 (notifiedAt 설정/해제)
 export async function PATCH(request: Request) {
   if (!(await isAdmin())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
-  let body: { examId?: unknown };
+  let body: { examId?: unknown; action?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -97,11 +96,11 @@ export async function PATCH(request: Request) {
   }
 
   try {
-    const nowIso = new Date().toISOString();
-    const exam = await notifyMockExam(examId, nowIso);
+    const cancel = body?.action === 'cancel';
+    const exam = await notifyMockExam(examId, cancel ? null : new Date().toISOString());
     return NextResponse.json({ success: true, exam });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '발송 실패';
+    const message = error instanceof Error ? error.message : '처리 실패';
     return NextResponse.json({ success: false, message }, { status: 500 });
   }
 }

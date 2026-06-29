@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { canAdminAccessStudent } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { isLeaveType } from '@/lib/leave';
 import { appendThreadMessage } from '@/lib/thread';
@@ -10,11 +10,11 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   let body: { type?: unknown; date?: unknown; reason?: unknown; status?: unknown };
   try {
@@ -61,11 +61,11 @@ export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   let body: { requestId?: unknown; status?: unknown; reply?: unknown; couponDelta?: unknown };
   try {
@@ -121,6 +121,7 @@ export async function PATCH(
   if (status) {
     target.status = status;
     target.reviewedAt = status === 'pending' ? undefined : nowIso;
+    target.acknowledgedAt = status === 'pending' ? nowIso : undefined;
   }
   await saveStudent(student);
 

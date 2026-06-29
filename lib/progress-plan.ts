@@ -43,7 +43,49 @@ function parsePlanEndAmount(plan: DetailedPlan) {
   return Number(matches[matches.length - 1]) || plan.targetAmount;
 }
 
-function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date) {
+function parsePlanBounds(plan: DetailedPlan) {
+  const values = plan.rangeText.match(/\d+/g)?.map(Number).filter(Number.isFinite) || [];
+  const end = values.length > 0 ? values[values.length - 1] : Number(plan.targetAmount || 0);
+  const start = values.length > 1
+    ? values[values.length - 2]
+    : Math.max(1, end - Number(plan.targetAmount || 0) + 1);
+  return { start, end };
+}
+
+function countStudyDaysInRange(start: Date, end: Date, studyDays?: string[]) {
+  const cursor = new Date(start);
+  cursor.setHours(0, 0, 0, 0);
+  const last = new Date(end);
+  last.setHours(0, 0, 0, 0);
+
+  let count = 0;
+  while (cursor <= last) {
+    if (isStudyDay(cursor, studyDays)) count++;
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return count;
+}
+
+function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[]) {
+  const start = parseDate(plan.startDate);
+  const end = parseDate(plan.endDate);
+  if (!start || !end) return parsePlanEndAmount(plan);
+
+  const { start: startAmount, end: endAmount } = parsePlanBounds(plan);
+  const beforePlanAmount = Math.max(0, startAmount - 1);
+  const elapsedStudyDays = countStudyDaysInRange(start, today, studyDays);
+  if (elapsedStudyDays <= 0) return beforePlanAmount;
+
+  const totalStudyDays = Math.max(1, countStudyDaysInRange(start, end, studyDays));
+  const dailyAmount = Math.max(1, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / totalStudyDays)));
+  return Math.min(endAmount, beforePlanAmount + dailyAmount * elapsedStudyDays);
+}
+
+function isSameDay(a: Date | null, b: Date) {
+  return Boolean(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
+}
+
+function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[]) {
   if (!plans || plans.length === 0) return null;
 
   const sortedPlans = [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -59,7 +101,7 @@ function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date) {
     }
 
     if (today <= end) {
-      return parsePlanEndAmount(plan);
+      return getExpectedWithinCurrentPlan(plan, today, studyDays);
     }
 
     latestPastPlan = plan;
@@ -84,7 +126,8 @@ function buildItem(
   subjectName: string,
   material: BookProgress | LectureProgress,
   type: ProgressItemType,
-  today: Date
+  today: Date,
+  studyDays?: string[],
 ): ManagedProgressItem {
   const total = type === 'book'
     ? (material as BookProgress).totalPages
@@ -96,9 +139,19 @@ function buildItem(
     ? (material as BookProgress).title
     : (material as LectureProgress).name;
 
-  const expectedFromPlans = getExpectedFromPlans(material.detailedPlans, today);
+  const expectedFromPlans = getExpectedFromPlans(material.detailedPlans, today, studyDays);
   const expectedToday = expectedFromPlans ?? getExpectedLinear(total, student.createdAt, material.targetDate, today);
-  const shortage = expectedToday === null ? null : Math.max(0, expectedToday - current);
+  const isCreatedToday = isSameDay(parseDate(student.createdAt), today);
+  const shortage = expectedToday === null || isCreatedToday ? null : Math.max(0, expectedToday - current);
+  const status = expectedToday === null
+    ? 'no-plan'
+    : isCreatedToday
+    ? (current >= expectedToday ? 'ahead' : 'on-track')
+    : current + 1 < expectedToday
+    ? 'behind'
+    : current >= expectedToday
+    ? 'ahead'
+    : 'on-track';
 
   return {
     studentId: student.id,
@@ -115,7 +168,7 @@ function buildItem(
     targetDate: material.targetDate,
     expectedToday,
     shortage,
-    status: expectedToday === null ? 'no-plan' : current + 1 < expectedToday ? 'behind' : current >= expectedToday ? 'ahead' : 'on-track',
+    status,
     daysToTarget: diffDays(today, material.targetDate),
     daysToConsultation: diffDays(today, student.nextConsultationDate),
   };
@@ -127,8 +180,8 @@ export function getManagedProgressItems(students: Student[], today = new Date())
   return students.flatMap((student) => {
     if (student.subjects && student.subjects.length > 0) {
       return student.subjects.flatMap((subject) => [
-        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today)),
-        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today)),
+        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today, subject.studyDays)),
+        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today, subject.studyDays)),
       ]);
     }
 

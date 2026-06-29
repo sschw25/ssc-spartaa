@@ -109,19 +109,20 @@ export default function OtEventsPage() {
     } catch { toast.error('네트워크 에러'); }
   };
 
-  const notifyToStudents = async (eventId: string) => {
+  const notifyToStudents = async (eventId: string, action: 'send' | 'cancel' = 'send') => {
     if (notifyingEventId) return;
+    if (action === 'cancel' && !confirm('발송된 OT 참여 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
     setNotifyingEventId(eventId);
     try {
       const res = await fetch('/api/admin/ot-events', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify({ eventId, action }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success('학생들에게 OT 참여 확인 알림을 발송했습니다.');
+        toast.success(action === 'cancel' ? 'OT 참여 알림을 취소했습니다.' : '학생들에게 OT 참여 확인 알림을 발송했습니다.');
         setEvents((prev) => prev.map((e) => (e.id === eventId ? json.event : e)));
-      } else { toast.error(json.message || '발송 실패'); }
+      } else { toast.error(json.message || '처리 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setNotifyingEventId(null); }
   };
 
@@ -250,13 +251,13 @@ export default function OtEventsPage() {
                       </div>
                     </div>
                   </button>
-                  <button type="button" disabled={!!notifyingEventId || !!event.notifiedAt} onClick={() => notifyToStudents(event.id)}
-                    title={event.notifiedAt ? `발송: ${new Date(event.notifiedAt).toLocaleString('ko-KR')}` : '학생에게 참여 확인 알림 발송'}
+                  <button type="button" disabled={!!notifyingEventId} onClick={() => notifyToStudents(event.id, event.notifiedAt ? 'cancel' : 'send')}
+                    title={event.notifiedAt ? `발송: ${new Date(event.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
-                      event.notifiedAt ? 'bg-slate-100 text-slate-400 cursor-default' : 'bg-blue-600 text-white hover:bg-blue-700'
+                      event.notifiedAt ? 'border border-red-100 bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}>
-                    {notifyingEventId === event.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <MessageSquare className="w-3 h-3" />}
-                    {event.notifiedAt ? '발송됨' : '학생 알림'}
+                    {notifyingEventId === event.id ? <Loader2 className="w-3 h-3 animate-spin" /> : event.notifiedAt ? <XCircle className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
+                    {event.notifiedAt ? '알림 취소' : '학생 알림'}
                   </button>
                   <button type="button" onClick={() => deleteEvent(event.id)}
                     className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition shrink-0" title="삭제">

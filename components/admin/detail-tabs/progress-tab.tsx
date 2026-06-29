@@ -1596,6 +1596,7 @@ export function ProgressTab() {
                                         <LectureReviewRecommender
                                           estimatedMinutesPerUnit={lec.estimatedMinutesPerUnit}
                                           speedMultiplier={lec.speedMultiplier}
+                                          studyTime={sub.studyTime}
                                         />
                                       </div>
                                     </div>

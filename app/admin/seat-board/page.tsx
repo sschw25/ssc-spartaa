@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
-import { Loader2, RefreshCw, LayoutGrid } from 'lucide-react';
+import { CalendarDays, Loader2, RefreshCw, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { Student, LeaveRequest } from '@/lib/types/student';
@@ -977,7 +977,10 @@ export default function SeatBoardPage() {
   const [unauthorizedMsg, setUnauthorizedMsg] = useState('');
   const [sendingUnauthorizedMsg, setSendingUnauthorizedMsg] = useState(false);
 
-  const today = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const kstToday = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const [selectedDate, setSelectedDate] = useState(kstToday);
+  const today = selectedDate;
+  const isSelectedToday = selectedDate === kstToday;
   const isDemoMode = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('demo') === '1';
   const demoSeatBoardData = useMemo(() => createDemoSeatBoardData(today), [today]);
 
@@ -987,7 +990,18 @@ export default function SeatBoardPage() {
   }
 
   // 교시 클릭 → 상태 토글 (absent ↔ present)
+  // 좌석보드는 과거/미래 날짜를 조회할 수 있으나, 수동 출결/좌석상태 수정은 오늘(KST)에만 허용한다.
+  // (date 입력으로 과거 날짜를 보던 중 저장/초기화하면 그 과거 날짜의 기록을 덮어쓰는 사고 방지)
+  function ensureEditableToday(): boolean {
+    if (!isSelectedToday) {
+      toast.error('지난/예정 날짜는 조회만 가능합니다. 수정은 오늘 날짜에서만 할 수 있어요.');
+      return false;
+    }
+    return true;
+  }
+
   async function handleTogglePeriod(key: string, current: PeriodStatus) {
+    if (!isDemoMode && !ensureEditableToday()) return;
     const parts = key.split(':');
     const studentId = parts[0];
     const periodIdx = parseInt(parts[parts.length - 1], 10);
@@ -1118,6 +1132,7 @@ export default function SeatBoardPage() {
   }
 
   async function handleTogglePhone(studentId: string, block: 'D' | 'E' | 'N') {
+    if (!isDemoMode && !ensureEditableToday()) return;
     const previous = new Map(phoneNoSubmitMap);
     const next = new Map(phoneNoSubmitMap);
     const set = new Set(next.get(studentId) || []);
@@ -1154,6 +1169,7 @@ export default function SeatBoardPage() {
   }
 
   async function clearPeriodOverrides() {
+    if (!isDemoMode && !ensureEditableToday()) return;
     if (isDemoMode) {
       setPeriodOverrides(new Map(demoSeatBoardData.periodOverrides));
       setPhoneNoSubmitMap(new Map(demoSeatBoardData.phoneNoSubmitMap));
@@ -1344,6 +1360,7 @@ export default function SeatBoardPage() {
 
   async function handleSaveAttendance() {
     if (!selectedStudent) return;
+    if (!ensureEditableToday()) return;
     if (!checkInTime && checkOutTime) {
       toast.error('등원 시간을 먼저 입력해 주세요.');
       return;
@@ -1376,7 +1393,8 @@ export default function SeatBoardPage() {
 
   async function handleClearAttendance() {
     if (!selectedStudent) return;
-    if (!confirm('당일 등하원 기록을 모두 삭제하시겠습니까?')) return;
+    if (!ensureEditableToday()) return;
+    if (!confirm('오늘 등하원 기록을 모두 삭제하시겠습니까?')) return;
     setSubmittingAttendance(true);
     try {
       const response = await fetch('/api/admin/attendance/manual', {
@@ -1404,6 +1422,7 @@ export default function SeatBoardPage() {
 
   async function handleSaveLeave() {
     if (!selectedStudent) return;
+    if (!ensureEditableToday()) return;
     setSubmittingLeave(true);
     try {
       const response = await fetch(`/api/admin/students/${selectedStudent.id}/leave`, {
@@ -1532,9 +1551,28 @@ export default function SeatBoardPage() {
             ))}
           </div>
 
-          <div>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SSC 스파르타</p>
-            <p className="text-sm font-black text-[#1D1D1F]">{today}</p>
+          <div className="min-w-[220px] rounded-2xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
+            <p className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+              <CalendarDays className="h-3.5 w-3.5 text-[#0071E3]" />
+              출결 기준일
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={selectedDate}
+                onChange={(event) => setSelectedDate(event.target.value || kstToday)}
+                className="h-8 rounded-xl border-black/[0.06] bg-[#F5F5F7] px-2 text-xs font-semibold text-[#1D1D1F]"
+              />
+              {!isSelectedToday && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDate(kstToday)}
+                  className="h-8 shrink-0 rounded-full bg-[#0071E3]/10 px-3 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/15 active:scale-[0.97]"
+                >
+                  오늘
+                </button>
+              )}
+            </div>
           </div>
 
           {isDemoMode && (
@@ -1749,7 +1787,7 @@ export default function SeatBoardPage() {
                   <Button
                     size="sm"
                     onClick={handleSaveAttendance}
-                    disabled={submittingAttendance}
+                    disabled={submittingAttendance || !isSelectedToday}
                     className="flex-1 rounded-xl text-xs font-black bg-[#0071E3] hover:bg-[#0071E3]/90 text-white h-9"
                   >
                     {submittingAttendance ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
@@ -1759,7 +1797,7 @@ export default function SeatBoardPage() {
                     size="sm"
                     variant="outline"
                     onClick={handleClearAttendance}
-                    disabled={submittingAttendance}
+                    disabled={submittingAttendance || !isSelectedToday}
                     className="rounded-xl text-xs font-black border-red-200 text-red-600 bg-red-50/50 hover:bg-red-50 h-9"
                   >
                     기록 초기화

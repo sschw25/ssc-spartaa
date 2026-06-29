@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 interface MissingRow {
   id: string;
@@ -28,6 +28,7 @@ export function MissingArrivalWidget({
   const [checkpoint, setCheckpoint] = useState('');
   const [configured, setConfigured] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -61,35 +62,53 @@ export function MissingArrivalWidget({
             미등원 알림 {checkpoint && <span className="text-[#86868B] font-medium">({checkpoint} 기준)</span>}
           </h3>
         </div>
-        <button
-          onClick={load}
-          className="text-[#86868B] hover:text-[#0071E3] transition-colors"
-          title="새로고침"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
-      <p className="px-1 text-[10px] text-[#86868B] mb-2">
-        등원 마감 시각이 지났는데 아직 등원하지 않은 학생입니다. (09시 이후 수동 시각 포함)
-      </p>
-      {filtered.length === 0 ? (
-        <p className="text-[11px] font-semibold text-emerald-600 py-5 text-center">
-          마감 시각이 지난 미등원 학생이 없습니다. 👍
-        </p>
-      ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {filtered.map((r) => (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => onSelectStudentId?.(r.id)}
-              className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-bold text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors"
-            >
-              {r.name}
-              <span className="text-[9px] font-semibold text-[#86868B]">{CAMPUS_LABEL[r.campus] || r.campus} · {r.expectedArrival}</span>
-            </button>
-          ))}
+        <div className="flex items-center gap-1.5">
+          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${filtered.length > 0 ? 'bg-amber-500/15 text-amber-700' : 'bg-emerald-500/12 text-emerald-700'}`}>
+            {filtered.length}명
+          </span>
+          <button
+            type="button"
+            onClick={() => setCollapsed((value) => !value)}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
+            title={collapsed ? '펼치기' : '접기'}
+            aria-label={collapsed ? '미등원 알림 펼치기' : '미등원 알림 접기'}
+          >
+            {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={load}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[#86868B] hover:bg-black/[0.04] hover:text-[#0071E3] transition-colors"
+            title="새로고침"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          </button>
         </div>
+      </div>
+      {!collapsed && (
+        <>
+          <p className="px-1 text-[10px] text-[#86868B] mb-2">
+            등원 마감 시각이 지났는데 아직 등원하지 않은 학생입니다. (09시 이후 수동 시각 포함)
+          </p>
+          {filtered.length === 0 ? (
+            <p className="text-[11px] font-semibold text-emerald-600 py-5 text-center">
+              마감 시각이 지난 미등원 학생이 없습니다.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {filtered.map((r) => (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => onSelectStudentId?.(r.id)}
+                  className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors"
+                >
+                  {r.name}
+                  <span className="text-[9px] font-semibold text-[#86868B]">{CAMPUS_LABEL[r.campus] || r.campus} · {r.expectedArrival}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );

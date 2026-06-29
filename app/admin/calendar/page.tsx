@@ -221,19 +221,20 @@ export default function AdminCalendarPage() {
     } catch { toast.error('네트워크 에러'); }
   };
 
-  const notifyEvent = async (eventId: string) => {
+  const notifyEvent = async (eventId: string, action: 'send' | 'cancel' = 'send') => {
+    if (action === 'cancel' && !confirm('발송된 참여 미션 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
     const key = `notify_${eventId}`;
     setBusy((b) => ({ ...b, [key]: true }));
     try {
       const res = await fetch('/api/admin/campus-events', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId }),
+        body: JSON.stringify({ eventId, action }),
       });
       const json = await res.json();
       if (json.success) {
         setCampusEvents((prev) => prev.map((e) => e.id === eventId ? json.event : e));
-        toast.success('학생들에게 참여 확인 알림을 발송했습니다.');
-      } else { toast.error(json.message || '발송 실패'); }
+        toast.success(action === 'cancel' ? '참여 미션 알림을 취소했습니다.' : '학생들에게 참여 확인 알림을 발송했습니다.');
+      } else { toast.error(json.message || '처리 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
   };
 
@@ -628,10 +629,11 @@ export default function AdminCalendarPage() {
                                   {stat.rewarded > 0 && <span className="rounded bg-amber-50 text-amber-600 px-1.5 py-0.5">지급 {stat.rewarded}</span>}
                                 </div>
                                 <div className="flex items-center gap-1.5 pt-1">
-                                  <button disabled={!!busy[`notify_${ev.id}`] || !!ev.notifiedAt} onClick={() => notifyEvent(ev.id)}
-                                    className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${ev.notifiedAt ? 'bg-slate-100 text-slate-400 cursor-default' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
-                                    {busy[`notify_${ev.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : <Bell className="w-3 h-3" />}
-                                    {ev.notifiedAt ? '알림 발송됨' : '학생 알림'}
+                                  <button disabled={!!busy[`notify_${ev.id}`]} onClick={() => notifyEvent(ev.id, ev.notifiedAt ? 'cancel' : 'send')}
+                                    title={ev.notifiedAt ? `발송: ${new Date(ev.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
+                                    className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${ev.notifiedAt ? 'border border-red-100 bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                                    {busy[`notify_${ev.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : ev.notifiedAt ? <X className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+                                    {ev.notifiedAt ? '알림 취소' : '학생 알림'}
                                   </button>
                                   <button disabled={!!busy[`grant_${ev.id}`] || !ev.notifiedAt} onClick={() => grantEventCoupons(ev)}
                                     title={!ev.notifiedAt ? '먼저 알림을 발송하세요' : '수락자에게 쿠폰 일괄 지급'}

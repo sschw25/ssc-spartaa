@@ -107,6 +107,7 @@ export interface ConsultationLog {
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
   requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
+  acknowledgedAt?: string;                                // 관리자가 확인했지만 아직 완료하지 않은 시각 (ISO)
   createdAt?: string;                                     // 신청 시각 (ISO)
   resolvedAt?: string;                                    // 처리 시각 (ISO)
   adminReply?: string;                                    // 관리자 최신 코멘트 답변 (학생에게 노출, 하위호환)
@@ -131,6 +132,7 @@ export interface LeaveRequest {
   urgent?: boolean;       // 전날 18:00시 이후 혹은 당일 오전 급작스러운 긴급 신청 여부
   createdAt: string;      // 신청 시각 (ISO)
   reviewedAt?: string;    // 처리(승인/반려) 시각 (ISO)
+  acknowledgedAt?: string;// 관리자가 확인했지만 아직 승인/반려하지 않은 시각 (ISO)
   adminReply?: string;    // 관리자 최신 코멘트 (학생에게 노출, 하위호환)
   thread?: ThreadMessage[];// 양방향 재답변 대화 (head=reason 이후의 추가 메시지들)
   reappealedAt?: string;  // 반려 후 학생이 재승인 요청한 시각 (ISO) — 인박스에 '재요청'으로 표시

@@ -6,10 +6,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Loader2, KeyRound, Bell, CalendarClock, ClipboardCheck, Link2, Copy, RotateCcw, X } from 'lucide-react';
+import { Trash2, Loader2, KeyRound, Bell, CalendarClock, ClipboardCheck, ClipboardPaste, Link2, Copy, RotateCcw, X } from 'lucide-react';
 import type { AwaySchedule } from '@/lib/types/student';
 
 type SmsTarget = 'parent' | 'student';
+
+interface QuickAwayApplyResult {
+  applied: number;
+  skippedNoMatch: number;
+  skippedDuplicateName: number;
+  skippedInvalid: number;
+  skippedDuplicateSchedule: number;
+  failed: number;
+}
 
 // 등록 종료일 → 관리자 즉시 피드백용 D-day 칩 (학생 출결 화면 안내 조건과 동일: D-3 이하)
 function enrollmentHint(dateStr: string): { label: string; tone: 'ok' | 'warn' | 'expired' } | null {
@@ -69,6 +78,7 @@ interface InfoTabProps {
   onRevokeShareToken?: () => Promise<void>;
   awaySchedules: AwaySchedule[];
   setAwaySchedules: (v: AwaySchedule[]) => void;
+  onApplyQuickAwaySchedules?: (text: string) => Promise<QuickAwayApplyResult>;
 }
 
 // 학생 기본정보 탭 (프레젠테이셔널). 상태·핸들러는 부모가 소유하고 props 로 전달.
@@ -103,6 +113,7 @@ export function InfoTab({
   onRevokeShareToken,
   awaySchedules,
   setAwaySchedules,
+  onApplyQuickAwaySchedules,
 }: InfoTabProps) {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -112,6 +123,9 @@ export function InfoTab({
   const [newDays, setNewDays] = useState<number[]>([]);          // [] = 매일
   const [newUntilForever, setNewUntilForever] = useState(true);
   const [newUntilDate, setNewUntilDate] = useState('');
+  const [quickAwayText, setQuickAwayText] = useState('');
+  const [quickAwaySaving, setQuickAwaySaving] = useState(false);
+  const [quickAwayResult, setQuickAwayResult] = useState('');
 
   const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -150,6 +164,35 @@ export function InfoTab({
       : '매일';
     const untilStr = s.until && s.until !== 'forever' ? `~${s.until}` : '';
     return `${time} · ${dayStr}${untilStr ? ' · ' + untilStr : ''}`;
+  };
+
+  const formatQuickAwayResult = (result: QuickAwayApplyResult) => {
+    const parts = [`${result.applied}건 적용`];
+    if (result.skippedNoMatch > 0) parts.push(`이름 없음 ${result.skippedNoMatch}건`);
+    if (result.skippedDuplicateName > 0) parts.push(`동명이인 ${result.skippedDuplicateName}건`);
+    if (result.skippedInvalid > 0) parts.push(`형식 오류 ${result.skippedInvalid}건`);
+    if (result.skippedDuplicateSchedule > 0) parts.push(`중복 ${result.skippedDuplicateSchedule}건`);
+    if (result.failed > 0) parts.push(`저장 실패 ${result.failed}건`);
+    return parts.join(' · ');
+  };
+
+  const handleApplyQuickAway = async () => {
+    if (!onApplyQuickAwaySchedules) return;
+    if (!quickAwayText.trim()) {
+      setQuickAwayResult('붙여넣을 내용을 입력해 주세요.');
+      return;
+    }
+    setQuickAwaySaving(true);
+    setQuickAwayResult('');
+    try {
+      const result = await onApplyQuickAwaySchedules(quickAwayText);
+      setQuickAwayResult(formatQuickAwayResult(result));
+      if (result.applied > 0 && result.failed === 0) setQuickAwayText('');
+    } catch {
+      setQuickAwayResult('빠른 입력 처리 중 오류가 발생했습니다.');
+    } finally {
+      setQuickAwaySaving(false);
+    }
   };
 
   const shareUrl = studentId && shareToken
@@ -268,10 +311,9 @@ export function InfoTab({
             id="edit-seat-number"
             type="number"
             min={1}
-            max={99}
             value={seatNumber}
             onChange={(e) => setSeatNumber(e.target.value)}
-            placeholder="예: 7"
+            placeholder="예: 104"
             className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
           />
         </div>
@@ -352,6 +394,35 @@ export function InfoTab({
         <p className="text-[10px] text-[#86868B]">
           지정된 시간에 출결판 교시 셀 내부에 외출 예정 시각이 자동으로 표시됩니다. (예: 14:30)
         </p>
+
+        {onApplyQuickAwaySchedules && (
+          <div className="space-y-2 rounded-lg border border-black/[0.06] bg-[#F5F5F7] p-3">
+            <div className="flex items-center gap-1.5">
+              <ClipboardPaste className="h-3.5 w-3.5 text-[#86868B]" />
+              <span className="text-[11px] font-semibold text-[#1D1D1F]">빠른 입력</span>
+            </div>
+            <Textarea
+              value={quickAwayText}
+              onChange={(e) => setQuickAwayText(e.target.value)}
+              placeholder={`홍길동\t14:30\t16:00\n김철수\t18:00\t`}
+              className="min-h-[72px] rounded-lg border-black/[0.08] bg-white font-mono text-[11px]"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                onClick={handleApplyQuickAway}
+                disabled={quickAwaySaving}
+                className="h-8 rounded-lg bg-[#1D1D1F] px-3 text-[11px] font-semibold text-white hover:bg-[#323236]"
+              >
+                {quickAwaySaving ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : null}
+                빠른 입력 적용
+              </Button>
+              {quickAwayResult && (
+                <span className="text-[11px] font-medium text-[#86868B]">{quickAwayResult}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 시간 */}
         <div className="flex items-center gap-2 flex-wrap">
@@ -514,6 +585,9 @@ export function InfoTab({
               {opt.label}
             </label>
           ))}
+          {smsTargets.length === 0 && (
+            <span className="text-[11px] font-semibold text-[#86868B]">자동 문자 발송 안 함</span>
+          )}
 
         </div>
       </div>

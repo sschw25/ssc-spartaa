@@ -24,6 +24,13 @@ type SmsTarget = 'parent' | 'student';
 interface BulkRow {
   seatNumber: string;
   name: string;
+  studentPhone: string;
+  parentPhone: string;
+  parentSmsFlag: string;
+  awayDays: string;
+  awayTime: string;
+  returnTime: string;
+  attendanceCode: string;
 }
 
 const DOW_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -35,7 +42,14 @@ function parsePasteText(text: string): BulkRow[] {
       const cols = line.split('\t');
       const seatNumber = (cols[0] ?? '').trim();
       const name = (cols[1] ?? '').trim();
-      return { seatNumber, name };
+      const studentPhone = (cols[2] ?? '').trim();
+      const parentPhone = (cols[3] ?? '').trim();
+      const parentSmsFlag = (cols[4] ?? '').trim();
+      const awayDays = (cols[5] ?? '').trim();
+      const awayTime = (cols[6] ?? '').trim();
+      const returnTime = (cols[7] ?? '').trim();
+      const attendanceCode = (cols[8] ?? '').trim();
+      return { seatNumber, name, studentPhone, parentPhone, parentSmsFlag, awayDays, awayTime, returnTime, attendanceCode };
     })
     .filter((r) => r.name);
 }
@@ -43,7 +57,80 @@ function parsePasteText(text: string): BulkRow[] {
 function normalizeSeatNumber(value: string): number | undefined {
   if (!value.trim()) return undefined;
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+}
+
+function normalizeTimeValue(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  const colonMatch = trimmed.match(/^(\d{1,2}):(\d{2})$/);
+  if (colonMatch) {
+    const h = Number(colonMatch[1]);
+    const m = Number(colonMatch[2]);
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  const digitMatch = trimmed.replace(/\D/g, '').match(/^(\d{1,2})(\d{2})$/);
+  if (digitMatch) {
+    const h = Number(digitMatch[1]);
+    const m = Number(digitMatch[2]);
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+  return '';
+}
+
+function parseAwayDays(value: string): number[] {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized || ['매일', 'everyday', 'daily', 'all'].includes(normalized)) return [];
+  const dayAliases: Array<[number, string[]]> = [
+    [0, ['일', '일요일', 'sun', 'sunday', '0']],
+    [1, ['월', '월요일', 'mon', 'monday', '1']],
+    [2, ['화', '화요일', 'tue', 'tuesday', '2']],
+    [3, ['수', '수요일', 'wed', 'wednesday', '3']],
+    [4, ['목', '목요일', 'thu', 'thursday', '4']],
+    [5, ['금', '금요일', 'fri', 'friday', '5']],
+    [6, ['토', '토요일', 'sat', 'saturday', '6']],
+  ];
+  const days = new Set<number>();
+  const matchToken = (token: string) => {
+    dayAliases.forEach(([day, aliases]) => {
+      if (aliases.includes(token) || aliases.some((alias) => alias.length > 1 && token.includes(alias))) {
+        days.add(day);
+      }
+    });
+  };
+
+  const parts = normalized.split(/[,\s/|·]+/).filter(Boolean);
+  if (parts.length > 1) {
+    parts.forEach(matchToken);
+  } else {
+    const token = parts[0] ?? '';
+    // 압축형 한글('월수금')만 글자 단위로 분해. 장형('화요일')·영문은 통째로 매칭
+    // (장형을 글자 분해하면 '요일'의 '일'이 일요일로 오검출됨)
+    if (/^[월화수목금토일]+$/.test(token)) {
+      [...token].forEach(matchToken);
+    } else {
+      matchToken(token);
+    }
+  }
+  return Array.from(days).sort();
+}
+
+function buildAwaySchedules(row: BulkRow): AwaySchedule[] {
+  const awayTime = normalizeTimeValue(row.awayTime);
+  if (!row.awayDays.trim() || !awayTime) return [];
+  return [{
+    awayTime,
+    returnTime: normalizeTimeValue(row.returnTime) || undefined,
+    days: parseAwayDays(row.awayDays),
+    dayMode: 'sun0',
+    until: 'forever',
+  }];
+}
+
+function parentSmsEnabled(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  if (['n', 'no', 'false', '0', '아니오', '아니요', '미수신'].includes(normalized)) return false;
+  return true;
 }
 
 export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: AddStudentModalProps) {
@@ -159,7 +246,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   const toggleSmsTarget = (target: SmsTarget) => {
     setSmsTargets((prev) => {
       const next = prev.includes(target) ? prev.filter((item) => item !== target) : [...prev, target];
-      return next.length ? next : ['parent'];
+      return next;
     });
   };
 
@@ -281,26 +368,45 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   // ── 일괄 등록: 순차 제출 ────────────────────────────────────────
   const handleBulkSubmit = async () => {
     if (bulkRows.length === 0) { toast.error('등록할 원생이 없습니다.'); return; }
+    const duplicateAwayNames = bulkRows
+      .filter((row) => row.awayDays.trim())
+      .filter((row, index, rows) =>
+        rows.findIndex((item) => item.name.trim() === row.name.trim()) !== index ||
+        students.some((student) => student.name.trim() === row.name.trim())
+      );
+    if (duplicateAwayNames.length > 0) {
+      const names = Array.from(new Set(duplicateAwayNames.map((row) => row.name.trim()))).join(', ');
+      const ok = confirm(`빠지는 요일이 있는 동명이인 또는 기존 원생 이름이 있습니다.\n\n대상: ${names}\n\n0번 좌석/동명이인 여부를 확인한 뒤 등록할까요?`);
+      if (!ok) return;
+    }
     setBulkLoading(true);
     setBulkDone(0);
 
     let successCount = 0;
+    let passwordFailCount = 0;
     let lastStudent: Student | null = null;
 
     for (const row of bulkRows) {
       try {
+        const wantsParentSms = parentSmsEnabled(row.parentSmsFlag);
+        const smsTargets: SmsTarget[] = wantsParentSms ? ['parent'] : (row.studentPhone.trim() ? ['student'] : []);
+        const attendanceCode = row.attendanceCode.trim();
         const res = await fetch('/api/admin/students', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             name: row.name,
+            loginId: attendanceCode ? attendanceCode.toLowerCase() : undefined,
             campus: bulkCampus,
             manager: bulkManager.trim(),
             contact: bulkContact.trim(),
             seatNumber: normalizeSeatNumber(row.seatNumber),
             enrollmentEndDate: bulkEnrollmentEndDate || undefined,
             weeklyGradeCheck: bulkWeeklyGradeCheck,
-            smsTargets: ['parent'],
+            studentPhone: row.studentPhone.trim(),
+            parentPhone: row.parentPhone.trim(),
+            smsTargets,
+            awaySchedules: buildAwaySchedules(row),
             lifeComment: '',
             studentLifeComment: '',
             specialNote: '',
@@ -313,6 +419,18 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
         });
         const data = await res.json();
         if (res.ok && data.success) {
+          if (attendanceCode && data.data?.id) {
+            try {
+              const pwRes = await fetch(`/api/admin/students/${data.data.id}/password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: attendanceCode }),
+              });
+              if (!pwRes.ok) passwordFailCount++;
+            } catch {
+              passwordFailCount++;
+            }
+          }
           successCount++;
           lastStudent = data.data;
           setBulkDone((n) => n + 1);
@@ -324,7 +442,9 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
     setBulkLoading(false);
     if (successCount > 0) {
-      toast.success(`${successCount}명 원생 등록이 완료되었습니다.`);
+      toast.success(passwordFailCount > 0
+        ? `${successCount}명 등록 완료, ${passwordFailCount}명은 비밀번호 설정을 다시 확인해 주세요.`
+        : `${successCount}명 원생 등록이 완료되었습니다.`);
       if (lastStudent) onSuccess(lastStudent);
       resetAll();
       onClose();
@@ -438,8 +558,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     id="new-seat-number"
                     type="number"
                     min={1}
-                    max={99}
-                    placeholder="예: 7"
+                    placeholder="예: 104"
                     value={seatNumber}
                     onChange={(e) => setSeatNumber(e.target.value)}
                     className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
@@ -558,6 +677,9 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     {option.label}
                   </label>
                 ))}
+                {smsTargets.length === 0 && (
+                  <span className="text-[11px] font-semibold text-[#86868B]">자동 문자 발송 안 함</span>
+                )}
               </div>
             </section>
 
@@ -763,13 +885,18 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
               <Label className="text-xs font-semibold text-[#1D1D1F]">
                 엑셀 데이터 붙여넣기
               </Label>
+              <div className="rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-3 text-[10px] font-semibold leading-relaxed text-slate-600">
+                <p className="mb-1 font-semibold text-[#0071E3]">권장 열 순서</p>
+                <p>좌석번호 · 이름 · 본인전화번호 · 부모님전화번호 · 부모님출결문자여부(Y/N) · 빠지는요일 · 나가는시간 · 들어오는시간 · 출결번호(로그인 비밀번호)</p>
+                <p className="mt-1 text-slate-400">빠지는요일 예: 월수금 또는 월,수,금. 시간이 비어 있으면 정기외출은 만들지 않습니다.</p>
+              </div>
               <div className="relative">
                 <Textarea
-                  placeholder={`엑셀에서 A열(학생번호) · B열(이름) 셀을 복사한 뒤 여기에 붙여넣기 (Ctrl+V)\n\n예시:\n101\t홍길동\n102\t김철수\n103\t이영희`}
+                  placeholder={`엑셀에서 아래 열 순서로 복사한 뒤 여기에 붙여넣기 (Ctrl+V)\n\n예시:\n101\t홍길동\t01012345678\t01099998888\tY\t월수금\t14:30\t16:00\t1234\n0\t김철수\t01022223333\t01044445555\tN\t화목\t18:00\t\t5678`}
                   value={pasteText}
                   onChange={handleTextChange}
                   onPaste={handlePaste}
-                  className="rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs min-h-[110px] font-mono resize-none"
+                  className="rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs min-h-[140px] font-mono resize-none"
                 />
                 {pasteText && (
                   <button
@@ -782,7 +909,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 )}
               </div>
               <p className="text-[10px] text-[#86868B]">
-                A열 학생번호 → 좌석번호 자동 매핑 · B열 이름만 있어도 등록 가능
+                좌석번호와 이름만 있어도 등록 가능하며, 추가 열이 있으면 학생정보·출결문자·정기외출·로그인 비밀번호까지 함께 입력됩니다.
               </p>
             </div>
 
@@ -799,12 +926,19 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     </span>
                   )}
                 </div>
-                <div className="rounded-xl border border-black/[0.06] overflow-hidden max-h-[180px] overflow-y-auto">
-                  <table className="w-full text-xs">
+                <div className="rounded-xl border border-black/[0.06] overflow-auto max-h-[220px]">
+                  <table className="min-w-[900px] w-full text-xs">
                     <thead className="bg-[#F5F5F7] sticky top-0">
                       <tr>
-                        <th className="px-3 py-2 text-left font-bold text-[#86868B] w-16">번호</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B] w-16">좌석</th>
                         <th className="px-3 py-2 text-left font-bold text-[#86868B]">이름</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">본인전화</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">부모전화</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">부모문자</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">빠지는요일</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">외출</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">복귀</th>
+                        <th className="px-3 py-2 text-left font-bold text-[#86868B]">출결번호</th>
                         <th className="w-8" />
                       </tr>
                     </thead>
@@ -815,6 +949,13 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                             {row.seatNumber || <span className="text-slate-300">-</span>}
                           </td>
                           <td className="px-3 py-2 font-bold text-[#1D1D1F]">{row.name}</td>
+                          <td className="px-3 py-2 text-[#86868B] font-mono">{row.studentPhone || '-'}</td>
+                          <td className="px-3 py-2 text-[#86868B] font-mono">{row.parentPhone || '-'}</td>
+                          <td className="px-3 py-2 text-[#86868B]">{row.parentSmsFlag || 'Y'}</td>
+                          <td className="px-3 py-2 text-[#86868B]">{row.awayDays || '-'}</td>
+                          <td className="px-3 py-2 text-[#86868B] font-mono">{row.awayTime || '-'}</td>
+                          <td className="px-3 py-2 text-[#86868B] font-mono">{row.returnTime || '-'}</td>
+                          <td className="px-3 py-2 text-[#86868B] font-mono">{row.attendanceCode || '-'}</td>
                           <td className="px-3 py-2 text-right">
                             <button
                               type="button"

@@ -11,13 +11,12 @@ function onlyDigits(value: unknown): string {
 
 function normalizeSmsTargets(value: unknown): SmsTarget[] {
   if (!Array.isArray(value)) return ['parent'];
-  const targets = value.filter((target): target is SmsTarget => target === 'parent' || target === 'student');
-  return targets.length ? targets : ['parent'];
+  return value.filter((target): target is SmsTarget => target === 'parent' || target === 'student');
 }
 
 function normalizeSeatNumber(value: unknown): number | undefined {
   const parsed = Number(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
 // 1. 전체 학생 및 진도/상담/성적 일괄 조회
