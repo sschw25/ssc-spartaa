@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStudentById, saveStudent, deleteStudent } from '@/lib/store';
+import { getStudentById, saveStudent, deleteStudent, patchStudentSubjects, patchStudentProfile } from '@/lib/store';
 import { Student } from '@/lib/types/student';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 
@@ -47,6 +47,19 @@ export async function PUT(
     const session = await getAdminSession();
     if (session && session.campus !== 'all' && studentData.campus !== session.campus) {
       return NextResponse.json({ success: false, message: '해당 캠퍼스로 원생을 이동시킬 권한이 없습니다.' }, { status: 403 });
+    }
+
+    // 필드 단위 저장(opt-in): ?scope=subjects|profile 이면 해당 컬럼만 타깃 업데이트한다.
+    // 전체 행을 쓰지 않으므로 쿠폰/벌점 등 다른 컬럼과 동시에 저장돼도 충돌(덮어쓰기)하지 않는다.
+    // (상담 자동저장이 이 경로를 사용. scope 미지정 호출자 — detail-sheet 등 — 은 기존 전체 저장 유지.)
+    const scope = new URL(request.url).searchParams.get('scope');
+    if (scope === 'subjects') {
+      const updated = await patchStudentSubjects(studentData);
+      return NextResponse.json({ success: true, data: updated });
+    }
+    if (scope === 'profile') {
+      const updated = await patchStudentProfile(studentData);
+      return NextResponse.json({ success: true, data: updated });
     }
 
     const updated = await saveStudent(studentData);

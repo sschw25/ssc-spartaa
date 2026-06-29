@@ -248,6 +248,54 @@ export async function patchStudentProgressSupabase(
   return rowToStudent(data);
 }
 
+// 필드 단위 저장 — 진도(subjects) 컬럼만 타깃 업데이트.
+// 전체 행 upsert 가 아니라 subjects 컬럼만 쓰므로 leave_coupons/penalties 등 다른 컬럼과
+// 동시에 저장돼도 충돌하지 않는다(상담 자동저장 ↔ 쿠폰/벌점 적립이 서로를 덮어쓰지 않음).
+export async function patchStudentSubjectsSupabase(student: Student): Promise<Student> {
+  const nowIso = new Date().toISOString();
+  // subjects 가 단일 진실 소스 — 최상위 고아 books/lectures 를 흡수해 일관성 유지.
+  const subjects = mergeOrphanMaterials(
+    student.subjects || [],
+    student.books || [],
+    student.lectures || [],
+    nowIso,
+  );
+  const { data, error } = await getClient()
+    .from('students')
+    .update({ subjects, updated_at: nowIso })
+    .eq('id', student.id)
+    .select()
+    .single();
+  if (error) {
+    console.error('[patchStudentSubjectsSupabase] 진도 저장 실패:', error.message, error.details || '', error.hint || '', error.code || '');
+    throw new Error(`진도 저장 실패: ${error.message}${error.details ? ` — ${error.details}` : ''}`);
+  }
+  return rowToStudent(data);
+}
+
+// 필드 단위 저장 — 프로필(담당/연락처/좌석) 컬럼만 타깃 업데이트.
+export async function patchStudentProfileSupabase(student: Student): Promise<Student> {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await getClient()
+    .from('students')
+    .update({
+      manager: student.manager || '',
+      contact: student.contact || '',
+      student_phone: student.studentPhone || null,
+      parent_phone: student.parentPhone || null,
+      seat_number: student.seatNumber ?? null,
+      updated_at: nowIso,
+    })
+    .eq('id', student.id)
+    .select()
+    .single();
+  if (error) {
+    console.error('[patchStudentProfileSupabase] 프로필 저장 실패:', error.message, error.details || '', error.hint || '', error.code || '');
+    throw new Error(`프로필 저장 실패: ${error.message}${error.details ? ` — ${error.details}` : ''}`);
+  }
+  return rowToStudent(data);
+}
+
 // ── 공유 교재/강의 ───────────────────────────────────────────
 export async function readSharedMaterialsSupabase(): Promise<SharedMaterial[]> {
   const { data, error } = await getClient().from('shared_materials').select('*');

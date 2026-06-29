@@ -304,7 +304,8 @@ function ConsultationContent() {
 
     setStudents((prev) => prev.map((item) => item.id === student.id ? updatedStudent : item));
     try {
-      const res = await fetch(`/api/admin/students/${student.id}`, {
+      // 필드 단위 저장(scope=profile): 프로필 컬럼만 써서 쿠폰/벌점 등 동시 변경과 충돌하지 않는다.
+      const res = await fetch(`/api/admin/students/${student.id}?scope=profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatedStudent),
@@ -434,12 +435,13 @@ function ConsultationContent() {
       if (!currentStudent) return;
 
       try {
-        const res = await fetch(`/api/admin/students/${studentId}`, {
+        // 필드 단위 저장(scope=subjects): 진도 컬럼만 써서 쿠폰/벌점 등 동시 변경과 충돌하지 않는다.
+        const res = await fetch(`/api/admin/students/${studentId}?scope=subjects`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(currentStudent),
         });
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
           toast.error('진도 저장에 실패했습니다.');
           loadStudents(); // 실패 시 롤백

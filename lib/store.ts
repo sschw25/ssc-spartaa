@@ -10,6 +10,8 @@ import {
   getStudentByIdSupabase,
   saveStudentSupabase,
   patchStudentProgressSupabase,
+  patchStudentSubjectsSupabase,
+  patchStudentProfileSupabase,
   deleteStudentSupabase,
   readSharedMaterialsSupabase,
   saveSharedMaterialSupabase,
@@ -129,6 +131,19 @@ export async function patchStudentProgress(
     return saveStudentLocal(student);
   }
   return patchStudentProgressSupabase(student, originalUpdatedAt);
+}
+
+// 필드 단위 저장: 진도(subjects) 컬럼만. 다른 컬럼(쿠폰/벌점 등)과 동시 저장돼도 충돌 안 함.
+// 로컬(dev)에서는 전체 저장으로 폴백.
+export async function patchStudentSubjects(student: Student): Promise<Student> {
+  if (!isSupabaseConfigured()) return saveStudentLocal(student);
+  return patchStudentSubjectsSupabase(student);
+}
+
+// 필드 단위 저장: 프로필(담당/연락처/좌석) 컬럼만. 로컬(dev)에서는 전체 저장으로 폴백.
+export async function patchStudentProfile(student: Student): Promise<Student> {
+  if (!isSupabaseConfigured()) return saveStudentLocal(student);
+  return patchStudentProfileSupabase(student);
 }
 
 export async function deleteStudent(id: string): Promise<boolean> {
