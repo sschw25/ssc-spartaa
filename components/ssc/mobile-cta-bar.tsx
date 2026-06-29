@@ -1,5 +1,6 @@
 'use client'
 
+import { Phone, MessageCircle } from 'lucide-react'
 import { CAMPUS_CONFIG } from '@/lib/campus-config'
 
 interface MobileCtaBarProps {
@@ -16,17 +17,19 @@ export function MobileCtaBar({
       <div className="grid grid-cols-2 gap-2">
         <a
           href={`tel:${phone}`}
-          className="flex items-center justify-center py-3.5 rounded-xl bg-accent-amber text-navy font-bold text-sm"
+          className="flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-accent-amber text-navy font-semibold text-sm"
         >
-          📞 전화 상담
+          <Phone className="w-4 h-4" strokeWidth={1.5} />
+          전화 상담
         </a>
         <a
           href={naverTalkUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center py-3.5 rounded-xl bg-[#03C75A] text-white font-bold text-sm"
+          className="flex items-center justify-center gap-1.5 py-3.5 rounded-xl bg-[#03C75A] text-white font-semibold text-sm"
         >
-          💬 네이버 톡톡
+          <MessageCircle className="w-4 h-4" strokeWidth={1.5} />
+          네이버 톡톡
         </a>
       </div>
     </div>

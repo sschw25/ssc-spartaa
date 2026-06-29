@@ -54,36 +54,36 @@ const locations = [
     name: '원주',
     href: '/wonju',
     tagline: '원주 유일\n공단기/커넥츠프랩 파트너',
+    signature: '공단기 · 커넥츠프랩 공식 파트너',
     highlights: [
       '데이터 기반 1:1 학습 전략 &\n정밀한 성적 관리 시스템',
       '단기합격을 위한\n스파르타식 타임테이블',
     ],
     address: '원주시 치악로 1793 농협건물 4층',
-    color: '#F5F5F7',
   },
   {
     id: 'chuncheon',
     name: '춘천',
     href: '/chuncheon',
     tagline: '임용고시\n최상위 합격의 산실',
+    signature: '임용고시 특화 교시제',
     highlights: [
       '순공 10시간을 맹세하는\n철저한 교시제 시스템',
       '합격생들이 증명하는\n압도적인 면학 분위기',
     ],
     address: '춘천시 퇴계로 249 5층',
-    color: '#F5F5F7',
   },
   {
     id: 'chungju',
     name: '충주',
     href: '/chungju',
     tagline: '노량진 시스템\n충주 직영 학습센터',
+    signature: '노량진 · 대치동 자료 직영',
     highlights: [
       '대치동 현강 자료와\n프리미엄 모의고사 완벽 도입',
       '자기주도학습지도사 코멘터의\n철저한 수면 및 출결 통제',
     ],
     address: '충주시 계명대로 283 4층',
-    color: '#F5F5F7',
   },
 ]
 
@@ -177,8 +177,8 @@ export default function SelectLocation() {
           
           <BlurFade delay={0.3} yOffset={20}>
             <div className="text-[#434345] text-base sm:text-lg md:text-2xl font-medium max-w-3xl mx-auto leading-relaxed tracking-tight text-balance">
-              <RhythmicText 
-                text={"가장 본질적인 것에 집중하십시오.\n압도적인 집중 환경과 노량진 시스템이\n당신의 단기 합격을 증명합니다."}
+              <RhythmicText
+                text={"08:20 등원부터 심야 자율학습까지,\n스마트폰 없이 오직 공부만 남깁니다.\n원주·춘천·충주, 노량진 커리큘럼 그대로."}
               />
             </div>
           </BlurFade>
@@ -239,6 +239,15 @@ export default function SelectLocation() {
                             />
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent opacity-90" />
+                          {/* 캠퍼스별 시그니처 — 3개 카드가 복붙처럼 보이지 않게 지점 고유 강점을 배지로 */}
+                          {loc.signature && (
+                            <div className="absolute top-4 left-4 z-10">
+                              <span className="inline-flex items-center gap-1.5 rounded-full bg-white/75 backdrop-blur-md border border-white/40 px-3 py-1.5 text-[10px] sm:text-[11px] font-semibold text-[#1D1D1F] tracking-tight shadow-sm">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#007AFF]" />
+                                {loc.signature}
+                              </span>
+                            </div>
+                          )}
                         </div>
 
                         {/* Content Area */}

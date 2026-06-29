@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
-import { getStudents, saveStudent, getCampusEvents, markCampusEventRewarded } from '@/lib/store';
+import { getStudents, getStudentById, patchStudentProgress, getCampusEvents, markCampusEventRewarded } from '@/lib/store';
 import { grantCampusEventReward } from '@/lib/mission-engine';
 
 // 관리자: 참여 미션 쿠폰 일괄 지급 (행사 후).
@@ -31,17 +31,25 @@ export async function POST(request: Request) {
     let totalCoupons = 0;
     for (const s of students) {
       const part = (s.eventParticipations || []).find((p) => p.eventId === eventId);
-      if (!part || part.status !== 'accepted') continue; // 수락자만 지급
-      const granted = grantCampusEventReward(s, eventId, coupons, event.title);
-      // 멱등: 이미 지급됐으면 0. 참여 기록 rewarded 플래그는 항상 동기화.
-      s.eventParticipations = (s.eventParticipations || []).map((p) =>
-        p.eventId === eventId ? { ...p, rewarded: true } : p,
-      );
-      if (granted > 0) {
-        rewardedStudents += 1;
-        totalCoupons += granted;
+      if (!part || part.status !== 'accepted') continue; // 수락자만 지급 (스냅샷 기준 대상 선별)
+      // optimistic locking: 학생별 fresh 재조회 후 조건부 저장·재시도 (일괄 지급이 동시 저장에 유실되지 않게). grant 는 rewards_log 멱등.
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const student = await getStudentById(s.id);
+        if (!student) break;
+        const originalUpdatedAt = student.updatedAt ?? '';
+        const granted = grantCampusEventReward(student, eventId, coupons, event.title);
+        // 참여 기록 rewarded 플래그는 항상 동기화.
+        student.eventParticipations = (student.eventParticipations || []).map((p) =>
+          p.eventId === eventId ? { ...p, rewarded: true } : p,
+        );
+        const saved = await patchStudentProgress(student, originalUpdatedAt);
+        if (saved === 'conflict') continue;
+        if (granted > 0) {
+          rewardedStudents += 1;
+          totalCoupons += granted;
+        }
+        break;
       }
-      await saveStudent(s);
     }
 
     const updated = await markCampusEventRewarded(eventId, new Date().toISOString());

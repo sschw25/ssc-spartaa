@@ -209,6 +209,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     <div className={wrap}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-2 text-left">
+          <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
           <h3 className="admin-fit-text text-[15px] font-semibold text-[#1D1D1F] tracking-tight">오늘 출결 현황</h3>
           {data?.today && <span className="text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.02]">{data.today}</span>}
           {campusFilter !== 'all' && (

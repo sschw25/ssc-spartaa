@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 import {
   activeBackend,
   getStudentsSummary,
@@ -21,7 +21,8 @@ function seoulHm(iso: string): string {
 
 // 관리자: 오늘 출결 현황(등원중/하원/미등원) + 주간 순공 집계
 export async function GET() {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -115,20 +116,34 @@ export async function GET() {
         weekMinutes: weekMinutesByStudent[s.id] || 0,
       }));
 
+    // 캠퍼스 관리자는 본인 캠퍼스 학생만 조회 가능 (슈퍼는 전원)
+    const inCampus = <T extends { campus: string }>(arr: T[]) =>
+      session.campus === 'all' ? arr : arr.filter((r) => r.campus === session.campus);
+    const visiblePresent = inCampus(present);
+    const visibleLeftToday = inCampus(leftToday);
+    const visibleAbsent = inCampus(absent);
+    const visibleStudents = session.campus === 'all'
+      ? students
+      : students.filter((s) => s.campus === session.campus);
+    const visibleIds = new Set(visibleStudents.map((s) => s.id));
+    const visibleWeekMinutes = session.campus === 'all'
+      ? weekMinutesByStudent
+      : Object.fromEntries(Object.entries(weekMinutesByStudent).filter(([sid]) => visibleIds.has(sid)));
+
     return NextResponse.json({
       success: true,
       configured: true,
       today: todayStr,
       summary: {
-        total: students.length,
-        present: present.length,
-        leftToday: leftToday.length,
-        absent: absent.length,
+        total: visibleStudents.length,
+        present: visiblePresent.length,
+        leftToday: visibleLeftToday.length,
+        absent: visibleAbsent.length,
       },
-      present,
-      leftToday,
-      absent,
-      weekMinutesByStudent,
+      present: visiblePresent,
+      leftToday: visibleLeftToday,
+      absent: visibleAbsent,
+      weekMinutesByStudent: visibleWeekMinutes,
     });
   } catch (e: any) {
     console.error('attendance/today error:', e);

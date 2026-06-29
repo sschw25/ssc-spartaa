@@ -103,7 +103,7 @@ export default function CommitmentSection() {
                   exit={{ opacity: 0, y: -20 }}
                   className="bg-white p-12 md:p-16 rounded-[48px] shadow-premium-hover border border-[#007AFF]/10"
                 >
-                  <p className="text-[#0A84FF] font-semibold text-2xl md:text-3xl mb-10 tracking-tight text-balance">당신은 SSC 스파르타의 일원이 될<br /> 준비가 되었습니다.</p>
+                  <p className="text-[#007AFF] font-semibold text-2xl md:text-3xl mb-10 tracking-tight text-balance">당신은 SSC 스파르타의 일원이 될<br /> 준비가 되었습니다.</p>
                   <button 
                     onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
                     className="bg-[#1D1D1F] text-white px-12 py-6 rounded-full font-semibold text-xl hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-black/20 flex items-center justify-center gap-4 mx-auto group"

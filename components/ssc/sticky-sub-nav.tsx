@@ -5,7 +5,6 @@ import { useState, useEffect } from 'react'
 const TABS = [
   { id: 'stats', label: '성과' },
   { id: 'testimonials', label: '수기' },
-  { id: 'curriculum', label: '시간표' },
   { id: 'timeline', label: '하루전경' },
   { id: 'systems', label: '시스템' },
   { id: 'facilities', label: '시설' },

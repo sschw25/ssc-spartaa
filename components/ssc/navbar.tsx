@@ -126,14 +126,14 @@ export function Navbar() {
           {/* Logo - Simplified with clean gothic text and partnership logic */}
           <Link href="/" className="flex items-center gap-1 group">
             <div className="flex items-baseline gap-1">
-              <span className="text-base md:text-[17px] font-bold tracking-tighter text-[#1D1D1F]">SSC</span>
-              <span className="text-base md:text-[17px] font-bold tracking-tighter text-[#1D1D1F]">
+              <span className="text-base md:text-[17px] font-semibold tracking-tighter text-[#1D1D1F]">SSC</span>
+              <span className="text-base md:text-[17px] font-semibold tracking-tighter text-[#1D1D1F]">
                 스파르타
               </span>
               {isGongmuwonPage && (
                 <div className="flex items-center gap-1.5 ml-1 animate-in fade-in slide-in-from-left-2 duration-700">
                   <span className="text-[#86868B] text-[10px] md:text-xs font-light opacity-60">X</span>
-                  <span className="text-base md:text-[17px] font-bold text-[#007AFF] tracking-tight">커넥츠프랩</span>
+                  <span className="text-base md:text-[17px] font-semibold text-[#007AFF] tracking-tight">커넥츠프랩</span>
                 </div>
               )}
             </div>
@@ -147,7 +147,7 @@ export function Navbar() {
                 <Link
                   key={item.stream}
                   href={`/${currentCampus}/${item.stream}`}
-                  className={`text-[13px] font-bold transition-all duration-300 ${
+                  className={`text-[13px] font-semibold transition-all duration-300 ${
                     isActive 
                       ? 'text-[#007AFF] scale-105' 
                       : 'text-[#434345] hover:text-black'
@@ -163,7 +163,7 @@ export function Navbar() {
           <div className="flex items-center gap-4">
             <div className="hidden md:block relative group">
               <button 
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-500 ${
                   isScrolled 
                     ? 'text-[#007AFF] hover:bg-[#007AFF]/10' 
                     : 'text-[#007AFF] hover:bg-white/10'
@@ -176,16 +176,16 @@ export function Navbar() {
               {/* Dropdown Menu */}
               <div className="absolute right-0 top-full mt-2 w-40 bg-white rounded-2xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-2 group-hover:translate-y-0 overflow-hidden">
                 <div className="py-2 flex flex-col">
-                  <Link href="/wonju/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
-                  <Link href="/chuncheon/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
-                  <Link href="/chungju/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
+                  <Link href="/wonju/summer" className="px-5 py-3 text-[13px] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
+                  <Link href="/chuncheon/summer" className="px-5 py-3 text-[13px] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
+                  <Link href="/chungju/summer" className="px-5 py-3 text-[13px] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
                 </div>
               </div>
             </div>
             
             <Link 
               href="#campuses" 
-              className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
+              className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold transition-all duration-500 ${
                 isScrolled 
                   ? 'bg-[#1D1D1F] text-white hover:bg-black shadow-lg shadow-black/10' 
                   : 'bg-white text-[#1D1D1F] hover:bg-[#F5F5F7]'
@@ -219,7 +219,7 @@ export function Navbar() {
               {/* Mobile Menu Items - Dynamic Link Grid */}
               {isCampusPage && (
                 <div className="flex flex-col gap-2 border-b border-black/[0.05] pb-4">
-                  <p className="text-[#86868B] text-[10px] font-extrabold tracking-[0.2em] uppercase px-2 mb-1">
+                  <p className="text-[#86868B] text-[10px] font-semibold tracking-[0.2em] uppercase px-2 mb-1">
                     프로그램 바로가기
                   </p>
                   <div className="grid grid-cols-2 gap-2">
@@ -230,7 +230,7 @@ export function Navbar() {
                           key={item.stream}
                           href={`/${currentCampus}/${item.stream}`} 
                           onClick={() => setMobileMenuOpen(false)}
-                          className={`text-center py-3.5 rounded-xl font-bold text-[13px] active:scale-95 transition-all ${
+                          className={`text-center py-3.5 rounded-xl font-semibold text-[13px] active:scale-95 transition-all ${
                             isActive
                               ? 'bg-[#007AFF]/10 text-[#007AFF]'
                               : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-black/5'
@@ -244,26 +244,26 @@ export function Navbar() {
                 </div>
               )}
               <div className="flex flex-col gap-2 mt-2">
-                <p className="text-[#007AFF] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
+                <p className="text-[#007AFF] font-semibold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
                     href="/wonju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-semibold text-[13px] active:scale-95 transition-all"
                   >
                     원주점
                   </Link>
                   <Link 
                     href="/chuncheon/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-semibold text-[13px] active:scale-95 transition-all"
                   >
                     춘천점
                   </Link>
                   <Link 
                     href="/chungju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-semibold text-[13px] active:scale-95 transition-all"
                   >
                     충주점
                   </Link>
@@ -272,7 +272,7 @@ export function Navbar() {
               <Link 
                 href="#campuses" 
                 onClick={() => setMobileMenuOpen(false)}
-                className="mt-2 bg-[#1D1D1F] text-white text-center py-5 rounded-2xl font-extrabold text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="mt-2 bg-[#1D1D1F] text-white text-center py-5 rounded-2xl font-semibold text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 캠퍼스 선택 및 상담 예약
                 <ChevronRight size={20} />

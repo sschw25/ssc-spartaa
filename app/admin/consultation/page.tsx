@@ -456,7 +456,7 @@ function ConsultationContent() {
   const selectedCampusLabel = campusFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(campusFilter);
   
   // 오늘 상담이 예정되었거나 지난 학생들
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
   const pendingConsultationStudents = campusScopedStudents.filter(s => {
     if (!s.nextConsultationDate) return false;
     return s.nextConsultationDate <= todayStr;

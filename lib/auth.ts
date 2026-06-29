@@ -63,7 +63,7 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
   const parts = payload.split(':');
-  if (parts.length < 4) return null;
+  if (parts.length !== 4) return null;
   const [id, username, campus, role] = parts;
   return { id, username, campus, role };
 }

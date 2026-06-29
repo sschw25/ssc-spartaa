@@ -24,7 +24,7 @@ const compareData = [
   {
     title: 'SSC 스파르타 (Sparta)',
     icon: CheckCircle2,
-    color: 'from-[#0A84FF] to-[#0A84FF]',
+    color: 'from-[#007AFF] to-[#007AFF]',
     iconColor: 'text-white',
     status: 'good',
     features: [
@@ -43,14 +43,14 @@ export default function ComparisonSection() {
         
         <div className="mb-24 md:mb-32 text-center">
           <BlurFade delay={0.1}>
-            <p className="text-[#0A84FF] text-[11px] font-semibold tracking-[0.18em] uppercase mb-6">The Real Difference</p>
+            <p className="text-[#007AFF] text-[11px] font-semibold tracking-[0.18em] uppercase mb-6">The Real Difference</p>
             <h2 className="text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-8 leading-[1.1] text-balance">
               의지가 아닌,<br />
               환경의 차이가 합격을 정합니다.
             </h2>
             <p className="text-[#434345] text-lg md:text-xl font-semibold max-w-3xl mx-auto break-keep leading-relaxed text-balance">
               혼자 하는 다짐은 쉽게 무너집니다. <br className="hidden md:block" /> 
-              압도적 집중 환경과 전문가의 코칭이 결합될 때 비로소 당신의 진짜 잠재력이 폭발합니다.
+              압도적 집중 환경과 전문가의 코멘팅이 결합될 때 비로소 당신의 진짜 잠재력이 폭발합니다.
             </p>
           </BlurFade>
         </div>
@@ -97,17 +97,17 @@ export default function ComparisonSection() {
           <div className="grid md:grid-cols-5 gap-16 lg:gap-24 items-center relative z-10">
             <div className="md:col-span-3 text-left">
               <BlurFade delay={0.5}>
-                <div className="inline-flex px-4 py-1.5 bg-white/[0.06] border border-white/10 rounded-full text-[#0A84FF] text-[10px] font-semibold tracking-[0.18em] uppercase mb-8">
+                <div className="inline-flex px-4 py-1.5 bg-white/[0.06] border border-white/10 rounded-full text-[#007AFF] text-[10px] font-semibold tracking-[0.18em] uppercase mb-8">
                   Expert Group
                 </div>
                 <h3 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-white mb-8 leading-[1.1] tracking-tight break-keep">
                   <span className="inline-block">전문 지식을 갖춘</span><br />
-                  <span className="text-[#0A84FF] inline-block">자기주도학습지도사들이</span><br />
+                  <span className="text-[#007AFF] inline-block">자기주도학습지도사들이</span><br />
                   <span className="inline-block">당신의 곁을 끝까지 지킵니다.</span>
                 </h3>
                 <p className="text-[#86868B] text-lg md:text-xl font-semibold max-w-2xl leading-relaxed break-keep mb-12 text-balance">
                   SSC 스파르타의 코멘터는 단순한 감시자가 아닙니다. <br className="hidden md:block" />
-                  <span className="text-white font-semibold tracking-tight border-b border-[#0A84FF]/50 pb-0.5">'자기주도학습지도사'</span> 자격증을 취득한 전문가 집단으로서, 수험생의 학습 상황을 분석하고 최적의 몰입 상태로 유도합니다.
+                  <span className="text-white font-semibold tracking-tight border-b border-[#007AFF]/50 pb-0.5">'자기주도학습지도사'</span> 자격증을 취득한 전문가 집단으로서, 수험생의 학습 상황을 분석하고 최적의 몰입 상태로 유도합니다.
                 </p>
                 <button 
                   onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
@@ -123,10 +123,10 @@ export default function ComparisonSection() {
               <BlurFade delay={0.6}>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { icon: BarChart3, label: '정밀 분석', iconColor: 'text-[#0A84FF]' },
-                    { icon: PenTool, label: '밀착 코칭', iconColor: 'text-[#0A84FF]' },
-                    { icon: Timer, label: '몰입 관리', iconColor: 'text-[#0A84FF]' },
-                    { icon: Award, label: '전문 지도', iconColor: 'text-[#0A84FF]' },
+                    { icon: BarChart3, label: '정밀 분석', iconColor: 'text-[#007AFF]' },
+                    { icon: PenTool, label: '밀착 코멘팅', iconColor: 'text-[#007AFF]' },
+                    { icon: Timer, label: '몰입 관리', iconColor: 'text-[#007AFF]' },
+                    { icon: Award, label: '전문 지도', iconColor: 'text-[#007AFF]' },
                   ].map((asset, i) => (
                     <div key={i} className="aspect-square rounded-[24px] bg-white/[0.06] border border-white/10 relative overflow-hidden group hover:bg-white/[0.09] transition-all duration-500">
                        <div className="absolute inset-0 flex flex-col items-center justify-center p-4">

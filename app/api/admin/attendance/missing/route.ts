@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 import { activeBackend, getStudentsSummary, getSessionsByDate } from '@/lib/store';
 import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
 
@@ -33,7 +33,10 @@ function kstNow(): { date: string; min: number } {
 }
 
 export async function GET(request: Request) {
-  if (!isCronRequest(request) && !(await isAdmin())) {
+  const isCron = isCronRequest(request);
+  // 크론 호출은 전 캠퍼스 대상(알림 발송용). 관리자 세션은 본인 캠퍼스로 제한.
+  const session = isCron ? null : await getAdminSession();
+  if (!isCron && !session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   if (activeBackend() !== 'supabase') {
@@ -59,6 +62,8 @@ export async function GET(request: Request) {
         if (checkedInIds.has(stu.id)) return false;
         // 등록 만료/기타 캠퍼스는 제외
         if (stu.campus === 'etc') return false;
+        // 관리자 세션 호출은 본인 캠퍼스만(크론은 전 캠퍼스). 슈퍼('all')는 전원.
+        if (session && session.campus !== 'all' && stu.campus !== session.campus) return false;
         const deadline = arrivalDeadlineMin(stu.expectedArrival);
         return deadline <= checkpointMin;
       })

@@ -80,7 +80,7 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
       {data?.summary && (
         <div className="flex flex-wrap gap-3 text-xs font-bold">
           <span className="px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-100">이번 주 지각 학생 {data.summary.lateStudents}명</span>
-          <span className="px-3 py-1.5 rounded-full bg-[#F56300]/10 text-[#F56300] border border-[#F56300]/15">누적 지각 {data.summary.totalLateDays}일</span>
+          <span className="px-3 py-1.5 rounded-full bg-[#FF9500]/10 text-[#FF9500] border border-[#FF9500]/15">누적 지각 {data.summary.totalLateDays}일</span>
           <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">기준: {data?.weekStart} ~ {data?.today}</span>
         </div>
       )}
@@ -109,7 +109,7 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
                   <td className="px-4 py-3 tabular-nums">{r.attendedDays}일</td>
                   <td className="px-4 py-3">
                     {r.lateDays > 0
-                      ? <span className={`font-bold tabular-nums ${r.lateDays >= 3 ? 'text-red-700' : 'text-[#F56300]'}`}>{r.lateDays}일{r.lateDays >= 3 ? ' ⚠' : ''}</span>
+                      ? <span className={`font-bold tabular-nums ${r.lateDays >= 3 ? 'text-red-700' : 'text-[#FF9500]'}`}>{r.lateDays}일{r.lateDays >= 3 ? ' ⚠' : ''}</span>
                       : <span className="text-emerald-700 font-bold">0일</span>}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-[#86868B]">{r.lateRate}%</td>

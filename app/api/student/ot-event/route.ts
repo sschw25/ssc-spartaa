@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, patchStudentProgress } from '@/lib/store';
 import { grantOtAttendance } from '@/lib/mission-engine';
 import type { OtParticipation } from '@/lib/types/student';
 
@@ -33,11 +33,6 @@ export async function POST(req: NextRequest) {
   }
   const status: OtParticipation['status'] = chosen === 'absent' ? 'absent_requested' : 'attending';
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const entry: OtParticipation = {
     eventId,
     status,
@@ -45,14 +40,31 @@ export async function POST(req: NextRequest) {
     updatedAt: new Date().toISOString(),
     respondedBy: 'student',
   };
-  student.otEvents = [...(student.otEvents || []).filter((e) => e.eventId !== eventId), entry];
 
-  let couponsGranted = 0;
-  if (status === 'attending') {
-    couponsGranted = await grantOtAttendance(student, eventId);
-    if (couponsGranted > 0) entry.rewarded = true;
+  // optimistic locking: conflict 시 fresh 재조회·재시도 (OT 적립 쿠폰 동시 저장 유실 방지). grant 는 rewards_log 멱등.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const student = await getStudentById(studentId);
+    if (!student) {
+      return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    const originalUpdatedAt = student.updatedAt ?? '';
+    student.otEvents = [...(student.otEvents || []).filter((e) => e.eventId !== eventId), entry];
+
+    let couponsGranted = 0;
+    entry.rewarded = false;
+    if (status === 'attending') {
+      couponsGranted = await grantOtAttendance(student, eventId);
+      if (couponsGranted > 0) entry.rewarded = true;
+    }
+
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
+
+    return NextResponse.json({ success: true, entry, couponsGranted });
   }
 
-  await saveStudent(student);
-  return NextResponse.json({ success: true, entry, couponsGranted });
+  return NextResponse.json(
+    { success: false, message: '저장 충돌이 발생했습니다. 다시 시도해주세요.' },
+    { status: 409 },
+  );
 }

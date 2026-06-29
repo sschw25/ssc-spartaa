@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
+import { timingSafeEqual } from 'crypto';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getAdminAccountByUsername } from '@/lib/store';
 import { signAdminSession } from '@/lib/auth';
+
+// 마스터 비밀번호 상수시간 비교 (타이밍 공격 방지). 길이 다르면 즉시 false.
+function safeEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
+}
 
 const SESSION_COOKIE_OPTS = {
   httpOnly: true,
@@ -32,7 +41,7 @@ export async function POST(request: Request) {
     const { username, password } = await request.json();
 
     // 1. 마스터 관리자(환경변수) 검사
-    if (username === 'admin' && password === correctPassword) {
+    if (username === 'admin' && typeof correctPassword === 'string' && correctPassword.length > 0 && safeEqual(String(password), correctPassword)) {
       const token = signAdminSession({
         id: 'super_admin',
         username: 'admin',

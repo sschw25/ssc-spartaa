@@ -1,18 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { ConsultationLog } from '@/lib/types/student';
-import { isAdmin } from '@/lib/auth';
+import { canAdminAccessStudent } from '@/lib/auth';
 
 // 특정 학생 상담 등록 API
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  if (!(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
-
   const { id } = await params;
+  if (!(await canAdminAccessStudent(id))) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
 
   try {
     const { date, manager, content, nextConsultationDate, type, subjects } = await request.json();

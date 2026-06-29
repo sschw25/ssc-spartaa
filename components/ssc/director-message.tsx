@@ -31,7 +31,7 @@ export function DirectorMessage() {
           </div>
           {/* Caption */}
           <div className="absolute -bottom-6 -right-6 md:-right-12 bg-white/10 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-2xl">
-             <p className="text-white text-lg font-bold leading-tight">스파르타 임직원 일동<br /><span className="text-white/60 text-xs font-medium uppercase tracking-widest">SSC Sparta Team</span></p>
+             <p className="text-white text-lg font-semibold leading-tight">스파르타 임직원 일동<br /><span className="text-white/60 text-xs font-medium uppercase tracking-widest">SSC Sparta Team</span></p>
           </div>
         </motion.div>
 
@@ -52,7 +52,7 @@ export function DirectorMessage() {
               <RhythmicText text={"충주, 원주, 춘천 캠퍼스의 모든 코멘터들이\n여러분의 인생을 건 도전을\n가장 가까이에서 응원하겠습니다."} />
             </div>
             <div className="mt-12 inline-flex flex-col gap-1">
-              <p className="text-white font-bold leading-snug">스파르타 임직원 일동 올림</p>
+              <p className="text-white font-semibold leading-snug">스파르타 임직원 일동 올림</p>
               <div className="h-[2px] w-12 bg-[#007AFF] rounded-full" />
             </div>
           </motion.div>

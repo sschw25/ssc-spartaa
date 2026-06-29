@@ -29,12 +29,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: '인증되지 않은 요청입니다.' }, { status: 401 });
     }
 
+    const { mode } = await request.json().catch(() => ({ mode: 'keepTargetDate' }));
+
+    // optimistic locking: 최대 2회 시도, conflict 시 fresh 데이터로 재시도
+    for (let attempt = 0; attempt < 2; attempt++) {
     const student = await getStudentById(studentId);
     if (!student) {
       return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     }
 
-    const { mode } = await request.json().catch(() => ({ mode: 'keepTargetDate' }));
     const nowStr = new Date().toISOString();
 
     const updatedSubjects = (student.subjects || []).map((subject) => {
@@ -153,12 +156,19 @@ export async function POST(request: NextRequest) {
       updatedAt: nowStr,
     };
 
-    const result = await patchStudentProgress(updatedStudent, student.updatedAt);
-    if (!result || result === 'conflict') {
-      return NextResponse.json({ success: false, message: '학생 정보 업데이트에 실패했거나 동시성 충돌이 발생했습니다.' }, { status: 500 });
+    const result = await patchStudentProgress(updatedStudent, student.updatedAt ?? '');
+    if (result === 'conflict') continue;
+    if (!result) {
+      return NextResponse.json({ success: false, message: '학생 정보 업데이트에 실패했습니다.' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data: result });
+    }
+
+    return NextResponse.json(
+      { success: false, message: '재조정 저장 충돌, 다시 시도해주세요.' },
+      { status: 409 },
+    );
   } catch (error) {
     console.error('Error realigning student plans:', error);
     return NextResponse.json({ success: false, message: '일괄 재조정 처리 중 오류가 발생했습니다.' }, { status: 500 });

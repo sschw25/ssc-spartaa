@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { sendCustomSms } from '@/lib/sms';
 import type { SmsLog } from '@/lib/types/student';
 
 // 관리자: 여러 학생에게 일괄 SMS 발송
 export async function POST(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -37,12 +38,19 @@ export async function POST(request: Request) {
   const nowIso = new Date().toISOString();
 
   let totalSent = 0;
+  let skippedCount = 0;
   const failed: string[] = [];
 
   for (const studentId of studentIds) {
     try {
       const student = await getStudentById(studentId);
       if (!student) { failed.push(studentId); continue; }
+
+      // 타 캠퍼스 학생은 발송 대상에서 제외 (슈퍼 관리자는 전원 허용)
+      if (session.campus !== 'all' && student.campus !== session.campus) {
+        skippedCount += 1;
+        continue;
+      }
 
       const recipients: string[] = [];
       if (targets.includes('parent') && student.parentPhone) recipients.push(student.parentPhone);
@@ -70,10 +78,12 @@ export async function POST(request: Request) {
     }
   }
 
-  const success = totalSent > 0 || failed.length < studentIds.length;
+  const attempted = studentIds.length - skippedCount;
+  const success = totalSent > 0 || failed.length < attempted || (attempted === 0 && skippedCount > 0);
   return NextResponse.json({
     success,
     totalSent,
+    skippedCount,
     failedCount: failed.length,
     failed,
   }, { status: success ? 200 : 502 });

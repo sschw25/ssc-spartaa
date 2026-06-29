@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, saveStudent, patchStudentProgress } from '@/lib/store';
 import { getRewardMeta } from '@/lib/leave';
 import type { RewardRedemption, RewardType } from '@/lib/types/student';
 
@@ -26,52 +26,65 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '교환 종류가 올바르지 않습니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
-  // 미차감 신청이므로, 이미 신청/승인대기 중인 쿠폰을 제외한 가용 쿠폰으로 한도 검사
-  const balance = student.leaveCoupons ?? 0;
-  const committed = (student.rewardRedemptions || [])
-    .filter((r) => r.status === 'requested' || r.status === 'pending')
-    .reduce((sum, r) => sum + (r.cost || 0), 0);
-  const available = balance - committed;
-  if (available < meta.cost) {
-    return NextResponse.json(
-      { success: false, message: `쿠폰이 부족합니다. (가용 ${available} / 필요 ${meta.cost})` },
-      { status: 400 },
-    );
-  }
-
   const nowIso = new Date().toISOString();
-  const redemption: RewardRedemption = meta.physical
-    ? {
-        // 상품권/플래너 — 신청(미차감), 관리자 승인 대기
-        id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        type: rewardType,
-        cost: meta.cost,
-        status: 'requested',
-        source: 'student',
-        createdAt: nowIso,
-      }
-    : {
-        // 반차권/휴식권 — 즉시 교환(쿠폰 즉시 차감)
-        id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-        type: rewardType,
-        cost: meta.cost,
-        status: 'fulfilled',
-        source: 'student',
-        createdAt: nowIso,
-        fulfilledAt: nowIso,
-      };
-  if (!meta.physical) {
-    student.leaveCoupons = balance - meta.cost;
-  }
-  student.rewardRedemptions = [redemption, ...(student.rewardRedemptions || [])];
-  await saveStudent(student);
 
-  return NextResponse.json({ success: true, redemption, leaveCoupons: student.leaveCoupons ?? 0 });
+  // optimistic locking: 최대 2회 시도, conflict 시 fresh 데이터로 재검증·재시도.
+  // 쿠폰은 환금성 인앱 통화 → 더블클릭/다중탭/적립과의 동시 저장으로 잔액·교환내역이 유실되지 않게 한다.
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const student = await getStudentById(studentId);
+    if (!student) {
+      return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    const originalUpdatedAt = student.updatedAt ?? '';
+
+    // 미차감 신청이므로, 이미 신청/승인대기 중인 쿠폰을 제외한 가용 쿠폰으로 한도 검사
+    const balance = student.leaveCoupons ?? 0;
+    const committed = (student.rewardRedemptions || [])
+      .filter((r) => r.status === 'requested' || r.status === 'pending')
+      .reduce((sum, r) => sum + (r.cost || 0), 0);
+    const available = balance - committed;
+    if (available < meta.cost) {
+      return NextResponse.json(
+        { success: false, message: `쿠폰이 부족합니다. (가용 ${available} / 필요 ${meta.cost})` },
+        { status: 400 },
+      );
+    }
+
+    const redemption: RewardRedemption = meta.physical
+      ? {
+          // 상품권/플래너 — 신청(미차감), 관리자 승인 대기
+          id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          type: rewardType,
+          cost: meta.cost,
+          status: 'requested',
+          source: 'student',
+          createdAt: nowIso,
+        }
+      : {
+          // 반차권/휴식권 — 즉시 교환(쿠폰 즉시 차감)
+          id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          type: rewardType,
+          cost: meta.cost,
+          status: 'fulfilled',
+          source: 'student',
+          createdAt: nowIso,
+          fulfilledAt: nowIso,
+        };
+    if (!meta.physical) {
+      student.leaveCoupons = balance - meta.cost;
+    }
+    student.rewardRedemptions = [redemption, ...(student.rewardRedemptions || [])];
+
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
+
+    return NextResponse.json({ success: true, redemption, leaveCoupons: student.leaveCoupons ?? 0 });
+  }
+
+  return NextResponse.json(
+    { success: false, message: '교환 처리 충돌이 발생했습니다. 다시 시도해주세요.' },
+    { status: 409 },
+  );
 }
 
 // 학생: 본인이 올린 '신청(requested)' 교환을 취소 (승인 전에만 가능)

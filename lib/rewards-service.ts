@@ -1,5 +1,5 @@
 import { Student } from './types/student';
-import { getStudentById, saveStudent, getStudySessions, activeBackend } from './store';
+import { getStudentById, patchStudentProgress, getStudySessions, activeBackend } from './store';
 import { getMissionConfig } from './mission-engine';
 import { MISSION_META } from './missions';
 import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
@@ -20,8 +20,11 @@ const getSeoulDateKey = () => {
 };
 
 export async function checkAndGrantRewards(studentId: string): Promise<{ granted: boolean; reasons: string[] }> {
+  // optimistic locking: conflict 시 fresh 데이터로 재평가·재시도(쿠폰 적립이 동시 저장에 유실되지 않게). 멱등성은 rewards_log.
+  for (let attempt = 0; attempt < 2; attempt++) {
   const student = await getStudentById(studentId);
   if (!student) return { granted: false, reasons: [] };
+  const originalUpdatedAt = student.updatedAt ?? '';
 
   const noteObj: any = readActivityEnvelope(student);
   if (!noteObj.rewards_log) {
@@ -115,9 +118,14 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
   if (couponsToGrant > 0) {
     student.leaveCoupons = (student.leaveCoupons || 0) + couponsToGrant;
     writeActivityEnvelope(student, noteObj);
-    await saveStudent(student);
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
     return { granted: true, reasons: grantedMissions };
   }
 
+  return { granted: false, reasons: [] };
+  }
+
+  // 재시도 소진(연속 conflict) — 이번엔 미지급, 다음 트리거에서 재평가됨
   return { granted: false, reasons: [] };
 }

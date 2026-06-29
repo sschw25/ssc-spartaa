@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 import { activeBackend, getStudentsSummary, getSessionsInRange } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
@@ -14,7 +14,8 @@ function seoulMin(iso: string): number {
 
 // 관리자: 이번 주(weekStart~오늘) 학생별 지각 누적 — 상습 지각 식별용
 export async function GET() {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   if (activeBackend() !== 'supabase') {
@@ -54,13 +55,16 @@ export async function GET() {
       };
     }).sort((a, b) => b.lateDays - a.lateDays || b.lateRate - a.lateRate || a.name.localeCompare(b.name, 'ko'));
 
+    // 캠퍼스 관리자는 본인 캠퍼스 학생만 조회 가능 (슈퍼는 전원)
+    const visibleRows = session.campus === 'all' ? rows : rows.filter((r) => r.campus === session.campus);
+
     const summary = {
       weekStart, today: todayStr,
-      lateStudents: rows.filter((r) => r.lateDays > 0).length,
-      totalLateDays: rows.reduce((a, r) => a + r.lateDays, 0),
+      lateStudents: visibleRows.filter((r) => r.lateDays > 0).length,
+      totalLateDays: visibleRows.reduce((a, r) => a + r.lateDays, 0),
     };
 
-    return NextResponse.json({ success: true, configured: true, weekStart, today: todayStr, summary, rows });
+    return NextResponse.json({ success: true, configured: true, weekStart, today: todayStr, summary, rows: visibleRows });
   } catch (e: any) {
     console.error('attendance/tardiness error:', e);
     return NextResponse.json({ success: false, message: e?.message || '지각 누적 조회 실패' }, { status: 500 });

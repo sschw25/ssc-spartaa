@@ -2,7 +2,7 @@
 // 정산 진입점: settleMissions(). 관리자 페이지의 '지금 정산' 버튼/크론이 호출.
 // 멱등성: 학생 specialNote.rewards_log 에 {date: periodKey, missionName} 으로 기록 — 같은 기간 중복 지급 방지.
 import { Student } from './types/student';
-import { getStudents, getStudyMinutesByStudent, getSessionsInRange, saveStudent, getAppSetting, setAppSetting, activeBackend } from './store';
+import { getStudents, getStudentById, getStudyMinutesByStudent, getSessionsInRange, patchStudentProgress, getAppSetting, setAppSetting, activeBackend } from './store';
 import { getPeriodBounds } from './study-stats';
 import {
   MissionId,
@@ -155,37 +155,46 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
     for (const sid of ranked) addGrant(sid, 'weekly_top_rank', weekKey, config.weekly_top_rank.coupons);
   }
 
-  // 지급 적용 (멱등) — 받을 게 있는 학생만 저장
+  // 지급 적용 (멱등) — 받을 게 있는 학생만, 학생별로 fresh 재조회 후 낙관적 잠금 저장.
+  // settle 시작 시점의 students 스냅샷이 stale 해져 동시 저장으로 쿠폰이 유실되던 문제 방지
+  // (patchStudentProgress = updated_at 조건부 update, conflict 시 fresh 재조회로 재시도). 카운트는 실제 저장 성공 후 집계.
   let totalCoupons = 0;
   let totalStudents = 0;
-  const studentMap = new Map(students.map((s) => [s.id, s]));
 
   for (const [sid, list] of grants) {
-    const student = studentMap.get(sid);
-    if (!student) continue;
-    const noteObj: any = readActivityEnvelope(student);
-    if (!Array.isArray(noteObj.rewards_log)) noteObj.rewards_log = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const student = await getStudentById(sid);
+      if (!student) break;
+      const originalUpdatedAt = student.updatedAt ?? '';
+      const noteObj: any = readActivityEnvelope(student);
+      if (!Array.isArray(noteObj.rewards_log)) noteObj.rewards_log = [];
 
-    let couponsForStudent = 0;
-    for (const g of list) {
-      const missionName = MISSION_META[g.id].name;
-      if (hasReward(noteObj, g.periodKey, missionName)) continue; // 이미 지급됨
-      noteObj.rewards_log.push({
-        date: g.periodKey,
-        missionName,
-        status: 'completed',
-        rewardGranted: g.coupons,
-      });
-      couponsForStudent += g.coupons;
-      granted[g.id] += 1;
-    }
+      let couponsForStudent = 0;
+      const newlyGranted: MissionId[] = [];
+      for (const g of list) {
+        const missionName = MISSION_META[g.id].name;
+        if (hasReward(noteObj, g.periodKey, missionName)) continue; // 이미 지급됨
+        noteObj.rewards_log.push({
+          date: g.periodKey,
+          missionName,
+          status: 'completed',
+          rewardGranted: g.coupons,
+        });
+        couponsForStudent += g.coupons;
+        newlyGranted.push(g.id);
+      }
 
-    if (couponsForStudent > 0) {
+      if (couponsForStudent <= 0) break; // 전부 이미 지급됨 — 저장 불필요
+
       student.leaveCoupons = (student.leaveCoupons || 0) + couponsForStudent;
       writeActivityEnvelope(student, noteObj);
-      await saveStudent(student);
+      const saved = await patchStudentProgress(student, originalUpdatedAt);
+      if (saved === 'conflict') continue; // fresh 재조회로 재시도
+
+      for (const id of newlyGranted) granted[id] += 1;
       totalCoupons += couponsForStudent;
       totalStudents += 1;
+      break;
     }
   }
 

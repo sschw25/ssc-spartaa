@@ -14,7 +14,7 @@ export function Campus({ filter }: { filter?: string } = {}) {
   const campus = campuses.find((c) => c.name === active)!
 
   return (
-    <section id="campus" className="bg-background-subtle py-20 md:py-28" ref={ref}>
+    <section id="campuses" className="bg-background-subtle py-20 md:py-28" ref={ref}>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="mb-10 fade-in-up">
@@ -95,7 +95,10 @@ export function Campus({ filter }: { filter?: string } = {}) {
             <div className="relative z-10 text-center">
               <MapPin size={36} className="text-white mx-auto mb-2 group-hover:scale-110 transition-transform" strokeWidth={1.2} />
               <p className="text-sm font-bold text-white">{campus.name} 캠퍼스</p>
-              <p className="text-xs text-white/80 font-semibold mt-1">📍 네이버 지도에서 보기 →</p>
+              <p className="inline-flex items-center gap-1 text-xs text-white/80 font-semibold mt-1">
+                <MapPin size={12} className="flex-shrink-0" strokeWidth={1.5} />
+                네이버 지도에서 보기 →
+              </p>
             </div>
           </a>
         </div>

@@ -43,6 +43,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: '필수 정보를 모두 입력해 주세요.' }, { status: 400 });
     }
 
+    // 세션 토큰 구분자(':')·서명 구분자('.') 오염 방지
+    if (String(username).includes(':') || String(username).includes('.')) {
+      return NextResponse.json({ success: false, message: '아이디에 : 또는 . 는 사용할 수 없습니다.' }, { status: 400 });
+    }
+
     // 아이디 중복 확인 (대소문자 구분 없이 확인)
     const existing = await getAdminAccountByUsername(username);
     if (existing || username.toLowerCase() === 'admin') {

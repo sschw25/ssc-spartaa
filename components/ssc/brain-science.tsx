@@ -55,9 +55,9 @@ export default function BrainScience() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10 text-left">
           {principles.map((p, i) => (
             <BlurFade key={i} delay={0.4 + i * 0.15} yOffset={30}>
-              <div className={`group relative h-full rounded-[40px] bg-white/[0.02] border border-white/[0.06] p-10 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all duration-700 ease-out backdrop-blur-3xl shadow-2xl`}>
+              <div className={`group relative h-full rounded-[40px] bg-white/[0.04] border border-white/[0.08] p-10 hover:bg-white/[0.07] hover:border-white/[0.14] transition-all duration-700 ease-out shadow-2xl`}>
                 <div className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center mb-8 shadow-lg group-hover:scale-110 transition-transform duration-500">
-                  <p.icon size={28} className="text-[#0A84FF]" />
+                  <p.icon size={28} className="text-[#007AFF]" />
                 </div>
                 <h3 className="text-white text-2xl font-semibold mb-5 tracking-tight group-hover:text-blue-400 transition-colors duration-500">
                   {p.title}

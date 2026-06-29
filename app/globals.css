@@ -266,6 +266,15 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+/* Premium Apple-style shadows — 죽은 파일 styles/globals.css 에만 있던 정의를 LIVE app/globals.css 로 포팅.
+   홈 카드(캠퍼스/비교/체크인) + admin/report 위젯이 shadow-premium / hover:shadow-premium-hover 를
+   참조하지만 정의가 import 안 되는 죽은 파일에 있어 그림자가 전혀 렌더되지 않던 버그 수정(AGENTS.md §8).
+   v4 --shadow-* 테마 토큰 → shadow-premium / shadow-premium-hover 유틸 + hover: variant 자동 생성. */
+@theme {
+  --shadow-premium: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 0 20px 40px -20px rgba(0, 0, 0, 0.03);
+  --shadow-premium-hover: 0 20px 50px -12px rgba(0, 0, 0, 0.08), 0 30px 60px -15px rgba(0, 0, 0, 0.05);
+}
+
 /* Entrance animation — used by admin app shells (dashboard/consultation/leaderboard) */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }

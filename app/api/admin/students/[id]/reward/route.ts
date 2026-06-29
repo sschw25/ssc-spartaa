@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, patchStudentProgress } from '@/lib/store';
 import { getRewardMeta, REWARD_CATALOG } from '@/lib/leave';
 import type { RewardRedemption, RewardType } from '@/lib/types/student';
 
@@ -28,33 +28,47 @@ export async function POST(
     return NextResponse.json({ success: false, message: '리워드 종류가 올바르지 않습니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(id);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
-  }
-
-  const balance = student.leaveCoupons ?? 0;
-  if (balance < meta.cost) {
-    return NextResponse.json({ success: false, message: `쿠폰이 부족합니다. (보유 ${balance} / 필요 ${meta.cost})` }, { status: 400 });
-  }
-
   const nowIso = new Date().toISOString();
-  const redemption: RewardRedemption = {
-    id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    type: rewardType,
-    cost: meta.cost,
-    // 상품권/플래너(physical)는 지급 대기, 반차권/휴식권은 즉시 처리 완료
-    status: meta.physical ? 'pending' : 'fulfilled',
-    createdAt: nowIso,
-    fulfilledAt: meta.physical ? undefined : nowIso,
-    handledBy: session.username,
-  };
 
-  student.leaveCoupons = balance - meta.cost;
-  student.rewardRedemptions = [redemption, ...(student.rewardRedemptions || [])];
-  await saveStudent(student);
+  // optimistic locking: conflict 시 fresh 재조회·재시도 (쿠폰 동시 차감/유실 방지)
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const student = await getStudentById(id);
+    if (!student) {
+      return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (session.campus !== 'all' && student.campus !== session.campus) {
+      return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+    }
+    const originalUpdatedAt = student.updatedAt ?? '';
 
-  return NextResponse.json({ success: true, redemption, leaveCoupons: student.leaveCoupons });
+    const balance = student.leaveCoupons ?? 0;
+    if (balance < meta.cost) {
+      return NextResponse.json({ success: false, message: `쿠폰이 부족합니다. (보유 ${balance} / 필요 ${meta.cost})` }, { status: 400 });
+    }
+
+    const redemption: RewardRedemption = {
+      id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      type: rewardType,
+      cost: meta.cost,
+      // 상품권/플래너(physical)는 지급 대기, 반차권/휴식권은 즉시 처리 완료
+      status: meta.physical ? 'pending' : 'fulfilled',
+      createdAt: nowIso,
+      fulfilledAt: meta.physical ? undefined : nowIso,
+      handledBy: session.username,
+    };
+
+    student.leaveCoupons = balance - meta.cost;
+    student.rewardRedemptions = [redemption, ...(student.rewardRedemptions || [])];
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
+
+    return NextResponse.json({ success: true, redemption, leaveCoupons: student.leaveCoupons });
+  }
+
+  return NextResponse.json(
+    { success: false, message: '교환 처리 충돌이 발생했습니다. 다시 시도해주세요.' },
+    { status: 409 },
+  );
 }
 
 // 관리자: 리워드 지급완료 처리 (상품권 번호/플래너 지급일 기록) 또는 교환 취소(쿠폰 환불)
@@ -80,10 +94,16 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: '처리 대상이 올바르지 않습니다.' }, { status: 400 });
   }
 
+  // optimistic locking: conflict 시 fresh 재조회·재시도 (승인 차감/취소 환불이 동시 저장에 유실되지 않게)
+  for (let attempt = 0; attempt < 2; attempt++) {
   const student = await getStudentById(id);
   if (!student) {
     return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
   }
+  if (session.campus !== 'all' && student.campus !== session.campus) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
+  }
+  const originalUpdatedAt = student.updatedAt ?? '';
 
   const target = (student.rewardRedemptions || []).find((r) => r.id === redemptionId);
   if (!target) {
@@ -107,7 +127,8 @@ export async function PATCH(
     target.handledBy = session.username;
     if (!meta?.physical) target.fulfilledAt = nowIso;
     student.rewardRedemptions = (student.rewardRedemptions || []).map((r) => (r.id === redemptionId ? target : r));
-    await saveStudent(student);
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
     return NextResponse.json({ success: true, redemption: target, leaveCoupons: student.leaveCoupons });
   }
 
@@ -116,7 +137,8 @@ export async function PATCH(
     target.status = 'rejected';
     target.handledBy = session.username;
     student.rewardRedemptions = (student.rewardRedemptions || []).map((r) => (r.id === redemptionId ? target : r));
-    await saveStudent(student);
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
     return NextResponse.json({ success: true, redemption: target });
   }
 
@@ -128,7 +150,8 @@ export async function PATCH(
     const wasDeducted = target.status === 'pending' || target.status === 'fulfilled';
     if (wasDeducted) student.leaveCoupons = (student.leaveCoupons ?? 0) + target.cost;
     student.rewardRedemptions = (student.rewardRedemptions || []).filter((r) => r.id !== redemptionId);
-    await saveStudent(student);
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
     return NextResponse.json({ success: true, leaveCoupons: student.leaveCoupons });
   }
 
@@ -140,7 +163,14 @@ export async function PATCH(
   if (typeof body?.note === 'string') target.note = body.note.trim() || undefined;
 
   student.rewardRedemptions = (student.rewardRedemptions || []).map((r) => (r.id === redemptionId ? target : r));
-  await saveStudent(student);
+  const saved = await patchStudentProgress(student, originalUpdatedAt);
+  if (saved === 'conflict') continue;
 
   return NextResponse.json({ success: true, redemption: target });
+  }
+
+  return NextResponse.json(
+    { success: false, message: '처리 충돌이 발생했습니다. 다시 시도해주세요.' },
+    { status: 409 },
+  );
 }

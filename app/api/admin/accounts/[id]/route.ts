@@ -19,6 +19,11 @@ export async function PUT(
   try {
     const { username, password, campus, role } = await request.json();
 
+    // 세션 토큰 구분자(':')·서명 구분자('.') 오염 방지
+    if (username && (String(username).includes(':') || String(username).includes('.'))) {
+      return NextResponse.json({ success: false, message: '아이디에 : 또는 . 는 사용할 수 없습니다.' }, { status: 400 });
+    }
+
     // 기존 계정 조회
     const accounts = await getAdminAccounts();
     const target = accounts.find((a) => a.id === id);

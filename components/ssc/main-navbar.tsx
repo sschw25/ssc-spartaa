@@ -39,8 +39,8 @@ export function MainNavbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-1 group">
             <div className="flex items-baseline gap-1">
-              <span className="text-base md:text-[17px] font-extrabold tracking-tighter text-[#1D1D1F]">SSC</span>
-              <span className="text-base md:text-[17px] font-extrabold tracking-tighter text-[#1D1D1F]">
+              <span className="text-base md:text-[17px] font-semibold tracking-tighter text-[#1D1D1F]">SSC</span>
+              <span className="text-base md:text-[17px] font-semibold tracking-tighter text-[#1D1D1F]">
                 스파르타
               </span>
             </div>
@@ -51,14 +51,14 @@ export function MainNavbar() {
             <a 
               href="#programs" 
               onClick={(e) => scrollToSection(e, 'programs')}
-              className="text-xs font-bold text-[#434345] hover:text-black transition-colors"
+              className="text-xs font-semibold text-[#434345] hover:text-black transition-colors"
             >
               제공 프로그램
             </a>
             <a 
               href="#campuses" 
               onClick={(e) => scrollToSection(e, 'campuses')}
-              className="text-xs font-bold text-[#434345] hover:text-black transition-colors"
+              className="text-xs font-semibold text-[#434345] hover:text-black transition-colors"
             >
               캠퍼스 안내
             </a>
@@ -69,7 +69,7 @@ export function MainNavbar() {
             {/* Summer School Dropdown */}
             <div className="relative group">
               <button 
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 ${
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition-all duration-300 ${
                   isScrolled 
                     ? 'text-[#007AFF] hover:bg-[#007AFF]/10' 
                     : 'text-[#007AFF] hover:bg-white/10'
@@ -82,9 +82,9 @@ export function MainNavbar() {
               {/* Dropdown Menu */}
               <div className="absolute right-0 top-full mt-2 w-44 bg-white rounded-2xl shadow-xl border border-black/5 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 translate-y-2 group-hover:translate-y-0 overflow-hidden">
                 <div className="py-2 flex flex-col">
-                  <Link href="/wonju/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
-                  <Link href="/chuncheon/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
-                  <Link href="/chungju/summer" className="px-5 py-3 text-[13px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
+                  <Link href="/wonju/summer" className="px-5 py-3 text-[13px] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">원주 썸머스쿨</Link>
+                  <Link href="/chuncheon/summer" className="px-5 py-3 text-[13px] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">춘천 썸머스쿨</Link>
+                  <Link href="/chungju/summer" className="px-5 py-3 text-[13px] font-semibold text-[#1D1D1F] hover:bg-[#F5F5F7] transition-colors">충주 썸머스쿨</Link>
                 </div>
               </div>
             </div>
@@ -93,7 +93,7 @@ export function MainNavbar() {
             <a 
               href="#campuses" 
               onClick={(e) => scrollToSection(e, 'campuses')}
-              className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
+              className={`hidden md:flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-semibold transition-all duration-500 ${
                 isScrolled 
                   ? 'bg-[#1D1D1F] text-white hover:bg-black shadow-lg shadow-black/10' 
                   : 'bg-white text-[#1D1D1F] hover:bg-[#F5F5F7]'
@@ -128,14 +128,14 @@ export function MainNavbar() {
                 <a 
                   href="#programs" 
                   onClick={(e) => scrollToSection(e, 'programs')}
-                  className="text-lg font-bold text-[#1D1D1F] py-2"
+                  className="text-lg font-semibold text-[#1D1D1F] py-2"
                 >
                   제공 프로그램
                 </a>
                 <a 
                   href="#campuses" 
                   onClick={(e) => scrollToSection(e, 'campuses')}
-                  className="text-lg font-bold text-[#1D1D1F] py-2"
+                  className="text-lg font-semibold text-[#1D1D1F] py-2"
                 >
                   캠퍼스 안내
                 </a>
@@ -143,26 +143,26 @@ export function MainNavbar() {
 
               {/* Mobile Summer School Info */}
               <div className="flex flex-col gap-2">
-                <p className="text-[#007AFF] font-extrabold text-sm px-1 mb-1">🔥 2026 썸머스쿨 바로가기</p>
+                <p className="text-[#007AFF] font-semibold text-sm px-1 mb-1">🔥 2026 썸머스쿨 바로가기</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
                     href="/wonju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-semibold text-[13px] active:scale-95 transition-all"
                   >
                     원주점
                   </Link>
                   <Link 
                     href="/chuncheon/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-semibold text-[13px] active:scale-95 transition-all"
                   >
                     춘천점
                   </Link>
                   <Link 
                     href="/chungju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-semibold text-[13px] active:scale-95 transition-all"
                   >
                     충주점
                   </Link>
@@ -172,7 +172,7 @@ export function MainNavbar() {
               <a 
                 href="#campuses" 
                 onClick={(e) => scrollToSection(e, 'campuses')}
-                className="mt-4 bg-[#1D1D1F] text-white text-center py-5 rounded-2xl font-extrabold text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                className="mt-4 bg-[#1D1D1F] text-white text-center py-5 rounded-2xl font-semibold text-lg shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
               >
                 캠퍼스 선택 및 상담 예약
                 <ChevronRight size={20} />

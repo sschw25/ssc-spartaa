@@ -29,15 +29,15 @@ export const metadata = getInterviewMetadata('wonju')
 const FAQ_LIST = [
   {
     question: '필기합격 발표 전에도 신청(사전등록)할 수 있나요?',
-    answer: '네, 사전등록이 적극 권장됩니다! 필기합격 발표 이후에는 자기소개서 제출과 면접 대비 기간이 매우 짧기 때문에 합격 확실권에 있으신 분들은 미리 신청해 두시는 것이 유리합니다. 발표 직후 수강 신청이 몰려 선착순 마감되거나 희망하시는 1:1 코칭 시간 배정이 어려울 수 있습니다. (※ 발표 후 불합격 시 전액 환불됩니다.)',
+    answer: '네, 사전등록이 적극 권장됩니다! 필기합격 발표 이후에는 자기소개서 제출과 면접 대비 기간이 매우 짧기 때문에 합격 확실권에 있으신 분들은 미리 신청해 두시는 것이 유리합니다. 발표 직후 수강 신청이 몰려 선착순 마감되거나 희망하시는 1:1 코멘팅 시간 배정이 어려울 수 있습니다. (※ 발표 후 불합격 시 전액 환불됩니다.)',
   },
   {
     question: '외부 수강생도 등록할 수 있나요?',
     answer: '네, 가능합니다. SSC스파르타 기존 원생이 아니더라도 강원 공무원 면접을 준비하는 수험생이라면 누구나 등록하여 동일한 혜택(사물함 선착순 제공 등)을 누리실 수 있습니다. 다만 면접반 단기 수강생에게는 별도의 자습 공간(독서실 좌석)은 제공되지 않는 점 양해 부탁드립니다.',
   },
   {
-    question: '1:1 개인코칭은 어떻게 진행되나요?',
-    answer: '1:1 추가반을 신청하시면 SSC스파르타의 1:1 개별 밀착 코칭이 50분간 제공됩니다. 작성하신 자기소개서와 지원동기 첨삭뿐만 아니라 실제 말할 때의 속도, 시선 처리, 태도, 나쁜 습관 교정까지 개인별 맞춤 피드백을 전달해 드립니다. (※ 지난 국가직 및 경채 면접반의 경우 수강생의 90%가 1:1 개인코칭 포함반을 신청해 면접을 대비했습니다.)',
+    question: '1:1 개인코멘팅은 어떻게 진행되나요?',
+    answer: '1:1 추가반을 신청하시면 SSC스파르타의 1:1 개별 밀착 코멘팅이 50분간 제공됩니다. 작성하신 자기소개서와 지원동기 첨삭뿐만 아니라 실제 말할 때의 속도, 시선 처리, 태도, 나쁜 습관 교정까지 개인별 맞춤 피드백을 전달해 드립니다. (※ 지난 국가직 및 경채 면접반의 경우 수강생의 90%가 1:1 개인코멘팅 포함반을 신청해 면접을 대비했습니다.)',
   },
   {
     question: '사물함을 이용할 수 있나요?',
@@ -49,7 +49,7 @@ const FAQ_LIST = [
   },
   {
     question: '기술직이나 특수직렬 수강생도 도움을 받을 수 있나요?',
-    answer: '네, 물론입니다. 매년 기계, 토목, 건축 등 특수 및 기술직렬 최종 합격자를 다수 배출해 온 데이터가 구축되어 있어 신뢰할 수 있습니다. 면접 공통 주제 외에도 특수직렬 맞춤형 기출 질문 및 답변 팁이 정리된 전문 자료를 제공합니다. 전공 및 직렬 특화 질문이 핵심인 만큼, 1:1 개인코칭 밀착반을 수강하시면 합격 확률을 극대화하실 수 있습니다.',
+    answer: '네, 물론입니다. 매년 기계, 토목, 건축 등 특수 및 기술직렬 최종 합격자를 다수 배출해 온 데이터가 구축되어 있어 신뢰할 수 있습니다. 면접 공통 주제 외에도 특수직렬 맞춤형 기출 질문 및 답변 팁이 정리된 전문 자료를 제공합니다. 전공 및 직렬 특화 질문이 핵심인 만큼, 1:1 개인코멘팅 밀착반을 수강하시면 합격 확률을 극대화하실 수 있습니다.',
   },
 ]
 
@@ -57,12 +57,12 @@ const INTERVIEW_TESTIMONIALS = [
   {
     name: '김O우 수험생',
     result: '지방직 일반행정직 최종 합격',
-    quote: '필기 합격 발표 후에 면접 준비 기간이 생각보다 너무 짧아서 눈앞이 캄캄했습니다. 하지만 SSC스파르타 면접반에서 제공해 준 기출 핵심 분석집과 답변 구조화 공식 덕분에 어떤 예상외 질문이 들어와도 당황하지 않고 차분히 답변 뼈대를 구성해 낼 수 있었습니다. 1:1 개인코칭 때 원장님께서 제 시선 처리나 말끝을 흐리는 세세한 습관까지 날카롭게 짚어 교정해 주신 덕분에 실전 면접장에서 최고의 태도로 임할 수 있었습니다.',
+    quote: '필기 합격 발표 후에 면접 준비 기간이 생각보다 너무 짧아서 눈앞이 캄캄했습니다. 하지만 SSC스파르타 면접반에서 제공해 준 기출 핵심 분석집과 답변 구조화 공식 덕분에 어떤 예상외 질문이 들어와도 당황하지 않고 차분히 답변 뼈대를 구성해 낼 수 있었습니다. 1:1 개인코멘팅 때 원장님께서 제 시선 처리나 말끝을 흐리는 세세한 습관까지 날카롭게 짚어 교정해 주신 덕분에 실전 면접장에서 최고의 태도로 임할 수 있었습니다.',
   },
   {
     name: '이O정 수험생',
     result: '지방직 토목직 최종 합격',
-    quote: '전공 과목 면접에 대한 부담이 정말 컸는데, SSC스파르타에 축적되어 있던 기계·토목·건축 등 기술직렬 합격자 데이터와 전공 질문 요약집이 구세주였습니다. 면접 공통 주제를 넘어 제 전공 지식을 자연스럽게 공직 가치와 엮어 표현하는 1:1 밀착 코칭이 결정적이었습니다. 꼬리 질문이 쏟아졌을 때도 코칭 때 배운 방어 요령을 적용해 무사히 면접을 마칠 수 있었습니다.',
+    quote: '전공 과목 면접에 대한 부담이 정말 컸는데, SSC스파르타에 축적되어 있던 기계·토목·건축 등 기술직렬 합격자 데이터와 전공 질문 요약집이 구세주였습니다. 면접 공통 주제를 넘어 제 전공 지식을 자연스럽게 공직 가치와 엮어 표현하는 1:1 밀착 코멘팅이 결정적이었습니다. 꼬리 질문이 쏟아졌을 때도 코멘팅 때 배운 방어 요령을 적용해 무사히 면접을 마칠 수 있었습니다.',
   },
   {
     name: '박O현 수험생',
@@ -79,7 +79,7 @@ export default function WonjuInterviewPage() {
       '@context': 'https://schema.org',
       '@type': 'Course',
       'name': '2026 지방직·교육행정직 공무원 면접반 (원주캠퍼스)',
-      'description': '원주 공무원 면접학원 SSC스파르타. 강원 지방직·교육행정직 필기합격자 대상 면접 집중 대비반. 12시간 정규수업 및 1:1 코칭 제공.',
+      'description': '원주 공무원 면접학원 SSC스파르타. 강원 지방직·교육행정직 필기합격자 대상 면접 집중 대비반. 12시간 정규수업 및 1:1 코멘팅 제공.',
       'provider': {
         '@type': 'EducationalOrganization',
         'name': 'SSC스파르타 원주캠퍼스',
@@ -133,7 +133,7 @@ export default function WonjuInterviewPage() {
             <Sparkles size={12} />
             2026 최종 합격을 향한 마지막 단 하나의 선택
           </div>
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight mb-6">
+          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-[#1D1D1F] leading-tight mb-6">
             원주 공무원 면접학원의 절대 기준<br />
             <span className="text-[#007AFF]">SSC스파르타 원주 면접반</span>
           </h1>
@@ -169,7 +169,7 @@ export default function WonjuInterviewPage() {
             <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#007AFF] mb-6">
               <Target size={24} />
             </div>
-            <h3 className="text-lg font-bold mb-2">SSC스파르타 면접 시스템</h3>
+            <h3 className="text-lg font-semibold mb-2">SSC스파르타 면접 시스템</h3>
             <p className="text-[#86868B] text-sm leading-relaxed">
               수많은 합격생을 배출한 SSC스파르타만의 명쾌한 면접 가이드라인. 추상적인 답변 대신 면접관이 채점표에 즉각 체크하는 직관적인 모범 답변 구조를 완성합니다.
             </p>
@@ -178,7 +178,7 @@ export default function WonjuInterviewPage() {
             <div className="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-[#34C759] mb-6">
               <Users size={24} />
             </div>
-            <h3 className="text-lg font-bold mb-2">체계적인 금요 자율스터디</h3>
+            <h3 className="text-lg font-semibold mb-2">체계적인 금요 자율스터디</h3>
             <p className="text-[#86868B] text-sm leading-relaxed">
               매주 금요일 오전 원주캠퍼스에서 진행되는 실전 자율스터디. 3~5명씩 조를 편성하고 면접관과 수험생 역할을 상호 교대하며 말문이 트이도록 무한 훈련합니다.
             </p>
@@ -187,7 +187,7 @@ export default function WonjuInterviewPage() {
             <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-[#FF9500] mb-6">
               <BookOpen size={24} />
             </div>
-            <h3 className="text-lg font-bold mb-2">강원·충북·경기 지역 특화 분석</h3>
+            <h3 className="text-lg font-semibold mb-2">강원·충북·경기 지역 특화 분석</h3>
             <p className="text-[#86868B] text-sm leading-relaxed">
               강원 및 충북 전역, 경기도까지 아우르는 지자체별 정책·현안 완벽 분석. 행정직뿐만 아니라 기계, 토목, 건축 등 기술직 및 특수직렬 맞춤 예상 질문과 합격자 배출 데이터를 바탕으로 면접에 특화된 대비를 제공합니다.
             </p>
@@ -199,7 +199,7 @@ export default function WonjuInterviewPage() {
       <section className="py-12 bg-white border-y border-[#E5E7EB]">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">수강 과정 & 등록 수강료</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">수강 과정 & 등록 수강료</h2>
             <p className="text-sm md:text-base text-[#86868B]">수강생의 준비 수준과 필요에 맞춰 스마트한 코스를 제안합니다.</p>
           </div>
 
@@ -207,7 +207,7 @@ export default function WonjuInterviewPage() {
             {/* 기본반 */}
             <div className="border border-[#E5E7EB] rounded-2xl p-8 relative flex flex-col justify-between bg-[#F8F9FA]">
               <div>
-                <h3 className="text-xl font-bold mb-2">면접 기본 과정</h3>
+                <h3 className="text-xl font-semibold mb-2">면접 기본 과정</h3>
                 <p className="text-[#86868B] text-sm mb-6">면접 본수업과 체계적인 조별 스터디로 답변 뼈대를 완성합니다.</p>
                 <div className="text-3xl font-semibold text-[#1D1D1F] mb-6">
                   38만 원
@@ -243,13 +243,13 @@ export default function WonjuInterviewPage() {
 
             {/* 1:1 추가반 */}
             <div className="border-2 border-[#007AFF] rounded-2xl p-8 relative flex flex-col justify-between bg-white shadow-lg shadow-blue-500/5">
-              <div className="absolute top-0 right-8 -translate-y-1/2 bg-[#007AFF] text-white px-3.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+              <div className="absolute top-0 right-8 -translate-y-1/2 bg-[#007AFF] text-white px-3.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                 <Sparkles size={12} />
                 추천! 수강생 90% 선택
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-2">
-                  <h3 className="text-xl font-bold">1:1 개인코칭 밀착 과정</h3>
+                  <h3 className="text-xl font-semibold">1:1 개인코멘팅 밀착 과정</h3>
                 </div>
                 <p className="text-[#86868B] text-sm mb-6">자소서부터 실전 시뮬레이션까지, 1:1 과외식 피드백으로 완성도를 올립니다.</p>
                 <div className="text-3xl font-semibold text-[#007AFF] mb-6">
@@ -262,7 +262,7 @@ export default function WonjuInterviewPage() {
                 <ul className="space-y-3.5 text-sm text-[#515154] mb-8">
                   <li className="flex items-start gap-2 font-semibold text-[#1D1D1F]">
                     <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
-                    <span>[핵심] 1:1 집중 개인코칭 1회 (50분) 포함</span>
+                    <span>[핵심] 1:1 집중 개인코멘팅 1회 (50분) 포함</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
@@ -298,18 +298,18 @@ export default function WonjuInterviewPage() {
       {/* 체계적인 4회 완결 커리큘럼 */}
       <section className="py-16 max-w-4xl mx-auto px-4">
         <div className="text-center mb-12">
-          <span className="text-xs font-bold text-[#007AFF] uppercase tracking-wider">Curriculum</span>
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight mt-2 mb-3">4회 완성 합격 로드맵</h2>
+          <span className="text-xs font-semibold text-[#007AFF] uppercase tracking-wider">Curriculum</span>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mt-2 mb-3">4회 완성 합격 로드맵</h2>
           <p className="text-sm md:text-base text-[#86868B]">수강생들이 실제로 말할 수 있도록 돕는 실질적 훈련 커리큘럼입니다.</p>
         </div>
 
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-semibold text-sm flex items-center justify-center shrink-0">
               1회
             </div>
             <div>
-              <h4 className="font-bold text-[#1D1D1F] mb-1">자기소개서 및 지원동기 작성법</h4>
+              <h4 className="font-semibold text-[#1D1D1F] mb-1">자기소개서 및 지원동기 작성법</h4>
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 나를 가장 선명하게 어필하는 핵심 키워드 선별 및 자소서 작성법. 면접관의 호기심을 유발하는 1분 스피치 구성 요령.
               </p>
@@ -321,11 +321,11 @@ export default function WonjuInterviewPage() {
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-semibold text-sm flex items-center justify-center shrink-0">
               2회
             </div>
             <div>
-              <h4 className="font-bold text-[#1D1D1F] mb-1">공직가치관 및 상황제시형 질문 대응</h4>
+              <h4 className="font-semibold text-[#1D1D1F] mb-1">공직가치관 및 상황제시형 질문 대응</h4>
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 민주성, 공정성, 청렴성 등 공직 가치 이해와 실제 경험 매핑. 업무 중 발생할 수 있는 딜레마(상사와의 갈등, 악성 민원 등) 논리적 해결 프로세스 제시.
               </p>
@@ -337,11 +337,11 @@ export default function WonjuInterviewPage() {
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-semibold text-sm flex items-center justify-center shrink-0">
               3회
             </div>
             <div>
-              <h4 className="font-bold text-[#1D1D1F] mb-1">지자체 지역현안 및 직렬별 기출 분석 (강원·충북·경기 특화)</h4>
+              <h4 className="font-semibold text-[#1D1D1F] mb-1">지자체 지역현안 및 직렬별 기출 분석 (강원·충북·경기 특화)</h4>
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 강원·충북·경기 지역 핵심 도정 및 지자체별 역점 사업 완벽 요약. 일반 행정직 및 기계, 토목, 건축 등 기술직/특수직렬 기출 및 전공 질문 완벽 대비.
               </p>
@@ -353,27 +353,27 @@ export default function WonjuInterviewPage() {
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-semibold text-sm flex items-center justify-center shrink-0">
               4회
             </div>
             <div>
-              <h4 className="font-bold text-[#1D1D1F] mb-1">실전 밀착 모의면접 및 모니터링</h4>
+              <h4 className="font-semibold text-[#1D1D1F] mb-1">실전 밀착 모의면접 및 모니터링</h4>
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 실전 면접장과 동일한 분위기 속에서 복장, 시선, 말투, 제스처 등 다차원 피드백 진행. 개별 약점 분석 및 최종 보완 가이드 제공.
               </p>
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-50 text-[#34C759]">
                 <Target size={13} />
-                1:1 프리미엄 코칭 (선택 시)
+                1:1 프리미엄 코멘팅 (선택 시)
               </span>
             </div>
           </div>
 
           <div className="bg-[#F5F5F7] p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-[#34C759] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-emerald-50 text-[#34C759] font-semibold text-sm flex items-center justify-center shrink-0">
               스터디
             </div>
             <div>
-              <h4 className="font-bold text-[#1D1D1F] mb-1">금요 면접 자율스터디 (오전 09:30~12:30)</h4>
+              <h4 className="font-semibold text-[#1D1D1F] mb-1">금요 면접 자율스터디 (오전 09:30~12:30)</h4>
               <p className="text-[#86868B] text-sm leading-relaxed">
                 SSC스파르타가 제공하는 면접 스터디 커리큘럼에 맞춰 센터 매니저가 스터디 조를 편성합니다. 서로 면접관과 수험생이 되어 자소서 피드백, 모의 문답을 주 1회씩 무한 훈련합니다.
               </p>
@@ -386,7 +386,7 @@ export default function WonjuInterviewPage() {
       <section className="py-16 bg-white border-y border-[#E5E7EB]">
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">원주캠퍼스 면접반 전체 일정</h2>
+            <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">원주캠퍼스 면접반 전체 일정</h2>
             <p className="text-sm md:text-base text-[#86868B]">필기합격 발표부터 모의면접까지, 일정을 꼭 미리 체크해두세요.</p>
           </div>
 
@@ -458,9 +458,9 @@ export default function WonjuInterviewPage() {
                 </tr>
                 <tr>
                   <td className="py-4 px-6 font-semibold">7/29(수)</td>
-                  <td className="py-4 px-6 font-semibold text-emerald-600">원주 1:1 개인 코칭 진행</td>
+                  <td className="py-4 px-6 font-semibold text-emerald-600">원주 1:1 개인 코멘팅 진행</td>
                   <td className="py-4 px-6 text-emerald-600">개별 예약 타임</td>
-                  <td className="py-4 px-6">1:1 추가반 신청자 개별 밀착 대면 코칭 (원장단 직접 첨삭)</td>
+                  <td className="py-4 px-6">1:1 추가반 신청자 개별 밀착 대면 코멘팅 (원장단 직접 첨삭)</td>
                 </tr>
                 <tr className="bg-blue-50/20">
                   <td className="py-4 px-6 font-semibold text-[#007AFF]">7/30(목)</td>
@@ -482,7 +482,7 @@ export default function WonjuInterviewPage() {
           <div className="mt-6 p-5 rounded-2xl bg-amber-50/60 border border-amber-100 flex items-start gap-3">
             <AlertTriangle size={18} className="text-[#FF9500] shrink-0 mt-0.5" />
             <div className="text-xs md:text-sm text-[#FF9500] leading-relaxed">
-              <span className="font-bold">강원 교육행정직 춘천 수강생 안내사항:</span><br />
+              <span className="font-semibold">강원 교육행정직 춘천 수강생 안내사항:</span><br />
               교육행정 1차시 수업(7/17 금 오후)은 원주캠퍼스 통합 진행이 기본입니다. 단, <b>필기합격 발표(7/15) 전 미리 사전등록을 완료한 춘천 지역 수강생에 한하여</b> 1차시 수업을 원주 이동 없이 춘천에서 수강할 수 있도록 특별 편성합니다. 발표(7/15) 이후 등록 시에는 1차시 수강을 위해 원주캠퍼스로 이동하셔야 하므로, 춘천 수강을 원하시는 분들은 반드시 발표 전 사전등록을 마쳐주시기 바랍니다.
             </div>
           </div>
@@ -495,7 +495,7 @@ export default function WonjuInterviewPage() {
       {/* 자주 묻는 질문 FAQ */}
       <section className="py-16 max-w-3xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-3">자주 묻는 질문 (FAQ)</h2>
+          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">자주 묻는 질문 (FAQ)</h2>
           <p className="text-sm md:text-base text-[#86868B]">수강생들이 면접반 등록 전에 가장 많이 질문하시는 내용들을 요약했습니다.</p>
         </div>
 
@@ -505,7 +505,7 @@ export default function WonjuInterviewPage() {
       {/* CTA Banner */}
       <section className="py-16 bg-[#1D1D1F] text-white text-center">
         <div className="max-w-3xl mx-auto px-4">
-          <h2 className="text-2xl md:text-4xl font-bold tracking-tight mb-4">
+          <h2 className="text-2xl md:text-4xl font-semibold tracking-tight mb-4">
             단 12시간, 최종합격으로 가는 마지막 관문
           </h2>
           <p className="text-white/70 text-sm md:text-base max-w-lg mx-auto mb-8">
@@ -541,7 +541,7 @@ export default function WonjuInterviewPage() {
         <div className="grid grid-cols-2 gap-2">
           <a
             href="tel:0507-1424-7999"
-            className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-amber-50 text-[#FF9500] border border-amber-100 font-bold text-xs"
+            className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-amber-50 text-[#FF9500] border border-amber-100 font-semibold text-xs"
           >
             <Phone size={14} />
             전화 상담 문의

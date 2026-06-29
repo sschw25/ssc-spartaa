@@ -133,9 +133,9 @@ export default function StreamPage({
             <div className="mb-6">
               {stream === 'gongmuwon' ? (
                 <div className="inline-flex items-center gap-3">
-                  <span className="text-sm md:text-base font-black tracking-tighter text-[#1D1D1F]">SSC 스파르타</span>
+                  <span className="text-sm md:text-base font-semibold tracking-tighter text-[#1D1D1F]">SSC 스파르타</span>
                   <span className="text-xs font-light text-[#86868B] opacity-40">X</span>
-                  <span className="text-sm md:text-base font-black tracking-tight text-[#007AFF]">커넥츠프랩</span>
+                  <span className="text-sm md:text-base font-semibold tracking-tight text-[#007AFF]">커넥츠프랩</span>
                 </div>
               ) : (
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#007AFF] text-xs font-semibold uppercase tracking-wider">
@@ -147,7 +147,7 @@ export default function StreamPage({
           </BlurFade>
 
           <BlurFade delay={0.3} yOffset={20}>
-            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight mb-6 text-balance break-keep">
+            <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-[#1D1D1F] leading-tight mb-6 text-balance break-keep">
               <RhythmicText text={content.hero.title.replaceAll('{{region}}', campusName)} />
             </h1>
           </BlurFade>

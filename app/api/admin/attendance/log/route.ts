@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
 import { activeBackend, getStudentsSummary, getSessionsByDate, getOpenSessions } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
@@ -19,7 +19,8 @@ function seoulHm(iso: string): { label: string; min: number } {
 // 관리자: 특정 날짜의 학생별 출결 로그.
 // includeAbsent=1이면 당일 출결 기록이 없는 학생도 함께 내려준다.
 export async function GET(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   if (activeBackend() !== 'supabase') {
@@ -108,17 +109,26 @@ export async function GET(request: Request) {
           })
       : [];
 
-    const rows = [...attendedRows, ...absentRows];
+    // 캠퍼스 관리자는 본인 캠퍼스 학생만 조회 가능 (슈퍼는 전원)
+    const inCampus = <T extends { campus: string }>(arr: T[]) =>
+      session.campus === 'all' ? arr : arr.filter((r) => r.campus === session.campus);
+    const visibleAttended = inCampus(attendedRows);
+    const visibleAbsent = inCampus(absentRows);
+    const visibleStudents = session.campus === 'all'
+      ? students
+      : students.filter((s) => s.campus === session.campus);
+
+    const rows = [...visibleAttended, ...visibleAbsent];
     const summary = {
-      ontime: attendedRows.filter((r) => !r.isLate).length,
-      late: attendedRows.filter((r) => r.isLate).length,
+      ontime: visibleAttended.filter((r) => !r.isLate).length,
+      late: visibleAttended.filter((r) => r.isLate).length,
       group0820: {
-        total: attendedRows.filter((r) => r.expectedArrival === '08:20').length,
-        late: attendedRows.filter((r) => r.expectedArrival === '08:20' && r.isLate).length,
+        total: visibleAttended.filter((r) => r.expectedArrival === '08:20').length,
+        late: visibleAttended.filter((r) => r.expectedArrival === '08:20' && r.isLate).length,
       },
       group0900: {
-        total: attendedRows.filter((r) => r.expectedArrival === '09:00').length,
-        late: attendedRows.filter((r) => r.expectedArrival === '09:00' && r.isLate).length,
+        total: visibleAttended.filter((r) => r.expectedArrival === '09:00').length,
+        late: visibleAttended.filter((r) => r.expectedArrival === '09:00' && r.isLate).length,
       },
     };
 
@@ -126,8 +136,8 @@ export async function GET(request: Request) {
       success: true,
       configured: true,
       date,
-      total: students.length,
-      attended: attendedRows.length,
+      total: visibleStudents.length,
+      attended: visibleAttended.length,
       summary,
       rows,
     });
