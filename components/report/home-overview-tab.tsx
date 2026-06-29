@@ -610,11 +610,13 @@ export function HomeOverviewTab({
             </div>
           </div>
 
-          {/* 3단계 생활 및 순공 지표 (실시간 통계 컴포넌트 호출) */}
-          <div className="no-print grid grid-cols-1 md:grid-cols-3 gap-6">
-            <AttendanceStatusCard />
+          {/* 생활·순공 지표 — 순공 리포트는 정보량이 많아 최소 1/2 폭 확보, 나머지 둘은 한 칼럼에 적층 */}
+          <div className="no-print grid grid-cols-1 md:grid-cols-2 gap-6">
             <StudyStatsCard stats={studyStats} />
-            <LeaderboardCard studentId={student.id} />
+            <div className="space-y-6">
+              <AttendanceStatusCard />
+              <LeaderboardCard studentId={student.id} />
+            </div>
           </div>
 
           {/* 코치 코멘트 피드백 퀘스트 리스트 */}
@@ -638,7 +640,7 @@ export function HomeOverviewTab({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <StudyStatsCard stats={studyStats} />
             <LeaderboardCard studentId={student.id} />
           </div>

@@ -29,6 +29,7 @@ import { ExamInfo2026 } from '@/components/ssc/exam-info-2026'
 import { StreamDataViz } from '@/components/ssc/stream-data-viz'
 import { WorrySolution } from '@/components/ssc/worry-solution'
 import { ManagementShowcase } from '@/components/ssc/management-showcase'
+import { StreamRoadmap } from '@/components/ssc/stream-roadmap'
 
 export default function StreamPage({
   campus,
@@ -92,7 +93,7 @@ export default function StreamPage({
   const bgImage = facilitiesWithImages.length > 0 ? facilitiesWithImages[0].image : undefined
 
   return (
-    <main className="overflow-x-hidden pb-16 md:pb-0 bg-[#F8F9FA] text-[#1D1D1F]">
+    <main className="stream-tone overflow-x-hidden pb-16 md:pb-0 bg-[#F8F9FA] text-[#1D1D1F]">
       <Navbar />
 
       <StreamStructuredData
@@ -220,6 +221,17 @@ export default function StreamPage({
             ...content.management,
             title: content.management.title.replaceAll('{{region}}', campusName),
             subtitle: content.management.subtitle.replaceAll('{{region}}', campusName),
+          }}
+        />
+      )}
+
+      {/* 1년 학습 로드맵 (모든 직렬 — 있을 때만) */}
+      {content.roadmap && (
+        <StreamRoadmap
+          data={{
+            ...content.roadmap,
+            title: content.roadmap.title.replaceAll('{{region}}', campusName),
+            subtitle: content.roadmap.subtitle.replaceAll('{{region}}', campusName),
           }}
         />
       )}

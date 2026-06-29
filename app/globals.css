@@ -201,6 +201,15 @@
      (Tailwind v4에서 unlayered `color`는 유틸리티를 덮어버리므로 제거) */
 }
 
+/* 직렬(stream) 페이지 톤 — 면접 페이지(text-2xl md:text-3xl)에 맞춰 섹션 헤딩 축소.
+   .stream-tone 래퍼 안에서만 적용 → 캠퍼스 홈 등 다른 마케팅 페이지는 영향 없음. */
+.stream-tone .section-title {
+  font-size: clamp(1.5rem, 1.2rem + 1vw, 1.875rem); /* 24px ~ 30px (면접 톤) */
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+
 /* Mobile Fine-tuning (under 768px) */
 @media (max-width: 767px) {
   .main-title {
@@ -208,6 +217,9 @@
   }
   .section-title {
     letter-spacing: -0.01em;
+  }
+  .stream-tone .section-title {
+    letter-spacing: -0.02em;
   }
 }
 

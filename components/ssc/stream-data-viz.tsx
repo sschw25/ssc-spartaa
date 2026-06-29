@@ -81,17 +81,18 @@ function Gauge({ value, label, sub, color }: { value: number; label: string; sub
             viewport={{ once: true, margin: '-60px' }}
             transition={{ duration: 1.4, ease: EASE }}
           />
+          {/* 숫자는 우측끝(end) 기준, % 는 바로 뒤(start) — 소수점 포함 값에서도 겹침 방지, 한 쌍으로 중앙 정렬 */}
           <motion.text
             ref={ref as React.RefObject<SVGTextElement>}
-            x={cx}
+            x={cx + 27}
             y={cy - 2}
-            textAnchor="middle"
+            textAnchor="end"
             className="tabular-nums"
-            style={{ fontSize: 38, fontWeight: 800, fill: C_INK, letterSpacing: '-0.04em' }}
+            style={{ fontSize: 36, fontWeight: 800, fill: C_INK, letterSpacing: '-0.04em' }}
           >
             {text}
           </motion.text>
-          <text x={cx} y={cy - 2} dx={34} textAnchor="middle" style={{ fontSize: 18, fontWeight: 800, fill: C_INK }}>
+          <text x={cx + 30} y={cy - 2} textAnchor="start" style={{ fontSize: 17, fontWeight: 800, fill: C_INK }}>
             %
           </text>
           <text x={cx} y={cy + 26} textAnchor="middle" style={{ fontSize: 12, fontWeight: 600, fill: C_MUTE }}>

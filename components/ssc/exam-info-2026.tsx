@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Calendar, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import type { ExamInfo } from '@/lib/stream-content'
 
 const EASE = [0.16, 1, 0.3, 1] as const
@@ -31,7 +31,7 @@ export function ExamInfo2026({ data }: { data: ExamInfo }) {
         </motion.div>
 
         {/* Fact cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-16">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {data.facts.map((f, i) => (
             <motion.div
               key={f.label}
@@ -56,41 +56,6 @@ export function ExamInfo2026({ data }: { data: ExamInfo }) {
           ))}
         </div>
 
-        {/* Timeline */}
-        {data.timeline.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-80px' }}
-            transition={{ duration: 0.6, ease: EASE }}
-            className="relative rounded-[28px] bg-[#1D1D1F] p-8 md:p-12 overflow-hidden"
-          >
-            <div className="absolute -right-10 -top-10 opacity-[0.06] pointer-events-none">
-              <Calendar size={180} strokeWidth={1} className="text-white" />
-            </div>
-            <p className="text-white/50 text-[11px] font-bold tracking-[0.2em] uppercase mb-8 flex items-center gap-2">
-              <Calendar size={14} /> 2026 시험 일정
-            </p>
-            <ol className="relative border-l border-white/15 ml-2">
-              {data.timeline.map((t, i) => (
-                <motion.li
-                  key={`${t.date}-${i}`}
-                  initial={{ opacity: 0, x: -12 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 0.45, ease: EASE, delay: i * 0.1 }}
-                  className="relative pl-7 pb-8 last:pb-0"
-                >
-                  <span className="absolute -left-[7px] top-1.5 w-3.5 h-3.5 rounded-full bg-[#007AFF] ring-4 ring-[#007AFF]/20" />
-                  <p className="text-[#0A84FF] text-sm font-semibold tracking-tight mb-1">{t.date}</p>
-                  <p className="text-white/90 text-base font-semibold tracking-tight whitespace-pre-line">
-                    {t.label}
-                  </p>
-                </motion.li>
-              ))}
-            </ol>
-          </motion.div>
-        )}
       </div>
     </section>
   )

@@ -32,7 +32,7 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
   const hasAny = stats.monthTotalMin > 0;
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-6">
+    <div className="@container rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-6">
       <div className="flex items-center gap-2">
         <Clock className="w-5 h-5 text-[#0071E3]" />
         <h3 className="text-base font-bold text-[#1D1D1F]">순공 시간 리포트</h3>
@@ -44,24 +44,21 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
         </div>
       ) : (
         <>
-          {/* 요약 3종 */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* 요약 3종 — 카드 폭 기준(@container) 반응형: 좁으면 2열+상위 가로, 넓으면 3열 */}
+          <div className="grid grid-cols-2 @md:grid-cols-3 gap-3">
             <div className="rounded-2xl bg-[#F5F5F7] p-4">
               <div className="text-[11px] text-[#86868B] font-semibold flex items-center gap-1">
-                <CalendarDays className="w-3.5 h-3.5" /> 이번 주 순공
+                <CalendarDays className="w-3.5 h-3.5 shrink-0" /> 이번 주 순공
               </div>
-              <div className="text-xl font-bold text-[#1D1D1F] mt-1">{fmt(stats.weekTotalMin)}</div>
+              <div className="text-lg @md:text-xl font-bold text-[#1D1D1F] mt-1 tabular-nums whitespace-nowrap">{fmt(stats.weekTotalMin)}</div>
             </div>
             <div className="rounded-2xl bg-[#F5F5F7] p-4">
               <div className="text-[11px] text-[#86868B] font-semibold flex items-center gap-1">
-                <CalendarDays className="w-3.5 h-3.5" /> 이번 달 순공
+                <CalendarDays className="w-3.5 h-3.5 shrink-0" /> 이번 달 순공
               </div>
-              <div className="text-xl font-bold text-[#1D1D1F] mt-1">{fmt(stats.monthTotalMin)}</div>
+              <div className="text-lg @md:text-xl font-bold text-[#1D1D1F] mt-1 tabular-nums whitespace-nowrap">{fmt(stats.monthTotalMin)}</div>
             </div>
-            <div className="rounded-2xl bg-[#0071E3]/[0.06] border border-[#0071E3]/15 p-4 flex flex-col items-center justify-center text-center gap-1.5">
-              <div className="text-[11px] font-semibold text-[#0071E3] flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" /> 이번 주 상위
-              </div>
+            <div className="col-span-2 @md:col-span-1 rounded-2xl bg-[#0071E3]/[0.06] border border-[#0071E3]/15 p-4 flex flex-row @md:flex-col items-center justify-center @md:text-center gap-3 @md:gap-1.5">
               <div className="relative h-16 w-16 shrink-0">
                 <svg viewBox="0 0 64 64" className="h-16 w-16 -rotate-90">
                   <circle cx="32" cy="32" r="26" fill="none" stroke="#0071E3" strokeOpacity="0.12" strokeWidth="6" />
@@ -77,9 +74,14 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
                   </span>
                 </div>
               </div>
-              <p className="text-[10px] font-bold leading-tight text-[#0071E3]/70">
-                상위권에 가까울수록 링이 가득 차요
-              </p>
+              <div className="flex flex-col @md:items-center gap-1 min-w-0">
+                <div className="text-[11px] font-semibold text-[#0071E3] flex items-center gap-1">
+                  <Trophy className="w-3.5 h-3.5 shrink-0" /> 이번 주 상위
+                </div>
+                <p className="text-[10px] font-bold leading-tight text-[#0071E3]/70">
+                  상위권에 가까울수록 링이 가득 차요
+                </p>
+              </div>
             </div>
           </div>
 

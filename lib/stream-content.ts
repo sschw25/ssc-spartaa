@@ -130,6 +130,23 @@ export interface StreamVizData {
   blocks: VizBlock[]
 }
 
+/** 직렬별 1년 학습 로드맵 — 대략적·상대적 단계(특정 날짜 비유지보수). */
+export interface RoadmapPhase {
+  /** 상대적 시기 라벨 (예: '입문기', '필기 D-DAY') — 절대 날짜 금지 */
+  period: string
+  /** 단계명 */
+  title: string
+  /** 한 줄 설명 */
+  focus: string
+  /** 시험/평가 시점 강조 */
+  exam?: boolean
+}
+export interface StreamRoadmap {
+  title: string
+  subtitle: string
+  phases: RoadmapPhase[]
+}
+
 export interface StreamContent {
   id: StreamId
   name: string
@@ -154,6 +171,8 @@ export interface StreamContent {
   management?: ManagementSection
   /** 데이터 시각화 섹션 (게이지·도넛·비교막대) — 있을 때만 렌더링 */
   viz?: StreamVizData
+  /** 1년 학습 로드맵 — 있을 때만 렌더링 */
+  roadmap?: StreamRoadmap
 }
 
 // 공용 시스템 카드는 리프 모듈에서 관리(순환참조 방지). 기존 import 경로 호환을 위해 재export.
