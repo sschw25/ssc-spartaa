@@ -10,22 +10,7 @@ import type { Student, LeaveRequest } from '@/lib/types/student';
 import { CAMPUS_LAYOUTS, CAMPUS_LABELS, type CampusKey, type Cell } from '@/lib/seat-layouts';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
 
 // ── 수강만료일 D-Day 헬퍼 함수 ───────────────────────────────────────────────
 function getEnrollmentDDay(enrollmentEndDate?: string, todayStr?: string): { status: 'expired' | 'warning' | 'normal'; daysLeft?: number } {
@@ -136,15 +121,6 @@ function nowKst(): { dateStr: string; minOfDay: number } {
 }
 
 type PeriodStatus = 'present' | 'absent' | 'future' | 'A';
-type ManualLeaveType = 'fullday' | 'morning' | 'afternoon' | 'night' | 'sick';
-const MANUAL_LEAVE_TYPES: ManualLeaveType[] = ['fullday', 'morning', 'afternoon', 'night', 'sick'];
-
-function isManualLeaveType(value: string): value is ManualLeaveType {
-  return MANUAL_LEAVE_TYPES.includes(value as ManualLeaveType);
-}
-
-const getErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
 
 function timeStringToMin(timeStr: string): number {
   if (!timeStr || !timeStr.includes(':')) return -1;
@@ -966,16 +942,6 @@ export default function SeatBoardPage() {
   // 폰 미제출 수동 표시: studentId → Set<'D'|'E'|'N'>
   const [phoneNoSubmitMap, setPhoneNoSubmitMap] = useState<Map<string, Set<'D' | 'E' | 'N'>>>(new Map());
 
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [checkInTime, setCheckInTime] = useState('');
-  const [checkOutTime, setCheckOutTime] = useState('');
-  const [leaveType, setLeaveType] = useState<ManualLeaveType>('fullday');
-  const [leaveReason, setLeaveReason] = useState('관리자 수동 등록');
-  const [submittingAttendance, setSubmittingAttendance] = useState(false);
-  const [submittingLeave, setSubmittingLeave] = useState(false);
-  const [unauthorizedMsg, setUnauthorizedMsg] = useState('');
-  const [sendingUnauthorizedMsg, setSendingUnauthorizedMsg] = useState(false);
 
   const kstToday = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
   const [selectedDate, setSelectedDate] = useState(kstToday);
@@ -1304,151 +1270,6 @@ export default function SeatBoardPage() {
     return m;
   }, [sessions]);
 
-  // ISO 문자열을 KST의 HH:MM 형태로 포매팅하는 유틸리티
-  function formatIsoToHM(isoStr: string): string {
-    try {
-      const date = new Date(isoStr);
-      const parts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false,
-      }).formatToParts(date);
-      const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
-      const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
-      return `${h}:${m}`;
-    } catch {
-      return '';
-    }
-  }
-
-  function openAttendanceModal(student: Student) {
-    const studentSessions = sessionMap.get(student.id) ?? [];
-    const latest = studentSessions[studentSessions.length - 1];
-
-    setSelectedStudent(student);
-    setCheckInTime(latest ? formatIsoToHM(latest.check_in) : '');
-    setCheckOutTime(latest?.check_out ? formatIsoToHM(latest.check_out) : '');
-    setLeaveType('fullday');
-    setLeaveReason('관리자 수동 등록');
-    setUnauthorizedMsg(`${student.name} 학생, 미승인 하원이 확인되었습니다. 사유가 있다면 등록해주시고 확인 부탁드립니다.`);
-    setIsModalOpen(true);
-  }
-
-  async function handleSendUnauthorizedMsg() {
-    if (!selectedStudent) return;
-    if (!unauthorizedMsg.trim()) {
-      toast.error('전송할 알림 메시지를 입력해 주세요.');
-      return;
-    }
-    setSendingUnauthorizedMsg(true);
-    try {
-      const response = await fetch('/api/admin/messages/bulk', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          studentIds: [selectedStudent.id],
-          message: unauthorizedMsg.trim(),
-        }),
-      });
-      const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json.success) throw new Error(json.message || '발송 실패');
-      toast.success('원생 알림 메시지가 성공적으로 발송되었습니다.');
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, '메시지 발송에 실패했습니다.'));
-    } finally {
-      setSendingUnauthorizedMsg(false);
-    }
-  }
-
-  async function handleSaveAttendance() {
-    if (!selectedStudent) return;
-    if (!ensureEditableToday()) return;
-    if (!checkInTime && checkOutTime) {
-      toast.error('등원 시간을 먼저 입력해 주세요.');
-      return;
-    }
-    setSubmittingAttendance(true);
-    try {
-      const response = await fetch('/api/admin/attendance/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          date: today,
-          checkIn: checkInTime || null,
-          checkOut: checkOutTime || '',
-        }),
-      });
-      const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json.success) throw new Error(json.message || '저장 실패');
-      
-      toast.success('수동 출결이 저장되었습니다.');
-      setIsModalOpen(false);
-      await loadData({ silent: true });
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, '출결 저장 중 오류가 발생했습니다.'));
-    } finally {
-      setSubmittingAttendance(false);
-    }
-  }
-
-  async function handleClearAttendance() {
-    if (!selectedStudent) return;
-    if (!ensureEditableToday()) return;
-    if (!confirm('오늘 등하원 기록을 모두 삭제하시겠습니까?')) return;
-    setSubmittingAttendance(true);
-    try {
-      const response = await fetch('/api/admin/attendance/manual', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          studentId: selectedStudent.id,
-          date: today,
-          clear: true,
-        }),
-      });
-      const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json.success) throw new Error(json.message || '삭제 실패');
-      
-      toast.success('당일 출결 기록이 초기화되었습니다.');
-      setIsModalOpen(false);
-      await loadData({ silent: true });
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, '출결 삭제 중 오류가 발생했습니다.'));
-    } finally {
-      setSubmittingAttendance(false);
-    }
-  }
-
-  async function handleSaveLeave() {
-    if (!selectedStudent) return;
-    if (!ensureEditableToday()) return;
-    setSubmittingLeave(true);
-    try {
-      const response = await fetch(`/api/admin/students/${selectedStudent.id}/leave`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          type: leaveType,
-          date: today,
-          reason: leaveReason,
-          status: 'approved',
-        }),
-      });
-      const json = await response.json().catch(() => ({}));
-      if (!response.ok || !json.success) throw new Error(json.message || '휴가 신청 실패');
-
-      toast.success('수동 휴무(즉시 승인)가 등록되었습니다.');
-      setIsModalOpen(false);
-      await loadData({ silent: true });
-    } catch (error: unknown) {
-      toast.error(getErrorMessage(error, '휴가 등록 중 오류가 발생했습니다.'));
-    } finally {
-      setSubmittingLeave(false);
-    }
-  }
-
   const openIds = useMemo(
     () => new Set(sessions.filter((s) => !s.check_out).map((s) => s.student_id)),
     [sessions],
@@ -1464,6 +1285,40 @@ export default function SeatBoardPage() {
     const present = campusStudents.filter((s) => openIds.has(s.id)).length;
     return { total: campusStudents.length, present, onLeave };
   }, [campusStudents, openIds, today]);
+
+  // 교시별 출석 확인 시, 자리에 없는(=수동 X 표시) 학생을 모아 학생 페이지 알림을 발송한다.
+  // 승인된 휴가/반차, 정기 외출로 빠지는 학생은 자동 제외한다.
+  async function notifyAbsentForPeriod(periodIdx: number) {
+    if (!ensureEditableToday()) return;
+    const todayDow = new Date(today + 'T00:00:00').getDay();
+    const targets = campusStudents.filter((s) => {
+      if (periodOverrides.get(`${s.id}:${periodIdx}`) !== 'absent') return false; // 관리자가 X로 표시
+      if (isApprovedLeavePeriod(s, today, periodIdx)) return false;                // 승인 휴가/반차 제외
+      const awayMark = getAwayPeriodMark(getApplicableAwayIntervals(s, today, todayDow), periodIdx);
+      if (awayMark.isAwayAbsent) return false;                                     // 정기 외출 제외
+      return true;
+    });
+    const label = PERIODS[periodIdx]?.label ?? String(periodIdx + 1);
+    if (targets.length === 0) {
+      toast.info(`${label}교시 미착석으로 표시된 학생이 없습니다. (휴가·외출 제외)`);
+      return;
+    }
+    const names = targets.map((s) => s.name).join(', ');
+    if (!confirm(`${label}교시 출석체크 시 ${names} 님이 자리에 없습니다.\n학생에게 알림을 발송하시겠습니까?`)) return;
+    try {
+      const res = await fetch('/api/admin/seat-board/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ studentIds: targets.map((s) => s.id), period: periodIdx, periodLabel: label, date: today }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || '발송 실패');
+      toast.success(`${label}교시 미착석 알림을 ${json.notifiedCount}명에게 발송했습니다.`);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '알림 발송에 실패했습니다.');
+    }
+  }
 
   if (checkingAuth) {
     return (
@@ -1595,6 +1450,23 @@ export default function SeatBoardPage() {
           </div>
         </div>
 
+        {/* ── 교시별 미착석 알림 ── */}
+        <div className="flex items-center gap-2 mb-4 flex-wrap rounded-2xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
+          <span className="shrink-0 text-[11px] font-bold text-slate-500">교시별 미착석 알림</span>
+          {PERIODS.slice(0, 7).map((p, idx) => (
+            <button
+              key={idx}
+              type="button"
+              disabled={!isSelectedToday}
+              onClick={() => notifyAbsentForPeriod(idx)}
+              className="h-7 min-w-[28px] rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-2 text-[11px] font-bold text-[#1D1D1F] transition hover:bg-[#0071E3]/10 hover:text-[#0071E3] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {p.label}
+            </button>
+          ))}
+          <span className="ml-1 text-[11px] text-slate-400">교시 셀을 X로 표시한 학생에게 발송 (휴가·외출 자동 제외)</span>
+        </div>
+
         {/* ── 페이지(구역) 탭 ── */}
         <div className="flex items-center gap-2 mb-4">
           {layoutPages.map((p, i) => (
@@ -1700,214 +1572,6 @@ export default function SeatBoardPage() {
           <span className="text-[10px] text-slate-400">· 60초마다 자동 갱신 · 교시 셀 클릭 시 수동 변경</span>
         </div>
 
-        {/* ── 수동 출결 및 휴무 신청 모달 ── */}
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-          <DialogContent className="max-w-md rounded-2xl bg-white p-6 shadow-xl border border-black/[0.05]">
-            <DialogHeader>
-              <DialogTitle className="text-base font-black text-[#1D1D1F]">
-                {selectedStudent?.name} 원생 출결 및 휴가 관리
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
-                좌석: {selectedStudent?.seatNumber}번 · 당일 기준 수동 출결 및 휴무 등록
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="flex flex-col gap-6 mt-4">
-              {/* 등하원 수동 입력 섹션 */}
-              <div className="border border-black/[0.05] rounded-xl p-4 bg-slate-50/50">
-                <h3 className="text-xs font-black text-slate-600 mb-3 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  당일 등하원 수동 설정
-                </h3>
-
-                {/* 오전/오후/야간 퀵 프리셋 버튼 */}
-                <div className="flex flex-col gap-1.5 mb-3">
-                  <Label className="text-[10px] font-bold text-slate-400">시간 프리셋</Label>
-                  <div className="flex gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        const expected = selectedStudent?.expectedArrival || '08:20';
-                        setCheckInTime(expected);
-                        setCheckOutTime('22:00');
-                      }}
-                      className="flex-1 rounded-xl text-[10px] h-7 bg-white border-black/[0.06] hover:bg-slate-50 font-bold"
-                    >
-                      오전 ({selectedStudent?.expectedArrival || '08:20'})
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setCheckInTime('13:00');
-                        setCheckOutTime('22:00');
-                      }}
-                      className="flex-1 rounded-xl text-[10px] h-7 bg-white border-black/[0.06] hover:bg-slate-50 font-bold"
-                    >
-                      오후 (13:00)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setCheckInTime('18:00');
-                        setCheckOutTime('22:00');
-                      }}
-                      className="flex-1 rounded-xl text-[10px] h-7 bg-white border-black/[0.06] hover:bg-slate-50 font-bold"
-                    >
-                      야간 (18:00)
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="flex flex-col gap-1.5">
-                     <Label htmlFor="checkIn" className="text-[10px] font-bold text-slate-400">등원 시간</Label>
-                    <Input
-                      id="checkIn"
-                      type="time"
-                      value={checkInTime}
-                      onChange={(e) => setCheckInTime(e.target.value)}
-                      className="h-9 rounded-lg text-xs bg-white border-black/[0.08]"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                     <Label htmlFor="checkOut" className="text-[10px] font-bold text-slate-400">하원 시간</Label>
-                    <Input
-                      id="checkOut"
-                      type="time"
-                      value={checkOutTime}
-                      onChange={(e) => setCheckOutTime(e.target.value)}
-                      className="h-9 rounded-lg text-xs bg-white border-black/[0.08]"
-                    />
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    onClick={handleSaveAttendance}
-                    disabled={submittingAttendance || !isSelectedToday}
-                    className="flex-1 rounded-xl text-xs font-black bg-[#0071E3] hover:bg-[#0071E3]/90 text-white h-9"
-                  >
-                    {submittingAttendance ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                    출결 시간 저장
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleClearAttendance}
-                    disabled={submittingAttendance || !isSelectedToday}
-                    className="rounded-xl text-xs font-black border-red-200 text-red-600 bg-red-50/50 hover:bg-red-50 h-9"
-                  >
-                    기록 초기화
-                  </Button>
-                </div>
-              </div>
-
-              {/* 수동 휴가 등록 섹션 */}
-              <div className="border border-black/[0.05] rounded-xl p-4 bg-slate-50/50">
-                <h3 className="text-xs font-black text-slate-600 mb-3 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                  당일 수동 휴무 신청 (즉시 승인)
-                </h3>
-                <div className="flex flex-col gap-3 mb-4">
-                  <div className="flex flex-col gap-1.5">
-                    <Label className="text-[10px] font-bold text-slate-400">휴무 구분</Label>
-                    <Select
-                      value={leaveType}
-                      onValueChange={(value) => {
-                        if (isManualLeaveType(value)) setLeaveType(value);
-                      }}
-                    >
-                      <SelectTrigger className="h-9 rounded-lg text-xs bg-white border-black/[0.08]">
-                        <SelectValue placeholder="구분 선택" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-lg bg-white border-black/[0.05]">
-                        <SelectItem value="fullday" className="text-xs">하루종일 휴가</SelectItem>
-                        <SelectItem value="morning" className="text-xs">오전 반차 (1, 2교시)</SelectItem>
-                        <SelectItem value="afternoon" className="text-xs">오후 반차 (3, 4, 5교시)</SelectItem>
-                        <SelectItem value="night" className="text-xs">야간 반차 (6, 7교시)</SelectItem>
-                        <SelectItem value="sick" className="text-xs">병가</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="leaveReason" className="text-[10px] font-bold text-slate-400">휴무 사유</Label>
-                    <Input
-                      id="leaveReason"
-                      value={leaveReason}
-                      onChange={(e) => setLeaveReason(e.target.value)}
-                      placeholder="사유를 입력해 주세요."
-                      className="h-9 rounded-lg text-xs bg-white border-black/[0.08]"
-                    />
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handleSaveLeave}
-                  disabled={submittingLeave}
-                  className="w-full rounded-xl text-xs font-black bg-[#1D1D1F] hover:bg-[#1D1D1F]/90 text-white h-9"
-                >
-                  {submittingLeave ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                  휴무 즉시 승인 등록
-                </Button>
-              </div>
-
-              {/* 미승인 하원 알림 섹션 */}
-              {(() => {
-                const selSessions = selectedStudent ? (sessionMap.get(selectedStudent.id) ?? []) : [];
-                const selIsLeftToday = selSessions.length > 0 && selSessions.every((s) => s.check_out);
-                const selLastCheckOutIso = selSessions.reduce((latest: string | null, s) =>
-                  s.check_out && (!latest || s.check_out > latest) ? s.check_out : latest, null);
-                const selLastCheckOutMin = selLastCheckOutIso ? kstMin(selLastCheckOutIso) : -1;
-                const selTodayDow = new Date(today + 'T00:00:00').getDay();
-                const selAwayIntervals = selectedStudent ? getApplicableAwayIntervals(selectedStudent, today, selTodayDow) : [];
-                const { dateStr: selNowDateStr, minOfDay: selNowMin } = nowKst();
-                const isUnauthorized = selectedStudent
-                  ? isUnauthorizedCheckout(
-                      selectedStudent,
-                      selIsLeftToday,
-                      selLastCheckOutMin,
-                      today,
-                      selNowDateStr,
-                      selNowMin,
-                      selAwayIntervals,
-                    )
-                  : false;
-                if (!isUnauthorized) return null;
-                return (
-                  <div className="border border-red-200 rounded-xl p-4 bg-red-50/30">
-                    <h3 className="text-xs font-black text-red-600 mb-3 flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                      미승인 하원 원생 알림 전송
-                    </h3>
-                    <div className="flex flex-col gap-1.5 mb-3">
-                      <Label htmlFor="unauthorizedMsg" className="text-[10px] font-bold text-red-500">알림 메시지</Label>
-                      <textarea
-                        id="unauthorizedMsg"
-                        value={unauthorizedMsg}
-                        onChange={(e) => setUnauthorizedMsg(e.target.value)}
-                        placeholder="메시지 내용을 입력하세요."
-                        rows={2}
-                        className="w-full resize-none rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                      />
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={handleSendUnauthorizedMsg}
-                      disabled={sendingUnauthorizedMsg || !unauthorizedMsg.trim()}
-                      className="w-full rounded-xl text-xs font-black bg-[#F56300] hover:bg-[#F56300]/90 text-white h-9"
-                    >
-                      {sendingUnauthorizedMsg ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-                      원생알림 즉시 발송
-                    </Button>
-                  </div>
-                );
-              })()}
-            </div>
-          </DialogContent>
-        </Dialog>
       </main>
     </div>
   );

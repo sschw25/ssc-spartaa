@@ -194,6 +194,9 @@ alter table meal_plans add column if not exists closed_days jsonb not null defau
 -- 학생별 도시락 신청 (요일×끼니 selections + 마감후 추가신청)
 alter table students add column if not exists meal_orders jsonb not null default '[]'::jsonb;
 
+-- 출결판 미착석 알림(관리자 발송) — 학생 페이지 알림으로 노출
+alter table students add column if not exists seat_alerts jsonb not null default '[]'::jsonb;
+
 -- 좌석 현황판 수동 상태
 create table if not exists seat_statuses (
   date        text not null,

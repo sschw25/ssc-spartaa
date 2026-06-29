@@ -1496,6 +1496,16 @@ export function useReportState() {
   });
 
   const systemNotifications = [
+    // 출결판 미착석 알림(관리자 발송) — 확인(dismiss) 전까지 누적 노출
+    ...((student.seatAlerts || []).map((alert) => ({
+      id: `seat-alert-${alert.id}`,
+      tone: 'red' as const,
+      label: '출석 확인',
+      title: `${alert.periodLabel}교시 자리 비움 확인 요청`,
+      body: alert.message,
+      date: alert.createdAt || alert.date,
+      priority: 1,
+    }))),
     ...(student.weeklyGradeCheck && !hasGradeThisWeek
       ? [{
           id: 'weekly-grade-check',

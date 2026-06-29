@@ -430,6 +430,19 @@ export interface Student {
   ddays?: DDayEvent[];
   // 도시락 신청 내역
   mealOrders?: MealOrder[];
+  // 출결판 미착석 알림(관리자 발송) — 학생 페이지 알림으로 노출, 확인 시 dismiss
+  seatAlerts?: SeatAlert[];
+}
+
+// 출결판에서 관리자가 "자리에 없음"으로 확인해 학생에게 보낸 알림
+export interface SeatAlert {
+  id: string;          // 고유 id (학생 페이지 dismiss 식별자로 사용)
+  date: string;        // 출결 기준일 (YYYY-MM-DD, KST)
+  period: number;      // 교시 인덱스 (0~7)
+  periodLabel: string; // 표시용 교시 라벨 ('2', '심야' 등)
+  message: string;     // 학생 페이지에 노출할 본문
+  createdAt: string;
+  createdBy?: string;
 }
 
 export interface AdminAccount {

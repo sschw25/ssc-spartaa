@@ -41,6 +41,7 @@ function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
       ? {
           penalties: student.penalties || [],
           mockExams: student.mockExams || [],
+          seatAlerts: student.seatAlerts || [],
         }
       : {}),
   };
