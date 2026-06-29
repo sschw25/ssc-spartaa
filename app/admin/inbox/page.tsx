@@ -66,6 +66,7 @@ export default function AdminInboxPage() {
 
   // 1. 관리자 인증 확인
   useEffect(() => {
+    let cancelled = false;
     async function verifyAuth() {
       try {
         const res = await fetch('/api/admin/auth/me');
@@ -73,15 +74,16 @@ export default function AdminInboxPage() {
           router.replace('/admin');
           return;
         }
-        loadStudents();
-      } catch (err) {
+        if (!cancelled) loadStudents();
+      } catch {
         router.replace('/admin');
       } finally {
-        setCheckingAuth(false);
+        if (!cancelled) setCheckingAuth(false);
       }
     }
     verifyAuth();
-  }, [router]);
+    return () => { cancelled = true; };
+  }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 2. 학생 데이터 및 신청 내역 수집
   const loadStudents = async () => {
@@ -269,7 +271,7 @@ export default function AdminInboxPage() {
         if (e.status !== 'absent_requested') return;
         const ev = eventNames[e.eventId];
         items.push({
-          id: `ot:${e.eventId}`,
+          id: `ot:${e.eventId}:${student.id}`,
           studentId: student.id,
           studentName: student.name,
           campus: student.campus,
@@ -292,7 +294,7 @@ export default function AdminInboxPage() {
         if (e.status !== 'absent_requested') return;
         const ev = eventNames[e.examId];
         items.push({
-          id: `mock:${e.examId}`,
+          id: `mock:${e.examId}:${student.id}`,
           studentId: student.id,
           studentName: student.name,
           campus: student.campus,
@@ -448,8 +450,15 @@ export default function AdminInboxPage() {
     });
   };
 
-  // 선택 변경 시 폼 바인딩
+  // 선택 변경 시 폼 바인딩 (초안 유실 경고)
   const handleSelectItem = (item: InboxItem) => {
+    if (
+      selectedItem &&
+      selectedItem.id !== item.id &&
+      replyText.trim() !== selectedItem.adminReply.trim()
+    ) {
+      if (!window.confirm('작성 중인 답변이 저장되지 않습니다. 항목을 전환할까요?')) return;
+    }
     setSelectedItem(item);
     setReplyText(item.adminReply);
   };
@@ -463,7 +472,7 @@ export default function AdminInboxPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans transition-all">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans transition-all">
       <AdminTopNav
         title="통합 신청 & 건의 인박스"
         onLogout={handleLogout}
@@ -743,7 +752,7 @@ export default function AdminInboxPage() {
                     rows={4}
                     className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                   />
-                  <p className="text-[9px] font-bold text-slate-400">답변을 입력하면 실시간으로 '처리중🔵' 또는 '완료🟢' 상태로 학생 화면에 표시됩니다.</p>
+                  <p className="text-[9px] font-bold text-slate-400">답변을 입력하면 실시간으로 '처리중' 또는 '완료' 상태로 학생 화면에 표시됩니다.</p>
                 </div>
 
                 {/* proposedGoal 제안 계획 표시 */}

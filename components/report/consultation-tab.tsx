@@ -140,7 +140,8 @@ export function ConsultationTab({
         const selCat = LEAVE_TYPES[leaveForm.type]?.category;
         const overQuota = (selCat === 'halfday' && halfLeft <= 0) || (selCat === 'fullday' && fullLeft <= 0);
         const isSick = selCat === 'sick';
-        const monthLabel = selMonth.replace('-', '. ') + '월';
+        const [y, m] = selMonth.split('-');
+        const monthLabel = `${y}년 ${parseInt(m)}월`;
         const leaveStatusBadge = (s: string, reply?: string) => getTimelineStatusBadge(s, reply);
         return (
           <div id="student-leave-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
@@ -165,7 +166,7 @@ export function ConsultationTab({
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">병가(이번달)</p>
-                <p className="mt-0.5 text-sm font-black text-slate-700">🤒 {usage.sick}<span className="text-[10px] font-bold text-slate-400">건</span></p>
+                <p className="mt-0.5 text-sm font-black text-slate-700">{usage.sick}<span className="text-[10px] font-bold text-slate-400">건</span></p>
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">쿠폰</p>
@@ -194,11 +195,12 @@ export function ConsultationTab({
             </div>
 
             {/* 날짜 + 사유 */}
-            <div className="space-y-2">
+            <form onSubmit={submitLeave} className="space-y-2">
               <div className="flex items-center gap-2">
                 <label className="shrink-0 text-[11px] font-black text-slate-500">사용일</label>
                 <input
                   type="date"
+                  required
                   value={leaveForm.date}
                   onChange={(e) => setLeaveForm((f) => ({ ...f, date: e.target.value }))}
                   className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
@@ -211,30 +213,29 @@ export function ConsultationTab({
                 rows={2}
                 className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
               />
-            </div>
 
-            {/* 안내/경고 */}
-            {isSick && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
-                🤒 병가는 월 한도와 무관하지만, <b>영수증/진단서를 밴드 채팅으로 반드시 증빙</b>해 주세요.
-              </div>
-            )}
-            {!isSick && overQuota && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
-                이번 달 {selCat === 'halfday' ? '반차' : '휴식권'}를 모두 사용했어요.
-                {selCat === 'halfday' ? ` 추가가 필요하면 쿠폰 ${COUPONS_PER_EXTRA_HALFDAY}개로 신청 가능합니다 — 밴드 채팅으로 문의 후 쿠폰을 제출해 주세요.` : ' 추가가 필요하면 밴드 채팅으로 문의해 주세요.'}
-              </div>
-            )}
+              {/* 안내/경고 */}
+              {isSick && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                  🤒 병가는 월 한도와 무관하지만, <b>영수증/진단서를 밴드 채팅으로 반드시 증빙</b>해 주세요.
+                </div>
+              )}
+              {!isSick && overQuota && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                  이번 달 {selCat === 'halfday' ? '반차' : '휴식권'}를 모두 사용했어요.
+                  {selCat === 'halfday' ? ` 추가가 필요하면 쿠폰 ${COUPONS_PER_EXTRA_HALFDAY}개로 신청 가능합니다 — 밴드 채팅으로 문의 후 쿠폰을 제출해 주세요.` : ' 추가가 필요하면 밴드 채팅으로 문의해 주세요.'}
+                </div>
+              )}
 
-            <button
-              type="button"
-              onClick={submitLeave}
-              disabled={leaveSubmitting || (!isSick && overQuota)}
-              className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
-            >
-              {leaveSubmitting ? '신청 중...' : (!isSick && overQuota) ? '한도 초과 (밴드 채팅 문의)' : `${getLeaveTypeLabel(leaveForm.type)} 신청하기`}
-            </button>
-            {leaveError && <p className="text-[10px] font-bold text-red-500">{leaveError}</p>}
+              <button
+                type="submit"
+                disabled={leaveSubmitting || (!isSick && overQuota) || !leaveForm.date}
+                className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+              >
+                {leaveSubmitting ? '신청 중...' : (!isSick && overQuota) ? '한도 초과 (밴드 채팅 문의)' : `${getLeaveTypeLabel(leaveForm.type)} 신청하기`}
+              </button>
+              {leaveError && <p className="text-[10px] font-bold text-red-500">{leaveError}</p>}
+            </form>
 
             {(() => {
               const pending = leaveRequests.filter(r => r.status === 'pending');
@@ -253,14 +254,14 @@ export function ConsultationTab({
                             <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
                             {leaveStatusBadge(r.status, r.adminReply)}
                           </span>
-                          <button type="button" onClick={() => cancelLeave(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                          <button type="button" onClick={() => { if (window.confirm('이 휴가 신청을 취소할까요?')) cancelLeave(r.id); }} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
                             <Trash2 className="w-3 h-3" />
                           </button>
                         </div>
                         {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.reason}</p>}
                         {r.adminReply && (
                           <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                            💬 코치 답변: {r.adminReply}
+                            코치 답변: {r.adminReply}
                           </div>
                         )}
                       </div>
@@ -292,7 +293,7 @@ export function ConsultationTab({
                                 {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.reason}</p>}
                                 {r.adminReply && (
                                   <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                    💬 코치 답변: {r.adminReply}
+                                    코치 답변: {r.adminReply}
                                   </div>
                                 )}
                               </div>
@@ -363,7 +364,7 @@ export function ConsultationTab({
                     <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
                     {r.adminReply && (
                       <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                        💬 코치 답변: {r.adminReply}
+                        코치 답변: {r.adminReply}
                       </div>
                     )}
                   </div>
@@ -395,7 +396,7 @@ export function ConsultationTab({
                             <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.content}</p>
                             {r.adminReply && (
                               <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                💬 코치 답변: {r.adminReply}
+                                코치 답변: {r.adminReply}
                               </div>
                             )}
                           </div>

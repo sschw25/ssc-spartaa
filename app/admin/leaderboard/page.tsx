@@ -9,6 +9,7 @@ import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/com
 import { Input } from '@/components/ui/input';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { Donut, VizLegend, CompareBar } from '@/components/admin/viz-kit';
 
 interface Row { rank: number; id: string; name: string; campus: string; weekMinutes: number; dayMinutes: number; isOpen: boolean }
 interface Data {
@@ -25,7 +26,7 @@ const fmt = (m: number) => {
   const min = m % 60;
   return h > 0 ? `${h}시간 ${min}분` : `${min}분`;
 };
-const medal = (rank: number) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`);
+const medal = (rank: number) => `${rank}`;
 
 export default function WeeklyLeaderboardPage() {
   const router = useRouter();
@@ -35,6 +36,7 @@ export default function WeeklyLeaderboardPage() {
   const [error, setError] = useState('');
   const [campusFilter, setCampusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [openingStudentId, setOpeningStudentId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,9 +58,12 @@ export default function WeeklyLeaderboardPage() {
 
   useEffect(() => {
     load();
+    const interval = setInterval(load, 60000);
+    return () => clearInterval(interval);
   }, [load]);
 
   const handleOpenStudentById = async (id: string) => {
+    setOpeningStudentId(id);
     try {
       const res = await fetch(`/api/admin/students/${id}`, { cache: 'no-store' });
       const json = await res.json();
@@ -70,6 +75,9 @@ export default function WeeklyLeaderboardPage() {
         return;
       }
     } catch {}
+    finally {
+      setOpeningStudentId(null);
+    }
     router.push(`/admin/consultation?studentId=${id}`);
   };
 
@@ -122,7 +130,7 @@ export default function WeeklyLeaderboardPage() {
   };
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans selection:bg-black/10">
       <AdminTopNav
         title="주간 순공 시간 상세 분석"
         titleIcon={<Trophy className="w-4 h-4 text-[#F56300]" />}
@@ -143,70 +151,87 @@ export default function WeeklyLeaderboardPage() {
         }
       />
 
-      <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
-        {/* KPI 메트릭 요약 카드 */}
+      <main className="max-w-6xl mx-auto p-4 md:p-8 pb-28 space-y-6">
+        {/* KPI 메트릭 요약 카드 — iOS 26 (앱아이콘 타일 + semibold 숫자) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
-            <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
-              <Activity className="w-16 h-16 text-emerald-500" />
+          <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
+            <div className="flex items-start justify-between">
+              <div className="w-9 h-9 rounded-2xl bg-emerald-500/12 flex items-center justify-center"><Activity className="w-[18px] h-[18px] text-emerald-500" /></div>
+              {liveCount > 0 && <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse mt-1" />}
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">누적 학습 인원</span>
-              {liveCount > 0 && (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              )}
+            <div className="mt-3.5 flex items-baseline gap-1">
+              <span className="text-[18px] leading-none font-semibold tracking-tight text-emerald-600">{studiedCount}</span>
+              <span className="text-[15px] font-medium text-[#86868B]">명</span>
             </div>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-emerald-600">{studiedCount}</span>
-              <span className="text-xs font-bold text-emerald-600/80 ml-1">명</span>
-            </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              이번 주 순공 시간이 기록된 원생 수
-            </p>
+            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">누적 학습 인원</p>
+            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">이번 주 순공 시간이 기록된 원생 수</p>
           </Card>
 
-          <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
-            <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
-              <Flame className="w-16 h-16 text-amber-500" />
+          <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
+            <div className="flex items-start justify-between">
+              <div className="w-9 h-9 rounded-2xl bg-amber-500/12 flex items-center justify-center"><Flame className="w-[18px] h-[18px] text-amber-500" /></div>
             </div>
-            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">미학습 인원</span>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-amber-600">{notStudiedCount}</span>
-              <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
+            <div className="mt-3.5 flex items-baseline gap-1">
+              <span className="text-[18px] leading-none font-semibold tracking-tight text-amber-600">{notStudiedCount}</span>
+              <span className="text-[15px] font-medium text-[#86868B]">명</span>
             </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              누적 순공 시간이 0분인 원생 수
-            </p>
+            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">미학습 인원</p>
+            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">누적 순공 시간이 0분인 원생 수</p>
           </Card>
 
-          <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
-            <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
-              <Clock className="w-16 h-16 text-blue-500" />
+          <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
+            <div className="flex items-start justify-between">
+              <div className="w-9 h-9 rounded-2xl bg-blue-500/12 flex items-center justify-center"><Clock className="w-[18px] h-[18px] text-blue-500" /></div>
             </div>
-            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">평균 학습 시간</span>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-blue-600">{Math.floor(avgWeekMin / 60)}</span>
-              <span className="text-xs font-bold text-blue-600/80 ml-1">시간 {avgWeekMin % 60}분</span>
+            <div className="mt-3.5 flex items-baseline gap-1">
+              <span className="text-[18px] leading-none font-semibold tracking-tight text-blue-600">{Math.floor(avgWeekMin / 60)}</span>
+              <span className="text-[15px] font-medium text-[#86868B]">시간 {avgWeekMin % 60}분</span>
             </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              전체 수강생의 주간 평균 순공 시간
-            </p>
+            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">평균 학습 시간</p>
+            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">전체 수강생의 주간 평균 순공 시간</p>
           </Card>
 
-          <Card className="rounded-2xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] relative overflow-hidden text-left">
-            <div className="absolute right-2 bottom-1 opacity-[0.04] pointer-events-none">
-              <Award className="w-16 h-16 text-blue-500" />
+          <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
+            <div className="flex items-start justify-between">
+              <div className="w-9 h-9 rounded-2xl bg-blue-500/12 flex items-center justify-center"><Award className="w-[18px] h-[18px] text-blue-500" /></div>
+              {liveCount > 0 && <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse mt-1" />}
             </div>
-            <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">실시간 몰입 인원</span>
-            <div className="mt-3 flex items-baseline">
-              <span className="text-3xl font-black tracking-tight text-blue-600">{liveCount}</span>
-              <span className="text-xs font-bold text-blue-600/80 ml-1">명</span>
+            <div className="mt-3.5 flex items-baseline gap-1">
+              <span className="text-[18px] leading-none font-semibold tracking-tight text-blue-600">{liveCount}</span>
+              <span className="text-[15px] font-medium text-[#86868B]">명</span>
             </div>
-            <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-              현재 등원 중인 실시간 학습자 수
-            </p>
+            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">실시간 몰입 인원</p>
+            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">현재 등원 중인 실시간 학습자 수</p>
           </Card>
         </div>
+
+        {/* 학습 현황 시각화 (viz-kit) */}
+        {scopedRows.length > 0 && (() => {
+          const total = scopedRows.length;
+          const studyRate = Math.round((studiedCount / total) * 100);
+          const studySegs = [
+            { label: '학습', value: studiedCount, color: '#34C759' },
+            { label: '미학습', value: notStudiedCount, color: '#FF9500' },
+          ];
+          return (
+            <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
+              <p className="text-[15px] font-semibold text-[#1D1D1F] mb-5">학습 현황 한눈에</p>
+              <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-7">
+                <div className="flex flex-col items-center gap-4 mx-auto">
+                  <Donut segments={studySegs} centerTop={`${studyRate}%`} centerBottom="학습 참여" />
+                  <VizLegend segments={studySegs} />
+                </div>
+                <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+                  <CompareBar label="학습 참여율" value={studyRate} color="#34C759" />
+                  <CompareBar label="실시간 몰입" value={liveCount} max={total} color="#0071E3" suffix="명" />
+                  <p className="text-[13px] text-[#86868B] leading-relaxed">
+                    전체 {total}명 중 <b className="font-semibold text-[#34C759]">{studiedCount}명</b>이 이번 주 순공 시간을 기록했고, <b className="font-semibold text-[#FF9500]">{notStudiedCount}명</b>은 아직 미학습입니다.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          );
+        })()}
 
         {/* 랭킹 상세 리스트 테이블 */}
         <Card className="border border-black/[0.04] rounded-3xl bg-white shadow-sm overflow-hidden text-left">
@@ -256,12 +281,16 @@ export default function WeeklyLeaderboardPage() {
                       <tr
                         key={student.id}
                         onClick={() => handleOpenStudentById(student.id)}
-                        className="border-b border-black/[0.02] hover:bg-black/[0.015] cursor-pointer transition-colors"
+                        className={`border-b border-black/[0.02] hover:bg-black/[0.015] cursor-pointer transition-colors ${openingStudentId === student.id ? 'opacity-60' : ''}`}
                       >
                         <td className="px-6 py-4 text-center">
-                          <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] shrink-0 border ${getRankBadgeStyle(student.rank, student.weekMinutes > 0)}`}>
-                            {student.weekMinutes > 0 ? (student.rank <= 3 ? medal(student.rank) : student.rank) : '–'}
-                          </span>
+                          {openingStudentId === student.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin text-[#0071E3] mx-auto" />
+                          ) : (
+                            <span className={`w-6 h-6 rounded-full inline-flex items-center justify-center text-[10px] shrink-0 border ${getRankBadgeStyle(student.rank, student.weekMinutes > 0)}`}>
+                              {student.weekMinutes > 0 ? (student.rank <= 3 ? medal(student.rank) : student.rank) : '–'}
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 font-bold text-[#1D1D1F]">{student.name}</td>
                         <td className="px-6 py-4 text-[#86868B]">{campusLabel(student.campus)}</td>

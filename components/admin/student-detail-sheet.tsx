@@ -342,6 +342,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (integratedSearchTimerRef.current) {
         clearTimeout(integratedSearchTimerRef.current);
       }
+      Object.values(debounceTimersRef.current).forEach(clearTimeout);
+      debounceTimersRef.current = {};
     };
   }, []);
 
@@ -3637,7 +3639,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                   Student Profile Detail
                 </span>
               </div>
-              <h2 className="text-2xl font-bold tracking-tight">{student.name}</h2>
+              <h2 className="text-[17px] font-semibold tracking-tight">{student.name}</h2>
               <p className="text-xs text-[#86868B] mt-1">
                 {student.campus === 'wonju' ? '원주 캠퍼스' : student.campus === 'chuncheon' ? '춘천 캠퍼스' : student.campus === 'chungju' ? '충주 캠퍼스' : '기타/퇴원'} · {student.manager || '담당 관리자'}
               </p>
@@ -3714,14 +3716,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           {pendingRequests.length > 0 && (
             <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-black text-white">{pendingRequests.length}</span>
-                <h4 className="text-xs font-black text-amber-800">학생 변경 신청 (대기중)</h4>
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">{pendingRequests.length}</span>
+                <h4 className="text-xs font-semibold text-amber-800">학생 변경 신청 (대기중)</h4>
               </div>
               <div className="space-y-2">
                 {pendingRequests.map(req => (
                   <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
                     <div className="flex items-center gap-1.5 text-[10px]">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">{getRequestTypeLabel(req.requestType)}</span>
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500">{getRequestTypeLabel(req.requestType)}</span>
                       <span className="font-semibold text-slate-400">{req.date}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
@@ -3732,13 +3734,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[10px] space-y-1 my-1.5 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all active:scale-[0.99] group"
                         title="클릭하여 학습 현황 확인 및 스크롤"
                       >
-                        <p className="font-black text-[#0071E3] flex items-center gap-1">📋 제안된 학습 계획 변경 사항</p>
+                        <p className="font-semibold text-[#0071E3] flex items-center gap-1">제안된 학습 계획 변경 사항</p>
                         <p className="font-bold text-slate-600">
-                          • 대상: {req.proposedGoal.materialType === 'book' ? '📚 교재' : '💻 인강'}
+                          • 대상: {req.proposedGoal.materialType === 'book' ? '교재' : '인강'}
                         </p>
                         {req.proposedGoal.proposedWeekNumber && req.proposedGoal.proposedRangeText && (
                           <p className="font-bold text-slate-600">
-                            • {req.proposedGoal.proposedWeekNumber}주차 범위: <span className="text-[#0071E3] font-black">{req.proposedGoal.proposedRangeText}</span>
+                            • {req.proposedGoal.proposedWeekNumber}주차 범위: <span className="text-[#0071E3] font-semibold">{req.proposedGoal.proposedRangeText}</span>
                           </p>
                         )}
                         {req.proposedGoal.goalValue > 0 && (
@@ -3756,7 +3758,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
                     {(sentReplies[req.id] ?? req.adminReply) && (
                       <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
-                        💬 내 답변: {sentReplies[req.id] ?? req.adminReply}
+                        내 답변: {sentReplies[req.id] ?? req.adminReply}
                       </div>
                     )}
 
@@ -3821,21 +3823,21 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           {pendingSuggestions.length > 0 && (
             <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex items-center gap-2">
-                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-black text-white">{pendingSuggestions.length}</span>
-                <h4 className="text-xs font-black text-amber-800">건의사항 (대기중)</h4>
+                <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">{pendingSuggestions.length}</span>
+                <h4 className="text-xs font-semibold text-amber-800">건의사항 (대기중)</h4>
               </div>
               <div className="space-y-2">
                 {pendingSuggestions.map(req => (
                   <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
                     <div className="flex items-center gap-1.5 text-[10px]">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-black text-slate-500">건의사항</span>
+                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500">건의사항</span>
                       <span className="font-semibold text-slate-400">{req.date}</span>
                     </div>
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
 
                     {(sentReplies[req.id] ?? req.adminReply) && (
                       <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
-                        💬 내 답변: {sentReplies[req.id] ?? req.adminReply}
+                        내 답변: {sentReplies[req.id] ?? req.adminReply}
                       </div>
                     )}
 
@@ -4223,7 +4225,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <div className="rounded-2xl border border-black/[0.06] bg-white shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-black/[0.04] flex items-center gap-2 bg-[#FAFAFA]">
                   <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-                  <h3 className="text-xs font-black text-[#1D1D1F]">D-Day 목록</h3>
+                  <h3 className="text-xs font-semibold text-[#1D1D1F]">D-Day 목록</h3>
                 </div>
 
                 {/* 현황 */}
@@ -4241,7 +4243,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         const isPast = diff < 0;
                         return (
                           <div key={d.id} className="flex items-center gap-3 rounded-xl border border-black/[0.06] bg-white px-3 py-2.5 hover:bg-slate-50/50 transition-colors">
-                            <span className={`shrink-0 text-xs font-black min-w-[3.5rem] text-center ${
+                            <span className={`shrink-0 text-xs font-semibold min-w-[3.5rem] text-center ${
                               diff === 0 ? 'text-emerald-600' : isPast ? 'text-slate-400' : 'text-[#0071E3]'
                             }`}>{label}</span>
                             <div className="flex-1 min-w-0">
@@ -4270,7 +4272,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
                 {/* 추가 */}
                 <div className="px-5 py-4 border-t border-black/[0.04] bg-[#FAFAFA] space-y-2">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">새 D-Day 추가 (관리자)</p>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">새 D-Day 추가 (관리자)</p>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -4309,7 +4311,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         setDdayAdminAdding(false);
                       }
                     }}
-                    className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0071E3]/90 text-white text-xs font-black py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
+                    className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0071E3]/90 text-white text-xs font-semibold py-2.5 flex items-center justify-center gap-1.5 disabled:opacity-50 transition-colors"
                   >
                     {ddayAdminAdding ? (
                       <span className="w-3 h-3 rounded-full border-2 border-white/40 border-t-white animate-spin" />

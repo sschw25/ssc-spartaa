@@ -123,12 +123,17 @@ export function HomeOverviewTab({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: ddayTitle.trim(), date: ddayDate }),
       });
-      const json = await res.json();
-      if (json.success) {
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) {
         setStudent((s) => s ? { ...s, ddays: [...(s.ddays || []), json.dday] } : s);
         setDdayTitle('');
         setDdayDate('');
+        setDdayOpen(false);
+      } else {
+        alert(json.message || 'D-Day 추가에 실패했습니다. 다시 시도해 주세요.');
       }
+    } catch {
+      alert('네트워크 오류로 D-Day를 추가하지 못했습니다.');
     } finally {
       setDdayAdding(false);
     }
@@ -220,7 +225,7 @@ export function HomeOverviewTab({
       <div className="rounded-3xl border border-[#0071E3]/15 bg-white p-5 md:p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
-            🔵 코치 특별 퀘스트
+            코치 특별 퀘스트
           </h3>
           <span className="text-[10px] text-[#0071E3]/80 font-bold bg-[#0071E3]/5 px-2.5 py-1 rounded-full">
             완료 체크 시 리포트에 실시간 반영
@@ -332,7 +337,7 @@ export function HomeOverviewTab({
                 return (
                   <form onSubmit={submitChecklist} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col justify-between gap-3">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침 자가 점검표 ☀️</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침 자가 점검표</p>
                       <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">매일 아침 본인의 컨디션과 환경을 스스로 기록하세요.</p>
                     </div>
                     

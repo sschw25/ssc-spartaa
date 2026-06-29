@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useState, useRef } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -152,11 +152,11 @@ function AdminAttendanceContent() {
     setSatDate(sat.toISOString().slice(0, 10));
   }, []);
 
-  const loadSatData = async () => {
-    if (!satDate) return;
+  const loadSatData = useCallback(async (dateStr: string) => {
+    if (!dateStr) return;
     setSatLoading(true);
     try {
-      const res = await fetch(`/api/admin/attendance/saturday-excuse?date=${satDate}`);
+      const res = await fetch(`/api/admin/attendance/saturday-excuse?date=${dateStr}`);
       const json = await res.json();
       if (res.ok && json.success) {
         setSatData(json.rows || []);
@@ -169,13 +169,13 @@ function AdminAttendanceContent() {
     } finally {
       setSatLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (mode === 'saturday-late') {
-      loadSatData();
+    if (mode === 'saturday-late' && satDate) {
+      loadSatData(satDate);
     }
-  }, [mode, satDate, reloadKey]);
+  }, [mode, satDate, reloadKey, loadSatData]);
 
   const loadPhoneSubmissions = async (forDate: string) => {
     setPhoneLoading(true);
@@ -234,7 +234,7 @@ function AdminAttendanceContent() {
       const json = await res.json();
       if (res.ok && json.success) {
         toast.success(json.message);
-        loadSatData();
+        loadSatData(satDate);
       } else {
         toast.error(json.message || '요청 실패');
       }
@@ -261,7 +261,7 @@ function AdminAttendanceContent() {
         toast.success(json.message);
         setDemeritModal(null);
         setDemeritPoints(1);
-        loadSatData();
+        loadSatData(satDate);
       } else {
         toast.error(json.message || '처리 실패');
       }
@@ -460,7 +460,7 @@ function AdminAttendanceContent() {
   const s = data?.summary;
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] font-sans text-[#1D1D1F]">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen font-sans text-[#1D1D1F]">
       <AdminTopNav
         title="출결 상세 표"
         campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}
@@ -480,13 +480,13 @@ function AdminAttendanceContent() {
         }
       />
 
-      <main className="max-w-6xl mx-auto p-4 md:p-8 space-y-5">
-        <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm p-4 space-y-4">
+      <main className="max-w-6xl mx-auto p-4 md:p-8 pb-28 space-y-5">
+        <div className="bg-white border border-black/[0.05] rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] p-4 space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="inline-flex p-0.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
+              <div className="glass-capsule inline-flex p-0.5 rounded-full">
                 {([['daily', '일별'], ['weekly', '주간 지각'], ['saturday-late', '토요 지각 증빙']] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setMode(k)} className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${mode === k ? 'bg-white text-[#1D1D1F] shadow-sm' : 'text-[#86868B]'}`}>{label}</button>
+                  <button key={k} onClick={() => setMode(k)} className={`px-3.5 py-1.5 rounded-full text-[13px] transition-all ${mode === k ? 'bg-white text-[#1D1D1F] shadow-sm font-semibold' : 'text-[#86868B] font-medium'}`}>{label}</button>
                 ))}
               </div>
               {mode === 'daily' && (
@@ -520,19 +520,19 @@ function AdminAttendanceContent() {
                   <button
                     key={option.key}
                     onClick={() => setStatusFilter(option.key)}
-                    className={`rounded-lg px-3 py-1.5 text-[11px] font-black ${statusFilter === option.key ? 'bg-[#1D1D1F] text-white' : 'bg-[#F5F5F7] text-[#86868B]'}`}
+                    className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${statusFilter === option.key ? 'bg-[#1D1D1F] text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
                   >
                     {option.label}
                   </button>
                 ))}
               </div>
-              <label className="flex min-w-0 items-center gap-2 rounded-xl border border-black/[0.06] bg-[#F5F5F7] px-3 py-2 lg:w-72">
+              <label className="flex min-w-0 items-center gap-2 rounded-2xl bg-black/[0.04] px-3.5 py-2.5 lg:w-72">
                 <Search className="h-4 w-4 shrink-0 text-[#86868B]" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="원생 이름 검색"
-                  className="min-w-0 flex-1 bg-transparent text-xs font-bold outline-none"
+                  className="min-w-0 flex-1 bg-transparent text-[13px] font-medium outline-none"
                 />
               </label>
             </div>
@@ -584,12 +584,12 @@ function AdminAttendanceContent() {
                           className="rounded border-black/[0.1] text-[#0071E3] focus:ring-[#0071E3]/20"
                         />
                       </th>
-                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">이름</th>
-                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">캠퍼스</th>
-                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">담당 코치</th>
-                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">증빙 상태</th>
-                      <th className="px-4 py-3 font-bold text-[#1D1D1F]">지각 사유 회신</th>
-                      <th className="px-4 py-3 font-bold text-[#1D1D1F] text-right">처리</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">이름</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">캠퍼스</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">담당 코치</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">증빙 상태</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">지각 사유 회신</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73] text-right">처리</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -688,12 +688,12 @@ function AdminAttendanceContent() {
         ) : (
           <>
             {s && (
-              <div className="flex flex-wrap gap-3 text-xs font-bold">
-                <span className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">정시 {s.ontime}</span>
-                <span className="px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-100">지각 {s.late}</span>
-                <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">08:20 그룹 {s.group0820.total}명(지각 {s.group0820.late})</span>
-                <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">09:00 그룹 {s.group0900.total}명(지각 {s.group0900.late})</span>
-                <span className="px-3 py-1.5 rounded-full bg-[#F5F5F7] text-[#86868B]">출석 {data?.attended ?? '-'} / {data?.total ?? '-'}</span>
+              <div className="flex flex-wrap gap-2 text-[13px] font-medium">
+                <span className="px-3 py-1.5 rounded-full bg-emerald-500/12 text-emerald-700">정시 {s.ontime}</span>
+                <span className="px-3 py-1.5 rounded-full bg-red-500/12 text-red-700">지각 {s.late}</span>
+                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-[#6e6e73]">08:20 그룹 {s.group0820.total}명(지각 {s.group0820.late})</span>
+                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-[#6e6e73]">09:00 그룹 {s.group0900.total}명(지각 {s.group0900.late})</span>
+                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-[#1d1d1f]">출석 {data?.attended ?? '-'} / {data?.total ?? '-'}</span>
               </div>
             )}
 
@@ -701,7 +701,7 @@ function AdminAttendanceContent() {
             {phoneSubmissions.length > 0 && (
               <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-black/[0.05] flex items-center justify-between">
-                  <span className="text-xs font-black text-[#1D1D1F]">📱 휴대폰 제출 방식 신청 <span className="text-[#86868B] font-bold">({phoneSubmissions.filter(s => s.status === 'pending').length}건 검토 대기)</span></span>
+                  <span className="text-xs font-black text-[#1D1D1F]">휴대폰 제출 방식 신청<span className="text-[#86868B] font-bold">({phoneSubmissions.filter(s => s.status === 'pending').length}건 검토 대기)</span></span>
                   {phoneLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#86868B]" />}
                 </div>
                 <div className="divide-y divide-black/[0.04]">

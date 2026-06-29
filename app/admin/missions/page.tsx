@@ -56,6 +56,17 @@ export default function MissionsPage() {
     router.replace('/admin');
   };
 
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (dirty) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [dirty]);
+
   const update = (id: MissionId, patch: Partial<MissionConfig>) => {
     setConfig((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
     setDirty(true);
@@ -120,7 +131,7 @@ export default function MissionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav
         title="쿠폰 미션 설정"
         titleIcon={<Trophy className="w-4 h-4 text-[#0071E3]" />}
@@ -201,7 +212,7 @@ export default function MissionsPage() {
                         <h3 className="text-sm font-black text-slate-800">{meta.name}</h3>
                         <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${
                           meta.period === 'weekly' ? 'bg-blue-50 text-blue-600'
-                          : meta.period === 'monthly' ? 'bg-purple-50 text-purple-600'
+                          : meta.period === 'monthly' ? 'bg-slate-100 text-slate-600'
                           : meta.period === 'daily' ? 'bg-emerald-50 text-emerald-600'
                           : 'bg-amber-50 text-amber-600'
                         }`}>
