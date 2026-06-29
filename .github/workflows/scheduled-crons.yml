@@ -1,0 +1,65 @@
+name: scheduled-crons
+
+# Vercel Hobby(무료) 플랜의 크론 한도(빈도/개수) 때문에, 자주 도는 정기 작업을 GitHub Actions(무료)로 실행한다.
+# - 출결 자동마감(매일)은 vercel.json 크론에 그대로 둔다(시각 정확도 필요).
+# - 여기서는 도시락 반복 템플릿(15분)·주간/월간 미션 정산을 처리한다.
+#
+# ▶ 반드시 설정해야 작동함:
+#   1) Vercel 프로젝트 → Settings → Environment Variables 에 CRON_SECRET 추가(임의의 긴 문자열).
+#   2) 이 저장소 → Settings → Secrets and variables → Actions → New repository secret:
+#        PROD_BASE_URL  = 운영 사이트 베이스 URL(끝 슬래시 없이). 예: https://www.sscsparta.com
+#        CRON_SECRET    = 위 1)과 '같은 값'
+#
+# 참고: GitHub Actions 의 schedule 은 부하 시 수 분~수십 분 지연될 수 있다(초 단위 정밀 X). 도시락/정산엔 무방.
+#       수동 실행: Actions 탭 → 이 워크플로 → Run workflow(대상 선택).
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'   # 도시락 반복 템플릿 (15분마다)
+    - cron: '59 14 * * 0'    # 주간 미션 정산 (일 14:59 UTC = 일 23:59 KST)
+    - cron: '30 15 1 * *'    # 월간 미션 정산 (매월 1일 15:30 UTC = 1일 00:30 KST, 지난달분)
+  workflow_dispatch:
+    inputs:
+      target:
+        description: '수동 실행 대상'
+        required: true
+        default: meal
+        type: choice
+        options: [meal, weekly, monthly]
+
+concurrency:
+  group: scheduled-crons
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger due endpoint
+        env:
+          BASE: ${{ secrets.PROD_BASE_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+          SCHED: ${{ github.event.schedule }}
+          MANUAL: ${{ github.event.inputs.target }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BASE:-}" ] || [ -z "${SECRET:-}" ]; then
+            echo "::error::PROD_BASE_URL / CRON_SECRET 시크릿이 설정되지 않았습니다."
+            exit 1
+          fi
+          KEY="${SCHED:-manual:${MANUAL:-meal}}"
+          case "$KEY" in
+            '*/15 * * * *'|manual:meal)    Q='/api/admin/meal-routines/run' ;;
+            '59 14 * * 0'|manual:weekly)   Q='/api/admin/missions/settle?scope=weekly' ;;
+            '30 15 1 * *'|manual:monthly)  Q='/api/admin/missions/settle?scope=monthly&prev=1' ;;
+            *)                             Q='/api/admin/meal-routines/run' ;;
+          esac
+          echo "GET ${BASE}${Q}"
+          code=$(curl -sS -o /tmp/resp -w '%{http_code}' -X GET -H "x-cron-secret: ${SECRET}" "${BASE}${Q}")
+          echo "HTTP ${code}"
+          cat /tmp/resp 2>/dev/null || true
+          echo
+          if [ "${code}" != "200" ]; then
+            echo "::error::요청 실패 (HTTP ${code}) — CRON_SECRET 일치/PROD_BASE_URL/배포 상태를 확인하세요."
+            exit 1
+          fi
