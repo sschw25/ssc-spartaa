@@ -25,6 +25,10 @@ import { RhythmicText } from '@/components/ui/rhythmic-text'
 import BlurFade from '@/components/ui/blur-fade'
 import { StreamStructuredData } from '@/components/ssc/seo-structured-data'
 import GongmuwonCards from '@/components/ssc/gongmuwon-cards'
+import { ExamInfo2026 } from '@/components/ssc/exam-info-2026'
+import { StreamDataViz } from '@/components/ssc/stream-data-viz'
+import { WorrySolution } from '@/components/ssc/worry-solution'
+import { ManagementShowcase } from '@/components/ssc/management-showcase'
 
 export default function StreamPage({
   campus,
@@ -99,9 +103,11 @@ export default function StreamPage({
         faqs={content.faqs}
       />
 
-      {/* Stream Specific Hero (Apple Light Aesthetic) */}
-      <section id="hero" className="relative pt-24 pb-14 px-4 sm:px-6 bg-[#F5F5F7] min-h-[400px] flex items-center justify-center border-b border-black/[0.03]">
-        <div className="max-w-[64rem] w-full mx-auto text-center">
+      {/* Stream Specific Hero (iOS 26 — brand accent glow) */}
+      <section id="hero" className="relative pt-24 pb-14 px-4 sm:px-6 bg-[#F5F5F7] min-h-[400px] flex items-center justify-center border-b border-black/[0.03] overflow-hidden">
+        {/* Brand accent glow (systemIndigo → systemBlue, premium marketing) */}
+        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[680px] h-[420px] rounded-full blur-[120px] opacity-60" style={{ background: 'radial-gradient(ellipse at center, rgba(88,86,214,0.18), rgba(0,122,255,0.10) 45%, transparent 70%)' }} />
+        <div className="relative max-w-[64rem] w-full mx-auto text-center">
           <BlurFade delay={0.1} yOffset={20}>
             <Link 
               href={`/${campus}`} 
@@ -118,10 +124,10 @@ export default function StreamPage({
                 <div className="inline-flex items-center gap-3">
                   <span className="text-sm md:text-base font-black tracking-tighter text-[#1D1D1F]">SSC 스파르타</span>
                   <span className="text-xs font-light text-[#86868B] opacity-40">X</span>
-                  <span className="text-sm md:text-base font-black tracking-tight text-[#0071E3]">커넥츠프랩</span>
+                  <span className="text-sm md:text-base font-black tracking-tight text-[#007AFF]">커넥츠프랩</span>
                 </div>
               ) : (
-                <p className="text-[#0071E3] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase">
+                <p className="brand-accent-text text-[11px] sm:text-xs font-extrabold tracking-[0.2em] uppercase">
                   SSC SPARTA {content.name}
                 </p>
               )}
@@ -173,6 +179,44 @@ export default function StreamPage({
 
       {/* Gongmuwon Specific Strengths Cards */}
       {stream === 'gongmuwon' && <GongmuwonCards campusName={campusName} />}
+
+      {/* 직렬 특화 섹션 (경찰·소방): 2026 시험정보 → 걱정/해결 → 학습관리 프로그램 */}
+      {content.examInfo && (
+        <ExamInfo2026
+          data={{
+            ...content.examInfo,
+            title: content.examInfo.title.replaceAll('{{region}}', campusName),
+            subtitle: content.examInfo.subtitle.replaceAll('{{region}}', campusName),
+          }}
+        />
+      )}
+      {content.viz && (
+        <StreamDataViz
+          data={{
+            ...content.viz,
+            title: content.viz.title.replaceAll('{{region}}', campusName),
+            subtitle: content.viz.subtitle.replaceAll('{{region}}', campusName),
+          }}
+        />
+      )}
+      {content.worries && (
+        <WorrySolution
+          data={{
+            ...content.worries,
+            title: content.worries.title.replaceAll('{{region}}', campusName),
+            subtitle: content.worries.subtitle.replaceAll('{{region}}', campusName),
+          }}
+        />
+      )}
+      {content.management && (
+        <ManagementShowcase
+          data={{
+            ...content.management,
+            title: content.management.title.replaceAll('{{region}}', campusName),
+            subtitle: content.management.subtitle.replaceAll('{{region}}', campusName),
+          }}
+        />
+      )}
 
       {/* Shared Components */}
       <div id="testimonials">

@@ -125,7 +125,7 @@ export default function AdminLeavePage() {
   }
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav
         title="휴가 쿠폰 관리"
         titleIcon={<Ticket className="w-4 h-4 text-[#0071E3]" />}

@@ -2,31 +2,12 @@
 
 import React, { ReactNode, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  BookOpen,
-  Calendar,
-  CalendarDays,
-  CalendarClock,
-  ClipboardCheck,
-  ClipboardList,
-  Home,
-  LayoutGrid,
-  LogOut,
-  Menu,
-  MessageSquare,
-  Plus,
-  ScanLine,
-  Search,
-  Shield,
-  Trophy,
-  Inbox,
-  AlertTriangle,
-  BarChart3,
-  Sparkles,
-} from 'lucide-react';
+import { Home, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
+import { AdminMenuList } from '@/components/admin/admin-menu-list';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 type CampusOption = {
   value: string;
@@ -58,6 +39,7 @@ export function AdminTopNav({
 }: AdminTopNavProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { isMenuPinned, toggleMenuPin } = useAdminGlobalSheet();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [adminSession, setAdminSession] = useState<{ id: string; username: string; campus: string; role: string } | null>(null);
 
@@ -82,6 +64,11 @@ export function AdminTopNav({
   const navigate = (href: string) => {
     setIsMenuOpen(false);
     router.push(href);
+  };
+
+  const handleTogglePin = () => {
+    setIsMenuOpen(false);
+    toggleMenuPin();
   };
 
   const openKiosk = () => {
@@ -118,21 +105,19 @@ export function AdminTopNav({
     router.replace('/admin');
   };
 
-  const menuButtonClass = (active: boolean) =>
-    cn(
-      'flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-[#1D1D1F]',
-      active ? 'bg-[#F5F5F7]' : 'hover:bg-[#F5F5F7]'
-    );
-
   return (
     <>
-      <nav className="border-b border-black/[0.03] bg-white/80 backdrop-blur-xl sticky top-0 z-30 px-4 md:px-6 py-3 flex justify-between items-center gap-3 admin-mobile-wrap shadow-sm">
+      <nav className="glass sticky top-0 z-30 px-4 md:px-6 py-3 flex justify-between items-center gap-3 admin-mobile-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <Button
             size="icon"
             variant="ghost"
             onClick={() => setIsMenuOpen(true)}
-            className="h-9.5 w-9.5 shrink-0 rounded-2xl hover:bg-[#F5F5F7] transition-premium"
+            className={cn(
+              'h-9.5 w-9.5 shrink-0 rounded-2xl hover:bg-[#F5F5F7] transition-premium',
+              // PC에서 메뉴가 고정돼 있으면 좌측 사이드바가 항상 보이므로 햄버거 숨김
+              isMenuPinned && 'lg:hidden'
+            )}
             title="메뉴"
           >
             <Menu className="w-5 h-5" />
@@ -141,19 +126,19 @@ export function AdminTopNav({
           <button
             type="button"
             onClick={() => router.push('/admin/dashboard')}
-            className="font-black text-sm tracking-tight text-white bg-[#1D1D1F] px-3.5 py-1.5 rounded-2xl mr-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.15)] hover:scale-[1.03] active:scale-[0.98] transition-all"
+            className="shrink-0 whitespace-nowrap font-semibold text-sm tracking-tight text-white bg-[#1D1D1F] px-3.5 py-1.5 rounded-2xl mr-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.15)] hover:scale-[1.03] active:scale-[0.98] transition-all"
           >
             SSC
           </button>
-          <h1 className="admin-fit-text text-xs sm:text-sm font-black tracking-tight text-[#1D1D1F] opacity-90 flex items-center gap-1.5 min-w-0">
+          <h1 className="admin-fit-text text-[15px] sm:text-[17px] font-semibold tracking-tight text-[#1D1D1F] flex items-center gap-1.5 min-w-0">
             {titleIcon}
             <span className="truncate">{title}</span>
           </h1>
         </div>
 
         {campusOptions && campusValue && onCampusChange && (
-          <div className="flex items-center gap-2 rounded-full border border-black/[0.04] bg-[#F5F5F7]/80 p-0.5 shrink-0 shadow-inner">
-            <span className="hidden sm:inline pl-3.5 pr-1 text-[10px] font-black text-[#86868B] uppercase tracking-wider">센터</span>
+          <div className="glass-capsule flex items-center gap-2 rounded-full p-0.5 shrink-0">
+            <span className="hidden sm:inline pl-3.5 pr-1 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">센터</span>
             <div className="flex min-w-0 overflow-hidden gap-0.5">
               {campusOptions
                 .filter((option) => {
@@ -171,7 +156,7 @@ export function AdminTopNav({
                     className={cn(
                       'admin-fit-button h-7 rounded-full px-3 text-[11px] transition-premium',
                       campusValue === option.value
-                        ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-black border border-black/[0.02]'
+                        ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-semibold border border-black/[0.02]'
                         : 'text-[#86868B] hover:bg-white/60 hover:text-black'
                     )}
                   >
@@ -197,176 +182,38 @@ export function AdminTopNav({
         </div>
       </nav>
 
+      {/* PC 고정 사이드바 — 데스크톱(lg+)에서 메뉴 고정 시 항상 노출 */}
+      {isMenuPinned && (
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-[280px] flex-col border-r border-black/[0.06] bg-white shadow-[2px_0_16px_rgba(0,0,0,0.04)]">
+          <AdminMenuList
+            pathname={pathname}
+            adminSession={adminSession}
+            pinned={isMenuPinned}
+            onTogglePin={handleTogglePin}
+            onNavigate={(href) => router.push(href)}
+            onSearchStudent={searchStudent}
+            onAddStudent={addStudent}
+            onOpenKiosk={openKiosk}
+            onLogout={logout}
+          />
+        </aside>
+      )}
+
+      {/* 오버레이 메뉴 — 모바일 및 미고정 데스크톱 */}
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <SheetContent side="left" className="w-[300px] bg-white p-0">
-          <SheetHeader className="border-b border-black/[0.05] p-5 text-left">
-            <SheetTitle className="flex items-center gap-2 text-base font-black text-[#1D1D1F]">
-              <span className="rounded-lg bg-[#1D1D1F] px-2.5 py-1.5 text-sm font-extrabold text-white">SSC</span>
-              관리자 메뉴
-            </SheetTitle>
-            <SheetDescription className="text-xs font-semibold text-[#86868B]">
-              자주 쓰는 관리자 화면으로 이동합니다.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="flex flex-col gap-0.5 p-3 overflow-y-auto flex-1">
-            {/* 메인 */}
-            <p className="px-3 pt-1 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">메인</p>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/dashboard')}
-              className={menuButtonClass(pathname === '/admin/dashboard')}
-            >
-              <Home className="w-4 h-4 text-[#0071E3]" />
-              홈 대시보드
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/inbox')}
-              className={menuButtonClass(pathname === '/admin/inbox')}
-            >
-              <Inbox className="w-4 h-4 text-[#0071E3]" />
-              통합 인박스
-            </button>
-
-            {/* 원생 관리 */}
-            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">원생 관리</p>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/consultation')}
-              className={menuButtonClass(pathname === '/admin/consultation')}
-            >
-              <BookOpen className="w-4 h-4 text-[#0071E3]" />
-              원생 종합 관리
-            </button>
-            <button type="button" onClick={searchStudent} className={menuButtonClass(false)}>
-              <Search className="w-4 h-4 text-[#0071E3]" />
-              학생 검색
-            </button>
-            <button type="button" onClick={addStudent} className={menuButtonClass(false)}>
-              <Plus className="w-4 h-4 text-[#0071E3]" />
-              학생 추가
-            </button>
-
-            {/* 출결 · 생활 */}
-            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">출결 · 생활</p>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/attendance')}
-              className={menuButtonClass(pathname === '/admin/attendance')}
-            >
-              <ClipboardList className="w-4 h-4 text-[#0071E3]" />
-              출결 상세
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/seat-board')}
-              className={menuButtonClass(pathname === '/admin/seat-board')}
-            >
-              <LayoutGrid className="w-4 h-4 text-[#0071E3]" />
-              좌석 현황판
-            </button>
-            <button type="button" onClick={openKiosk} className={menuButtonClass(false)}>
-              <ScanLine className="w-4 h-4 text-[#0071E3]" />
-              등하원 체크 ↗
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/mock-exam')}
-              className={menuButtonClass(pathname === '/admin/mock-exam')}
-            >
-              <ClipboardCheck className="w-4 h-4 text-[#0071E3]" />
-              모의고사 참여 체크
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/ot-events')}
-              className={menuButtonClass(pathname === '/admin/ot-events')}
-            >
-              <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-              OT 참여 관리
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/penalties')}
-              className={menuButtonClass(pathname === '/admin/penalties')}
-            >
-              <Shield className="w-4 h-4 text-[#0071E3]" />
-              벌점 · 상점 관리
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/leave')}
-              className={menuButtonClass(pathname === '/admin/leave')}
-            >
-              <Calendar className="w-4 h-4 text-[#0071E3]" />
-              휴가 쿠폰 관리
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/leave/by-date')}
-              className={menuButtonClass(pathname === '/admin/leave/by-date')}
-            >
-              <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-              날짜별 휴식·반차
-            </button>
-
-            {/* 소통 */}
-            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">소통</p>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/messages')}
-              className={menuButtonClass(pathname === '/admin/messages')}
-            >
-              <MessageSquare className="w-4 h-4 text-[#0071E3]" />
-              메시지 발송
-            </button>
-
-            {/* 통계 */}
-            <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">통계</p>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/leaderboard')}
-              className={menuButtonClass(pathname === '/admin/leaderboard')}
-            >
-              <Trophy className="w-4 h-4 text-[#0071E3]" />
-              순공 랭킹
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/admin/missions')}
-              className={menuButtonClass(pathname === '/admin/missions')}
-            >
-              <Sparkles className="w-4 h-4 text-[#0071E3]" />
-              쿠폰 미션 설정
-            </button>
-
-            {/* 설정 (슈퍼 관리자용) */}
-            {adminSession && (adminSession.campus === 'all' || adminSession.role === 'super') && (
-              <>
-                <p className="px-3 pt-3 pb-1.5 text-[10px] font-extrabold text-[#86868B] uppercase tracking-wider">설정</p>
-                <button
-                  type="button"
-                  onClick={() => navigate('/admin/accounts')}
-                  className={menuButtonClass(pathname === '/admin/accounts')}
-                >
-                  <Shield className="w-4 h-4 text-[#0071E3]" />
-                  관리자 계정 관리
-                </button>
-              </>
-            )}
-          </div>
-
-          <div className="mt-auto border-t border-black/[0.05] p-3">
-            <button
-              type="button"
-              onClick={logout}
-              className="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-bold text-red-600 hover:bg-red-50"
-            >
-              <LogOut className="w-4 h-4" />
-              로그아웃
-            </button>
-          </div>
+          <SheetTitle className="sr-only">관리자 메뉴</SheetTitle>
+          <AdminMenuList
+            pathname={pathname}
+            adminSession={adminSession}
+            pinned={isMenuPinned}
+            onTogglePin={handleTogglePin}
+            onNavigate={navigate}
+            onSearchStudent={searchStudent}
+            onAddStudent={addStudent}
+            onOpenKiosk={openKiosk}
+            onLogout={logout}
+          />
         </SheetContent>
       </Sheet>
     </>

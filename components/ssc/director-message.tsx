@@ -42,7 +42,7 @@ export function DirectorMessage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
-            <Quote className="text-[#0071E3] mb-8" size={40} />
+            <Quote className="text-[#007AFF] mb-8" size={40} />
             <h2 className="section-title text-white mb-8 leading-tight">
               <RhythmicText text={"관리는 단순한 통제가 아니라\n학생의 의지가 꺾이지 않도록\n지켜주는 울타리입니다."} />
             </h2>
@@ -53,7 +53,7 @@ export function DirectorMessage() {
             </div>
             <div className="mt-12 inline-flex flex-col gap-1">
               <p className="text-white font-bold leading-snug">스파르타 임직원 일동 올림</p>
-              <div className="h-[2px] w-12 bg-[#0071E3] rounded-full" />
+              <div className="h-[2px] w-12 bg-[#007AFF] rounded-full" />
             </div>
           </motion.div>
         </div>

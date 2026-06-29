@@ -522,14 +522,14 @@ export function InfoTab({
       <div className="rounded-2xl border border-black/[0.06] bg-[#FAFAFA] p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Link2 className="w-3.5 h-3.5 text-[#86868B]" />
-          <span className="text-[11px] font-black tracking-wide text-[#1D1D1F]">학부모 리포트 공유</span>
+          <span className="text-[11px] font-semibold tracking-wide text-[#1D1D1F]">학부모 리포트 공유</span>
           {tokenValid && (
-            <span className="ml-auto text-[9px] font-extrabold text-green-700 bg-green-50 border border-green-200/60 rounded-full px-2 py-0.5">
+            <span className="ml-auto text-[9px] font-semibold text-green-700 bg-green-50 border border-green-200/60 rounded-full px-2 py-0.5">
               활성 · {expiryLabel} 만료
             </span>
           )}
           {shareToken && tokenExpired && (
-            <span className="ml-auto text-[9px] font-extrabold text-[#86868B] bg-[#F5F5F7] border border-black/[0.06] rounded-full px-2 py-0.5">
+            <span className="ml-auto text-[9px] font-semibold text-[#86868B] bg-[#F5F5F7] border border-black/[0.06] rounded-full px-2 py-0.5">
               만료됨
             </span>
           )}
@@ -545,7 +545,7 @@ export function InfoTab({
                 title="링크 복사"
               >
                 {copied
-                  ? <span className="text-[9px] font-extrabold text-green-600">복사됨!</span>
+                  ? <span className="text-[9px] font-semibold text-green-600">복사됨!</span>
                   : <Copy className="w-3.5 h-3.5 text-[#86868B]" />
                 }
               </button>
@@ -553,7 +553,7 @@ export function InfoTab({
             {sharePassword && (
               <div className="flex items-center gap-2 bg-[#F5F5F7] rounded-xl px-3 py-2">
                 <span className="text-[10px] text-[#86868B] font-semibold">비밀번호</span>
-                <span className="text-sm font-black tracking-[0.25em] text-[#1D1D1F]">{sharePassword}</span>
+                <span className="text-sm font-semibold tracking-[0.25em] text-[#1D1D1F]">{sharePassword}</span>
                 <span className="ml-auto text-[9px] text-[#86868B]">링크와 별도로 전달</span>
               </div>
             )}
@@ -562,7 +562,7 @@ export function InfoTab({
               <button
                 onClick={handleGenerate}
                 disabled={sharingLoading}
-                className="flex items-center gap-1 text-[10px] font-extrabold text-[#0071E3] hover:underline disabled:opacity-50"
+                className="flex items-center gap-1 text-[10px] font-semibold text-[#0071E3] hover:underline disabled:opacity-50"
               >
                 <RotateCcw className="w-3 h-3" />
                 새 링크 발급
@@ -570,7 +570,7 @@ export function InfoTab({
               <button
                 onClick={handleRevoke}
                 disabled={sharingLoading}
-                className="flex items-center gap-1 text-[10px] font-extrabold text-red-600 hover:underline disabled:opacity-50"
+                className="flex items-center gap-1 text-[10px] font-semibold text-red-600 hover:underline disabled:opacity-50"
               >
                 <X className="w-3 h-3" />
                 링크 폐기
@@ -585,7 +585,7 @@ export function InfoTab({
             <button
               onClick={handleGenerate}
               disabled={sharingLoading || !onGenerateShareToken}
-              className="flex items-center gap-1.5 text-[11px] font-extrabold text-white bg-[#1D1D1F] hover:bg-[#323236] disabled:opacity-50 rounded-xl px-4 py-2 transition-colors"
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-white bg-[#1D1D1F] hover:bg-[#323236] disabled:opacity-50 rounded-xl px-4 py-2 transition-colors"
             >
               {sharingLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Link2 className="w-3.5 h-3.5" />}
               링크 생성 (7일 유효)

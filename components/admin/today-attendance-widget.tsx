@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, RefreshCw, Clock, Flame, UserCheck, Home, UserX } from 'lucide-react';
+import { Donut } from '@/components/admin/viz-kit';
 
 type AttendanceSection = 'present' | 'left' | 'absent';
 type PresentRow = { id: string; name: string; campus: string; checkInAt: string; minutesSoFar: number; weekMinutes: number };
@@ -74,26 +75,22 @@ function Tile({
           : `${inactiveColor} hover:bg-black/[0.01] hover:scale-[1.005] hover:border-black/[0.08]`
       }`}
     >
-      <div className={`absolute right-2 bottom-1 opacity-[0.06] transition-transform duration-500 pointer-events-none ${isActive ? 'scale-105 opacity-[0.09]' : 'scale-95'}`}>
-        <Icon className="w-14 h-14" />
-      </div>
-
       <div className="flex items-center gap-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${section === 'present' ? 'animate-pulse' : ''}`} />
-        <span className={`text-[11px] font-extrabold tracking-wide uppercase transition-colors duration-300 ${
+        <span className={`text-[13px] font-medium transition-colors duration-300 ${
           isActive ? 'text-[#1D1D1F]' : 'text-[#86868B]'
         }`}>
           {label}
         </span>
       </div>
 
-      <div className="mt-2.5 flex items-baseline">
-        <span className={`text-2xl sm:text-3xl font-black tracking-tight transition-colors duration-300 ${
-          isActive ? 'text-[#1D1D1F]' : 'text-[#3A3A3C]'
+      <div className="mt-2.5 flex items-baseline gap-1">
+        <span className={`text-[18px] leading-none font-semibold tracking-tight transition-colors duration-300 ${
+          isActive ? 'text-[#1D1D1F]' : 'text-[#1D1D1F]'
         }`}>
           {count}
         </span>
-        <span className={`text-xs font-bold ml-1 transition-colors duration-300 ${
+        <span className={`text-[14px] font-medium transition-colors duration-300 ${
           isActive ? 'text-[#1D1D1F]/70' : 'text-[#86868B]'
         }`}>
           명
@@ -127,7 +124,7 @@ function Name({ name, campus }: { name: string; campus: string }) {
   return (
     <span className="flex items-center gap-2 min-w-0">
       <span className="text-xs font-semibold text-[#1D1D1F] truncate">{name}</span>
-      <span className="text-[9px] font-extrabold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(campus)}</span>
+      <span className="text-[9px] font-semibold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(campus)}</span>
     </span>
   );
 }
@@ -212,10 +209,10 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     <div className={wrap}>
       <div className="mb-4 flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-2 text-left">
-          <h3 className="admin-fit-text text-sm font-black text-[#1D1D1F] tracking-tight">오늘 출결 현황</h3>
+          <h3 className="admin-fit-text text-[15px] font-semibold text-[#1D1D1F] tracking-tight">오늘 출결 현황</h3>
           {data?.today && <span className="text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.02]">{data.today}</span>}
           {campusFilter !== 'all' && (
-            <span className="text-[10px] font-extrabold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
+            <span className="text-[10px] font-semibold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -231,7 +228,23 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
         </div>
       </div>
 
-      <div className="flex gap-3">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        {(present.length + left.length + absent.length) > 0 && (
+          <div className="shrink-0 mx-auto sm:mx-0">
+            <Donut
+              size={124}
+              thickness={16}
+              segments={[
+                { label: '등원', value: present.length, color: '#34C759' },
+                { label: '하원', value: left.length, color: '#0071E3' },
+                { label: '미등원', value: absent.length, color: '#C7C7CC' },
+              ]}
+              centerTop={`${present.length + left.length}`}
+              centerBottom={`/ ${present.length + left.length + absent.length}명`}
+            />
+          </div>
+        )}
+        <div className="flex gap-3 flex-1 w-full min-w-0">
         <Tile
           label="등원 중"
           count={present.length}
@@ -265,6 +278,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
           isActive={detailsOpen && openSection === 'absent'}
           onSelect={setOpenSection}
         />
+        </div>
       </div>
 
       {detailsOpen && (

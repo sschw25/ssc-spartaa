@@ -219,7 +219,7 @@ export default function AdminAccountsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] font-sans text-[#1D1D1F]">
+    <div className="ios-app-bg min-h-screen font-sans text-[#1D1D1F]">
       <AdminTopNav title="관리자 계정 관리" titleIcon={<Shield className="w-4 h-4 text-[#0071E3]" />} />
 
       <main className="max-w-6xl mx-auto px-4 py-8">

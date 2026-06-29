@@ -25,7 +25,7 @@ const fmt = (m: number) => {
   const min = m % 60;
   return h > 0 ? `${h}시간 ${min}분` : `${min}분`;
 };
-const medal = (rank: number) => (rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : `${rank}`);
+const medal = (rank: number) => `${rank}`;
 
 export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentId }: Props) {
   const router = useRouter();
@@ -86,11 +86,11 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
     if (!hasMinutes) return 'bg-[#F5F5F7] text-[#86868B] border border-black/[0.03]';
     switch (rank) {
       case 1:
-        return 'bg-amber-100 text-amber-800 border border-amber-200 font-black shadow-sm';
+        return 'bg-amber-100 text-amber-800 border border-amber-200 font-semibold shadow-sm';
       case 2:
-        return 'bg-slate-100 text-slate-800 border border-slate-200 font-black shadow-sm';
+        return 'bg-slate-100 text-slate-800 border border-slate-200 font-semibold shadow-sm';
       case 3:
-        return 'bg-orange-100 text-orange-800 border border-orange-200 font-black shadow-sm';
+        return 'bg-orange-100 text-orange-800 border border-orange-200 font-semibold shadow-sm';
       default:
         return 'bg-[#F5F5F7] text-[#434345] font-bold border border-black/[0.02]';
     }
@@ -101,14 +101,14 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 min-w-0">
           <Trophy className="w-4 h-4 text-[#F56300]" />
-          <h3 className="admin-fit-text text-sm font-black text-[#1D1D1F] tracking-tight">주간 순공 랭킹 <span className="text-[#86868B] font-semibold">({selectedCampusLabel})</span></h3>
+          <h3 className="admin-fit-text text-[15px] font-semibold text-[#1D1D1F] tracking-tight">주간 순공 랭킹 <span className="text-[#86868B] font-normal">({selectedCampusLabel})</span></h3>
           {campusFilter !== 'all' && (
-            <span className="text-[10px] font-extrabold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
+            <span className="text-[10px] font-semibold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {liveCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-[9px] font-black text-emerald-800 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full mr-1">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full mr-1">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
@@ -128,7 +128,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-[10px] font-extrabold text-[#86868B] bg-[#F5F5F7]/80 rounded-xl px-3.5 py-2.5 border border-black/[0.02]">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-[10px] font-semibold text-[#86868B] bg-[#F5F5F7]/80 rounded-xl px-3.5 py-2.5 border border-black/[0.02]">
         <span>누적 학습 <span className="text-emerald-700">{studiedCount}명</span></span>
         <span className="w-px h-3 bg-black/[0.08] self-center"></span>
         <span>미학습 <span className="text-amber-600">{notStudiedCount}명</span></span>
@@ -153,7 +153,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
                 {r.weekMinutes > 0 ? (r.rank <= 3 ? medal(r.rank) : r.rank) : '–'}
               </span>
               <span className="text-xs font-semibold text-[#1D1D1F] truncate">{r.name}</span>
-              <span className="text-[9px] font-extrabold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(r.campus)}</span>
+              <span className="text-[9px] font-semibold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(r.campus)}</span>
               {r.isOpen && (
                 <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100/80 px-1.5 py-0.5 rounded-md shrink-0">
                   <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -167,7 +167,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
                   오늘 {fmt(r.dayMinutes)}
                 </span>
               )}
-              <span className={`text-xs font-extrabold ${r.weekMinutes === 0 ? 'text-amber-600' : 'text-[#1D1D1F]'}`}>
+              <span className={`text-xs font-semibold ${r.weekMinutes === 0 ? 'text-amber-600' : 'text-[#1D1D1F]'}`}>
                 {r.weekMinutes === 0 ? '미학습' : fmt(r.weekMinutes)}
               </span>
             </span>

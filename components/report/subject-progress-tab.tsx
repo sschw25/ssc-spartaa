@@ -159,7 +159,7 @@ export function SubjectProgressTab({
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">전체 학습 진도</p>
-                  <p className="mt-1 text-2xl font-black text-[#0071E3]">{overall}<span className="text-sm font-bold">%</span></p>
+                  <p className="mt-1 text-[18px] font-semibold tracking-tight text-[#0071E3]">{overall}<span className="text-[12px] font-medium ml-0.5">%</span></p>
                 </div>
                 <p className="text-[10px] font-bold text-slate-400">교재·인강 {total}개 중 <span className="font-black text-emerald-600">{done}개</span> 완료</p>
               </div>
@@ -179,7 +179,7 @@ export function SubjectProgressTab({
                 return (
                   <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col gap-3">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">📚 교재 vs 💻 인강 비중</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">교재 vs 인강 비중</p>
                       <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">학습 포트폴리오 내 자료 비율</p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -198,14 +198,14 @@ export function SubjectProgressTab({
                         <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2">
                           <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
                             <span className="w-2.5 h-2.5 rounded-full bg-[#0071E3] shrink-0" />
-                            📚 교재
+                            교재
                           </span>
                           <span className="text-[10px] font-black text-[#0071E3]">{allBooksCount}개</span>
                         </div>
                         <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2">
                           <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
                             <span className="w-2.5 h-2.5 rounded-full bg-[#0071E3] shrink-0" />
-                            💻 인강
+                            인강
                           </span>
                           <span className="text-[10px] font-black text-[#0071E3]">{allLecturesCount}개</span>
                         </div>
@@ -249,9 +249,9 @@ export function SubjectProgressTab({
                           <p className="text-xs font-black">{paceStatus}</p>
                         </div>
                         <p className="text-[9px] font-bold text-slate-400 leading-relaxed text-center px-1">
-                          {paceStatus === '적정' && '인강-교재 밸런스 최적 ✅'}
-                          {paceStatus === '양호' && '풀이량을 조금 더 늘려봐요 🔵'}
-                          {paceStatus === '부족' && '스스로 푸는 시간이 부족해요 🟠'}
+                          {paceStatus === '적정' && '인강-교재 밸런스 최적'}
+                          {paceStatus === '양호' && '풀이량을 조금 더 늘려봐요'}
+                          {paceStatus === '부족' && '스스로 푸는 시간이 부족해요'}
                         </p>
                         <div className="flex items-center gap-1.5 justify-center">
                           {[25, 50, 75, 100].map(mark => (
@@ -388,11 +388,11 @@ export function SubjectProgressTab({
             <div key={sub.id} className="p-6 md:p-8 rounded-[24px] border border-slate-100 bg-white space-y-6 shadow-sm hover:shadow-md transition-all break-inside-avoid">
               <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                 <span className="text-xs font-black text-slate-800 px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-2xl inline-block self-start shadow-sm tracking-wider">
-                  📚 {sub.name} 과목 학습 스케줄러
+                  {sub.name} 과목 학습 스케줄러
                 </span>
                 {isStudentReport && sub.learningGoal && (
                   <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100/60 px-3.5 py-1.5 rounded-xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]">
-                    🎯 과목 목표: {sub.learningGoal}
+                    과목 목표: {sub.learningGoal}
                   </span>
                 )}
               </div>
@@ -424,7 +424,7 @@ export function SubjectProgressTab({
                               <h5 className="text-xs font-black text-slate-700">{b.title}</h5>
                               {b.goalDescription && (
                                 <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
-                                  <span>🏁</span> 완독 목표: {b.goalDescription}
+                                  완독 목표: {b.goalDescription}
                                 </p>
                               )}
                               {isStudentReport && paceComparison && (
@@ -459,7 +459,7 @@ export function SubjectProgressTab({
                                     </div>
                                     <span className="font-normal text-slate-300">/</span> {b.totalPages}p
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                      ✏️ 숫자를 수정하여 직접 진도를 기록하세요
+                                      숫자를 수정하여 직접 진도를 기록하세요
                                     </span>
                                   </span>
                                   <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 group relative">
@@ -477,7 +477,7 @@ export function SubjectProgressTab({
                                     />
                                     <span>문항</span>
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                      ✏️ 해결한 누적 문항 수를 기록하세요
+                                      해결한 누적 문항 수를 기록하세요
                                     </span>
                                   </span>
                                   
@@ -607,7 +607,7 @@ export function SubjectProgressTab({
                               <h5 className="text-xs font-black text-slate-700">{l.name}</h5>
                               {l.goalDescription && (
                                 <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
-                                  <span>🏁</span> 수강 목표: {l.goalDescription}
+                                  수강 목표: {l.goalDescription}
                                 </p>
                               )}
                               {isStudentReport && paceComparison && (
@@ -641,7 +641,7 @@ export function SubjectProgressTab({
                                   </div>
                                   <span className="font-normal text-slate-300">/</span> {l.totalLectures}강
                                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                    ✏️ 숫자를 수정하여 직접 진도를 기록하세요
+                                    숫자를 수정하여 직접 진도를 기록하세요
                                   </span>
                                 </span>
                               ) : (

@@ -163,7 +163,7 @@ export default function MessagesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">

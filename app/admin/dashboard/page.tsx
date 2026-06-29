@@ -641,8 +641,8 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10">
-      
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans selection:bg-black/10">
+
       <AdminTopNav
         title="학습 및 진도 체계적 관리 대시보드"
         campusOptions={CAMPUS_FILTERS.map((c) => ({ value: c, label: c === 'all' ? '전체' : getCampusLabel(c) }))}
@@ -687,48 +687,46 @@ export default function AdminDashboardPage() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-8">
+      <main className="max-w-7xl mx-auto p-4 md:p-8 pb-28 md:pb-28 space-y-8">
 
-        {/* ── 섹션 1: 알림 현황 (4 핵심 카드 + 보조 지표 인라인) ── */}
-        <div className="space-y-3.5">
+        {/* ── 섹션 1: 알림 현황 (iOS 26 — 차분한 흰 카드 + 의미색은 숫자에만) ── */}
+        <div className="space-y-4">
           {/* 헤더 + 보조 지표 칩 */}
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <AlertTriangle className="w-3.5 h-3.5 text-[#86868B] shrink-0" />
-            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B] shrink-0">알림 현황</span>
-            <div className="flex-1 h-px bg-black/[0.06] min-w-[20px]" />
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-end justify-between gap-3 flex-wrap">
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">알림 현황</h2>
+            <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => router.push('/admin/inbox')}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100' : 'bg-white border-black/[0.06] text-[#86868B] hover:bg-[#F5F5F7]'}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] text-[#6e6e73] hover:bg-black/[0.07]'}`}
               >
-                <ClipboardList className="w-3 h-3" />
+                <ClipboardList className="w-3.5 h-3.5" />
                 대기요청 {pendingRequestsTotal}건
               </button>
               <button
                 onClick={() => { handleCardClick('grades'); router.push('/admin/consultation?filter=missing_grade'); }}
-                className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border transition-colors ${weeklyGradeMissingStudents.length > 0 ? 'bg-amber-50 border-amber-200/60 text-amber-700 hover:bg-amber-100' : 'bg-white border-black/[0.06] text-[#86868B] hover:bg-[#F5F5F7]'}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${weeklyGradeMissingStudents.length > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] text-[#6e6e73] hover:bg-black/[0.07]'}`}
               >
                 성적미입력 {weeklyGradeMissingStudents.length}명
               </button>
               <button
                 onClick={() => { handleCardClick('students'); handleShowAllStudents(); }}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-blue-600 hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
               >
-                <Users className="w-3 h-3" />
+                <Users className="w-3.5 h-3.5" />
                 총원생 {totalStudentsCount}명
               </button>
               <button
                 onClick={() => { handleCardClick('progress'); handleShowBehindMaterials(); }}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-blue-600 hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
               >
-                <BarChart3 className="w-3 h-3" />
+                <BarChart3 className="w-3.5 h-3.5" />
                 평균진도 {averageProgress}%
               </button>
               <button
                 onClick={() => router.push('/admin/leave/by-date')}
-                className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-[#0071E3] hover:bg-blue-50 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
               >
-                <Calendar className="w-3 h-3" />
+                <Calendar className="w-3.5 h-3.5" />
                 날짜별 휴식반차
               </button>
             </div>
@@ -744,42 +742,42 @@ export default function AdminDashboardPage() {
 
             {/* 만료 경고 — 빨강 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card onClick={() => router.push('/admin/enrollment-expired')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${expiredStudents.length > 0 ? 'bg-gradient-to-br from-red-50 to-red-100/60 border-red-200/60' : 'bg-gradient-to-br from-white to-[#FFF5F5] border-black/[0.04]'}`}>
-              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
-                <XCircle className="w-16 h-16 text-red-500" />
+            <Card onClick={() => router.push('/admin/enrollment-expired')} className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
+              <div className="flex items-start justify-between">
+                <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${expiredStudents.length > 0 ? 'bg-red-500/12' : 'bg-black/[0.04]'}`}>
+                  <XCircle className={`w-[18px] h-[18px] ${expiredStudents.length > 0 ? 'text-red-500' : 'text-[#86868B]'}`} />
+                </div>
+                {expiredStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse mt-1" />}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold tracking-wider uppercase text-red-600/80">만료 경고</span>
-                {expiredStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+              <div className="mt-3.5 flex items-baseline gap-1">
+                <AnimatedNumber value={expiredStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${expiredStudents.length > 0 ? 'text-red-600' : 'text-[#1d1d1f]'}`} />
+                <span className="text-[15px] font-medium text-[#86868B]">명</span>
               </div>
-              <div className="mt-3 flex items-baseline">
-                <AnimatedNumber value={expiredStudents.length} className={`text-3xl font-black tracking-tight ${expiredStudents.length > 0 ? 'text-red-600' : 'text-[#86868B]'}`} />
-                <span className={`text-xs font-bold ml-1 ${expiredStudents.length > 0 ? 'text-red-600/80' : 'text-[#86868B]'}`}>명</span>
-              </div>
-              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
-              <div className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 group-hover:underline ${expiredStudents.length > 0 ? 'text-red-700' : 'text-[#86868B]'}`}>
-                {expiredStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3 h-3" />
+              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">만료 경고</p>
+              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
+              <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
+                {expiredStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
             </Card>
             </motion.div>
 
             {/* 재등록 임박 — 주황 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card onClick={() => router.push('/admin/enrollment-warning')} className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${renewalWarnStudents.length > 0 ? 'bg-gradient-to-br from-amber-50 to-orange-100/50 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}>
-              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
-                <Clock className="w-16 h-16 text-amber-500" />
+            <Card onClick={() => router.push('/admin/enrollment-warning')} className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
+              <div className="flex items-start justify-between">
+                <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${renewalWarnStudents.length > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04]'}`}>
+                  <Clock className={`w-[18px] h-[18px] ${renewalWarnStudents.length > 0 ? 'text-amber-500' : 'text-[#86868B]'}`} />
+                </div>
+                {renewalWarnStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-1" />}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-600/80">재등록 임박</span>
-                {renewalWarnStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
+              <div className="mt-3.5 flex items-baseline gap-1">
+                <AnimatedNumber value={renewalWarnStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${renewalWarnStudents.length > 0 ? 'text-amber-600' : 'text-[#1d1d1f]'}`} />
+                <span className="text-[15px] font-medium text-[#86868B]">명</span>
               </div>
-              <div className="mt-3 flex items-baseline">
-                <AnimatedNumber value={renewalWarnStudents.length} className={`text-3xl font-black tracking-tight ${renewalWarnStudents.length > 0 ? 'text-amber-600' : 'text-[#86868B]'}`} />
-                <span className={`text-xs font-bold ml-1 ${renewalWarnStudents.length > 0 ? 'text-amber-600/80' : 'text-[#86868B]'}`}>명</span>
-              </div>
-              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
-              <div className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 group-hover:underline ${renewalWarnStudents.length > 0 ? 'text-amber-700' : 'text-[#86868B]'}`}>
-                {renewalWarnStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3 h-3" />
+              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">재등록 임박</p>
+              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
+              <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
+                {renewalWarnStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
             </Card>
             </motion.div>
@@ -788,21 +786,21 @@ export default function AdminDashboardPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
             <Card
               onClick={() => { handleCardClick('consultation'); handleShowConsultationStudents(); }}
-              className="admin-fit-box group border border-black/[0.04] rounded-2xl bg-gradient-to-br from-white to-[#FDFBF7] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.05)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full"
+              className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
             >
-              <div className="absolute right-2 bottom-1 opacity-[0.04] group-hover:opacity-[0.07] group-hover:scale-105 transition-all duration-500 pointer-events-none">
-                <Calendar className="w-16 h-16 text-[#F56300]" />
+              <div className="flex items-start justify-between">
+                <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${pendingConsultationStudents.length > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04]'}`}>
+                  <Calendar className={`w-[18px] h-[18px] ${pendingConsultationStudents.length > 0 ? 'text-amber-500' : 'text-[#86868B]'}`} />
+                </div>
+                {shouldShowDot('consultation', lastConsultationUpdate) && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-1" />}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase">상담 도래</span>
-                {shouldShowDot('consultation', lastConsultationUpdate) && <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />}
+              <div className="mt-3.5 flex items-baseline gap-1">
+                <AnimatedNumber value={pendingConsultationStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingConsultationStudents.length > 0 ? 'text-amber-600' : 'text-[#1d1d1f]'}`} />
+                <span className="text-[15px] font-medium text-[#86868B]">명</span>
               </div>
-              <div className="mt-3 flex items-baseline">
-                <AnimatedNumber value={pendingConsultationStudents.length} className="text-3xl font-black tracking-tight text-amber-600" />
-                <span className="text-xs font-bold text-amber-600/80 ml-1">명</span>
-              </div>
-              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">{selectedCampusLabel} 기준 상담 일지 미작성 대상자</p>
-              <div className="mt-3 text-[10px] text-amber-700 font-extrabold group-hover:underline flex items-center gap-0.5">대상 원생 보기 &rarr;</div>
+              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">상담 도래</p>
+              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">{selectedCampusLabel} 기준 상담 일지 미작성 대상자</p>
+              <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">대상 원생 보기 <ChevronRight className="w-3.5 h-3.5" /></div>
             </Card>
             </motion.div>
 
@@ -810,22 +808,22 @@ export default function AdminDashboardPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
             <Card
               onClick={handleShowBehindMaterials}
-              className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${behindStudentsCount > 0 ? 'bg-gradient-to-br from-orange-50 to-red-100/40 border-orange-200/60' : 'bg-gradient-to-br from-white to-[#FFF8F5] border-black/[0.04]'}`}
+              className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
             >
-              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
-                <AlertTriangle className="w-16 h-16 text-orange-500" />
+              <div className="flex items-start justify-between">
+                <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${behindStudentsCount > 0 ? 'bg-orange-500/12' : 'bg-black/[0.04]'}`}>
+                  <AlertTriangle className={`w-[18px] h-[18px] ${behindStudentsCount > 0 ? 'text-orange-500' : 'text-[#86868B]'}`} />
+                </div>
+                {behindStudentsCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse mt-1" />}
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold tracking-wider uppercase text-orange-600/80">진도 지연</span>
-                {behindStudentsCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />}
+              <div className="mt-3.5 flex items-baseline gap-1">
+                <AnimatedNumber value={behindStudentsCount} className={`text-[18px] leading-none font-semibold tracking-tight ${behindStudentsCount > 0 ? 'text-orange-600' : 'text-[#1d1d1f]'}`} />
+                <span className="text-[15px] font-medium text-[#86868B]">명</span>
               </div>
-              <div className="mt-3 flex items-baseline">
-                <AnimatedNumber value={behindStudentsCount} className={`text-3xl font-black tracking-tight ${behindStudentsCount > 0 ? 'text-orange-600' : 'text-[#86868B]'}`} />
-                <span className={`text-xs font-bold ml-1 ${behindStudentsCount > 0 ? 'text-orange-600/80' : 'text-[#86868B]'}`}>명</span>
-              </div>
-              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">목표 대비 진도가 뒤처진 원생</p>
-              <div className="mt-3 text-[10px] text-orange-700 font-extrabold group-hover:underline flex items-center gap-0.5">
-                {behindStudentsCount > 0 ? '지연 원생 보기' : '지연 없음'} <ChevronRight className="w-3 h-3" />
+              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">진도 지연</p>
+              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">목표 대비 진도가 뒤처진 원생</p>
+              <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
+                {behindStudentsCount > 0 ? '지연 원생 보기' : '지연 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
             </Card>
             </motion.div>
@@ -834,27 +832,24 @@ export default function AdminDashboardPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
             <Card
               onClick={() => router.push('/admin/inbox')}
-              className={`admin-fit-box group border rounded-2xl p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)] hover:shadow-[0_12px_24px_rgba(0,0,0,0.06)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer relative overflow-hidden text-left h-full ${pendingRequestsTotal > 0 ? 'bg-gradient-to-br from-amber-50 to-amber-100/60 border-amber-200/60' : 'bg-gradient-to-br from-white to-[#FDFBF7] border-black/[0.04]'}`}
+              className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
             >
-              <div className="absolute right-2 bottom-1 opacity-[0.06] group-hover:opacity-[0.1] transition-all duration-500 pointer-events-none">
-                <ClipboardList className="w-16 h-16 text-amber-500" />
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-extrabold tracking-wider uppercase text-amber-600/80">대기 요청</span>
-                {pendingRequestsTotal > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />}
-              </div>
-              <div className="mt-3 flex items-baseline gap-1.5">
-                <AnimatedNumber value={pendingRequestsTotal} className={`text-3xl font-black tracking-tight ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#86868B]'}`} />
-                <span className={`text-xs font-bold ${pendingRequestsTotal > 0 ? 'text-amber-600/80' : 'text-[#86868B]'}`}>건</span>
+              <div className="flex items-start justify-between">
+                <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${pendingRequestsTotal > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04]'}`}>
+                  <ClipboardList className={`w-[18px] h-[18px] ${pendingRequestsTotal > 0 ? 'text-amber-500' : 'text-[#86868B]'}`} />
+                </div>
                 {pendingStudentCount > 0 && (
-                  <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">{pendingStudentCount}명</span>
+                  <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{pendingStudentCount}명</span>
                 )}
               </div>
-              <p className="text-[10px] font-semibold text-[#86868B] mt-1.5 leading-snug">
-                변경 {pendingChangeCount} · 휴가 {pendingLeaveCount} · 건의 {pendingSuggestionCount}
-              </p>
-              <div className={`mt-3 text-[10px] font-extrabold flex items-center gap-0.5 group-hover:underline ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#86868B]'}`}>
-                {pendingRequestsTotal > 0 ? '인박스 열기' : '대기 없음'} <ChevronRight className="w-3 h-3" />
+              <div className="mt-3.5 flex items-baseline gap-1">
+                <AnimatedNumber value={pendingRequestsTotal} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#1d1d1f]'}`} />
+                <span className="text-[15px] font-medium text-[#86868B]">건</span>
+              </div>
+              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">대기 요청</p>
+              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">변경 {pendingChangeCount} · 휴가 {pendingLeaveCount} · 건의 {pendingSuggestionCount}</p>
+              <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
+                {pendingRequestsTotal > 0 ? '인박스 열기' : '대기 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
             </Card>
             </motion.div>
@@ -864,15 +859,13 @@ export default function AdminDashboardPage() {
 
         {/* ── 섹션 3: 출결 현황 ── */}
         <div className="space-y-3.5">
-          <div className="flex items-center gap-2.5">
-            <Calendar className="w-3.5 h-3.5 text-[#86868B]" />
-            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">출결 현황</span>
-            <div className="flex-1 h-px bg-black/[0.06]" />
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">출결 현황</h2>
             <button
               onClick={() => router.push('/admin/attendance')}
-              className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold border bg-white border-black/[0.06] text-[#0071E3] hover:bg-blue-50 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
             >
-              <ClipboardList className="w-3 h-3" />
+              <ClipboardList className="w-3.5 h-3.5" />
               출결 상세
             </button>
           </div>
@@ -895,15 +888,13 @@ export default function AdminDashboardPage() {
 
         {/* ── 섹션 4: 학습 현황 ── */}
         <div className="space-y-3.5">
-          <div className="flex items-center gap-2.5">
-            <BookOpen className="w-3.5 h-3.5 text-[#86868B]" />
-            <span className="text-[10px] font-black tracking-[0.14em] uppercase text-[#86868B]">학습 현황</span>
-            <div className="flex-1 h-px bg-black/[0.06]" />
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">학습 현황</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 과목 (교재)</CardTitle>
+              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 공부 중인 과목 (교재)</CardTitle>
               <BookOpen className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
@@ -917,22 +908,22 @@ export default function AdminDashboardPage() {
                       onClick={() => setAnalysisTarget({ type: 'subject', name: rank.label })}
                       className="flex items-center gap-2.5 rounded-xl bg-black/[0.02] border border-black/[0.01] px-3 py-2.5 cursor-pointer hover:bg-black/[0.04] hover:border-black/[0.03] active:scale-[0.98] transition-all duration-200"
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
-                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                          <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
                         <p className="text-[9px] font-bold text-[#86868B] mt-0.5">항목 {rank.itemCount}개</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
+                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
                   ))}
                 </div>
@@ -942,7 +933,7 @@ export default function AdminDashboardPage() {
 
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 공부 중인 책</CardTitle>
+              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 공부 중인 책</CardTitle>
               <ClipboardList className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
@@ -956,22 +947,22 @@ export default function AdminDashboardPage() {
                       onClick={() => setAnalysisTarget({ type: 'book', name: rank.label })}
                       className="flex items-center gap-2.5 rounded-xl bg-black/[0.02] border border-black/[0.01] px-3 py-2.5 cursor-pointer hover:bg-black/[0.04] hover:border-black/[0.03] active:scale-[0.98] transition-all duration-200"
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
-                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                          <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
                         <p className="truncate text-[9px] font-bold text-[#86868B] mt-0.5">{rank.meta || '기타'}</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
+                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
                   ))}
                 </div>
@@ -981,7 +972,7 @@ export default function AdminDashboardPage() {
 
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 듣고 있는 과목 (인강)</CardTitle>
+              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 듣고 있는 과목 (인강)</CardTitle>
               <Play className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
@@ -995,22 +986,22 @@ export default function AdminDashboardPage() {
                       onClick={() => setAnalysisTarget({ type: 'subject', name: rank.label })}
                       className="flex items-center gap-2.5 rounded-xl bg-black/[0.02] border border-black/[0.01] px-3 py-2.5 cursor-pointer hover:bg-black/[0.04] hover:border-black/[0.03] active:scale-[0.98] transition-all duration-200"
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
-                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                          <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
                         <p className="text-[9px] font-bold text-[#86868B] mt-0.5">항목 {rank.itemCount}개</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
+                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
                   ))}
                 </div>
@@ -1020,7 +1011,7 @@ export default function AdminDashboardPage() {
 
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-black text-[#1D1D1F]">많이 듣고 있는 강의</CardTitle>
+              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 듣고 있는 강의</CardTitle>
               <Play className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
@@ -1034,22 +1025,22 @@ export default function AdminDashboardPage() {
                       onClick={() => setAnalysisTarget({ type: 'book', name: rank.label })}
                       className="flex items-center gap-2.5 rounded-xl bg-black/[0.02] border border-black/[0.01] px-3 py-2.5 cursor-pointer hover:bg-black/[0.04] hover:border-black/[0.03] active:scale-[0.98] transition-all duration-200"
                     >
-                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shrink-0 border ${
+                      <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
                         'bg-black/[0.03] border-transparent text-[#86868B]'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-black text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
-                          <span className="text-[9px] font-black text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
+                          <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
                         <p className="truncate text-[9px] font-bold text-[#86868B] mt-0.5">{rank.meta || '기타'}</p>
                       </div>
-                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-black text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
+                      <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
                   ))}
                 </div>
@@ -1076,10 +1067,10 @@ export default function AdminDashboardPage() {
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-black/[0.04] p-5 shrink-0 bg-white/50">
               <div>
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#86868B]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868B]">
                   {analysisData.type === 'subject' ? '과목 분석' : '교재/강의 분석'}
                 </span>
-                <h2 className="text-lg font-black text-[#1D1D1F] tracking-tight mt-0.5">{analysisData.name}</h2>
+                <h2 className="text-lg font-semibold text-[#1D1D1F] tracking-tight mt-0.5">{analysisData.name}</h2>
               </div>
               <button
                 onClick={() => setAnalysisTarget(null)}
@@ -1095,22 +1086,22 @@ export default function AdminDashboardPage() {
               {/* 요약 KPI 카드 */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-2xl bg-black/[0.02] border border-black/[0.04] p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-extrabold text-[#86868B] uppercase">학습 학생 수</span>
-                  <div className="text-xl font-black text-[#1D1D1F] mt-2">{analysisData.studentCount}명</div>
+                  <span className="text-[10px] font-semibold text-[#86868B] uppercase">학습 학생 수</span>
+                  <div className="text-xl font-semibold text-[#1D1D1F] mt-2">{analysisData.studentCount}명</div>
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-blue-500/[0.02] to-blue-500/[0.06] border border-blue-500/10 p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-extrabold text-[#0071E3] uppercase">평균 진도율</span>
-                  <div className="text-xl font-black text-[#0071E3] mt-2">{analysisData.avgProgress}%</div>
+                  <span className="text-[10px] font-semibold text-[#0071E3] uppercase">평균 진도율</span>
+                  <div className="text-xl font-semibold text-[#0071E3] mt-2">{analysisData.avgProgress}%</div>
                 </div>
                 <div className="rounded-2xl bg-black/[0.02] border border-black/[0.04] p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-extrabold text-[#86868B] uppercase">평균 학습 소요</span>
-                  <div className="text-xl font-black text-[#1D1D1F] mt-2">
+                  <span className="text-[10px] font-semibold text-[#86868B] uppercase">평균 학습 소요</span>
+                  <div className="text-xl font-semibold text-[#1D1D1F] mt-2">
                     {analysisData.avgDays > 0 ? `${analysisData.avgDays}일` : '-'}
                   </div>
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-emerald-500/[0.02] to-emerald-500/[0.06] border border-emerald-500/10 p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-extrabold text-emerald-600 uppercase">하루 평균 진도</span>
-                  <div className="text-xl font-black text-emerald-800 mt-2">
+                  <span className="text-[10px] font-semibold text-emerald-600 uppercase">하루 평균 진도</span>
+                  <div className="text-xl font-semibold text-emerald-800 mt-2">
                     {analysisData.avgDailyAmount !== '0.0' && analysisData.avgDailyAmount !== '0' 
                       ? `${analysisData.avgDailyAmount} ${analysisData.unitLabel || '페이지'}` 
                       : '계획 없음'}
@@ -1120,11 +1111,11 @@ export default function AdminDashboardPage() {
 
               {/* 학생별 상세 현황 */}
               <div className="space-y-2">
-                <h3 className="text-xs font-black text-[#1D1D1F]">학생별 진도 상세</h3>
+                <h3 className="text-xs font-semibold text-[#1D1D1F]">학생별 진도 상세</h3>
                 <div className="border border-black/[0.04] rounded-2xl overflow-hidden bg-white">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-black/[0.02] text-[#86868B] font-extrabold border-b border-black/[0.04]">
+                      <tr className="bg-black/[0.02] text-[#86868B] font-semibold border-b border-black/[0.04]">
                         <th className="px-4 py-2.5">이름</th>
                         <th className="px-4 py-2.5">캠퍼스</th>
                         {analysisData.type === 'subject' && <th className="px-4 py-2.5">학습 교재/강의</th>}
@@ -1139,7 +1130,7 @@ export default function AdminDashboardPage() {
                           <td className="px-4 py-2.5 font-bold text-[#1D1D1F]">{student.name}</td>
                           <td className="px-4 py-2.5 text-[#86868B]">{getCampusLabel(student.campus)}</td>
                           {analysisData.type === 'subject' && <td className="px-4 py-2.5 text-[#1D1D1F] truncate max-w-[200px]">{student.title}</td>}
-                          <td className="px-4 py-2.5 font-black text-[#0071E3]">{student.progress}%</td>
+                          <td className="px-4 py-2.5 font-semibold text-[#0071E3]">{student.progress}%</td>
                           <td className="px-4 py-2.5 text-[#86868B]">{student.current} / {student.total}</td>
                           <td className="px-4 py-2.5 text-[#86868B]">{student.targetDate || '-'}</td>
                         </tr>
@@ -1154,14 +1145,14 @@ export default function AdminDashboardPage() {
                 
                 {/* 학습 목표 목록 */}
                 <div className="space-y-2 flex flex-col">
-                  <h3 className="text-xs font-black text-[#1D1D1F]">학생 설정 목표</h3>
+                  <h3 className="text-xs font-semibold text-[#1D1D1F]">학생 설정 목표</h3>
                   <div className="border border-black/[0.04] rounded-2xl p-4 bg-white space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[250px]">
                     {analysisData.goals.length === 0 ? (
                       <p className="text-[11px] font-semibold text-[#86868B] py-8 text-center">등록된 학습 목표가 없습니다.</p>
                     ) : (
                       analysisData.goals.map((g, i) => (
                         <div key={i} className="text-xs leading-relaxed border-b border-black/[0.01] pb-2 last:border-0 last:pb-0">
-                          <span className="font-extrabold text-[#0071E3] mr-1.5">{g.studentName}</span>
+                          <span className="font-semibold text-[#0071E3] mr-1.5">{g.studentName}</span>
                           <span className="text-[#1D1D1F]">{g.text}</span>
                         </div>
                       ))
@@ -1171,14 +1162,14 @@ export default function AdminDashboardPage() {
 
                 {/* 피드백(상담 기록) 목록 */}
                 <div className="space-y-2 flex flex-col">
-                  <h3 className="text-xs font-black text-[#1D1D1F]">관련 피드백 (상담 기록)</h3>
+                  <h3 className="text-xs font-semibold text-[#1D1D1F]">관련 피드백 (상담 기록)</h3>
                   <div className="border border-black/[0.04] rounded-2xl p-4 bg-white space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[250px]">
                     {analysisData.feedbacks.length === 0 ? (
                       <p className="text-[11px] font-semibold text-[#86868B] py-8 text-center">상담 기록 중 언급된 피드백이 없습니다.</p>
                     ) : (
                       analysisData.feedbacks.map((f, i) => (
                         <div key={i} className="text-xs border-b border-black/[0.02] pb-2.5 last:border-0 last:pb-0">
-                          <div className="flex items-center justify-between text-[10px] text-[#86868B] mb-1 font-extrabold">
+                          <div className="flex items-center justify-between text-[10px] text-[#86868B] mb-1 font-semibold">
                             <span>{f.studentName} · {f.date}</span>
                             <span>{f.manager} 코치</span>
                           </div>

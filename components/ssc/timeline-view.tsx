@@ -36,7 +36,7 @@ export function TimelineView({ schedule = SCHEDULE, showFlexibleNote = false }: 
     <section id="timeline" className="py-16 md:py-24 bg-[#F5F5F7]" ref={ref}>
       <div className="max-w-[72rem] mx-auto px-6 sm:px-8">
         <div className="mb-12 md:mb-16 text-center fade-in-up">
-            <p className="text-[#0071E3] text-[11px] sm:text-xs font-extrabold tracking-[0.3em] uppercase mb-6 opacity-80">Daily Workflow</p>
+            <p className="text-[#007AFF] text-[11px] sm:text-xs font-extrabold tracking-[0.3em] uppercase mb-6 opacity-80">Daily Workflow</p>
             <h2 className="text-4xl md:text-5xl lg:text-7xl font-bold text-[#1D1D1F] tracking-tighter mb-8 leading-[1.05] text-balance">
               가장 치열한 몰입,<br />
               스파르타의 하루
@@ -67,7 +67,7 @@ export function TimelineView({ schedule = SCHEDULE, showFlexibleNote = false }: 
               >
                 {/* Content Side */}
                 <div className={`flex-1 md:w-1/2 ${i % 2 === 0 ? 'md:pr-16 md:text-right' : 'md:pl-16 md:text-left'} ml-12 md:ml-0`}>
-                  <p className="text-[#0071E3] text-[11px] md:text-xs font-extrabold tracking-[0.2em] uppercase mb-2 opacity-80">{item.time}</p>
+                  <p className="text-[#007AFF] text-[11px] md:text-xs font-extrabold tracking-[0.2em] uppercase mb-2 opacity-80">{item.time}</p>
                   <h3 className="text-2xl md:text-3xl font-bold text-[#1D1D1F] tracking-tight mb-2">{item.label}</h3>
                   <p className="text-[#86868B] text-base md:text-lg font-semibold leading-relaxed break-keep max-w-md inline-block">{item.desc}</p>
                 </div>
@@ -95,7 +95,7 @@ export function TimelineView({ schedule = SCHEDULE, showFlexibleNote = false }: 
             className="mt-24 text-center"
           >
             <p className="text-[#86868B] text-sm font-semibold flex items-center justify-center gap-2">
-              <span className="w-1 h-1 rounded-full bg-[#0071E3]" />
+              <span className="w-1 h-1 rounded-full bg-[#007AFF]" />
               학교에 가지 않는 방학 기간이므로, 본인의 스케줄에 맞춰 등하원 시간을 유동적으로 조정할 수 있습니다.
             </p>
           </motion.div>

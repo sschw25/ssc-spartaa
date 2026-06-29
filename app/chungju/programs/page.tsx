@@ -27,7 +27,7 @@ export default function ChungjuProgramsPage() {
             <ChevronLeft size={16} />
             충주 홈으로
           </Link>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">이달의 프로그램</h1>
+          <h1 className="text-3xl md:text-4xl font-semibold text-white mb-2">이달의 프로그램</h1>
           <p className="text-white/70 text-base">매달 업데이트되는 충주 캠퍼스 합격 전략 프로그램</p>
         </div>
       </div>

@@ -364,7 +364,7 @@ export function GradeAnalysisTab({
                 rel="noopener noreferrer"
                 className="rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3.5 py-2 text-[10px] font-bold transition shadow-sm flex items-center gap-1"
               >
-                💬 밴드 톡 바로가기
+                밴드 톡 바로가기
               </a>
             </div>
           </div>

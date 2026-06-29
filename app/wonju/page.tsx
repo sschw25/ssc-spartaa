@@ -129,7 +129,7 @@ export default function WonjuPage() {
             className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 rounded-[24px] border border-black/5 bg-white p-8 shadow-sm"
           >
             <div>
-              <h2 className="text-2xl md:text-3xl font-semibold text-[#1D1D1F] tracking-tighter mb-2">
+              <h2 className="text-2xl md:text-3xl font-semibold text-[#1D1D1F] tracking-tight mb-2">
                 이달의 프로그램
               </h2>
               <p className="text-[#86868B] text-sm md:text-base font-medium">

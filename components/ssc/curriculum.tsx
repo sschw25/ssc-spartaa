@@ -18,7 +18,7 @@ const schedule = [
     time: '13:50 – 17:40',
     items: ['3·4교시: 한계를 넘어서는 순공 확보', '5교시: 합격을 앞당기는 열정 기록', '개인별 밀착 학습 관리'],
     bgColor: 'bg-gradient-to-br from-[#EBF5FF] to-[#D6E8FB]',
-    iconColor: 'text-[#0071E3]',
+    iconColor: 'text-[#007AFF]',
   },
   {
     icon: Moon,
@@ -40,7 +40,7 @@ export function Curriculum() {
       <div className="max-w-[72rem] mx-auto px-6 sm:px-8">
         
         <div className="mb-20 md:mb-28 text-center fade-in-up">
-          <p className="text-[#0071E3] text-[11px] sm:text-xs font-extrabold tracking-[0.3em] uppercase mb-6">Timetable</p>
+          <p className="text-[#007AFF] text-[11px] sm:text-xs font-extrabold tracking-[0.3em] uppercase mb-6">Timetable</p>
           <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tighter mb-8 leading-[1.1] text-balance">낭비 없는 압도적 몰입 시간</h2>
           <p className="text-[#434345] text-lg md:text-xl font-semibold max-w-2xl mx-auto break-keep leading-relaxed text-balance">
             매 순간 가장 몰입할 수 있도록 설계된 스파르타식 교시제. <br className="hidden md:block" /> 
@@ -87,7 +87,7 @@ export function Curriculum() {
         {/* Flexible Schedule Note */}
         <div className="mt-20 text-center fade-in-up">
           <p className="text-[#86868B] text-sm font-semibold flex items-center justify-center gap-2">
-            <span className="w-1 h-1 rounded-full bg-[#0071E3]" />
+            <span className="w-1 h-1 rounded-full bg-[#007AFF]" />
             등원 및 하원 시간은 수험생의 거주지에 따라 유동적으로 운영됩니다.
           </p>
         </div>

@@ -68,7 +68,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
           >
             <ChevronLeft className="w-4 h-4 text-[#86868B]" />
           </button>
-          <span className="text-sm font-black text-[#1D1D1F] min-w-[90px] text-center">
+          <span className="text-sm font-semibold text-[#1D1D1F] min-w-[90px] text-center">
             {viewYear}년 {viewMonth + 1}월
           </span>
           <button
@@ -78,7 +78,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
             <ChevronRight className="w-4 h-4 text-[#86868B]" />
           </button>
         </div>
-        <div className="flex items-center gap-3 text-[10px] font-extrabold">
+        <div className="flex items-center gap-3 text-[10px] font-semibold">
           <span className="text-[#86868B]">이달 상담 <span className="text-[#1D1D1F]">{thisMonthStudents.length}명</span></span>
           {overdueCount > 0 && (
             <span className="flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200/60 rounded-full px-2.5 py-1">
@@ -94,7 +94,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
         {DOW_LABELS.map((d, i) => (
           <div
             key={d}
-            className={`py-2 text-center text-[10px] font-black tracking-wider ${
+            className={`py-2 text-center text-[10px] font-semibold tracking-wider ${
               i === 5 ? 'text-blue-500' : i === 6 ? 'text-red-500' : 'text-[#86868B]'
             }`}
           >
@@ -123,7 +123,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
               {day && (
                 <>
                   <span
-                    className={`text-[11px] font-black w-6 h-6 flex items-center justify-center rounded-full self-start transition-colors ${
+                    className={`text-[11px] font-semibold w-6 h-6 flex items-center justify-center rounded-full self-start transition-colors ${
                       isToday
                         ? 'bg-[#0071E3] text-white'
                         : hasOverdue
@@ -142,7 +142,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                       <button
                         key={s.id}
                         onClick={() => onOpenStudent(s.id)}
-                        className={`w-full text-left text-[9px] font-extrabold px-1.5 py-0.5 rounded-md truncate transition-all hover:scale-[1.02] ${
+                        className={`w-full text-left text-[9px] font-semibold px-1.5 py-0.5 rounded-md truncate transition-all hover:scale-[1.02] ${
                           hasOverdue
                             ? 'bg-amber-100/80 text-amber-800 hover:bg-amber-200'
                             : 'bg-[#0071E3]/[0.08] text-[#0071E3] hover:bg-[#0071E3]/[0.14]'
@@ -153,7 +153,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                       </button>
                     ))}
                     {scheduled.length > 3 && (
-                      <span className="text-[9px] font-black text-[#86868B] pl-1">
+                      <span className="text-[9px] font-semibold text-[#86868B] pl-1">
                         +{scheduled.length - 3}
                       </span>
                     )}

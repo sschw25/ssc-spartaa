@@ -67,7 +67,7 @@ export function Testimonials({
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <div className="mb-16 text-center fade-in-up">
-          <p className="text-[#0071E3] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">학생들의 치열한 기록</p>
+          <p className="text-[#007AFF] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">학생들의 치열한 기록</p>
           <h2 
             className="font-semibold text-[#1D1D1F] tracking-tighter mb-6 whitespace-pre-line break-keep drop-shadow-sm text-balance"
             style={{ fontSize: 'var(--font-size-section-title)' }}
@@ -116,13 +116,13 @@ export function Testimonials({
                 {/* Subtle Nano-texture glow inside card */}
                 <div className="absolute inset-0 bg-gradient-to-b from-white/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                <Quote size={28} className="w-10 h-10 text-[#0071E3]/10 mb-6 drop-shadow-sm group-hover:text-[#0071E3]/20 transition-colors duration-300" strokeWidth={2} />
+                <Quote size={28} className="w-10 h-10 text-[#007AFF]/10 mb-6 drop-shadow-sm group-hover:text-[#007AFF]/20 transition-colors duration-300" strokeWidth={2} />
                 <blockquote className="text-[16px] font-medium text-[#1D1D1F] leading-relaxed tracking-tight flex-1 text-balance">
                   <RhythmicText text={`“${formatQuote(t.quote)}”`} className="inline" />
                 </blockquote>
                 <div className="flex flex-col gap-1 border-t border-black/5 pt-6 mt-auto">
                   <span className="text-[15px] font-semibold text-[#1D1D1F]">{t.name}</span>
-                  <span className="text-[13px] text-[#0071E3] font-semibold tracking-wide">{t.result}</span>
+                  <span className="text-[13px] text-[#007AFF] font-semibold tracking-wide">{t.result}</span>
                 </div>
               </div>
             </article>

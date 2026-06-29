@@ -25,21 +25,21 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
   const cardsData = [
     {
       id: 1,
-      icon: <Award className="w-8 h-8 text-[#0071E3]" />,
+      icon: <Award className="w-8 h-8 text-[#007AFF]" />,
       title: `${campusName} 유일의\n공단기 파트너`,
       description: `노량진 공단기·경단기·소단기 본원의 실시간 합격 예측 전국 모의고사 시스템과 1타 강사진의 하프 테스트 등 노량진 독점 콘텐츠를 제공받습니다.`,
       badge: '독점 제휴',
     },
     {
       id: 2,
-      icon: <ShieldAlert className="w-8 h-8 text-[#0071E3]" />,
+      icon: <ShieldAlert className="w-8 h-8 text-[#007AFF]" />,
       title: `노량진의 관리를\n${campusName}에서 그대로`,
       description: `하루 12시간 엄격한 교시제 밀착 출결 관리, 원내 대화 및 친목 완전 차단, 스마트폰 수거 및 유해 사이트 통제로 오직 공부에만 완전 침잠할 수 있는 절대 몰입 환경을 갖췄습니다.`,
       badge: '스파르타 통제',
     },
     {
       id: 3,
-      icon: <CheckCircle2 className="w-8 h-8 text-[#0071E3]" />,
+      icon: <CheckCircle2 className="w-8 h-8 text-[#007AFF]" />,
       title: `전국 석차 및\n정밀 오답률 분석`,
       description: `전국 단위 모의고사를 마친 후, 문항별 정답률 분석과 직렬별 석차 데이터를 제공합니다. 1:1 학습 상담 및 취약점 보완 지도를 통해 불필요한 시행착오를 단축합니다.`,
       badge: '데이터 피드백',
@@ -53,10 +53,10 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
           <div>
-            <p className="text-[#0071E3] text-[11px] font-extrabold tracking-[0.25em] uppercase mb-3">
+            <p className="text-[#007AFF] text-[11px] font-semibold tracking-[0.18em] uppercase mb-3">
               Why SSC Sparta
             </p>
-            <h2 className="text-[#1D1D1F] text-2xl md:text-4xl font-bold tracking-tighter text-balance">
+            <h2 className="text-[#1D1D1F] text-2xl md:text-4xl font-semibold tracking-tight text-balance">
               합격할 수밖에 없는<br className="md:hidden" /> 압도적 스파르타 시스템
             </h2>
           </div>
@@ -83,12 +83,12 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
                   <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-300">
                     {card.icon}
                   </div>
-                  <span className="text-[10px] font-extrabold tracking-wider text-[#86868B] uppercase px-3 py-1 rounded-full bg-white border border-black/5">
+                  <span className="text-[11px] font-semibold tracking-tight text-[#86868B] px-3 py-1 rounded-full bg-black/[0.04]">
                     {card.badge}
                   </span>
                 </div>
-                
-                <h3 className="text-xl font-bold tracking-tight text-[#1D1D1F] leading-tight mb-4 whitespace-pre-line">
+
+                <h3 className="text-xl font-semibold tracking-tight text-[#1D1D1F] leading-tight mb-4 whitespace-pre-line">
                   {card.title}
                 </h3>
               </div>

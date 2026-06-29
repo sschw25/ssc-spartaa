@@ -65,9 +65,9 @@ export function FacilityComparison() {
           </table>
         </div>
 
-        <div className="mt-12 p-6 rounded-2xl bg-[#0071E3]/5 border border-[#0071E3]/10 flex items-start gap-4">
-          <Info className="text-[#0071E3] shrink-0" size={20} />
-          <p className="text-[#0071E3] text-sm font-medium leading-relaxed break-keep">
+        <div className="mt-12 p-6 rounded-2xl bg-[#007AFF]/5 border border-[#007AFF]/10 flex items-start gap-4">
+          <Info className="text-[#007AFF] shrink-0" size={20} />
+          <p className="text-[#007AFF] text-sm font-medium leading-relaxed break-keep">
             독학 관리반 등록 시 위 3가지 학습 공간(강의실, 개인테이블, 라운지)을 모두 자유롭게 이용할 수 있습니다. 전 좌석에 백색 소음기 시스템이 가동 중이며, 개인별 수납공간과 기가 와이파이(5G), 그리고 콘센트가 기본 제공됩니다. 자세한 좌석 현황은 캠퍼스 상담 시 안내해 드립니다.
           </p>
         </div>

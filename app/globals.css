@@ -6,9 +6,17 @@
 :root {
   /* Brand Colors - Apple Light */
   --navy: #1D1D1F; /* Premium dark gray instead of deep blue */
-  --accent-blue: #0071E3; /* Apple bright blue */
-  --accent-amber: #F56300;
-  --accent-green: #34C759;
+  --accent-blue: #007AFF; /* iOS 26 systemBlue */
+  --accent-amber: #FF9500; /* iOS 26 systemOrange */
+  --accent-green: #34C759; /* iOS 26 systemGreen */
+
+  /* iOS 26 System Colors (HIG) — 역할 바인딩, AGENTS.md §3 */
+  --ios-blue: #007AFF;
+  --ios-green: #34C759;
+  --ios-orange: #FF9500;
+  --ios-red: #FF3B30;
+  --ios-indigo: #5856D6;   /* 강조·프리미엄·브랜드 액센트 */
+  --ios-purple: #AF52DE;   /* 등급/리워드·브랜드 그라데이션 */
 
   /* Background */
   --background: #FFFFFF;
@@ -180,7 +188,8 @@
   line-height: 1.05;
   letter-spacing: -0.04em;
   font-weight: 600;
-  color: inherit; /* 유틸리티 클래스로 색상 제어 허용 */
+  /* color는 지정하지 않는다 — text-white / text-[#..] 유틸리티가 제어.
+     (Tailwind v4에서 unlayered `color`는 유틸리티를 덮어버리므로 제거) */
 }
 
 .section-title {
@@ -188,7 +197,8 @@
   line-height: 1.1;
   letter-spacing: -0.03em;
   font-weight: 600;
-  color: inherit; /* 유틸리티 클래스로 색상 제어 허용 */
+  /* color는 지정하지 않는다 — text-white / text-[#..] 유틸리티가 제어.
+     (Tailwind v4에서 unlayered `color`는 유틸리티를 덮어버리므로 제거) */
 }
 
 /* Mobile Fine-tuning (under 768px) */
@@ -596,4 +606,129 @@ body:has(.admin-fluid-ui) {
     color: inherit !important;
     text-decoration: none !important;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   iOS 26 "Liquid Glass" — Material System (AGENTS.md §1·§2·§7)
+   유리는 "떠 있는 크롬"에만(네비·탭·툴바·시트·FAB·스티키).
+   본문 카드·표는 solid. 유리 위 유리 금지. 엣지 라이트 필수.
+   ────────────────────────────────────────────────────────────── */
+
+/* Thin glass — 기본 크롬(내비·서브내비·모바일 바) */
+.glass {
+  background: rgba(255, 255, 255, 0.6);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  /* 상단 1px 엣지 하이라이트 — "유리 가장자리"를 드러낸다 */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 0 rgba(0, 0, 0, 0.04),
+    0 8px 30px rgba(0, 0, 0, 0.06);
+}
+
+/* Strong glass — FAB·시트·팝오버 등 더 떠 있는 레이어 */
+.glass-strong {
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 10px 40px rgba(0, 0, 0, 0.12);
+}
+
+/* Clear glass — 사진/영상 위 미디어 배경에서만 */
+.glass-clear {
+  background: rgba(255, 255, 255, 0.18);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Capsule glass — 세그먼트 컨트롤·칩·필터 (가벼운 그림자, 작은 인라인 컨트롤용) */
+.glass-capsule {
+  background: rgba(255, 255, 255, 0.5);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.7),
+    0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+/* iOS 26 app canvas — 유리 굴절용 멀티컬러 광원을 페이지 배경에 직접 굽는다.
+   앱 셸 루트(min-h-screen)의 bg-[#F8F9FA] 대신 사용. 상단(파랑)이 유리 네비
+   밑으로 깔려 굴절되고, attachment:fixed 라 스크롤해도 광원이 고정된다. */
+.ios-app-bg {
+  background-color: #f8f9fa;
+  background-image:
+    radial-gradient(46rem 46rem at 12% 2%, rgba(0, 113, 227, 0.26), transparent 58%),
+    radial-gradient(42rem 42rem at 96% 10%, rgba(88, 86, 214, 0.20), transparent 58%),
+    radial-gradient(40rem 40rem at 55% 116%, rgba(52, 199, 89, 0.16), transparent 58%);
+  background-attachment: fixed;
+  /* 하단 플로팅 유리 탭바(약 76px) 클리어런스 — 전 페이지 공통 */
+  padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
+}
+
+/* iOS 26 무게 통일 — 앱 셸(.ios-app-bg) 안에서는 초굵은 폰트를 semibold로 강제.
+   font-black(900)/font-extrabold(800)는 Apple 톤과 충돌해 전역 추방(AGENTS.md Apple 레시피).
+   전역 적용 — 어드민·마케팅·메인·센터 전부 일관. 마케팅 히어로는 `.main-title`(600) 사용이라 영향 없음.
+   리포트 본문(.report-paper)은 아래에서 700으로 따로 유지(브랜드 디스플레이). */
+.font-black,
+.font-extrabold,
+.font-bold {
+  font-weight: 600 !important;
+}
+
+/* 본문 강조 <b>/<strong>도 semibold로 통일 (Tailwind preflight의 bolder가 900까지 튀는 것 방지) */
+b,
+strong {
+  font-weight: 600 !important;
+}
+
+/* iOS 26 타입 스케일 — 미세 폰트 가독 최소 11px로 전역 통일(어드민·리포트·마케팅 공통).
+   캡션 계열을 11/12/13px 3단으로 정리. (seat-board 6·7px 초밀집은 별도 처리 — 여기선 8px부터.) */
+.text-\[8px\],
+.text-\[9px\],
+.text-\[10px\] {
+  font-size: 11px !important;
+}
+
+/* 학생 리포트 본문(.report-paper) — 초굵은(900/800)을 700(bold)까지로 캡(히어로 디스플레이 보존). */
+.report-paper .font-black,
+.report-paper .font-extrabold {
+  font-weight: 700;
+}
+
+/* 브랜드 액센트 그라데이션 — 마케팅 히어로/프리미엄 (systemIndigo→Blue) */
+.brand-accent-text {
+  background: linear-gradient(120deg, var(--ios-indigo), var(--ios-blue));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* 접근성 — 재질보다 가독성 우선 (AGENTS.md §7).
+   Reduce Transparency 켜지면 유리는 불투명으로 폴백. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass,
+  .glass-strong,
+  .glass-clear,
+  .glass-capsule {
+    background: #ffffff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border-color: rgba(0, 0, 0, 0.08);
+  }
+  .ios-app-bg { background-image: none; }
+}
+@media (prefers-contrast: more) {
+  .glass,
+  .glass-strong,
+  .glass-capsule {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.18);
+  }
+  .ios-app-bg { background-image: none; }
 }

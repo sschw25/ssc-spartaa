@@ -6,8 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, X, ChevronRight } from 'lucide-react'
 
 const navItems = [
-  { 
-    label: '공무원', 
+  {
+    label: '공무원',
     href: '#programs',
     stream: 'gongmuwon',
     campuses: [
@@ -16,8 +16,28 @@ const navItems = [
       { name: '충주 캠퍼스', href: '/chungju/gongmuwon' }
     ]
   },
-  { 
-    label: '임용고시', 
+  {
+    label: '경찰',
+    href: '#programs',
+    stream: 'police',
+    campuses: [
+      { name: '원주 캠퍼스', href: '/wonju/police' },
+      { name: '춘천 캠퍼스', href: '/chuncheon/police' },
+      { name: '충주 캠퍼스', href: '/chungju/police' }
+    ]
+  },
+  {
+    label: '소방',
+    href: '#programs',
+    stream: 'fire',
+    campuses: [
+      { name: '원주 캠퍼스', href: '/wonju/fire' },
+      { name: '춘천 캠퍼스', href: '/chuncheon/fire' },
+      { name: '충주 캠퍼스', href: '/chungju/fire' }
+    ]
+  },
+  {
+    label: '임용고시',
     href: '#programs',
     stream: 'imyong',
     campuses: [
@@ -97,8 +117,8 @@ export function Navbar() {
     <>
       <nav 
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
-          isScrolled 
-            ? 'py-3 bg-white/80 backdrop-blur-xl border-b border-black/[0.05] shadow-sm' 
+          isScrolled
+            ? 'py-3 glass border-b border-white/40'
             : 'py-5 bg-transparent'
         }`}
       >
@@ -113,14 +133,14 @@ export function Navbar() {
               {isGongmuwonPage && (
                 <div className="flex items-center gap-1.5 ml-1 animate-in fade-in slide-in-from-left-2 duration-700">
                   <span className="text-[#86868B] text-[10px] md:text-xs font-light opacity-60">X</span>
-                  <span className="text-base md:text-[17px] font-bold text-[#0071E3] tracking-tight">커넥츠프랩</span>
+                  <span className="text-base md:text-[17px] font-bold text-[#007AFF] tracking-tight">커넥츠프랩</span>
                 </div>
               )}
             </div>
           </Link>
 
           {/* Desktop Menu - Dynamically render streams for current campus */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden md:flex items-center gap-4 lg:gap-6">
             {isCampusPage && navItems.map((item) => {
               const isActive = currentStream === item.stream
               return (
@@ -129,7 +149,7 @@ export function Navbar() {
                   href={`/${currentCampus}/${item.stream}`}
                   className={`text-[13px] font-bold transition-all duration-300 ${
                     isActive 
-                      ? 'text-[#0071E3] scale-105' 
+                      ? 'text-[#007AFF] scale-105' 
                       : 'text-[#434345] hover:text-black'
                   }`}
                 >
@@ -145,8 +165,8 @@ export function Navbar() {
               <button 
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-500 ${
                   isScrolled 
-                    ? 'text-[#0071E3] hover:bg-[#0071E3]/10' 
-                    : 'text-[#0071E3] hover:bg-white/10'
+                    ? 'text-[#007AFF] hover:bg-[#007AFF]/10' 
+                    : 'text-[#007AFF] hover:bg-white/10'
                 }`}
               >
                 🔥 썸머스쿨
@@ -212,7 +232,7 @@ export function Navbar() {
                           onClick={() => setMobileMenuOpen(false)}
                           className={`text-center py-3.5 rounded-xl font-bold text-[13px] active:scale-95 transition-all ${
                             isActive
-                              ? 'bg-[#0071E3]/10 text-[#0071E3]'
+                              ? 'bg-[#007AFF]/10 text-[#007AFF]'
                               : 'bg-[#F5F5F7] text-[#1D1D1F] hover:bg-black/5'
                           }`}
                         >
@@ -224,26 +244,26 @@ export function Navbar() {
                 </div>
               )}
               <div className="flex flex-col gap-2 mt-2">
-                <p className="text-[#0071E3] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
+                <p className="text-[#007AFF] font-extrabold text-sm px-2 mb-1 flex items-center gap-2">🔥 2026 썸머스쿨</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
                     href="/wonju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     원주점
                   </Link>
                   <Link 
                     href="/chuncheon/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     춘천점
                   </Link>
                   <Link 
                     href="/chungju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     충주점
                   </Link>

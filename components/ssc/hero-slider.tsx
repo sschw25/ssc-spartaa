@@ -165,7 +165,7 @@ export function HeroSlider({
               <div className="w-full max-w-[64rem] mx-auto px-4 sm:px-6">
                 <div className="max-w-3xl transform transition-all duration-700 ease-out translate-y-0 opacity-100">
                   <div className="fade-in-up" style={{ animation: i === current ? 'slideUp 0.8s ease-out forwards' : 'none' }}>
-                    <p className="text-[#86868B] text-[10px] sm:text-xs font-semibold tracking-[0.2em] uppercase mb-4 opacity-80">
+                    <p className="text-[#86868B] text-[11px] sm:text-xs font-semibold tracking-[0.18em] uppercase mb-4 opacity-80">
                       PREMIUM SPARTAN CENTER
                     </p>
                     <h2
@@ -193,7 +193,7 @@ export function HeroSlider({
                               scroll('cta')
                             }
                           }}
-                          className="rounded-full font-bold transition-all duration-300 bg-[#1D1D1F] text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)] hover:bg-black hover:scale-105 active:scale-95 btn-fluid"
+                          className="rounded-full font-semibold transition-all duration-300 bg-[#1D1D1F] text-white shadow-[0_4px_14px_rgba(0,0,0,0.15)] hover:shadow-[0_6px_20px_rgba(0,0,0,0.2)] hover:bg-black hover:scale-105 active:scale-95 btn-fluid"
                         >
                           {slide.ctaLabel}
                         </button>

@@ -12,7 +12,7 @@ export function MobileCtaBar({
   naverTalkUrl = CAMPUS_CONFIG.wonju.naverTalkUrl,
 }: MobileCtaBarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 p-3 bg-white border-t border-border-color md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-40 p-3 glass border-t border-white/40 md:hidden">
       <div className="grid grid-cols-2 gap-2">
         <a
           href={`tel:${phone}`}

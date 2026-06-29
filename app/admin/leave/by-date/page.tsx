@@ -361,7 +361,7 @@ export default function AdminLeaveByDatePage() {
   }
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav
         title="휴식반차 날짜별 현황"
         titleIcon={<CalendarIcon className="w-4 h-4 text-[#0071E3]" />}
@@ -476,13 +476,13 @@ export default function AdminLeaveByDatePage() {
                               )}
                               {act.consultations > 0 && (
                                 <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-700 border-emerald-100/50 truncate flex items-center gap-1">
-                                  <span>💬</span>
+                                  <MessageSquare className="w-3 h-3 shrink-0" />
                                   <span>상담 {act.consultations}</span>
                                 </div>
                               )}
                               {act.penalties > 0 && (
                                 <div className="text-[9px] font-extrabold px-1.5 py-0.5 rounded border bg-amber-50 text-amber-700 border-amber-100/50 truncate flex items-center gap-1">
-                                  <span>⚠️</span>
+                                  <ShieldAlert className="w-3 h-3 shrink-0" />
                                   <span>벌점 {act.penalties}</span>
                                 </div>
                               )}

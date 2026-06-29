@@ -10,11 +10,11 @@ export function Footer() {
         
         {/* SEO Internal Links */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 text-[12px] font-bold text-[#434345] border-b border-black/5 pb-6">
-          <a href="/wonju/gongmuwon" className="text-[#0071E3] hover:underline">원주 공무원학원</a>
+          <a href="/wonju/gongmuwon" className="text-[#007AFF] hover:underline">원주 공무원학원</a>
           <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
-          <a href="/chuncheon/gongmuwon" className="hover:text-[#0071E3] hover:underline">춘천 공무원학원</a>
+          <a href="/chuncheon/gongmuwon" className="hover:text-[#007AFF] hover:underline">춘천 공무원학원</a>
           <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
-          <a href="/chungju/gongmuwon" className="hover:text-[#0071E3] hover:underline">충주 공무원학원</a>
+          <a href="/chungju/gongmuwon" className="hover:text-[#007AFF] hover:underline">충주 공무원학원</a>
         </div>
 
         {/* Company Info Block */}
@@ -24,17 +24,17 @@ export function Footer() {
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-black/60">전화번호(원주) :</span>
-              <a href={`tel:${CAMPUS_CONFIG.wonju.phone}`} className="hover:text-[#0071E3]">{CAMPUS_CONFIG.wonju.phone}</a>
+              <a href={`tel:${CAMPUS_CONFIG.wonju.phone}`} className="hover:text-[#007AFF]">{CAMPUS_CONFIG.wonju.phone}</a>
             </div>
             <span className="w-[1px] h-2 bg-black/10 hidden sm:block" />
             <div className="flex items-center gap-2">
               <span className="font-semibold text-black/60">전화번호(춘천) :</span>
-              <a href={`tel:${CAMPUS_CONFIG.chuncheon.phone}`} className="hover:text-[#0071E3]">{CAMPUS_CONFIG.chuncheon.phone}</a>
+              <a href={`tel:${CAMPUS_CONFIG.chuncheon.phone}`} className="hover:text-[#007AFF]">{CAMPUS_CONFIG.chuncheon.phone}</a>
             </div>
             <span className="w-[1px] h-2 bg-black/10 hidden sm:block" />
             <div className="flex items-center gap-2">
               <span className="font-semibold text-black/60">전화번호(충주) :</span>
-              <a href={`tel:${CAMPUS_CONFIG.chungju.phone}`} className="hover:text-[#0071E3]">{CAMPUS_CONFIG.chungju.phone}</a>
+              <a href={`tel:${CAMPUS_CONFIG.chungju.phone}`} className="hover:text-[#007AFF]">{CAMPUS_CONFIG.chungju.phone}</a>
             </div>
           </div>
 

@@ -158,7 +158,7 @@ export default function OtEventsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav title="OT 참여 관리" titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
 
       <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
@@ -247,7 +247,7 @@ export default function OtEventsPage() {
                 ['미정', 'bg-slate-50 border-slate-200/70 text-slate-600', stats.undecided],
               ] as [string, string, number][]).map(([label, cls, count]) => (
                 <div key={label} className={`rounded-2xl border px-4 py-3 ${cls}`}>
-                  <p className="text-2xl font-black">{count}</p>
+                  <p className="text-[18px] font-semibold tracking-tight">{count}</p>
                   <p className="text-[11px] font-bold opacity-70 mt-0.5">{label}</p>
                 </div>
               ))}
@@ -309,7 +309,7 @@ export default function OtEventsPage() {
                               )}
                               {selfResponded && !pendingAbsence && <span className="rounded-lg bg-blue-50 text-blue-600 px-2 py-1 text-[10px] font-black">학생응답</span>}
                             </div>
-                            {absentReason && <p className="mt-1 text-[11px] font-semibold text-slate-400">💬 {absentReason}</p>}
+                            {absentReason && <p className="mt-1 text-[11px] font-semibold text-slate-400">{absentReason}</p>}
                             {pendingAbsence && (
                               <div className="mt-1.5 flex gap-1.5">
                                 <button type="button" disabled={isUpdating} onClick={() => setStatus(s.id, 'absent')}

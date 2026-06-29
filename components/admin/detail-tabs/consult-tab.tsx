@@ -10,9 +10,9 @@ import { LEAVE_TYPES } from '@/lib/leave';
 import type { DailyChecklistEntry } from '@/lib/student-activity';
 
 function leaveStatusChip(status: LeaveRequest['status']) {
-  if (status === 'approved') return <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-black text-emerald-700">승인</span>;
-  if (status === 'rejected') return <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-black text-red-600">반려</span>;
-  return <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700">대기중</span>;
+  if (status === 'approved') return <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">승인</span>;
+  if (status === 'rejected') return <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600">반려</span>;
+  return <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">대기중</span>;
 }
 
 interface ConsultTabProps {
@@ -122,40 +122,40 @@ export function ConsultTab({
 
         <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
           <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-500">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
               <Clock className="w-3.5 h-3.5" />
               실시간 공부타이머
             </p>
-            <p className={`mt-1 text-sm font-black ${attendanceLabel.tone}`}>{attendanceLabel.title}</p>
+            <p className={`mt-1 text-sm font-semibold ${attendanceLabel.tone}`}>{attendanceLabel.title}</p>
             <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{attendanceLabel.detail}</p>
           </div>
 
           <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-500">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
               <Timer className="w-3.5 h-3.5" />
               뽀모도로 집중
             </p>
-            <p className="mt-1 text-sm font-black text-[#0071E3]">
+            <p className="mt-1 text-sm font-semibold text-[#0071E3]">
               {todayPomodoroStats.sessions}세션 · {fmtMin(todayPomodoroStats.minutes)}
             </p>
             <p className="mt-0.5 text-[10px] font-semibold text-slate-400">학생 결과지에서 완료한 집중 기록</p>
           </div>
 
           <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-black text-slate-500">
+            <p className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
               <ClipboardCheck className="w-3.5 h-3.5" />
               자가점검표
             </p>
             {todayChecklist ? (
               <>
-                <p className="mt-1 text-sm font-black text-emerald-700">제출 완료{checklistSubmittedAt ? ` · ${checklistSubmittedAt}` : ''}</p>
+                <p className="mt-1 text-sm font-semibold text-emerald-700">제출 완료{checklistSubmittedAt ? ` · ${checklistSubmittedAt}` : ''}</p>
                 <p className="mt-0.5 text-[10px] font-semibold text-slate-400">
                   수면 {todayChecklist.sleep_hours ?? '-'}시간 · 휴대폰 {todayChecklist.phone_submitted ? '제출' : '미제출'}
                 </p>
               </>
             ) : (
               <>
-                <p className="mt-1 text-sm font-black text-amber-700">미제출</p>
+                <p className="mt-1 text-sm font-semibold text-amber-700">미제출</p>
                 <p className="mt-0.5 text-[10px] font-semibold text-slate-400">오늘 자가점검 기록이 없습니다.</p>
               </>
             )}
@@ -227,14 +227,14 @@ export function ConsultTab({
                 <div key={req.id} className="rounded-xl border border-black/[0.06] bg-[#F9F9FB] p-3 space-y-2">
                   {/* 상단: 종류·날짜·상태 */}
                   <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                    <span className="rounded-full bg-white border border-black/[0.08] px-1.5 py-0.5 font-black text-slate-700">
+                    <span className="rounded-full bg-white border border-black/[0.08] px-1.5 py-0.5 font-semibold text-slate-700">
                       {typeInfo?.label ?? req.type}
                     </span>
                     <span className="font-semibold text-slate-500">{req.date}</span>
                     {leaveStatusChip(req.status)}
                     {req.usedCoupon && (
                       <span className="rounded-full bg-amber-50 border border-amber-200 px-1.5 py-0.5 font-bold text-amber-700">
-                        🎟️ 쿠폰 사용
+                        쿠폰 사용
                       </span>
                     )}
                   </div>
@@ -247,7 +247,7 @@ export function ConsultTab({
                   {/* 기존 관리자 답변 */}
                   {req.adminReply && (
                     <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
-                      💬 답변: {req.adminReply}
+                      답변: {req.adminReply}
                     </div>
                   )}
 

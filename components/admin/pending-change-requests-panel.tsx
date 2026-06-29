@@ -43,10 +43,10 @@ export function PendingAdminTasksPanel({
             </div>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <h4 className="admin-fit-text text-sm font-black tracking-tight text-amber-900">
+                <h4 className="admin-fit-text text-sm font-semibold tracking-tight text-amber-900">
                   {title || `대기중 요청 ${totalRequestCount}건`}
                 </h4>
-                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black text-white">
+                <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
                   {rows.length}명
                 </span>
               </div>
@@ -54,9 +54,9 @@ export function PendingAdminTasksPanel({
                 {description || `학생별 요청 수와 신청 종류를 확인한 뒤 기존 학생 상세 시트에서 답변 및 처리할 수 있습니다.`}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-black text-amber-800">학습 변경 {totalChangeCount}건</span>
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-black text-amber-800">반차/휴가 {totalLeaveCount}건</span>
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-black text-amber-800">건의사항 {totalSuggestionCount}건</span>
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">학습 변경 {totalChangeCount}건</span>
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">반차/휴가 {totalLeaveCount}건</span>
+                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">건의사항 {totalSuggestionCount}건</span>
               </div>
             </div>
           </div>
@@ -77,17 +77,17 @@ export function PendingAdminTasksPanel({
               >
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-black text-[#1D1D1F]">{row.student.name}</span>
+                    <span className="font-semibold text-[#1D1D1F]">{row.student.name}</span>
                     <Badge className="rounded-md border border-black/[0.06] bg-[#F5F5F7] px-1.5 py-0.5 text-[9px] font-bold text-[#86868B]">
                       {getCampusLabel(row.student.campus)}
                     </Badge>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-800">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                       {rowCount}건
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {row.labels.map((label) => (
-                      <span key={label} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-black text-slate-500">
+                      <span key={label} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
                         {label}
                       </span>
                     ))}
@@ -96,7 +96,7 @@ export function PendingAdminTasksPanel({
                     {latestText}
                   </p>
                 </div>
-                <span className="inline-flex shrink-0 items-center justify-end gap-0.5 text-[11px] font-black text-amber-700 group-hover:underline">
+                <span className="inline-flex shrink-0 items-center justify-end gap-0.5 text-[11px] font-semibold text-amber-700 group-hover:underline">
                   바로 열기 <ArrowUpRight className="h-3.5 w-3.5" />
                 </span>
               </button>
@@ -105,7 +105,7 @@ export function PendingAdminTasksPanel({
         </div>
 
         {rows.length > visibleRows.length && (
-          <p className="text-[10px] font-extrabold text-amber-700">
+          <p className="text-[10px] font-semibold text-amber-700">
             외 {rows.length - visibleRows.length}명 더 있음
           </p>
         )}

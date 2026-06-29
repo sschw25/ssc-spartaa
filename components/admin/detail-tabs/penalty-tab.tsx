@@ -92,7 +92,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
         }`} />
         <div>
           <p className="text-xs font-bold text-slate-500">누적 벌점</p>
-          <p className={`text-2xl font-black ${
+          <p className={`text-[18px] font-semibold tracking-tight ${
             totalPenalty > 0 ? 'text-red-600' : totalPenalty < 0 ? 'text-emerald-600' : 'text-slate-400'
           }`}>
             {totalPenalty > 0 ? `+${totalPenalty}` : totalPenalty}점
@@ -106,12 +106,12 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
 
       {/* 등록 폼 */}
       <form onSubmit={handleAdd} className="rounded-2xl border border-black/[0.05] bg-[#F5F5F7] p-4 space-y-3">
-        <p className="text-xs font-black text-[#1D1D1F]">벌점 · 상점 부여</p>
+        <p className="text-xs font-semibold text-[#1D1D1F]">벌점 · 상점 부여</p>
         <div className="flex gap-2">
           <button
             type="button"
             onClick={() => setType('penalty')}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black border transition ${
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold border transition ${
               type === 'penalty'
                 ? 'bg-red-500 border-red-500 text-white'
                 : 'bg-white border-slate-200 text-slate-500 hover:border-red-300'
@@ -122,7 +122,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
           <button
             type="button"
             onClick={() => setType('bonus')}
-            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black border transition ${
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold border transition ${
               type === 'bonus'
                 ? 'bg-emerald-500 border-emerald-500 text-white'
                 : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300'
@@ -167,7 +167,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
           type="submit"
           disabled={saving}
           size="sm"
-          className="w-full rounded-xl text-xs font-black h-9"
+          className="w-full rounded-xl text-xs font-semibold h-9"
         >
           {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Plus className="w-3.5 h-3.5 mr-1.5" />}
           {type === 'penalty' ? '벌점' : '상점'} 부여
@@ -177,7 +177,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
       {/* 내역 */}
       <div className="rounded-2xl border border-black/[0.05] bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-black/[0.04] bg-[#F5F5F7]">
-          <p className="text-xs font-black text-[#1D1D1F]">내역 ({penalties.length}건)</p>
+          <p className="text-xs font-semibold text-[#1D1D1F]">내역 ({penalties.length}건)</p>
         </div>
         {penalties.length === 0 ? (
           <div className="py-10 text-center text-xs font-bold text-slate-400">
@@ -187,13 +187,13 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
           <div className="divide-y divide-black/[0.04]">
             {penalties.map((p) => (
               <div key={p.id} className="flex items-center gap-3 px-4 py-3 group">
-                <span className={`shrink-0 grid w-10 h-10 place-items-center rounded-xl text-sm font-black ${
+                <span className={`shrink-0 grid w-10 h-10 place-items-center rounded-xl text-sm font-semibold ${
                   p.type === 'penalty' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
                 }`}>
                   {p.type === 'penalty' ? '+' : '-'}{p.points}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-black text-[#1D1D1F] truncate">{p.reason}</p>
+                  <p className="text-xs font-semibold text-[#1D1D1F] truncate">{p.reason}</p>
                   <p className="text-[10px] font-bold text-slate-400 mt-0.5">
                     {p.date} · {p.awardedBy}
                   </p>

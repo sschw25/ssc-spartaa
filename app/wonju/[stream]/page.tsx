@@ -16,6 +16,8 @@ export function generateStaticParams() {
     { stream: 'professional' },
     { stream: 'job' },
     { stream: 'managed' },
+    { stream: 'police' },
+    { stream: 'fire' },
   ]
 }
 

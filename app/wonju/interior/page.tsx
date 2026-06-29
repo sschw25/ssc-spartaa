@@ -49,7 +49,7 @@ export default function WonjuInteriorPage() {
             <ChevronLeft size={16} />
             원주 홈으로
           </Link>
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-2">내부시설</h1>
+          <h1 className="text-3xl md:text-4xl font-semibold text-white mb-2">내부시설</h1>
           <p className="text-white/70 text-base">공부가 유지될 수밖에 없는 구조</p>
         </div>
       </div>

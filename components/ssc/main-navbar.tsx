@@ -30,8 +30,8 @@ export function MainNavbar() {
     <>
       <nav 
         className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
-          isScrolled 
-            ? 'py-3 bg-white/80 backdrop-blur-xl border-b border-black/[0.05] shadow-sm' 
+          isScrolled
+            ? 'py-3 glass border-b border-white/40'
             : 'py-5 bg-transparent'
         }`}
       >
@@ -71,8 +71,8 @@ export function MainNavbar() {
               <button 
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-bold transition-all duration-300 ${
                   isScrolled 
-                    ? 'text-[#0071E3] hover:bg-[#0071E3]/10' 
-                    : 'text-[#0071E3] hover:bg-white/10'
+                    ? 'text-[#007AFF] hover:bg-[#007AFF]/10' 
+                    : 'text-[#007AFF] hover:bg-white/10'
                 }`}
               >
                 🔥 썸머스쿨
@@ -143,26 +143,26 @@ export function MainNavbar() {
 
               {/* Mobile Summer School Info */}
               <div className="flex flex-col gap-2">
-                <p className="text-[#0071E3] font-extrabold text-sm px-1 mb-1">🔥 2026 썸머스쿨 바로가기</p>
+                <p className="text-[#007AFF] font-extrabold text-sm px-1 mb-1">🔥 2026 썸머스쿨 바로가기</p>
                 <div className="grid grid-cols-3 gap-2">
                   <Link 
                     href="/wonju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     원주점
                   </Link>
                   <Link 
                     href="/chuncheon/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     춘천점
                   </Link>
                   <Link 
                     href="/chungju/summer" 
                     onClick={() => setMobileMenuOpen(false)}
-                    className="bg-[#0071E3]/5 text-[#0071E3] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
+                    className="bg-[#007AFF]/5 text-[#007AFF] text-center py-4 rounded-xl font-bold text-[13px] active:scale-95 transition-all"
                   >
                     충주점
                   </Link>

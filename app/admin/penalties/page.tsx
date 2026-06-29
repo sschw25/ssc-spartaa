@@ -83,7 +83,7 @@ export default function PenaltiesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav title="벌점 · 상점 관리" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-5">
@@ -119,21 +119,21 @@ export default function PenaltiesPage() {
 
         {/* 요약 통계 */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-2xl border border-red-200/70 bg-red-50 px-4 py-3">
-            <p className="text-2xl font-black text-red-700">{withPenalty.length}</p>
-            <p className="text-[11px] font-bold text-red-500 opacity-80 mt-0.5">벌점 보유 원생</p>
+          <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+            <p className="text-[18px] leading-none font-semibold tracking-tight text-red-600">{withPenalty.length}</p>
+            <p className="text-[12px] font-medium text-[#86868B] mt-2">벌점 보유 원생</p>
           </div>
-          <div className="rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-3">
-            <p className="text-2xl font-black text-slate-700">
+          <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+            <p className="text-[18px] leading-none font-semibold tracking-tight text-[#1d1d1f]">
               {filtered.reduce((s, st) => s + (st.penalties || []).filter((p) => p.type === 'penalty').reduce((a, p) => a + p.points, 0), 0)}
             </p>
-            <p className="text-[11px] font-bold text-slate-400 mt-0.5">총 벌점</p>
+            <p className="text-[12px] font-medium text-[#86868B] mt-2">총 벌점</p>
           </div>
-          <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50 px-4 py-3">
-            <p className="text-2xl font-black text-emerald-700">
+          <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+            <p className="text-[18px] leading-none font-semibold tracking-tight text-emerald-600">
               {filtered.reduce((s, st) => s + (st.penalties || []).filter((p) => p.type === 'bonus').reduce((a, p) => a + p.points, 0), 0)}
             </p>
-            <p className="text-[11px] font-bold text-emerald-500 opacity-80 mt-0.5">총 상점</p>
+            <p className="text-[12px] font-medium text-[#86868B] mt-2">총 상점</p>
           </div>
         </div>
 

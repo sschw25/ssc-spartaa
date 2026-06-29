@@ -57,7 +57,7 @@ export function StickySubNav() {
   if (!isVisible) return <div className="h-0" />
 
   return (
-    <nav className="sticky top-14 md:top-16 z-40 bg-white/90 backdrop-blur-md border-b border-black/[0.05] transition-all duration-500 animate-in fade-in slide-in-from-top-4">
+    <nav className="sticky top-14 md:top-16 z-40 glass border-b border-white/40 transition-all duration-500 animate-in fade-in slide-in-from-top-4">
       <div className="max-w-[64rem] mx-auto px-4 overflow-x-auto no-scrollbar">
         <ul className="flex items-center justify-between md:justify-center md:gap-12 min-w-max h-12">
           {TABS.map((tab) => (

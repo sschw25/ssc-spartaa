@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next'
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = 'https://www.sscsparta.com'
   const campuses = ['wonju', 'chuncheon', 'chungju']
-  const streams = ['gongmuwon', 'suneung', 'imyong', 'professional', 'job', 'managed']
+  const streams = ['gongmuwon', 'police', 'fire', 'suneung', 'imyong', 'professional', 'job', 'managed']
   
   const routes: MetadataRoute.Sitemap = [
     {

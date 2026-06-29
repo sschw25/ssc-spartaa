@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Users, User, Calendar, BarChart3, Search, Plus, Minus, LogOut, Loader2,
   AlertTriangle, ChevronRight, SlidersHorizontal, BookOpen,
-  LayoutGrid, Table, RefreshCw
+  LayoutGrid, Table, RefreshCw, Monitor
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
@@ -601,7 +601,7 @@ function ConsultationContent() {
   };
 
   return (
-    <div className="admin-fluid-ui min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans selection:bg-black/10">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans selection:bg-black/10">
       
       {/* Navbar */}
       <AdminTopNav
@@ -648,10 +648,10 @@ function ConsultationContent() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
-        
+      <main className="max-w-7xl mx-auto p-4 md:p-8 pb-28 space-y-6">
+
         {/* 필터 및 검색 바 */}
-        <div className="admin-fit-box flex flex-col gap-3.5 bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
+        <div className="admin-fit-box flex flex-col gap-3.5 bg-white p-5 rounded-3xl border border-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
           <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
             <div className="relative flex-1 max-w-md admin-mobile-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B]" />
@@ -660,7 +660,7 @@ function ConsultationContent() {
                 placeholder="수강생 이름 또는 교재명을 입력해 주세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-xl border-black/[0.08] text-xs h-10 bg-[#F5F5F7]"
+                className="pl-10 rounded-2xl border-transparent text-[13px] h-11 bg-black/[0.04]"
               />
             </div>
 
@@ -680,7 +680,7 @@ function ConsultationContent() {
             {/* 캠퍼스(센터) 필터 */}
             <div className="flex items-center gap-2.5">
               <span className="font-extrabold text-[#86868B] shrink-0">캠퍼스</span>
-              <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] shrink-0">
+              <div className="glass-capsule flex items-center p-1 rounded-full shrink-0">
                 {CAMPUS_FILTERS.map((c) => (
                   <Button
                     key={c}
@@ -702,7 +702,7 @@ function ConsultationContent() {
             {/* 퀵 필터 (상담/진도/정체/미입력) */}
             <div className="flex items-center gap-2.5 flex-wrap">
               <span className="font-extrabold text-[#86868B] shrink-0">상태 필터</span>
-              <div className="flex flex-wrap items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04] gap-0.5">
+              <div className="glass-capsule flex flex-wrap items-center p-1 rounded-2xl gap-0.5">
                 <Button
                   variant={quickFilter === 'all' ? 'default' : 'ghost'}
                   size="sm"
@@ -724,8 +724,8 @@ function ConsultationContent() {
                       : 'text-[#86868B] hover:text-red-500 hover:bg-red-50/40'
                   }`}
                 >
-                  <span className="mr-1">🔴</span>
-                  진도 정체 {stagnantCount > 0 && <span className="ml-0.5 bg-red-100 text-red-800 rounded-full px-1.5 py-0.2 text-[9px] font-black">{stagnantCount}</span>}
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 inline-block" />
+                  진도 정체 {stagnantCount > 0 && <span className="ml-0.5 bg-red-500/15 text-red-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">{stagnantCount}</span>}
                 </Button>
                 
                 <Button
@@ -738,8 +738,8 @@ function ConsultationContent() {
                       : 'text-[#86868B] hover:text-orange-500 hover:bg-orange-50/40'
                   }`}
                 >
-                  <span className="mr-1">🟠</span>
-                  진도 지연 {behindCount > 0 && <span className="ml-0.5 bg-orange-100 text-orange-800 rounded-full px-1.5 py-0.2 text-[9px] font-black">{behindCount}</span>}
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5 inline-block" />
+                  진도 지연 {behindCount > 0 && <span className="ml-0.5 bg-orange-500/15 text-orange-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">{behindCount}</span>}
                 </Button>
 
                 <Button
@@ -752,8 +752,8 @@ function ConsultationContent() {
                       : 'text-[#86868B] hover:text-amber-600 hover:bg-amber-50/40'
                   }`}
                 >
-                  <span className="mr-1">⚠️</span>
-                  성적 미입력 {missingGradeCount > 0 && <span className="ml-0.5 bg-amber-100 text-amber-800 rounded-full px-1.5 py-0.2 text-[9px] font-black">{missingGradeCount}</span>}
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 inline-block" />
+                  성적 미입력 {missingGradeCount > 0 && <span className="ml-0.5 bg-amber-500/15 text-amber-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold">{missingGradeCount}</span>}
                 </Button>
 
                 <Button
@@ -766,8 +766,8 @@ function ConsultationContent() {
                       : 'text-[#86868B] hover:text-[#0071E3] hover:bg-blue-50/40'
                   }`}
                 >
-                  <span className="mr-1">💬</span>
-                  상담 대상 {consultationCount > 0 && <span className="ml-0.5 bg-blue-100 text-[#0071E3] rounded-full px-1.5 py-0.2 text-[9px] font-black">{consultationCount}</span>}
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] mr-1.5 inline-block" />
+                  상담 대상 {consultationCount > 0 && <span className="ml-0.5 bg-[#0071E3]/15 text-[#0071E3] rounded-full px-1.5 py-0.5 text-[10px] font-semibold">{consultationCount}</span>}
                 </Button>
               </div>
             </div>
@@ -932,7 +932,7 @@ function ConsultationContent() {
                                           <div key={item.id} className="space-y-1">
                                             <div className="admin-fit-row flex items-center justify-between gap-2">
                                               <span className="admin-fit-text admin-fit-caption font-semibold text-[#434345]">
-                                                {item.type === 'book' ? '📚' : '💻'} {item.title}
+                                                {item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />} {item.title}
                                               </span>
                                               <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 현재 {item.current}/{item.total}{item.unit}
@@ -1073,7 +1073,7 @@ function ConsultationContent() {
                                           summary.activeItems.map((item, idx) => (
                                             <span key={item.id} className="text-[#434345] inline-flex items-center gap-1">
                                               {idx > 0 && <span className="text-black/10">|</span>}
-                                              <span className="text-[10px]">{item.type === 'book' ? '📚' : '💻'}</span>
+                                              <span className="text-[10px]">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
                                               <span>{item.title}</span>
                                               <span className={`font-bold ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 ({item.current}/{item.total}{item.unit}, {item.percent}%)
@@ -1209,7 +1209,7 @@ function ConsultationContent() {
                             
                             <td className="p-3.5 pl-6 font-bold text-[#1D1D1F] min-w-[240px]">
                               <div className="flex items-start gap-2">
-                                <span className="shrink-0">{item.type === 'book' ? '📚' : '💻'}</span>
+                                <span className="shrink-0">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
                                 <div className="min-w-0">
                                   <p className="truncate">{item.title}</p>
                                   <p className="text-[10px] text-[#86868B] mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
@@ -1350,7 +1350,7 @@ function ConsultationContent() {
                             <div className="min-w-0">
                               <span className="text-[10px] text-[#86868B]">{item.subjectName}</span>
                               <h4 className="font-bold text-[#1D1D1F] truncate mt-0.5">
-                                {item.type === 'book' ? '📚' : '💻'} {item.title}
+                                {item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />} {item.title}
                               </h4>
                             </div>
                             <span className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[9px] font-bold shrink-0 ${getProgressStatusStyle(item.status)}`}>

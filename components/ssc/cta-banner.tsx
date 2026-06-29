@@ -58,7 +58,7 @@ export function CtaBanner({
 
           <div className="mt-8 pt-8 border-t border-black/5">
             <p className="text-sm font-medium text-[#86868B]">
-              또는 <a href={naverTalkUrl} target="_blank" rel="noopener noreferrer" className="text-[#0071E3] font-semibold hover:underline">네이버 톡톡</a>으로 간편하게 문의하실 수 있습니다.
+              또는 <a href={naverTalkUrl} target="_blank" rel="noopener noreferrer" className="text-[#007AFF] font-semibold hover:underline">네이버 톡톡</a>으로 간편하게 문의하실 수 있습니다.
             </p>
           </div>
         </div>

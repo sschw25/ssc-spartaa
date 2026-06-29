@@ -154,14 +154,14 @@ export default function SelectLocation() {
       {/* Background Soft Glow (Clean Apple Light) */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div className="absolute top-[0%] left-[50%] -translate-x-1/2 w-[100%] h-[40%] bg-gradient-to-b from-white/80 via-white/40 to-transparent blur-[120px] rounded-[100%]" />
-        <div className="absolute bottom-[10%] right-[0%] w-[50%] h-[30%] bg-[#0071E3]/05 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[10%] right-[0%] w-[50%] h-[30%] bg-[#007AFF]/5 blur-[120px] rounded-full" />
       </div>
 
       <div className="relative z-10 flex flex-col flex-1 pt-12">
         {/* Header Section */}
         <header className="pt-16 md:pt-24 pb-20 px-6 text-center max-w-5xl mx-auto">
           <BlurFade delay={0.1} yOffset={20}>
-            <p className="text-[#86868B] text-[10px] sm:text-xs font-bold tracking-[0.4em] uppercase mb-6 opacity-80">
+            <p className="text-[#86868B] text-[10px] sm:text-xs font-semibold tracking-[0.18em] uppercase mb-6 opacity-80">
               Supreme Spartan Control
             </p>
           </BlurFade>
@@ -192,7 +192,7 @@ export default function SelectLocation() {
               {programs.map((p) => (
                 <div
                   key={p}
-                  className="px-5 py-3.5 sm:py-2 rounded-2xl sm:rounded-full text-[11px] sm:text-xs font-bold sm:font-semibold uppercase tracking-widest border border-black/[0.05] bg-white text-[#1D1D1F] shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-300 cursor-default flex items-center justify-center text-center"
+                  className="px-5 py-3.5 sm:py-2 rounded-2xl sm:rounded-full text-[11px] sm:text-xs font-semibold tracking-tight border border-black/[0.05] bg-white text-[#1D1D1F] shadow-sm hover:shadow-md hover:-translate-y-[1px] transition-all duration-300 cursor-default flex items-center justify-center text-center"
                 >
                   {p}
                 </div>
@@ -213,8 +213,8 @@ export default function SelectLocation() {
         <div id="campuses" className="flex-1 px-6 py-32 md:py-48 bg-white/30 scroll-mt-32">
           <div className="max-w-[72rem] mx-auto text-center mb-20 md:mb-24">
             <BlurFade delay={0.1}>
-              <p className="text-[#0071E3] text-[11px] font-extrabold tracking-[0.25em] uppercase mb-5">Campuses</p>
-              <h2 className="text-[#1D1D1F] text-3xl md:text-5xl lg:text-6xl font-bold tracking-tighter text-balance">당신의 단기합격을 증명할 장소</h2>
+              <p className="text-[#007AFF] text-[11px] font-semibold tracking-[0.18em] uppercase mb-5">Campuses</p>
+              <h2 className="text-[#1D1D1F] text-3xl md:text-5xl lg:text-6xl font-semibold tracking-tight text-balance">당신의 단기합격을 증명할 장소</h2>
             </BlurFade>
           </div>
           <div className="max-w-[64rem] mx-auto flex flex-col md:flex-row gap-8 md:gap-10 justify-center">
@@ -245,13 +245,13 @@ export default function SelectLocation() {
                         <div className="flex flex-col flex-1 p-8 md:p-10 relative z-10 bg-white">
                           <div className="flex items-start justify-between gap-4 mb-6">
                             <div>
-                              <p className="text-[#86868B] text-[10px] font-bold tracking-[0.25em] uppercase mb-2">
+                              <p className="text-[#86868B] text-[10px] font-semibold tracking-[0.18em] uppercase mb-2">
                                 {loc.id} CAMPUS
                               </p>
-                              <h2 className="text-[#1D1D1F] text-3xl md:text-4xl font-bold tracking-tighter mb-2">{loc.name}</h2>
+                              <h2 className="text-[#1D1D1F] text-3xl md:text-4xl font-semibold tracking-tight mb-2">{loc.name}</h2>
                               <p className="font-semibold text-xs sm:text-sm text-[#434345] tracking-tight whitespace-pre-line leading-relaxed">{loc.tagline}</p>
                             </div>
-                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-[#F5F5F7] text-[#1D1D1F] group-hover:bg-[#0071E3] group-hover:text-white transition-all duration-500 ease-out shadow-sm group-hover:shadow-lg group-hover:-translate-y-1">
+                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full flex items-center justify-center flex-shrink-0 bg-[#F5F5F7] text-[#1D1D1F] group-hover:bg-[#007AFF] group-hover:text-white transition-all duration-500 ease-out shadow-sm group-hover:shadow-lg group-hover:-translate-y-1">
                               <ChevronRight size={20} />
                             </div>
                           </div>
@@ -282,13 +282,13 @@ export default function SelectLocation() {
           </div>
 
           {/* Quick Links for SEO & User Convenience */}
-          <div className="max-w-[64rem] mx-auto mt-16 pt-8 border-t border-black/[0.05] flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-xs md:text-sm font-bold">
+          <div className="max-w-[64rem] mx-auto mt-16 pt-8 border-t border-black/[0.05] flex flex-wrap justify-center items-center gap-x-6 gap-y-3 text-xs md:text-sm font-semibold">
             <span className="text-[#86868B] cursor-default">바로가기:</span>
-            <Link href="/wonju/gongmuwon" className="text-[#0071E3] hover:underline">원주 공무원학원</Link>
+            <Link href="/wonju/gongmuwon" className="text-[#007AFF] hover:underline">원주 공무원학원</Link>
             <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
-            <Link href="/chuncheon/gongmuwon" className="text-[#434345] hover:text-[#0071E3] hover:underline">춘천 공무원학원</Link>
+            <Link href="/chuncheon/gongmuwon" className="text-[#434345] hover:text-[#007AFF] hover:underline">춘천 공무원학원</Link>
             <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
-            <Link href="/chungju/gongmuwon" className="text-[#434345] hover:text-[#0071E3] hover:underline">충주 공무원학원</Link>
+            <Link href="/chungju/gongmuwon" className="text-[#434345] hover:text-[#007AFF] hover:underline">충주 공무원학원</Link>
           </div>
         </div>
 

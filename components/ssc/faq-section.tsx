@@ -33,7 +33,7 @@ export function FAQSection({ faqList }: FaqSectionProps) {
               className="w-full px-6 py-4 flex items-center justify-between text-left font-bold text-sm md:text-base hover:bg-[#F8F9FA] transition-colors"
             >
               <span className="flex items-center gap-2">
-                <HelpCircle size={18} className="text-[#0071E3] shrink-0" />
+                <HelpCircle size={18} className="text-[#007AFF] shrink-0" />
                 {faq.question}
               </span>
               <ChevronDown

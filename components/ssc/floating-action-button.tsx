@@ -49,17 +49,17 @@ export function FloatingActionButton() {
           href={config.naverMapUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-3 bg-white/90 backdrop-blur-md shadow-lg rounded-full py-3 px-4 hover:bg-[#F5F5F7] transition-colors border border-black/5"
+          className="flex items-center gap-3 glass-strong rounded-full py-3 px-4 hover:bg-white transition-colors"
         >
           <span className="text-[13px] font-medium text-[#1D1D1F] whitespace-nowrap">방문 상담(지도)</span>
-          <div className="w-8 h-8 rounded-full bg-[#E5F1FF] text-[#0071E3] flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-[#E5F1FF] text-[#007AFF] flex items-center justify-center">
             <MapPin size={16} />
           </div>
         </a>
 
         <a
           href={`tel:${config.phone}`}
-          className="flex items-center gap-3 bg-white/90 backdrop-blur-md shadow-lg rounded-full py-3 px-4 hover:bg-[#F5F5F7] transition-colors border border-black/5"
+          className="flex items-center gap-3 glass-strong rounded-full py-3 px-4 hover:bg-white transition-colors"
         >
           <span className="text-[13px] font-medium text-[#1D1D1F] whitespace-nowrap">전화 문의하기</span>
           <div className="w-8 h-8 rounded-full bg-[#E5F8EB] text-[#34C759] flex items-center justify-center">
@@ -69,7 +69,7 @@ export function FloatingActionButton() {
 
         <button
           onClick={scrollToTop}
-          className="flex items-center gap-3 bg-white/90 backdrop-blur-md shadow-lg rounded-full py-3 px-4 hover:bg-[#F5F5F7] transition-colors border border-black/5"
+          className="flex items-center gap-3 glass-strong rounded-full py-3 px-4 hover:bg-white transition-colors"
         >
           <span className="text-[13px] font-medium text-[#1D1D1F] whitespace-nowrap">맨 위로 가기</span>
           <div className="w-8 h-8 rounded-full bg-[#F5F5F7] text-[#1D1D1F] flex items-center justify-center">

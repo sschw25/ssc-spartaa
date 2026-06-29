@@ -57,14 +57,14 @@ export function MissionSummaryWidget() {
   return (
     <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-sm font-black text-[#1D1D1F]">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-[#1D1D1F]">
           <Trophy className="w-4 h-4 text-amber-500" /> 쿠폰 미션 현황
         </h3>
         <div className="flex items-center gap-1">
           <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-[#86868B] hover:bg-[#F5F5F7] transition">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button onClick={() => router.push('/admin/missions')} className="flex items-center gap-0.5 rounded-lg px-2 py-1 text-[11px] font-black text-[#0071E3] hover:bg-blue-50 transition">
+          <button onClick={() => router.push('/admin/missions')} className="flex items-center gap-0.5 rounded-lg px-2 py-1 text-[13px] font-medium text-[#0071E3] hover:bg-blue-50 transition">
             설정 <ChevronRight className="w-3 h-3" />
           </button>
         </div>
@@ -76,17 +76,17 @@ export function MissionSummaryWidget() {
         <>
           <div className="mt-4 grid grid-cols-3 gap-2.5">
             {([
-              ['이번 달', data?.month, 'from-purple-50 to-white border-purple-100 text-purple-700'],
-              ['이번 주', data?.week, 'from-blue-50 to-white border-blue-100 text-blue-700'],
-              ['오늘', data?.today, 'from-emerald-50 to-white border-emerald-100 text-emerald-700'],
+              ['이번 달', data?.month, 'bg-black/[0.03] text-[#1d1d1f]'],
+              ['이번 주', data?.week, 'bg-[#0071E3]/[0.08] text-[#0071E3]'],
+              ['오늘', data?.today, 'bg-emerald-500/10 text-emerald-600'],
             ] as [string, Bucket | undefined, string][]).map(([label, b, cls]) => (
-              <div key={label} className={`rounded-2xl border bg-gradient-to-br ${cls} px-3 py-2.5`}>
-                <p className="text-[10px] font-extrabold opacity-70">{label} 지급</p>
+              <div key={label} className={`rounded-2xl px-3 py-3 ${cls}`}>
+                <p className="text-[11px] font-medium text-[#86868B]">{label} 지급</p>
                 <p className="mt-1 flex items-baseline gap-0.5">
-                  <span className="text-xl font-black">{b?.coupons ?? 0}</span>
-                  <span className="text-[10px] font-bold opacity-70">장</span>
+                  <span className="text-[18px] leading-none font-semibold tracking-tight">{b?.coupons ?? 0}</span>
+                  <span className="text-[11px] font-medium text-[#86868B]">장</span>
                 </p>
-                <p className="text-[10px] font-semibold text-[#86868B]">{b?.students ?? 0}명 수령</p>
+                <p className="text-[11px] text-[#86868B]">{b?.students ?? 0}명 수령</p>
               </div>
             ))}
           </div>
@@ -96,7 +96,7 @@ export function MissionSummaryWidget() {
               {data.byMission.slice(0, 4).map((m) => (
                 <div key={m.missionName} className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
                   <span className="truncate">{m.missionName}</span>
-                  <span className="flex items-center gap-1 shrink-0 text-amber-600 font-black">
+                  <span className="flex items-center gap-1 shrink-0 text-amber-600 font-semibold">
                     <Ticket className="w-3 h-3" /> {m.coupons}장 · {m.students}명
                   </span>
                 </div>

@@ -23,7 +23,7 @@ interface MissionsData {
 const periodLabel = (p: Mission['period']) => (p === 'weekly' ? '매주' : p === 'monthly' ? '매월' : p === 'daily' ? '매일' : 'OT');
 const periodCls = (p: Mission['period']) =>
   p === 'weekly' ? 'bg-blue-50 text-blue-600'
-  : p === 'monthly' ? 'bg-purple-50 text-purple-600'
+  : p === 'monthly' ? 'bg-slate-100 text-slate-600'
   : p === 'daily' ? 'bg-emerald-50 text-emerald-600'
   : 'bg-amber-50 text-amber-600';
 
@@ -99,7 +99,7 @@ export function MissionsCard() {
               </div>
               <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{m.describe}</p>
               {!m.earned && m.progress && (
-                <p className="text-[11px] font-bold text-[#0071E3] mt-1">📊 {m.progress}</p>
+                <p className="text-[11px] font-bold text-[#0071E3] mt-1">{m.progress}</p>
               )}
             </div>
           </div>

@@ -4,6 +4,8 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import { AdminGlobalProvider, useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
+import { AdminGlassTabBar } from '@/components/admin/admin-glass-tabbar';
+import { cn } from '@/lib/utils';
 
 function GlobalStudentSheet() {
   const { selectedStudent, isSheetOpen, closeSheet, updateSheetStudent, sheetCallbacks } = useAdminGlobalSheet();
@@ -29,6 +31,7 @@ function GlobalStudentSheet() {
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { isMenuPinned } = useAdminGlobalSheet();
   const isLoginPage = pathname === '/admin';
 
   if (isLoginPage) {
@@ -37,8 +40,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      {children}
+      {/* 메뉴 고정 시 PC(lg+)에서 좌측 사이드바(280px)만큼 본문을 밀어준다 */}
+      <div className={cn('transition-[padding] duration-300', isMenuPinned && 'lg:pl-[280px]')}>
+        {children}
+      </div>
       <GlobalStudentSheet />
+      {/* 고정 사이드바가 보일 땐 데스크톱에서 하단 탭바 숨김(중복 방지) */}
+      <div className={cn(isMenuPinned && 'lg:hidden')}>
+        <AdminGlassTabBar />
+      </div>
     </>
   );
 }

@@ -68,7 +68,7 @@ export function SaturdayLateExcuseNotice({
           <AlertCircle className="w-5 h-5" />
         </div>
         <div className="space-y-1">
-          <h4 className="text-sm font-black text-slate-900">⏰ 토요 지각 · 결석 사유 증빙 요청</h4>
+          <h4 className="text-sm font-black text-slate-900">토요 지각 · 결석 사유 증빙 요청</h4>
           <p className="text-[11px] font-semibold text-slate-500 leading-normal">
             <b>{target.date}</b> 토요일에 반차/휴가 신청 없이 등원하지 않은 내역이 확인되었습니다. <br />
             정상 참작을 위해 지각/결석 사유를 입력하여 제출해 주시기 바랍니다.

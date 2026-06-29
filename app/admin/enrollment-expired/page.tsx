@@ -96,7 +96,7 @@ export default function EnrollmentExpiredPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav title="만료 경고 원생 목록" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
@@ -169,7 +169,7 @@ export default function EnrollmentExpiredPage() {
             <p className={`text-sm font-black ${filtered.length > 0 ? 'text-red-800' : 'text-slate-400'}`}>
               {filtered.length > 0
                 ? `만료 경고 원생 ${filtered.length}명 · 결제 확인 필요`
-                : '만료 경고 원생이 없습니다 🟢'}
+                : '만료 경고 원생이 없습니다'}
             </p>
             {filtered.length > 0 && (
               <p className="text-[11px] font-semibold text-red-600 mt-0.5">
@@ -188,7 +188,7 @@ export default function EnrollmentExpiredPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-sm font-bold text-slate-400">
-              {searchQuery ? '검색 결과가 없습니다.' : '만료 경고 원생이 없습니다 🟢'}
+              {searchQuery ? '검색 결과가 없습니다.' : '만료 경고 원생이 없습니다'}
             </div>
           ) : (
             <div className="overflow-x-auto">

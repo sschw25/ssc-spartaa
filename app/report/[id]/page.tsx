@@ -183,7 +183,7 @@ function StudentReportInner() {
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
             </div>
-            <h1 className="text-base font-black text-[#1D1D1F]">리포트 비밀번호</h1>
+            <h1 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F]">리포트 비밀번호</h1>
             <p className="text-[11px] text-[#86868B] leading-relaxed">
               담당 코치에게 받은 6자리 비밀번호를 입력해 주세요.
             </p>
@@ -202,7 +202,7 @@ function StudentReportInner() {
                 setSharePasswordError('');
               }}
               placeholder="000000"
-              className="w-full text-center text-2xl font-black tracking-[0.3em] border border-black/[0.1] rounded-2xl px-4 py-3 outline-none focus:border-[#0071E3] transition-colors bg-[#FAFAFA]"
+              className="w-full text-center text-2xl font-semibold tracking-[0.3em] border border-black/[0.08] rounded-2xl px-4 py-3.5 outline-none focus:border-[#0071E3] transition-colors bg-black/[0.03]"
               autoFocus
             />
             {sharePasswordError && (
@@ -211,7 +211,7 @@ function StudentReportInner() {
             <button
               type="submit"
               disabled={sharePasswordInput.length !== 6 || sharePasswordChecking}
-              className="w-full rounded-2xl bg-[#0071E3] text-white text-[13px] font-black py-3 hover:bg-[#0077ED] transition-colors disabled:opacity-40"
+              className="w-full rounded-2xl bg-[#0071E3] text-white text-[15px] font-semibold py-3.5 hover:bg-[#0077ED] transition-colors disabled:opacity-40"
             >
               {sharePasswordChecking ? '확인 중...' : '리포트 열기'}
             </button>

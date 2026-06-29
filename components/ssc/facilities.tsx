@@ -68,7 +68,7 @@ export function Facilities({ facilities }: { facilities?: FacilityItem[] } = {})
       <div className="max-w-[72rem] mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="mb-16 text-center fade-in-up">
-          <p className="text-[#0071E3] text-xs font-bold tracking-[0.3em] uppercase mb-4">World-Class Environment</p>
+          <p className="text-[#007AFF] text-xs font-bold tracking-[0.3em] uppercase mb-4">World-Class Environment</p>
           <h2 className="section-title mb-8 leading-tight">
             <RhythmicText text={"공부가 유지될 수밖에 없는\n압도적 몰입의 공간"} />
           </h2>

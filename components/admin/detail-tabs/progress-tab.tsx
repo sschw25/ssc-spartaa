@@ -235,7 +235,7 @@ export function ProgressTab() {
                 <div className="rounded-lg bg-[#F5F5F7]/70 border border-black/[0.03] p-3 text-[10px] leading-relaxed text-[#86868B] space-y-1">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <p className="font-bold text-[#6E6E73] flex items-center">
-                      💡 빠른 입력 가이드 및 예시
+                      빠른 입력 가이드 및 예시
                     </p>
                     <button
                       type="button"
@@ -309,7 +309,7 @@ export function ProgressTab() {
               <div className="admin-fit-box p-5 rounded-2xl border border-black/[0.06] bg-[#F5F5F7] space-y-4 shadow-sm">
                 <div className="flex items-center justify-between border-b border-black/[0.04] pb-2">
                   <h3 className="text-xs font-bold text-[#1D1D1F] flex items-center">
-                    📚 통합 학습 자료(교재/인강) 추가
+                    통합 학습 자료(교재/인강) 추가
                   </h3>
                   <div className="flex bg-black/[0.05] p-0.5 rounded-lg">
                     <button
@@ -1094,7 +1094,7 @@ export function ProgressTab() {
                                     {/* 목표 설정 영역 */}
                                     <div className="p-3 bg-black/[0.02] rounded-xl border border-black/[0.03] space-y-2.5">
                                       <Label className="text-[10px] font-bold text-[#1D1D1F] flex items-center">
-                                        🎯 학습 목표 설정
+                                        학습 목표 설정
                                       </Label>
                                       
                                       <div className="space-y-2">
@@ -1167,7 +1167,7 @@ export function ProgressTab() {
                                     {/* 주간 학습 계획 테이블 */}
                                     {book.targetDate && (
                                       <div className="pt-2 border-t border-black/[0.03] space-y-2">
-                                        <Label className="text-[10px] font-bold text-[#434345]">📆 주간 학습 계획표 (학습 요일 기준)</Label>
+                                        <Label className="text-[10px] font-bold text-[#434345]">주간 학습 계획표 (학습 요일 기준)</Label>
                                         
                                         {!hasDetailedPlans ? (
                                           <p className="text-[9px] text-[#86868B] py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>
@@ -1490,7 +1490,7 @@ export function ProgressTab() {
                                     {/* 목표 설정 영역 */}
                                     <div className="p-3 bg-black/[0.02] rounded-xl border border-black/[0.03] space-y-2.5">
                                       <Label className="text-[10px] font-bold text-[#1D1D1F] flex items-center">
-                                        🎯 학습 목표 설정
+                                        학습 목표 설정
                                       </Label>
                                       
                                       <div className="space-y-2">
@@ -1595,7 +1595,7 @@ export function ProgressTab() {
                                     {/* 주간 학습 계획 테이블 */}
                                     {lec.targetDate && (
                                       <div className="pt-2 border-t border-black/[0.03] space-y-2">
-                                        <Label className="text-[10px] font-bold text-[#434345]">📆 주간 학습 계획표 (학습 요일 기준)</Label>
+                                        <Label className="text-[10px] font-bold text-[#434345]">주간 학습 계획표 (학습 요일 기준)</Label>
                                         
                                         {!hasDetailedPlans ? (
                                           <p className="text-[9px] text-[#86868B] py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>

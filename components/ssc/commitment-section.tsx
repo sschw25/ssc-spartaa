@@ -43,9 +43,9 @@ export default function CommitmentSection() {
         
         <div className="mb-20 md:mb-28">
           <BlurFade delay={0.1}>
-            <p className="text-[#86868B] text-[11px] font-extrabold tracking-[0.4em] uppercase mb-6 opacity-70">Last Check-in</p>
-            <h2 
-              className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tighter mb-10 leading-[1.05] text-balance"
+            <p className="text-[13px] text-[#86868B] font-medium mb-6">Last Check-in</p>
+            <h2
+              className="text-4xl md:text-5xl lg:text-7xl font-semibold tracking-tight mb-10 leading-[1.05] text-balance"
             >
               <RhythmicText text={"입학하기 전,\n스스로에게 물으십시오."} />
             </h2>
@@ -60,22 +60,22 @@ export default function CommitmentSection() {
             <BlurFade key={c.id} delay={0.3 + i * 0.1} yOffset={30}>
               <div 
                 onClick={() => toggle(c.id)}
-                className={`group cursor-pointer rounded-[40px] border-[3px] p-10 transition-all duration-700 ease-out shadow-premium hover:shadow-premium-hover ${
+                className={`group cursor-pointer rounded-[40px] border p-10 transition-all duration-700 ease-out shadow-premium hover:shadow-premium-hover ${
                   checked.includes(c.id) 
-                    ? 'bg-white border-[#0071E3] scale-[1.02]' 
-                    : 'bg-white border-transparent hover:border-[#0071E3]/20'
+                    ? 'bg-white border-[#007AFF] scale-[1.02]' 
+                    : 'bg-white border-transparent hover:border-[#007AFF]/20'
                 }`}
               >
                 <div className="flex items-start gap-8">
                   <div className={`w-12 h-12 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-700 ${
                     checked.includes(c.id) 
-                      ? 'bg-[#0071E3] border-[#0071E3] text-white shadow-[0_10px_30px_rgba(0,113,227,0.3)]' 
-                      : 'border-black/05 text-transparent'
+                      ? 'bg-[#007AFF] border-[#007AFF] text-white shadow-[0_10px_30px_rgba(0,113,227,0.3)]' 
+                      : 'border-black/5 text-transparent'
                   }`}>
                     <Check size={24} strokeWidth={4} />
                   </div>
                   <div className="flex-1">
-                    <h3 className={`text-2xl md:text-3xl font-bold tracking-tighter mb-4 transition-colors duration-700 ${
+                    <h3 className={`text-2xl md:text-3xl font-semibold tracking-tight mb-4 transition-colors duration-700 ${
                       checked.includes(c.id) ? 'text-[#1D1D1F]' : 'text-[#86868B]'
                     }`}>
                       <RhythmicText text={c.question} />
@@ -101,12 +101,12 @@ export default function CommitmentSection() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="bg-white p-12 md:p-16 rounded-[48px] shadow-premium-hover border border-[#0071E3]/10"
+                  className="bg-white p-12 md:p-16 rounded-[48px] shadow-premium-hover border border-[#007AFF]/10"
                 >
-                  <p className="text-[#0071E3] font-extrabold text-2xl md:text-3xl mb-10 tracking-tight text-balance">당신은 SSC 스파르타의 일원이 될<br /> 준비가 되었습니다.</p>
+                  <p className="text-[#0A84FF] font-semibold text-2xl md:text-3xl mb-10 tracking-tight text-balance">당신은 SSC 스파르타의 일원이 될<br /> 준비가 되었습니다.</p>
                   <button 
                     onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="bg-[#1D1D1F] text-white px-12 py-6 rounded-full font-extrabold text-xl hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-black/20 flex items-center justify-center gap-4 mx-auto group"
+                    className="bg-[#1D1D1F] text-white px-12 py-6 rounded-full font-semibold text-xl hover:scale-105 active:scale-95 transition-all duration-500 shadow-2xl shadow-black/20 flex items-center justify-center gap-4 mx-auto group"
                   >
                     전문 상담 예약하기
                     <ArrowRight size={26} className="group-hover:translate-x-3 transition-transform" />

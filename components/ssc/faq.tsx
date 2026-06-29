@@ -60,7 +60,7 @@ export function Faq({ customFaqs }: FaqProps) {
       <div className="max-w-[48rem] mx-auto px-4 sm:px-6">
         {/* Heading */}
         <div className="mb-14 text-center fade-in-up">
-          <p className="text-[#0071E3] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">FAQ</p>
+          <p className="text-[#007AFF] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">FAQ</p>
           <h2 className="text-3xl md:text-5xl font-semibold text-[#1D1D1F] tracking-tighter mb-8">
             자주 묻는 질문
           </h2>
@@ -110,10 +110,10 @@ export function Faq({ customFaqs }: FaqProps) {
                       onClick={() => setOpen(isOpen ? null : i)}
                       aria-expanded={isOpen}
                     >
-                      <div className={`text-[15px] sm:text-base font-bold tracking-tight leading-snug transition-colors ${isOpen ? 'text-[#0071E3]' : 'text-[#1D1D1F]'}`}>
+                      <div className={`text-[15px] sm:text-base font-bold tracking-tight leading-snug transition-colors ${isOpen ? 'text-[#007AFF]' : 'text-[#1D1D1F]'}`}>
                         <RhythmicText text={faq.q} />
                       </div>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${isOpen ? 'bg-[#0071E3] text-white rotate-180' : 'bg-black/5 text-[#86868B]'}`}>
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0 ${isOpen ? 'bg-[#007AFF] text-white rotate-180' : 'bg-black/5 text-[#86868B]'}`}>
                         {isOpen ? (
                           <Minus size={16} strokeWidth={3} />
                         ) : (

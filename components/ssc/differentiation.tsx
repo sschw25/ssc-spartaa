@@ -72,7 +72,7 @@ export function Differentiation({ location = '원주' }: { location?: '원주' |
         <div className="mt-12 flex justify-center fade-in-up">
           <button 
             onClick={() => document.getElementById('cta')?.scrollIntoView({ behavior: 'smooth' })}
-            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#1D1D1F] text-white font-bold text-[15px] hover:scale-105 active:scale-95 transition-all shadow-lg"
+            className="inline-flex items-center gap-2.5 px-8 py-3.5 rounded-full bg-[#1D1D1F] text-white font-semibold text-[15px] hover:scale-105 active:scale-95 transition-all shadow-lg"
           >
             지금 상담 신청하기
             <Shield size={18} />

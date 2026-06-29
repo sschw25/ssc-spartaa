@@ -79,7 +79,7 @@ export function BeforeAfterSwipe() {
 
           {/* Right Side: AFTER (Sparta) */}
           <motion.div 
-            className="absolute inset-0 bg-[#0071E3] overflow-hidden pointer-events-none origin-right"
+            className="absolute inset-0 bg-[#007AFF] overflow-hidden pointer-events-none origin-right"
             style={{ clipPath }}
           >
              <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-12">
@@ -94,7 +94,7 @@ export function BeforeAfterSwipe() {
                     60<span className="text-[2rem] ml-1">h</span>
                   </motion.div>
                   <p className="text-white font-bold text-base md:text-lg mt-4">스파르타 강제 통제 순공 시간</p>
-                  <div className="mt-8 px-6 py-3 rounded-2xl bg-white text-[#0071E3] font-black text-[1.2rem] md:text-[1.75rem] shadow-xl break-keep">합격 기간 단축: <span className="underline decoration-4">단 1년</span></div>
+                  <div className="mt-8 px-6 py-3 rounded-2xl bg-white text-[#007AFF] font-black text-[1.2rem] md:text-[1.75rem] shadow-xl break-keep">합격 기간 단축: <span className="underline decoration-4">단 1년</span></div>
                </div>
 
                <div className="max-w-xs md:max-w-md mb-6">
@@ -119,7 +119,7 @@ export function BeforeAfterSwipe() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-white shadow-2xl flex flex-col items-center justify-center gap-[2px] border border-black/5">
                 <div className="flex gap-[2px]">
                   <div className="w-[2px] h-3 bg-black/10 rounded-full" />
-                  <div className="w-[3px] h-5 bg-[#0071E3] rounded-full mx-[1px]" />
+                  <div className="w-[3px] h-5 bg-[#007AFF] rounded-full mx-[1px]" />
                   <div className="w-[2px] h-3 bg-black/10 rounded-full" />
                 </div>
             </div>

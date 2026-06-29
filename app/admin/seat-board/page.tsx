@@ -1491,7 +1491,7 @@ export default function SeatBoardPage() {
   const hasOverrides = periodOverrides.size > 0;
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F]">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F]">
       <AdminTopNav
         title="출결판"
         titleIcon={<LayoutGrid className="w-4 h-4" />}
@@ -1550,7 +1550,7 @@ export default function SeatBoardPage() {
               { label: '휴가',   val: stats.onLeave,                               color: 'text-blue-500' },
             ].map(({ label, val, color }) => (
               <div key={label} className="text-center">
-                <p className={`text-xl font-black leading-none ${color}`}>{val}</p>
+                <p className={`text-[18px] font-semibold tracking-tight leading-none ${color}`}>{val}</p>
                 <p className="text-[10px] font-bold text-slate-400 mt-0.5">{label}</p>
               </div>
             ))}

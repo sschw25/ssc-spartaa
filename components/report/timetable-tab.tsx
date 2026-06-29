@@ -190,7 +190,7 @@ export function TimetableTab({
                               {pl.subjectName}
                             </span>
                             <span className="font-semibold text-slate-700 truncate max-w-[200px]">
-                              {pl.type === 'book' ? '📚' : '💻'} {pl.title}
+                              {pl.title}
                             </span>
                             <span className="font-bold text-slate-500">
                               오늘 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
@@ -212,7 +212,7 @@ export function TimetableTab({
 
                     {isStudyPeriod && matchedPlans.length === 0 && (
                       <p className="mt-1 text-[9px] font-bold text-slate-400">
-                        ✨ 개별 자습 및 취약 영역 보완 학습 시간
+                        개별 자습 및 취약 영역 보완 학습 시간
                       </p>
                     )}
                   </div>

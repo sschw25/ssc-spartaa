@@ -13,6 +13,9 @@ import {
   Target,
   FileText,
   Phone,
+  Rocket,
+  Lightbulb,
+  Laptop,
 } from 'lucide-react'
 import { Navbar } from '@/components/ssc/navbar'
 import { Footer } from '@/components/ssc/footer'
@@ -126,13 +129,13 @@ export default function ChuncheonInterviewPage() {
       {/* Hero Section */}
       <section className="bg-white py-16 md:py-24 border-b border-[#E5E7EB]">
         <div className="max-w-4xl mx-auto px-4 text-center">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#0071E3] text-xs font-semibold mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#007AFF] text-xs font-semibold mb-6">
             <Sparkles size={12} />
             2026 최종 합격을 향한 마지막 단 하나의 선택
           </div>
           <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight mb-6">
             춘천 공무원 면접학원의 절대 기준<br />
-            <span className="text-[#0071E3]">SSC스파르타 춘천 면접반</span>
+            <span className="text-[#007AFF]">SSC스파르타 춘천 면접반</span>
           </h1>
           <p className="text-base md:text-lg text-[#86868B] max-w-2xl mx-auto mb-10 leading-relaxed">
             강원 및 충북 전역, 인근 경기도 지역까지 아우르는 면접 준비생 대상.<br />
@@ -143,9 +146,10 @@ export default function ChuncheonInterviewPage() {
               href={googleFormUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#0071E3] text-white font-semibold hover:bg-blue-700 hover:scale-102 active:scale-98 transition-all shadow-md shadow-blue-500/10 text-center"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 rounded-xl bg-[#007AFF] text-white font-semibold hover:bg-blue-700 hover:scale-102 active:scale-98 transition-all shadow-md shadow-blue-500/10 text-center"
             >
-              🚀 면접반 사전신청 바로가기
+              <Rocket size={16} />
+              면접반 사전신청 바로가기
             </a>
             <a
               href="tel:0507-1366-8881"
@@ -162,7 +166,7 @@ export default function ChuncheonInterviewPage() {
       <section className="py-16 max-w-5xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-8 rounded-2xl border border-[#E5E7EB] shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#0071E3] mb-6">
+            <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-[#007AFF] mb-6">
               <Target size={24} />
             </div>
             <h3 className="text-lg font-bold mb-2">SSC스파르타 면접 시스템</h3>
@@ -180,7 +184,7 @@ export default function ChuncheonInterviewPage() {
             </p>
           </div>
           <div className="bg-white p-8 rounded-2xl border border-[#E5E7EB] shadow-sm">
-            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-[#F56300] mb-6">
+            <div className="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-[#FF9500] mb-6">
               <BookOpen size={24} />
             </div>
             <h3 className="text-lg font-bold mb-2">강원·충북·경기 지역 특화 분석</h3>
@@ -205,24 +209,24 @@ export default function ChuncheonInterviewPage() {
               <div>
                 <h3 className="text-xl font-bold mb-2">면접 기본 과정</h3>
                 <p className="text-[#86868B] text-sm mb-6">면접 본수업과 체계적인 조별 스터디로 답변 뼈대를 완성합니다.</p>
-                <div className="text-3xl font-extrabold text-[#1D1D1F] mb-6">
+                <div className="text-3xl font-semibold text-[#1D1D1F] mb-6">
                   38만 원
                 </div>
                 <ul className="space-y-3.5 text-sm text-[#515154] mb-8">
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>SSC스파르타 정규 수업 4회 (총 12시간)</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>매주 금요일 오전 자율스터디 & 피드백 시트 제공</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>춘천/강원도 지자체 지역 현안 핵심 요약집</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>춘천캠퍼스 사물함 제공 (잔여 수량 있을 시 선착순)</span>
                   </li>
                 </ul>
@@ -231,15 +235,15 @@ export default function ChuncheonInterviewPage() {
                 href={googleFormUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full py-3.5 rounded-xl border border-[#0071E3] text-[#0071E3] font-semibold text-center hover:bg-blue-50 transition-colors"
+                className="block w-full py-3.5 rounded-xl border border-[#007AFF] text-[#007AFF] font-semibold text-center hover:bg-blue-50 transition-colors"
               >
                 기본 과정 신청하기
               </a>
             </div>
 
             {/* 1:1 추가반 */}
-            <div className="border-2 border-[#0071E3] rounded-2xl p-8 relative flex flex-col justify-between bg-white shadow-lg shadow-blue-500/5">
-              <div className="absolute top-0 right-8 -translate-y-1/2 bg-[#0071E3] text-white px-3.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <div className="border-2 border-[#007AFF] rounded-2xl p-8 relative flex flex-col justify-between bg-white shadow-lg shadow-blue-500/5">
+              <div className="absolute top-0 right-8 -translate-y-1/2 bg-[#007AFF] text-white px-3.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
                 <Sparkles size={12} />
                 추천! 수강생 90% 선택
               </div>
@@ -248,31 +252,32 @@ export default function ChuncheonInterviewPage() {
                   <h3 className="text-xl font-bold">1:1 개인코칭 밀착 과정</h3>
                 </div>
                 <p className="text-[#86868B] text-sm mb-6">자소서부터 실전 시뮬레이션까지, 1:1 과외식 피드백으로 완성도를 올립니다.</p>
-                <div className="text-3xl font-extrabold text-[#0071E3] mb-6">
+                <div className="text-3xl font-semibold text-[#007AFF] mb-6">
                   44만 원
                 </div>
-                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 text-xs text-[#0071E3] leading-relaxed mb-6">
-                  💡 <b>수강생 선호도:</b> 지난 국가직 및 경채 면접반의 경우 전체 수강생의 90% 이상이 본 1:1 추가반을 선택해 면접을 탄탄히 대비했습니다.
+                <div className="flex items-start gap-2 p-4 rounded-xl bg-blue-50/50 border border-blue-100 text-xs text-[#007AFF] leading-relaxed mb-6">
+                  <Lightbulb size={14} className="shrink-0 mt-0.5" />
+                  <span><b>수강생 선호도:</b> 지난 국가직 및 경채 면접반의 경우 전체 수강생의 90% 이상이 본 1:1 추가반을 선택해 면접을 탄탄히 대비했습니다.</span>
                 </div>
                 <ul className="space-y-3.5 text-sm text-[#515154] mb-8">
                   <li className="flex items-start gap-2 font-semibold text-[#1D1D1F]">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>[핵심] 1:1 집중 개인코칭 1회 (50분) 포함</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>SSC스파르타 정규 수업 4회 (총 12시간)</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>매주 금요일 오전 자율스터디 & 피드백 시트 제공</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>자기소개서·지원동기 개별 서면 첨삭</span>
                   </li>
                   <li className="flex items-start gap-2">
-                    <CheckCircle size={16} className="text-[#0071E3] shrink-0 mt-0.5" />
+                    <CheckCircle size={16} className="text-[#007AFF] shrink-0 mt-0.5" />
                     <span>춘천캠퍼스 사물함 제공 (잔여 수량 있을 시 선착순)</span>
                   </li>
                 </ul>
@@ -281,7 +286,7 @@ export default function ChuncheonInterviewPage() {
                 href={googleFormUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block w-full py-3.5 rounded-xl bg-[#0071E3] text-white font-semibold text-center hover:bg-blue-700 hover:scale-101 active:scale-99 transition-all shadow-md shadow-blue-500/10"
+                className="block w-full py-3.5 rounded-xl bg-[#007AFF] text-white font-semibold text-center hover:bg-blue-700 hover:scale-101 active:scale-99 transition-all shadow-md shadow-blue-500/10"
               >
                 1:1 밀착 과정 신청하기
               </a>
@@ -293,14 +298,14 @@ export default function ChuncheonInterviewPage() {
       {/* 체계적인 4회 완결 커리큘럼 */}
       <section className="py-16 max-w-4xl mx-auto px-4">
         <div className="text-center mb-12">
-          <span className="text-xs font-bold text-[#0071E3] uppercase tracking-wider">Curriculum</span>
+          <span className="text-xs font-bold text-[#007AFF] uppercase tracking-wider">Curriculum</span>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight mt-2 mb-3">4회 완성 합격 로드맵</h2>
           <p className="text-sm md:text-base text-[#86868B]">수강생들이 실제로 말할 수 있도록 돕는 실질적 훈련 커리큘럼입니다.</p>
         </div>
 
         <div className="space-y-6">
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#0071E3] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
               1회
             </div>
             <div>
@@ -308,14 +313,15 @@ export default function ChuncheonInterviewPage() {
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 나를 가장 선명하게 어필하는 핵심 키워드 선별 및 자소서 작성법. 면접관의 호기심을 유발하는 1분 스피치 구성 요령.
               </p>
-              <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
-                📚 교재 학습 + 사전과제 배포
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
+                <BookOpen size={13} />
+                교재 학습 + 사전과제 배포
               </span>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#0071E3] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
               2회
             </div>
             <div>
@@ -323,14 +329,15 @@ export default function ChuncheonInterviewPage() {
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 민주성, 공정성, 청렴성 등 공직 가치 이해와 실제 경험 매핑. 업무 중 발생할 수 있는 딜레마(상사와의 갈등, 악성 민원 등) 논리적 해결 프로세스 제시.
               </p>
-              <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
-                💻 실강 + 5단 답변 템플릿
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
+                <Laptop size={13} />
+                실강 + 5단 답변 템플릿
               </span>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#0071E3] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
               3회
             </div>
             <div>
@@ -338,14 +345,15 @@ export default function ChuncheonInterviewPage() {
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 강원·충북·경기 지역 핵심 도정 및 지자체별 역점 사업 완벽 요약. 일반 행정직 및 기계, 토목, 건축 등 기술직/특수직렬 기출 및 전공 질문 완벽 대비.
               </p>
-              <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
-                📚 지자체 현안 특별 자료집
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
+                <BookOpen size={13} />
+                지자체 현안 특별 자료집
               </span>
             </div>
           </div>
 
           <div className="bg-white p-6 rounded-xl border border-[#E5E7EB] flex gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#0071E3] font-bold text-sm flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-lg bg-blue-50 text-[#007AFF] font-bold text-sm flex items-center justify-center shrink-0">
               4회
             </div>
             <div>
@@ -353,8 +361,9 @@ export default function ChuncheonInterviewPage() {
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
                 실전 면접장과 동일한 분위기 속에서 복장, 시선, 말투, 제스처 등 다차원 피드백 진행. 개별 약점 분석 및 최종 보완 가이드 제공.
               </p>
-              <span className="inline-block text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-50 text-[#34C759]">
-                🎯 1:1 프리미엄 코칭 (선택 시)
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded bg-emerald-50 text-[#34C759]">
+                <Target size={13} />
+                1:1 프리미엄 코칭 (선택 시)
               </span>
             </div>
           </div>
@@ -397,7 +406,7 @@ export default function ChuncheonInterviewPage() {
                   <td className="py-4 px-6 font-semibold">7/9(목)</td>
                   <td className="py-4 px-6">강원 일반 지방직 공채 필기 발표</td>
                   <td className="py-4 px-6">-</td>
-                  <td className="py-4 px-6 text-[#0071E3] font-semibold">필기 합격 확인 즉시 면접반 신청 및 센터 상담</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">필기 합격 확인 즉시 면접반 신청 및 센터 상담</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 font-semibold">7/10(금)</td>
@@ -406,19 +415,19 @@ export default function ChuncheonInterviewPage() {
                   <td className="py-4 px-6">자체 면접 플랫폼 가입 및 자기소개서 사전과제 작성 시작</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#0071E3]">7/14(화)</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/14(화)</td>
                   <td className="py-4 px-6 font-semibold">춘천 공채 1차시 본수업</td>
-                  <td className="py-4 px-6 text-[#0071E3] font-semibold">오후 14:00~17:00</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
                   <td className="py-4 px-6">자기소개서 및 1분 자기소개 작성 뼈대 빌드업 (실강)</td>
                 </tr>
                 <tr>
                   <td className="py-4 px-6 font-semibold">7/15(수)</td>
                   <td className="py-4 px-6">강원교육청 교육행정 필기 발표</td>
                   <td className="py-4 px-6">-</td>
-                  <td className="py-4 px-6 font-medium text-[#F56300]">★ 교육행정 합격생 춘천 수업 희망여부 파악 및 사전등록</td>
+                  <td className="py-4 px-6 font-medium text-[#FF9500]">★ 교육행정 합격생 춘천 수업 희망여부 파악 및 사전등록</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#0071E3]">7/17(금)</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/17(금)</td>
                   <td className="py-4 px-6">공채 자율스터디 / 교행 1차시</td>
                   <td className="py-4 px-6">
                     오전 09:30~12:30 (스터디)<br />
@@ -426,19 +435,19 @@ export default function ChuncheonInterviewPage() {
                   </td>
                   <td className="py-4 px-6">
                     공채 수강생은 오전 자율스터디 참여.<br />
-                    <span className="text-[#F56300] font-semibold">교육행정 1차시는 기본 원주 진행이나, 발표 전 사전등록자 대상으로는 춘천에서 수강 가능</span>
+                    <span className="text-[#FF9500] font-semibold">교육행정 1차시는 기본 원주 진행이나, 발표 전 사전등록자 대상으로는 춘천에서 수강 가능</span>
                   </td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#0071E3]">7/21(화)</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/21(화)</td>
                   <td className="py-4 px-6 font-semibold">춘천 통합반 2차시 본수업</td>
-                  <td className="py-4 px-6 text-[#0071E3] font-semibold">오후 14:00~17:00</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
                   <td className="py-4 px-6">공채 및 교육행정 통합 수업 (2차시부터는 전체 춘천캠퍼스 진행)</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#0071E3]">7/23(목)</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/23(목)</td>
                   <td className="py-4 px-6 font-semibold">춘천 통합반 3차시 본수업</td>
-                  <td className="py-4 px-6 text-[#0071E3] font-semibold">오후 14:00~17:00</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
                   <td className="py-4 px-6">지자체 현안 및 직렬별 예상 질문 분석</td>
                 </tr>
                 <tr>
@@ -448,9 +457,9 @@ export default function ChuncheonInterviewPage() {
                   <td className="py-4 px-6">스터디원 교대 모의면접 피드백 훈련</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#0071E3]">7/28(화)</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/28(화)</td>
                   <td className="py-4 px-6 font-semibold">춘천 통합반 4차시 본수업</td>
-                  <td className="py-4 px-6 text-[#0071E3] font-semibold">오후 14:30~17:30</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:30~17:30</td>
                   <td className="py-4 px-6">실전 대면 모의면접 피드백 및 답변 최종 정교화</td>
                 </tr>
                 <tr>
@@ -471,8 +480,8 @@ export default function ChuncheonInterviewPage() {
 
           {/* 강원 교행 춘천 수강 희망자 특이사항 경고 */}
           <div className="mt-6 p-5 rounded-2xl bg-amber-50/60 border border-amber-100 flex items-start gap-3">
-            <AlertTriangle size={18} className="text-[#F56300] shrink-0 mt-0.5" />
-            <div className="text-xs md:text-sm text-[#F56300] leading-relaxed">
+            <AlertTriangle size={18} className="text-[#FF9500] shrink-0 mt-0.5" />
+            <div className="text-xs md:text-sm text-[#FF9500] leading-relaxed">
               <span className="font-bold">강원 교육행정직 수강생 필수 안내:</span><br />
               교육행정 1차시 수업(7/17 금 오후)은 원주캠퍼스 통합 진행이 기본입니다. 단, <b>교육행정 필기 발표(7/15) 전에 미리 사전등록을 완료하신 춘천 수강생에 한하여</b> 1차시 수업을 원주 이동 없이 춘천에서 수강하실 수 있도록 지원합니다. 발표(7/15) 이후 신청할 경우 1차시는 원주캠퍼스에 오셔서 통합 수강하셔야 하므로, 춘천에서 1차시부터 편하게 듣기를 원하시는 분들은 반드시 발표 전 사전등록을 완료해 주시기 바랍니다.
             </div>
@@ -507,17 +516,19 @@ export default function ChuncheonInterviewPage() {
               href={googleFormUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#0071E3] text-white font-semibold hover:bg-blue-700 hover:scale-102 active:scale-98 transition-all text-center shadow-lg shadow-blue-500/20"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-8 py-4 rounded-xl bg-[#007AFF] text-white font-semibold hover:bg-blue-700 hover:scale-102 active:scale-98 transition-all text-center shadow-lg shadow-blue-500/20"
             >
-              🚀 구글 신청서 작성하기
+              <Rocket size={16} />
+              구글 신청서 작성하기
             </a>
             <a
               href="https://naver.me/5RhgAeoi"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto px-6 py-4 rounded-xl border border-white/20 bg-white/10 text-white font-semibold hover:bg-white/20 transition-all text-center"
+              className="inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-4 rounded-xl border border-white/20 bg-white/10 text-white font-semibold hover:bg-white/20 transition-all text-center"
             >
-              📍 춘천캠퍼스 위치 보기
+              <MapPin size={16} />
+              춘천캠퍼스 위치 보기
             </a>
           </div>
         </div>
@@ -530,7 +541,7 @@ export default function ChuncheonInterviewPage() {
         <div className="grid grid-cols-2 gap-2">
           <a
             href="tel:0507-1366-8881"
-            className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-amber-50 text-[#F56300] border border-amber-100 font-bold text-xs"
+            className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-amber-50 text-[#FF9500] border border-amber-100 font-bold text-xs"
           >
             <Phone size={14} />
             전화 상담 문의
@@ -539,9 +550,10 @@ export default function ChuncheonInterviewPage() {
             href={googleFormUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#0071E3] text-white font-bold text-xs shadow-md shadow-blue-500/10"
+            className="flex items-center justify-center gap-1.5 py-3 rounded-xl bg-[#007AFF] text-white font-semibold text-xs shadow-md shadow-blue-500/10"
           >
-            🚀 면접반 사전신청
+            <Rocket size={14} />
+            면접반 사전신청
           </a>
         </div>
       </div>

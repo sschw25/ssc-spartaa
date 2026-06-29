@@ -97,7 +97,7 @@ export default function EnrollmentWarningPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
       <AdminTopNav title="재등록 임박 원생 목록" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
@@ -170,7 +170,7 @@ export default function EnrollmentWarningPage() {
             <p className={`text-sm font-black ${filtered.length > 0 ? 'text-amber-800' : 'text-slate-400'}`}>
               {filtered.length > 0
                 ? `재등록 임박 원생 ${filtered.length}명 · ${RENEWAL_WARN_DAYS}일 이내 종료`
-                : '재등록 임박 원생이 없습니다 🟢'}
+                : '재등록 임박 원생이 없습니다'}
             </p>
             {filtered.length > 0 && (
               <p className="text-[11px] font-semibold text-amber-600 mt-0.5">
@@ -189,7 +189,7 @@ export default function EnrollmentWarningPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-sm font-bold text-slate-400">
-              {searchQuery ? '검색 결과가 없습니다.' : '재등록 임박 원생이 없습니다 🟢'}
+              {searchQuery ? '검색 결과가 없습니다.' : '재등록 임박 원생이 없습니다'}
             </div>
           ) : (
             <div className="overflow-x-auto">
