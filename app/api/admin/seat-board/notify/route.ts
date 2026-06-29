@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: '날짜 형식이 올바르지 않습니다.' }, { status: 400 });
   }
   const message = String(body?.message ?? '').trim().slice(0, 200)
-    || `${periodLabel}교시 출석 확인 시 자리에 계시지 않았어요. 외출/자리 비움 사유가 있다면 담당 코치에게 알려 주세요.`;
+    || `${periodLabel}교시 출석 확인 시 자리에 계시지 않았어요. 외출/자리 비움 사유가 있다면 담당 코멘터에게 알려 주세요.`;
 
   const nowIso = new Date().toISOString();
   const notified: string[] = [];

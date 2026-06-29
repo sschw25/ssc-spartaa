@@ -933,7 +933,7 @@ function ConsultationContent() {
                                 </Badge>
                               </div>
                               <p className="admin-fit-text admin-fit-caption text-[#86868B] mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                <span>{student.manager || '담당 코치'}</span>
+                                <span>{student.manager || '담당 코멘터'}</span>
                                 {(() => {
                                   const todayMin = getStudentTodayTotalStudyTimeMin(student);
                                   if (todayMin <= 0) return null;
@@ -1058,7 +1058,7 @@ function ConsultationContent() {
                             onClick={() => handleSortStudents('manager')}
                           >
                             <div className="flex items-center gap-1">
-                              담당 코치 {studentSortField === 'manager' && (studentSortOrder === 'asc' ? '▲' : '▼')}
+                              담당 코멘터 {studentSortField === 'manager' && (studentSortOrder === 'asc' ? '▲' : '▼')}
                             </div>
                           </th>
                           <th className="p-3.5 text-center">좌석</th>
@@ -1092,7 +1092,7 @@ function ConsultationContent() {
                               <td className="p-3.5 text-[#434345]" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   defaultValue={student.manager || ''}
-                                  placeholder="담당 코치"
+                                  placeholder="담당 코멘터"
                                   onBlur={(event) => handleInlineStudentUpdate(student, { manager: event.currentTarget.value.trim() })}
                                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
                                   className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"

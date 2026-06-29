@@ -360,7 +360,7 @@ export function useReportState() {
   const [homeAttendNow, setHomeAttendNow] = useState(0);
   const [realigningPlans, setRealigningPlans] = useState(false);
 
-  // 1. 코치 퀘스트 상태 동기화 로드
+  // 1. 코멘터 퀘스트 상태 동기화 로드
   useEffect(() => {
     if (!student) return;
     const coachQuests = extractQuestsFromComment(student.studentLifeComment);
@@ -523,7 +523,7 @@ export function useReportState() {
     setDismissedNotificationIds([]);
   };
 
-  // 학생이 코치 답변에 재답변 — 서버 append 후 로컬 스레드 낙관적 갱신
+  // 학생이 코멘터 답변에 재답변 — 서버 append 후 로컬 스레드 낙관적 갱신
   const replyToThread = async (
     kind: 'request' | 'suggestion' | 'leave',
     id: string,
@@ -1418,7 +1418,7 @@ export function useReportState() {
         tone: 'emerald' as const,
         label: '처리완료',
         title: `${requestLabel}이 처리완료됐어요`,
-        body: '담당 코치가 신청을 확인하고 처리했습니다.',
+        body: '담당 코멘터가 신청을 확인하고 처리했습니다.',
         meta: truncateNotificationText(request.content || ''),
         date: notificationDate,
         priority: 3,
@@ -1433,7 +1433,7 @@ export function useReportState() {
       tone: 'amber' as const,
       label: '확인 대기',
       title: `${requestLabel} 확인을 기다리고 있어요`,
-      body: '담당 코치가 확인하면 이 알림 영역에서 바로 볼 수 있어요.',
+      body: '담당 코멘터가 확인하면 이 알림 영역에서 바로 볼 수 있어요.',
       meta: truncateNotificationText(request.content || ''),
       date: notificationDate,
       priority: 4,
@@ -1473,7 +1473,7 @@ export function useReportState() {
         tone: 'emerald' as const,
         label: '처리완료',
         title: '건의사항이 처리완료됐어요',
-        body: '담당 코치가 건의사항을 확인하고 처리했습니다.',
+        body: '담당 코멘터가 건의사항을 확인하고 처리했습니다.',
         meta: truncateNotificationText(suggestion.content || ''),
         date: notificationDate,
         priority: 3,
@@ -1488,7 +1488,7 @@ export function useReportState() {
       tone: 'amber' as const,
       label: '확인 대기',
       title: '건의사항 확인을 기다리고 있어요',
-      body: '담당 코치가 확인하면 이 알림 영역에서 바로 볼 수 있어요.',
+      body: '담당 코멘터가 확인하면 이 알림 영역에서 바로 볼 수 있어요.',
       meta: truncateNotificationText(suggestion.content || ''),
       date: notificationDate,
       priority: 4,
@@ -1512,7 +1512,7 @@ export function useReportState() {
           tone: 'amber' as const,
           label: '성적 입력',
           title: '이번 주 성적 입력이 필요해요',
-          body: '주간 테스트나 모의고사 성적을 입력하면 담당 코치가 이번 주 학습 흐름을 더 정확히 확인할 수 있어요.',
+          body: '주간 테스트나 모의고사 성적을 입력하면 담당 코멘터가 이번 주 학습 흐름을 더 정확히 확인할 수 있어요.',
           date: todayDateKey,
           priority: 2,
         }]
@@ -1524,7 +1524,7 @@ export function useReportState() {
           label: daysUntilEnrollmentEnd < 0 ? '등록 만료' : '등록 안내',
           title: daysUntilEnrollmentEnd < 0 ? '등록 기간이 만료됐어요' : `등록 종료까지 D-${daysUntilEnrollmentEnd}`,
           body: daysUntilEnrollmentEnd < 0
-            ? '데스크 또는 담당 코치에게 등록 상태를 확인해 주세요.'
+            ? '데스크 또는 담당 코멘터에게 등록 상태를 확인해 주세요.'
             : `${student.enrollmentEndDate}까지 등록 기간이 예정되어 있어요.`,
           date: student.enrollmentEndDate,
           priority: daysUntilEnrollmentEnd < 0 ? 1 : 2,
@@ -1534,8 +1534,8 @@ export function useReportState() {
       ? [{
           id: 'student-life-comment',
           tone: 'blue' as const,
-          label: '코치 소견',
-          title: '코치 선생님의 피드백이 도착했어요',
+          label: '코멘터 소견',
+          title: '코멘터 선생님의 피드백이 도착했어요',
           body: truncateNotificationText(student.studentLifeComment, 160),
           date: student.updatedAt,
           priority: 5,
@@ -1580,7 +1580,7 @@ export function useReportState() {
         { href: '#study-stats', label: '순공/랭킹', meta: '학습 시간 비교', icon: Award },
         { href: '#timetable', label: '오늘 계획', meta: `${todaySubjects.length}개 과목`, icon: Target },
         { href: '#execution-plan', label: '실행 계획표', meta: '학습 플래너', icon: Sparkles },
-        { href: '#coach-feedback', label: '코칭 소견', meta: '학생 피드백', icon: MessageSquare },
+        { href: '#coach-feedback', label: '코멘팅 소견', meta: '학생 피드백', icon: MessageSquare },
         { href: '#student-requests', label: '반차 신청', meta: `반차 ${homeHalfLeft}회 남음`, icon: Calendar },
         { href: '#student-missions', label: '쿠폰 미션', meta: `쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Ticket },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
@@ -1590,7 +1590,7 @@ export function useReportState() {
     : [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
         { href: '#study-stats', label: '학습 통계', meta: '학습 시간 비교', icon: Award },
-        { href: '#coach-feedback', label: '코칭 소견', meta: '학부모 브리핑', icon: MessageSquare },
+        { href: '#coach-feedback', label: '코멘팅 소견', meta: '학부모 브리핑', icon: MessageSquare },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
         { href: '#student-penalties', label: '벌점 내역', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },

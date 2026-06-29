@@ -815,8 +815,8 @@ export default function AdminCalendarPage() {
                     {selectedDateConsultations.map(({ student, log }) => (
                       <div key={log.id} onClick={() => openStudentSheet(student)} className="rounded-xl border border-black/[0.05] border-l-[3px] border-l-emerald-500 bg-white shadow-sm hover:bg-[#F8F9FA] transition cursor-pointer p-3.5 space-y-2">
                         <div className="flex justify-between items-start">
-                          <div><span className="font-extrabold text-[13px] text-[#1D1D1F]">{student.name}</span><span className="text-[10px] text-[#86868B] font-medium ml-2">{campusLabel(student.campus)} · 코치 {student.manager || '없음'}</span></div>
-                          <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">코치 {log.manager}</span>
+                          <div><span className="font-extrabold text-[13px] text-[#1D1D1F]">{student.name}</span><span className="text-[10px] text-[#86868B] font-medium ml-2">{campusLabel(student.campus)} · 코멘터 {student.manager || '없음'}</span></div>
+                          <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">코멘터 {log.manager}</span>
                         </div>
                         <div className="rounded-lg bg-emerald-50/[0.2] border border-emerald-100/30 p-2.5"><p className="text-[11px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap break-all">{log.content}</p></div>
                       </div>

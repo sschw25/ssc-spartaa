@@ -1179,7 +1179,7 @@ export default function AdminDashboardPage() {
                         <div key={i} className="text-xs border-b border-black/[0.02] pb-2.5 last:border-0 last:pb-0">
                           <div className="flex items-center justify-between text-[10px] text-[#86868B] mb-1 font-semibold">
                             <span>{f.studentName} · {f.date}</span>
-                            <span>{f.manager} 코치</span>
+                            <span>{f.manager} 코멘터</span>
                           </div>
                           <p className="text-[#1D1D1F] leading-relaxed whitespace-pre-wrap">{f.content}</p>
                         </div>

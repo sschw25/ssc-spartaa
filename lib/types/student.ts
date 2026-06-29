@@ -369,7 +369,7 @@ export interface Student {
   loginId?: string;   // 로그인용 아이디
   passwordHash?: string; // 로그인용 비밀번호 해시
   campus: 'wonju' | 'chuncheon' | 'chungju' | 'etc' | string;
-  manager: string;    // 상담자/담당 코치
+  manager: string;    // 상담자/담당 코멘터
   contact?: string;   // 목표시험 (구 연락처)
   lifeComment?: string; // 학부모 공유용 생활 관리 코멘트
   studentLifeComment?: string; // 학생 공유용 생활 관리 코멘트

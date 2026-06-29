@@ -598,7 +598,7 @@ function AdminAttendanceContent() {
                       </th>
                       <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">이름</th>
                       <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">캠퍼스</th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">담당 코치</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">담당 코멘터</th>
                       <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">증빙 상태</th>
                       <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">지각 사유 회신</th>
                       <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73] text-right">처리</th>

@@ -124,7 +124,7 @@ function StudentLoginForm() {
                   />
                 </div>
                 <p className="text-xs leading-5 text-[#64748B]">
-                  비밀번호를 모르거나 분실한 경우, 담당 코치 선생님께 말씀해 주세요.
+                  비밀번호를 모르거나 분실한 경우, 담당 코멘터 선생님께 말씀해 주세요.
                 </p>
               </div>
 

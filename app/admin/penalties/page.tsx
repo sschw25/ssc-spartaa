@@ -191,7 +191,7 @@ export default function PenaltiesPage() {
                 <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="px-5 py-4">원생</th>
-                    <th className="px-5 py-4">담당 코치</th>
+                    <th className="px-5 py-4">담당 코멘터</th>
                     <th className="px-5 py-4">누적 벌점</th>
                     <th className="px-5 py-4">내역</th>
                     <th className="px-5 py-4"></th>

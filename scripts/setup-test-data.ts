@@ -82,10 +82,10 @@ async function main() {
     console.log(`현재 등록된 학생 수: ${students.length}명`);
 
     const targets = [
-      { name: '김철수', manager: '김동하 코치', campus: 'wonju', subject: '국어', isBook: true, title: '수능 국어 기출' },
-      { name: '이영희', manager: '김동하 코치', campus: 'chuncheon', subject: '영어', isBook: true, title: '수능 영어 독해' },
-      { name: '박지성', manager: '이승현 코치', campus: 'chungju', subject: '수학', isBook: false, title: '수학 기하 인강' },
-      { name: '손흥민', manager: '이승현 코치', campus: 'wonju', subject: '과학', isBook: false, title: '물리학I 개념 인강' },
+      { name: '김철수', manager: '김동하 코멘터', campus: 'wonju', subject: '국어', isBook: true, title: '수능 국어 기출' },
+      { name: '이영희', manager: '김동하 코멘터', campus: 'chuncheon', subject: '영어', isBook: true, title: '수능 영어 독해' },
+      { name: '박지성', manager: '이승현 코멘터', campus: 'chungju', subject: '수학', isBook: false, title: '수학 기하 인강' },
+      { name: '손흥민', manager: '이승현 코멘터', campus: 'wonju', subject: '과학', isBook: false, title: '물리학I 개념 인강' },
     ];
 
     const passwordHash = bcrypt.hashSync('1234', 10);

@@ -324,7 +324,7 @@ export default function AdminLeavePage() {
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="font-black text-sm text-[#1D1D1F]">{student.name}</span>
                     <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">{campusLabel(student.campus)}</Badge>
-                    <span className="text-[10px] text-[#86868B] font-semibold">{student.manager || '담당 코치'}</span>
+                    <span className="text-[10px] text-[#86868B] font-semibold">{student.manager || '담당 코멘터'}</span>
                     {pending > 0 && (
                       <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">대기 {pending}건</span>
                     )}

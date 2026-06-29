@@ -154,7 +154,7 @@ export default function EnrollmentWarningPage() {
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="원생명 또는 코치 검색"
+              placeholder="원생명 또는 코멘터 검색"
               className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 focus:border-slate-400 focus:outline-none transition-all"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -197,7 +197,7 @@ export default function EnrollmentWarningPage() {
                 <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-4">원생</th>
-                    <th className="px-6 py-4">담당 코치</th>
+                    <th className="px-6 py-4">담당 코멘터</th>
                     <th className="px-6 py-4">등록 종료일</th>
                     <th className="px-6 py-4">남은 기간</th>
                     <th className="px-6 py-4 text-right">상세 보기</th>

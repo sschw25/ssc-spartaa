@@ -291,7 +291,7 @@ export function SubjectProgressTab({
                 진도나 계획이 맞지 않나요?
               </h4>
               <p className="mt-1 text-[10px] font-semibold leading-5 text-amber-700/90">
-                숫자 정정, 속도 조절, 상담 요청은 담당 코치에게 바로 신청할 수 있습니다.
+                숫자 정정, 속도 조절, 상담 요청은 담당 코멘터에게 바로 신청할 수 있습니다.
               </p>
             </div>
             <button

@@ -412,7 +412,7 @@ export default function AdminInboxPage() {
     return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [students, eventNames, mealPlanLabels]);
 
-  // 카테고리 + 검색 필터링 반영 (신청 원생 / 코치 답장 / 전달 텍스트)
+  // 카테고리 + 검색 필터링 반영 (신청 원생 / 코멘터 답장 / 전달 텍스트)
   const filteredItems = React.useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return inboxItems.filter((item) => {
@@ -633,7 +633,7 @@ export default function AdminInboxPage() {
       from: 'admin',
       text: reply,
       at: nowIso,
-      author: '코치',
+      author: '코멘터',
     });
     return { ...(rawItem || {}), adminReply: reply, repliedAt: nowIso, thread };
   };
@@ -777,14 +777,14 @@ export default function AdminInboxPage() {
         
         {/* 좌측: 카테고리 필터 및 요청 목록 */}
         <div className="lg:col-span-2 space-y-4">
-          {/* 검색 — 신청 원생 / 코치 답장 / 전달 텍스트 */}
+          {/* 검색 — 신청 원생 / 코멘터 답장 / 전달 텍스트 */}
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="원생 이름 · 신청 내용 · 코치 답변으로 검색"
+              placeholder="원생 이름 · 신청 내용 · 코멘터 답변으로 검색"
               className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-9 py-2.5 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 transition-all shadow-sm"
             />
             {searchQuery && (
@@ -998,7 +998,7 @@ export default function AdminInboxPage() {
                       <div className="text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.04] border border-[#0071E3]/10 p-3 rounded-2xl flex items-start gap-1.5">
                         <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                         <div className="min-w-0">
-                          <p className="font-black text-[10px] text-[#0071E3]/80 uppercase tracking-wider">코치 답변 완료</p>
+                          <p className="font-black text-[10px] text-[#0071E3]/80 uppercase tracking-wider">코멘터 답변 완료</p>
                           <p className="mt-1 font-semibold whitespace-pre-wrap leading-normal text-slate-600">{item.adminReply}</p>
                         </div>
                       </div>
@@ -1050,7 +1050,7 @@ export default function AdminInboxPage() {
                           <div key={m.id} className={`flex ${m.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold whitespace-pre-wrap break-words ${m.from === 'admin' ? 'bg-[#0071E3]/[0.06] border border-[#0071E3]/15 text-slate-700' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
                               <span className={`block text-[9px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'admin' ? 'text-[#0071E3]/70' : 'text-slate-400'}`}>
-                                {m.from === 'admin' ? (m.author || '코치') : '학생'}
+                                {m.from === 'admin' ? (m.author || '코멘터') : '학생'}
                               </span>
                               {m.text}
                             </div>
@@ -1080,7 +1080,7 @@ export default function AdminInboxPage() {
                 </button>
 
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코치 답변 / 재답변 작성</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코멘터 답변 / 재답변 작성</label>
                   <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 focus-within:border-[#0071E3] focus-within:ring-2 focus-within:ring-[#0071E3]/20">
                     <textarea
                       value={replyText}

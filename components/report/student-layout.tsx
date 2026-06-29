@@ -129,7 +129,7 @@ export function StudentLayout({
               <h2 className="text-xl font-black text-[#1D1D1F] tracking-tight">등록 기간이 만료되었습니다</h2>
               <p className="text-sm text-[#86868B] leading-relaxed mt-2">
                 결제가 완료되면 기능이 자동으로 복구됩니다.<br />
-                학원 데스크 또는 담당 코치에게 문의해 주세요.
+                학원 데스크 또는 담당 코멘터에게 문의해 주세요.
               </p>
             </div>
             <div className="rounded-2xl bg-red-50 border border-red-100 px-4 py-3 text-left">
@@ -279,7 +279,7 @@ export function StudentLayout({
                     ) : (
                       <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-center">
                         <p className="text-xs font-black text-slate-700">새 알림이 없습니다.</p>
-                        <p className="mt-1 text-[10px] font-semibold text-slate-400">코치 답변과 신청 처리 상태가 여기에 표시돼요.</p>
+                        <p className="mt-1 text-[10px] font-semibold text-slate-400">코멘터 답변과 신청 처리 상태가 여기에 표시돼요.</p>
                       </div>
                     )}
 

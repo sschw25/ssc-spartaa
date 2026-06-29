@@ -162,7 +162,7 @@ export function ConsultationTab({
                 <Calendar className="w-4 h-4" /> 휴가 · 반차 · 휴식권 신청
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-400">
-                신청하면 담당 코치가 검토 후 승인해요. 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.
+                신청하면 담당 코멘터가 검토 후 승인해요. 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.
               </p>
             </div>
 
@@ -302,7 +302,7 @@ export function ConsultationTab({
                         {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.reason}</p>}
                         {r.adminReply && (
                           <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                            코치 답변: {r.adminReply}
+                            코멘터 답변: {r.adminReply}
                           </div>
                         )}
                       </div>
@@ -334,17 +334,17 @@ export function ConsultationTab({
                                 {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.reason}</p>}
                                 {r.adminReply && (
                                   <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                    코치 답변: {r.adminReply}
+                                    코멘터 답변: {r.adminReply}
                                   </div>
                                 )}
                                 {r.status === 'rejected' && (
                                   <button
                                     type="button"
                                     onClick={async () => {
-                                      const note = window.prompt('재승인 요청 사유를 입력해 주세요. (코치에게 함께 전달됩니다)', '');
+                                      const note = window.prompt('재승인 요청 사유를 입력해 주세요. (코멘터에게 함께 전달됩니다)', '');
                                       if (note === null) return;
                                       const ok = await reappealLeave(r.id, note.trim());
-                                      if (ok) window.alert('재승인 요청이 접수되었습니다. 코치 확인 후 다시 안내드릴게요.');
+                                      if (ok) window.alert('재승인 요청이 접수되었습니다. 코멘터 확인 후 다시 안내드릴게요.');
                                       else window.alert('재승인 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
                                     }}
                                     className="mt-2 w-full rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-black text-amber-700 transition hover:bg-amber-100"
@@ -373,7 +373,7 @@ export function ConsultationTab({
             <MessageSquare className="w-4 h-4" /> 건의사항
           </h4>
           <p className="mt-1 text-[10px] font-semibold text-slate-400">
-            시설, 운영, 학습 환경에 대한 의견을 남기면 담당 코치가 확인해요.
+            시설, 운영, 학습 환경에 대한 의견을 남기면 담당 코멘터가 확인해요.
           </p>
         </div>
         <div className="space-y-2">
@@ -420,7 +420,7 @@ export function ConsultationTab({
                     <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
                     {r.adminReply && (
                       <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                        코치 답변: {r.adminReply}
+                        코멘터 답변: {r.adminReply}
                       </div>
                     )}
                   </div>
@@ -452,7 +452,7 @@ export function ConsultationTab({
                             <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.content}</p>
                             {r.adminReply && (
                               <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                코치 답변: {r.adminReply}
+                                코멘터 답변: {r.adminReply}
                               </div>
                             )}
                           </div>

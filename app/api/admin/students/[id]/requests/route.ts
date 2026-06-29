@@ -44,7 +44,7 @@ export async function PATCH(
 
   const nowIso = new Date().toISOString();
   if (reply) {
-    appendThreadMessage(target, { from: 'admin', text: reply, author: '코치' });
+    appendThreadMessage(target, { from: 'admin', text: reply, author: '코멘터' });
     target.adminReply = reply;
     target.repliedAt = nowIso;
   }

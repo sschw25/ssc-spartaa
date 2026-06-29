@@ -224,7 +224,7 @@ export function HomeOverviewTab({
       <div className="rounded-3xl border border-[#0071E3]/15 bg-white p-5 md:p-6 shadow-sm space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h3 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
-            코치 특별 퀘스트
+            코멘터 특별 퀘스트
           </h3>
           <span className="text-[10px] text-[#0071E3]/80 font-bold bg-[#0071E3]/5 px-2.5 py-1 rounded-full">
             완료 체크 시 리포트에 실시간 반영
@@ -326,7 +326,7 @@ export function HomeOverviewTab({
               setRewardBanner={setRewardBanner}
             />
 
-            {/* 2. 아침 자가 점검표 & 코칭 팁 */}
+            {/* 2. 아침 자가 점검표 & 코멘팅 팁 */}
             {(() => {
               const note = getSpecialNoteObj();
               const todayKey = getSeoulDateKey();
@@ -433,7 +433,7 @@ export function HomeOverviewTab({
                 <div className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
                   <div>
                     <div className="flex justify-between items-center">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코칭 팁 ⚪</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁 ⚪</p>
                       <span className="text-[8px] font-bold text-slate-400">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     
@@ -599,7 +599,7 @@ export function HomeOverviewTab({
               </p>
             </div>
             <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">관리자 배정 코치</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">관리자 배정 코멘터</p>
               <p className="mt-2 text-xs font-black text-slate-800 leading-tight truncate">{student.manager || '배정 대기'}</p>
               <p className="mt-1 text-[10px] font-bold text-slate-400">{getCampusLabel(student.campus)}</p>
             </div>
@@ -619,7 +619,7 @@ export function HomeOverviewTab({
             </div>
           </div>
 
-          {/* 코치 코멘트 피드백 퀘스트 리스트 */}
+          {/* 코멘터 코멘트 피드백 퀘스트 리스트 */}
           {renderCoachQuestList()}
         </div>
       ) : (
@@ -672,7 +672,7 @@ export function HomeOverviewTab({
     <section id="coach-feedback" className={`scroll-mt-24 space-y-4 print-card ${!isStudentReport || activeTab === 'coach-feedback' ? '' : 'hidden print:block'}`}>
       <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-[#0071E3]" />
-        코칭 소견 및 생활 관리 피드백
+        코멘팅 소견 및 생활 관리 피드백
       </h3>
 
       {isStudentReport ? (
@@ -684,7 +684,7 @@ export function HomeOverviewTab({
           </div>
         ) : (
           <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
-            <p className="text-xs font-bold text-slate-400">아직 학생용 코칭 소견이 등록되지 않았습니다.</p>
+            <p className="text-xs font-bold text-slate-400">아직 학생용 코멘팅 소견이 등록되지 않았습니다.</p>
           </div>
         )
       ) : (
@@ -696,7 +696,7 @@ export function HomeOverviewTab({
           </div>
         ) : (
           <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/70 p-8 text-center">
-            <p className="text-xs font-bold text-slate-400">아직 학부모용 코칭 소견이 등록되지 않았습니다.</p>
+            <p className="text-xs font-bold text-slate-400">아직 학부모용 코멘팅 소견이 등록되지 않았습니다.</p>
           </div>
         )
       )}

@@ -99,7 +99,7 @@ export function ExecutionPlanTab({
 }: ExecutionPlanTabProps) {
   const [showRealignBox, setShowRealignBox] = React.useState(false);
   const [validationError, setValidationError] = React.useState('');
-  // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코치에게 '요청'으로 전달
+  // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코멘터에게 '요청'으로 전달
   const [realignRequesting, setRealignRequesting] = React.useState<null | 'keepTargetDate' | 'keepPace'>(null);
   const [realignRequested, setRealignRequested] = React.useState(false);
 
@@ -109,7 +109,7 @@ export function ExecutionPlanTab({
     const modeLabel = mode === 'keepTargetDate'
       ? '목표 완료일 유지 (하루 학습량을 늘려 따라잡기)'
       : '학습 페이스 유지 (완료 목표일을 뒤로 조정)';
-    const message = `[복귀/진도 재조정 요청] 오랜만에 복귀했거나 진도가 많이 밀려 학습계획 재설정이 필요합니다.\n희망 방식: ${modeLabel}\n코치님이 검토 후 반영하거나 상담을 안내해 주세요.`;
+    const message = `[복귀/진도 재조정 요청] 오랜만에 복귀했거나 진도가 많이 밀려 학습계획 재설정이 필요합니다.\n희망 방식: ${modeLabel}\n코멘터님이 검토 후 반영하거나 상담을 안내해 주세요.`;
     try {
       await sendRequest('plan', message);
       setRealignRequested(true);
@@ -221,7 +221,7 @@ export function ExecutionPlanTab({
         </span>
       </div>
 
-      {/* 오래 쉬고 온 학생을 위한 진도 재조정 — 학생이 직접 실행하지 않고 코치에게 '요청'으로 전달 (#11) */}
+      {/* 오래 쉬고 온 학생을 위한 진도 재조정 — 학생이 직접 실행하지 않고 코멘터에게 '요청'으로 전달 (#11) */}
       {isStudentReport && (
         <div className="no-print rounded-3xl border border-amber-300 bg-amber-50/60 p-4 md:p-5 shadow-sm space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -230,7 +230,7 @@ export function ExecutionPlanTab({
                 🔄 오랜만에 복귀하셨거나 진도가 많이 밀렸나요?
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                계획 재설정은 코치 검토가 필요해요. 희망하는 방식을 코치에게 요청하면, 검토 후 반영하거나 상담을 안내해 드려요.
+                계획 재설정은 코멘터 검토가 필요해요. 희망하는 방식을 코멘터에게 요청하면, 검토 후 반영하거나 상담을 안내해 드려요.
               </p>
             </div>
             {!realignRequested && !showRealignBox && (
@@ -256,7 +256,7 @@ export function ExecutionPlanTab({
           {realignRequested ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-              코치에게 계획 재조정 요청을 보냈어요. 검토 후 반영하거나 상담을 안내해 드릴게요. (아래 ‘학습 관련 요청’에서 진행 상황 확인)
+              코멘터에게 계획 재조정 요청을 보냈어요. 검토 후 반영하거나 상담을 안내해 드릴게요. (아래 ‘학습 관련 요청’에서 진행 상황 확인)
             </div>
           ) : showRealignBox && (
             <div className="pt-3 border-t border-amber-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up">
@@ -271,7 +271,7 @@ export function ExecutionPlanTab({
                   <span className="text-[9px] font-bold bg-[#0071E3]/10 px-1.5 py-0.5 rounded">{realignRequesting === 'keepTargetDate' ? '전송 중' : '기본값'}</span>
                 </div>
                 <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
-                  원래 약속된 목표일에 끝내기 위해, 밀렸던 분량만큼 하루 목표치를 늘리는 방향으로 코치에게 요청합니다.
+                  원래 약속된 목표일에 끝내기 위해, 밀렸던 분량만큼 하루 목표치를 늘리는 방향으로 코멘터에게 요청합니다.
                 </p>
               </button>
 
@@ -285,7 +285,7 @@ export function ExecutionPlanTab({
                   🐢 학습 페이스 유지 요청 {realignRequesting === 'keepPace' && <span className="text-[9px] text-slate-400">(전송 중)</span>}
                 </div>
                 <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
-                  하루 학습 강도는 유지하는 대신, 남은 분량만큼 완료 목표일을 늦추는 방향으로 코치에게 요청합니다.
+                  하루 학습 강도는 유지하는 대신, 남은 분량만큼 완료 목표일을 늦추는 방향으로 코멘터에게 요청합니다.
                 </p>
               </button>
             </div>
@@ -300,7 +300,7 @@ export function ExecutionPlanTab({
           <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
             <MessageSquare className="w-4 h-4" /> 학습 관련 요청
           </h4>
-          <p className="mt-1 text-[10px] font-semibold text-slate-400">진도 정정·과목 추가/변경·학습계획 조정 등을 신청하면 담당 코치가 확인해요.</p>
+          <p className="mt-1 text-[10px] font-semibold text-slate-400">진도 정정·과목 추가/변경·학습계획 조정 등을 신청하면 담당 코멘터가 확인해요.</p>
         </div>
         <div className="space-y-2.5">
           {/* 원탭 빠른 신청 */}
@@ -556,7 +556,7 @@ export function ExecutionPlanTab({
                     <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
                     {r.adminReply && (
                       <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                        코치 답변: {r.adminReply}
+                        코멘터 답변: {r.adminReply}
                       </div>
                     )}
                   </div>
@@ -587,7 +587,7 @@ export function ExecutionPlanTab({
                             <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.content}</p>
                             {r.adminReply && (
                               <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                코치 답변: {r.adminReply}
+                                코멘터 답변: {r.adminReply}
                               </div>
                             )}
                           </div>

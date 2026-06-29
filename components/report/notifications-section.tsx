@@ -107,7 +107,7 @@ function NotificationThread({
             <div key={m.id} className={`flex ${m.from === 'student' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold leading-4 whitespace-pre-wrap break-words ${m.from === 'student' ? 'bg-slate-900 text-white' : 'bg-white border border-[#0071E3]/20 text-slate-700'}`}>
                 <span className={`block text-[8px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'student' ? 'text-white/60' : 'text-[#0071E3]/70'}`}>
-                  {m.from === 'student' ? '나' : '코치'}
+                  {m.from === 'student' ? '나' : '코멘터'}
                 </span>
                 {m.text}
               </div>
@@ -120,7 +120,7 @@ function NotificationThread({
           value={text}
           onChange={(e) => setText(e.target.value)}
           rows={1}
-          placeholder="코치에게 답장하기..."
+          placeholder="코멘터에게 답장하기..."
           className="min-h-9 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15"
         />
         <button
@@ -166,7 +166,7 @@ export function NotificationsSection({
               {notificationCount > 0 ? `${studentName}님에게 온 알림 ${notificationCount}개` : `${studentName}님, 새 알림이 없습니다`}
             </h2>
             <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
-              코치 답변, 신청 처리 상태, 성적 입력 안내처럼 지금 먼저 확인해야 할 내용을 한곳에 모았습니다.
+              코멘터 답변, 신청 처리 상태, 성적 입력 안내처럼 지금 먼저 확인해야 할 내용을 한곳에 모았습니다.
             </p>
           </div>
           <button
@@ -251,7 +251,7 @@ export function NotificationsSection({
         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
           <Bell className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-black text-slate-700">확인할 알림이 없습니다.</p>
-          <p className="mt-1 text-xs font-semibold text-slate-400">신청 답변이나 코치 안내가 도착하면 이 화면 맨 위에 표시됩니다.</p>
+          <p className="mt-1 text-xs font-semibold text-slate-400">신청 답변이나 코멘터 안내가 도착하면 이 화면 맨 위에 표시됩니다.</p>
         </div>
       ) : (
         <p className="px-1 text-xs font-semibold text-slate-400">아래의 모의고사 · OT · 증빙 응답 카드를 확인해 주세요.</p>

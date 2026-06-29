@@ -209,7 +209,7 @@ function StudentReportInner() {
             </div>
             <h1 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F]">리포트 비밀번호</h1>
             <p className="text-[11px] text-[#86868B] leading-relaxed">
-              담당 코치에게 받은 6자리 비밀번호를 입력해 주세요.
+              담당 코멘터에게 받은 6자리 비밀번호를 입력해 주세요.
             </p>
           </div>
           <form onSubmit={handleSharePasswordSubmit} className="flex flex-col gap-3">
