@@ -75,6 +75,11 @@ function EventCard({ event, onResponded }: { event: OtEvent; onResponded: (id: s
           <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
             OT는 <b className="text-[#B45309]">필수 참석</b>이에요. 참여하면 쿠폰 적립! 부득이한 불참은 사유를 적어 신청하면 선생님이 확인해요.
           </p>
+          {event.message && (
+            <p className="mt-2 rounded-xl border border-[#FDE7C9] bg-white/70 px-3 py-2 text-[11px] font-semibold leading-relaxed text-[#92400E] whitespace-pre-wrap break-words">
+              {event.message}
+            </p>
+          )}
         </div>
       </div>
 

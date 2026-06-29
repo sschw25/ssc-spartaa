@@ -52,15 +52,14 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   // ── 개별 등록 상태 ──────────────────────────────────────────────
   const [name, setName] = useState('');
   const [loginId, setLoginId] = useState('');
+  const [password, setPassword] = useState('');
+  const [generatingId, setGeneratingId] = useState(false);
   const [campus, setCampus] = useState('wonju');
   const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
   const [seatNumber, setSeatNumber] = useState('');
-  const [nextConsultationDate, setNextConsultationDate] = useState('');
   const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
-  const [lifeComment, setLifeComment] = useState('');
-  const [studentLifeComment, setStudentLifeComment] = useState('');
   const [specialNote, setSpecialNote] = useState('');
   const [parentPhone, setParentPhone] = useState('');
   const [studentPhone, setStudentPhone] = useState('');
@@ -92,18 +91,46 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     )
   );
 
+  // 담당 상담자 목록 — 기존 학생들에 입력된 담당자에서 추출(선택형 자동완성)
+  const uniqueManagers = Array.from(
+    new Set(
+      students
+        .map((s) => s.manager)
+        .filter((m): m is string => typeof m === 'string' && m.trim() !== '')
+        .map((m) => m.trim())
+    )
+  ).sort((a, b) => a.localeCompare(b, 'ko'));
+
+  // 임시 로그인 ID·비밀번호 자동발급 (sparta00001, 전 센터 통합 순차)
+  const generateTempCredentials = async () => {
+    setGeneratingId(true);
+    try {
+      const res = await fetch('/api/admin/students/next-login-id');
+      const data = await res.json();
+      if (res.ok && data.success && data.loginId) {
+        setLoginId(data.loginId);
+        setPassword(data.loginId); // 임시 비번 = 임시 아이디(로그인 후 변경 안내)
+        toast.success(`임시 계정 발급: ${data.loginId}`);
+      } else {
+        toast.error(data.message || '임시 ID 발급에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 에러가 발생했습니다.');
+    } finally {
+      setGeneratingId(false);
+    }
+  };
+
   function resetAll() {
     setName('');
     setLoginId('');
+    setPassword('');
     setCampus('wonju');
     setManager('');
     setContact('');
     setSeatNumber('');
-    setNextConsultationDate('');
     setEnrollmentEndDate('');
     setWeeklyGradeCheck(false);
-    setLifeComment('');
-    setStudentLifeComment('');
     setSpecialNote('');
     setParentPhone('');
     setStudentPhone('');
@@ -177,6 +204,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) { toast.error('원생 이름을 입력해 주세요.'); return; }
+    if (password.trim() && password.trim().length < 4) { toast.error('비밀번호는 4자 이상이어야 합니다.'); return; }
     setLoading(true);
     try {
       const res = await fetch('/api/admin/students', {
@@ -189,14 +217,12 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
           manager: manager.trim(),
           contact: contact.trim(),
           seatNumber: normalizeSeatNumber(seatNumber),
-          nextConsultationDate: nextConsultationDate || undefined,
           enrollmentEndDate: enrollmentEndDate || undefined,
           weeklyGradeCheck,
           parentPhone: parentPhone.trim(),
           studentPhone: studentPhone.trim(),
           smsTargets,
-          lifeComment: lifeComment.trim(),
-          studentLifeComment: studentLifeComment.trim(),
+          // 생활 코멘트는 추후 상담 시 입력 — 등록 시점엔 내부 메모(특이사항)만
           specialNote: specialNote.trim(),
           awaySchedules,
           consultationLogs: [],
@@ -208,6 +234,18 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        // 비밀번호가 입력된 경우 학생 포털 로그인 비번 설정
+        if (password.trim() && data.data?.id) {
+          try {
+            await fetch(`/api/admin/students/${data.data.id}/password`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ password: password.trim() }),
+            });
+          } catch {
+            toast.error('학생은 등록됐지만 비밀번호 설정에 실패했습니다. 학생 정보에서 다시 설정해 주세요.');
+          }
+        }
         toast.success(`${name} 원생이 성공적으로 등록되었습니다.`);
         onSuccess(data.data);
         resetAll();
@@ -304,7 +342,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto rounded-2xl border-black/[0.05] bg-white p-6 sm:max-w-3xl">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border-black/[0.05] bg-white p-6 sm:max-w-3xl">
         <DialogHeader className="pb-3 pr-8">
           <DialogTitle className="text-lg font-bold text-[#1D1D1F]">신규 원생 등록</DialogTitle>
           <DialogDescription className="text-xs text-[#86868B]">
@@ -333,7 +371,8 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
         {/* ── 개별 등록 ── */}
         {mode === 'single' && (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+           <div className="flex-1 space-y-4 overflow-y-auto">
             <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
               <div className="flex items-center gap-1.5">
                 <UserPlus className="w-4 h-4 text-[#0071E3]" />
@@ -350,16 +389,6 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     onChange={(e) => setName(e.target.value)}
                     className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9"
                     required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-login-id" className="text-xs font-semibold text-[#1D1D1F]">로그인 ID (학생용 포털)</Label>
-                  <Input
-                    id="new-login-id"
-                    placeholder="영어/숫자 조합"
-                    value={loginId}
-                    onChange={(e) => setLoginId(e.target.value.trim().toLowerCase())}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -382,8 +411,12 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     placeholder="원주센터장"
                     value={manager}
                     onChange={(e) => setManager(e.target.value)}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9"
+                    list="managers-list"
+                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
+                  <datalist id="managers-list">
+                    {uniqueManagers.map((m) => <option key={m} value={m} />)}
+                  </datalist>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="new-contact" className="text-xs font-semibold text-[#1D1D1F]">목표시험</Label>
@@ -413,16 +446,6 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-next-consult" className="text-xs font-semibold text-[#1D1D1F]">다음 상담 예정일</Label>
-                  <Input
-                    id="new-next-consult"
-                    type="date"
-                    value={nextConsultationDate}
-                    onChange={(e) => setNextConsultationDate(e.target.value)}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
-                  />
-                </div>
-                <div className="space-y-1.5">
                   <Label htmlFor="new-enrollment-end" className="flex items-center gap-1 text-xs font-semibold text-[#1D1D1F]">
                     <CalendarClock className="w-3.5 h-3.5 text-[#86868B]" />
                     등록 종료일
@@ -439,6 +462,50 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
               </div>
 
 
+            </section>
+
+            {/* 로그인 정보 — 아이디·비밀번호 동일 타일 */}
+            <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-[#0071E3]" />
+                  <h4 className="text-xs font-bold text-[#1D1D1F]">학생 포털 로그인 정보</h4>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generateTempCredentials}
+                  disabled={generatingId}
+                  className="h-7 rounded-lg border-[#0071E3]/20 bg-white text-[10px] font-bold text-[#0071E3] px-2.5"
+                >
+                  {generatingId ? <Loader2 className="w-3 h-3 animate-spin" /> : '임시 ID·비번 자동발급'}
+                </Button>
+              </div>
+              <p className="text-[10px] text-[#86868B]">
+                임시 계정(sparta00001 형식)은 전 센터 통합 순차로 발급되어 중복되지 않습니다. ID·비번이 노출돼도 다른 개인정보에는 영향이 없습니다.
+              </p>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-login-id" className="text-xs font-semibold text-[#1D1D1F]">로그인 ID</Label>
+                  <Input
+                    id="new-login-id"
+                    placeholder="영어/숫자 조합"
+                    value={loginId}
+                    onChange={(e) => setLoginId(e.target.value.trim().toLowerCase())}
+                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password" className="text-xs font-semibold text-[#1D1D1F]">비밀번호 (4자 이상)</Label>
+                  <Input
+                    id="new-password"
+                    placeholder="미입력 시 추후 설정"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                  />
+                </div>
+              </div>
             </section>
 
             <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
@@ -612,43 +679,22 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
             </section>
 
             <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
-              <h4 className="text-xs font-bold text-[#1D1D1F]">생활 코멘트 및 내부 메모</h4>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-life-comment" className="text-xs font-semibold text-[#1D1D1F]">학부모 공유용 생활 코멘트</Label>
-                  <Textarea
-                    id="new-life-comment"
-                    placeholder="학부모용 결과지에 표시할 생활 관리 피드백"
-                    value={lifeComment}
-                    onChange={(e) => setLifeComment(e.target.value)}
-                    className="min-h-[78px] rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="new-student-life-comment" className="text-xs font-semibold text-[#1D1D1F]">학생 공유용 생활 코멘트</Label>
-                  <Textarea
-                    id="new-student-life-comment"
-                    placeholder="학생 본인이 확인할 생활 습관/자습 태도 피드백"
-                    value={studentLifeComment}
-                    onChange={(e) => setStudentLifeComment(e.target.value)}
-                    className="min-h-[78px] rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs"
-                  />
-                </div>
-              </div>
+              <h4 className="text-xs font-bold text-[#1D1D1F]">내부 메모 (특이사항)</h4>
               <div className="space-y-1.5">
                 <Label htmlFor="new-special-note" className="text-xs font-semibold text-[#1D1D1F]">특이사항</Label>
                 <Textarea
                   id="new-special-note"
-                  placeholder="보호자 요청, 연락 가능 시간, 건강/생활 참고사항 등 내부 관리 메모를 입력하세요."
+                  placeholder="해당 원생의 특이사항만 적어주세요. 예: 어디가 아프다 / 집이 멀다 / 기존 학습량 등"
                   value={specialNote}
                   onChange={(e) => setSpecialNote(e.target.value)}
-                  className="min-h-[72px] rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs"
+                  className="min-h-[88px] rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs"
                 />
-                <p className="text-[10px] text-[#86868B]">내부 관리용 메모이며 학부모용 결과지에는 표시되지 않습니다.</p>
+                <p className="text-[10px] text-[#86868B]">내부 관리용 메모이며 학부모용 결과지에는 표시되지 않습니다. 생활 코멘트는 추후 상담하면서 입력합니다.</p>
               </div>
             </section>
 
-            <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t border-black/[0.05] bg-white px-6 py-4">
+           </div>
+            <DialogFooter className="-mx-6 -mb-6 mt-4 shrink-0 border-t border-black/[0.05] bg-white px-6 py-4">
               <Button type="button" variant="outline" onClick={handleClose} className="rounded-xl text-xs py-4 bg-white">
                 취소
               </Button>
@@ -659,9 +705,10 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
           </form>
         )}
 
-        {/* ── 엑셀 일괄 등록 ── */}
+        {/* ── 엑셀 일괄 등록 (붙여넣기) ── */}
         {mode === 'bulk' && (
-          <div className="space-y-4">
+          <div className="flex min-h-0 flex-1 flex-col">
+           <div className="flex-1 space-y-4 overflow-y-auto">
             {/* 공통 설정 */}
             <div className="grid grid-cols-1 gap-3 rounded-xl border border-black/[0.05] bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1.5">
@@ -795,7 +842,8 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
               </div>
             )}
 
-            <DialogFooter className="sticky bottom-0 -mx-6 -mb-6 border-t border-black/[0.05] bg-white px-6 py-4">
+           </div>
+            <DialogFooter className="-mx-6 -mb-6 mt-4 shrink-0 border-t border-black/[0.05] bg-white px-6 py-4">
               <Button type="button" variant="outline" onClick={handleClose} className="rounded-xl text-xs py-4 bg-white">
                 취소
               </Button>

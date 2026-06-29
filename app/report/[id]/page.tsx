@@ -13,23 +13,29 @@ import { ConsultationTab } from '@/components/report/consultation-tab';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
 import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
+import { CampusEventNotice } from '@/components/report/campus-event-notice';
+import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MissionsCard } from '@/components/report/missions-card';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
-import type { MockExam, OtEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
+import type { MockExam, OtEvent, CampusEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
 function StudentReportInner() {
   const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
   const [pendingOtEvents, setPendingOtEvents] = useState<OtEvent[]>([]);
+  const [pendingCampusEvents, setPendingCampusEvents] = useState<CampusEvent[]>([]);
+  const [mealPlans, setMealPlans] = useState<MealPlanWithOrder[]>([]);
 
   useEffect(() => {
     let cancelled = false;
 
     async function loadPending() {
       try {
-        const [examRes, otRes] = await Promise.all([
+        const [examRes, otRes, campusRes, mealRes] = await Promise.all([
           fetch('/api/student/mock-exams', { credentials: 'same-origin' }),
           fetch('/api/student/ot-events', { credentials: 'same-origin' }),
+          fetch('/api/student/campus-events', { credentials: 'same-origin' }),
+          fetch('/api/student/meal-plans', { credentials: 'same-origin' }),
         ]);
         if (examRes.ok) {
           const json = await examRes.json();
@@ -38,6 +44,14 @@ function StudentReportInner() {
         if (otRes.ok) {
           const json = await otRes.json();
           if (!cancelled && json.success) setPendingOtEvents(json.events || []);
+        }
+        if (campusRes.ok) {
+          const json = await campusRes.json();
+          if (!cancelled && json.success) setPendingCampusEvents(json.events || []);
+        }
+        if (mealRes.ok) {
+          const json = await mealRes.json();
+          if (!cancelled && json.success) setMealPlans(json.plans || []);
         }
       } catch {}
     }
@@ -48,12 +62,20 @@ function StudentReportInner() {
     };
   }, []);
 
+  const handleMealSaved = useCallback((planId: string, order: import('@/lib/types/student').MealOrder) => {
+    setMealPlans((prev) => prev.map((p) => (p.id === planId ? { ...p, myOrder: order } : p)));
+  }, []);
+
   const handleMockExamResponded = useCallback((examId: string) => {
     setPendingMockExams((prev) => prev.filter((e) => e.id !== examId));
   }, []);
 
   const handleOtEventResponded = useCallback((eventId: string) => {
     setPendingOtEvents((prev) => prev.filter((e) => e.id !== eventId));
+  }, []);
+
+  const handleCampusEventResponded = useCallback((eventId: string) => {
+    setPendingCampusEvents((prev) => prev.filter((e) => e.id !== eventId));
   }, []);
 
   const {
@@ -121,6 +143,7 @@ function StudentReportInner() {
     leaveError,
     submitLeave,
     cancelLeave,
+    reappealLeave,
     homeAttend,
     handlePrint,
     handleLogout,
@@ -148,6 +171,7 @@ function StudentReportInner() {
     dismissNotification,
     restoreNotification,
     restoreAllNotifications,
+    replyToThread,
     reportNavItems,
     tabIds,
     daysUntilEnrollmentEnd,
@@ -262,6 +286,14 @@ function StudentReportInner() {
     (excuse) => excuse.status === 'pending'
   );
 
+  // 도시락: 마감 전인데 아직 신청 안 한 라운드만 "확인할 알림"으로 카운트
+  const pendingMealCount = mealPlans.filter((p) => !p.pastDeadline && !p.myOrder).length;
+
+  // #6 — 홈 알림 배지: 일반 알림 + 모의고사/OT/도시락/토요증빙 미응답을 모두 합산해 "확인할 알림 수"로 표시
+  const attentionCount = isStudentReport
+    ? notificationCount + pendingMockExams.length + pendingOtEvents.length + pendingCampusEvents.length + pendingMealCount + pendingSaturdayLateExcuses.length
+    : notificationCount;
+
   return (
     <StudentLayout
       student={student}
@@ -270,7 +302,7 @@ function StudentReportInner() {
       showEnrollmentWarning={showEnrollmentWarning}
       isEnrollmentExpiredLocked={isEnrollmentExpiredLocked}
       daysUntilEnrollmentEnd={daysUntilEnrollmentEnd}
-      notificationCount={notificationCount}
+      notificationCount={attentionCount}
       notificationPreview={notificationPreview}
       reportNavItems={reportNavItems}
       activeTab={activeTab}
@@ -294,10 +326,11 @@ function StudentReportInner() {
             studentName={student.name}
             studentNotifications={studentNotifications}
             dismissedNotifications={dismissedStudentNotifications}
-            notificationCount={notificationCount}
+            notificationCount={attentionCount}
             onDismissNotification={dismissNotification}
             onRestoreNotification={restoreNotification}
             onRestoreAllNotifications={restoreAllNotifications}
+            onReplyToThread={replyToThread}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             slideDirRef={slideDirRef}
@@ -305,8 +338,8 @@ function StudentReportInner() {
           />
         )}
 
-        {/* 0-1. 모의고사 참여 여부 응답 카드 (학생 전용, 미응답 시험이 있을 때만) */}
-        {isStudentReport && pendingMockExams.length > 0 && (
+        {/* 0-1. 모의고사 참여 여부 응답 카드 (학생 전용 · 알림 탭에서만 노출 — 홈은 배지 카운트로 안내) */}
+        {isStudentReport && activeTab === 'student-notifications' && pendingMockExams.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
             <MockExamNotice
               exams={pendingMockExams}
@@ -315,8 +348,8 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 0-1b. OT 참여 여부 응답 카드 (학생 전용, 미응답 OT가 있을 때만) */}
-        {isStudentReport && pendingOtEvents.length > 0 && (
+        {/* 0-1b. OT 참여 여부 응답 카드 (학생 전용 · 알림 탭에서만 노출) */}
+        {isStudentReport && activeTab === 'student-notifications' && pendingOtEvents.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
             <OtEventNotice
               events={pendingOtEvents}
@@ -325,8 +358,28 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 0-2. 토요 지각 증빙 요청 공지 (학생 전용, 미회신 증빙이 있을 때만) */}
-        {isStudentReport && pendingSaturdayLateExcuses.length > 0 && (
+        {/* 0-1b2. 참여 미션(캘린더) 수락 카드 (학생 전용 · 알림 탭에서만 노출) */}
+        {isStudentReport && activeTab === 'student-notifications' && pendingCampusEvents.length > 0 && (
+          <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
+            <CampusEventNotice
+              events={pendingCampusEvents}
+              onResponded={handleCampusEventResponded}
+            />
+          </div>
+        )}
+
+        {/* 0-1c. 도시락 신청 카드 (학생 전용 · 알림 탭에서만 노출) */}
+        {isStudentReport && activeTab === 'student-notifications' && mealPlans.length > 0 && (
+          <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
+            <MealPlanNotice
+              plans={mealPlans}
+              onSaved={handleMealSaved}
+            />
+          </div>
+        )}
+
+        {/* 0-2. 토요 지각 증빙 요청 공지 (학생 전용 · 알림 탭에서만 노출) */}
+        {isStudentReport && activeTab === 'student-notifications' && pendingSaturdayLateExcuses.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
             <SaturdayLateExcuseNotice
               excuses={pendingSaturdayLateExcuses}
@@ -462,6 +515,7 @@ function StudentReportInner() {
           leaveError={leaveError}
           submitLeave={submitLeave}
           cancelLeave={cancelLeave}
+          reappealLeave={reappealLeave}
           showLeaveHistory={showLeaveHistory}
           setShowLeaveHistory={setShowLeaveHistory}
           suggestionMessage={suggestionMessage}

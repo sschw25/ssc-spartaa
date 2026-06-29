@@ -32,8 +32,11 @@ export default function OtEventsPage() {
   const [campusFilter, setCampusFilter] = useState('all');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [adminCampus, setAdminCampus] = useState<string>('all');
   const [newName, setNewName] = useState('');
   const [newDate, setNewDate] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [newCampus, setNewCampus] = useState<string>('all');
   const [adding, setAdding] = useState(false);
   const [notifyingEventId, setNotifyingEventId] = useState<string | null>(null);
 
@@ -66,6 +69,10 @@ export default function OtEventsPage() {
       try {
         const res = await fetch('/api/admin/auth/me');
         if (!res.ok) { router.replace('/admin'); return; }
+        try {
+          const me = await res.json();
+          if (me?.campus && me.campus !== 'all') { setAdminCampus(me.campus); setNewCampus(me.campus); }
+        } catch { /* noop */ }
         loadAll();
       } catch { router.replace('/admin'); } finally { setCheckingAuth(false); }
     })();
@@ -77,14 +84,14 @@ export default function OtEventsPage() {
     try {
       const res = await fetch('/api/admin/ot-events', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), date: newDate }),
+        body: JSON.stringify({ name: newName.trim(), date: newDate, campus: newCampus, message: newMessage.trim() }),
       });
       const json = await res.json();
       if (json.success) {
         toast.success('OT 일정이 등록되었습니다.');
         setEvents((prev) => [json.event, ...prev]);
         setSelectedEventId(json.event.id);
-        setNewName(''); setNewDate('');
+        setNewName(''); setNewDate(''); setNewMessage('');
       } else { toast.error(json.message || '등록 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setAdding(false); }
   };
@@ -194,11 +201,32 @@ export default function OtEventsPage() {
               className="flex-1 min-w-40 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
             <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+            <select
+              value={newCampus}
+              onChange={(e) => setNewCampus(e.target.value)}
+              disabled={adminCampus !== 'all'}
+              title={adminCampus !== 'all' ? '담당 센터로 자동 지정됩니다' : '대상 센터 선택'}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
+              <option value="all">전체 센터</option>
+              <option value="wonju">원주</option>
+              <option value="chuncheon">춘천</option>
+              <option value="chungju">충주</option>
+            </select>
             <Button onClick={addEvent} disabled={adding}
               className="rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-10 px-4">
               {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} 등록
             </Button>
           </div>
+          <textarea
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="학생 알림에 함께 보낼 안내 메시지 (선택) — 예) 준비물·장소·시간 안내"
+            rows={2}
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none resize-none"
+          />
+          <p className="text-[11px] font-semibold text-slate-400">
+            💡 센터별로 날짜가 다르면 같은 OT명으로 센터를 바꿔 각각 등록하세요. 학생에게는 <b>OT 날짜 3일 전부터 자동</b>으로 알림이 뜹니다. (즉시 보내려면 ‘학생 알림’)
+          </p>
 
           {events.length > 0 && (
             <div className="space-y-2 pt-1">
@@ -211,6 +239,9 @@ export default function OtEventsPage() {
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className={`text-xs font-black ${selectedEventId === event.id ? 'text-[#0071E3]' : 'text-slate-700'}`}>{event.name}</span>
                         <span className="text-[11px] font-semibold text-slate-400">{event.date}</span>
+                        <span className="rounded-lg bg-slate-200/70 text-slate-600 px-1.5 py-0.5 text-[9px] font-black">
+                          {event.campus && event.campus !== 'all' ? getCampusLabel(event.campus) : '전체 센터'}
+                        </span>
                         {event.notifiedAt && (
                           <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
                             <Bell className="w-2 h-2" /> 알림됨

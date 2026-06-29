@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { activeBackend, getStudentsSummary, getSessionsByDate, getOpenSessions } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
+import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
 
 function seoulHm(iso: string): { label: string; min: number } {
   const label = new Intl.DateTimeFormat('en-GB', {
@@ -14,7 +15,6 @@ function seoulHm(iso: string): { label: string; min: number } {
   return { label, min: h * 60 + m };
 }
 
-const DEADLINE_MIN: Record<string, number> = { '08:20': 8 * 60 + 20, '09:00': 9 * 60 };
 
 // 관리자: 특정 날짜의 학생별 출결 로그.
 // includeAbsent=1이면 당일 출결 기록이 없는 학생도 함께 내려준다.
@@ -66,8 +66,8 @@ export async function GET(request: Request) {
       const stillOpen = openIds.has(sid) && arr.some((session) => !session.check_out);
       const ci = seoulHm(firstIn);
       const co = lastOut ? seoulHm(lastOut) : null;
-      const expectedArrival = (stu.expectedArrival === '09:00' ? '09:00' : '08:20') as '08:20' | '09:00';
-      const isLate = ci.min > DEADLINE_MIN[expectedArrival];
+      const expectedArrival = normalizeArrival(stu.expectedArrival);
+      const isLate = ci.min > arrivalDeadlineMin(expectedArrival);
       return {
         id: stu.id,
         name: stu.name,
@@ -89,7 +89,7 @@ export async function GET(request: Request) {
       ? students
           .filter((stu) => !byStudent.has(stu.id))
           .map((stu) => {
-            const expectedArrival = (stu.expectedArrival === '09:00' ? '09:00' : '08:20') as '08:20' | '09:00';
+            const expectedArrival = normalizeArrival(stu.expectedArrival);
             return {
               id: stu.id,
               name: stu.name,

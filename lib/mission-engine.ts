@@ -208,3 +208,19 @@ export async function grantOtAttendance(student: Student, eventId: string): Prom
   writeActivityEnvelope(student, noteObj);
   return m.coupons;
 }
+
+// 학원 캘린더 참여 미션 쿠폰 지급 (행사 후 일괄 지급·멱등) — student 객체를 변형하고 지급한 쿠폰 수를 반환.
+// 저장(saveStudent)은 호출부 책임. 쿠폰<=0 이거나 이미 지급된 경우 0 반환.
+// rewards_log 의 periodKey=`EVENT:${eventId}` 로 중복 지급을 막고, 학생 미션 카드 "최근 적립"에 행사명으로 노출된다.
+export function grantCampusEventReward(student: Student, eventId: string, coupons: number, eventTitle: string): number {
+  if (!coupons || coupons <= 0) return 0;
+  const noteObj: any = readActivityEnvelope(student);
+  if (!Array.isArray(noteObj.rewards_log)) noteObj.rewards_log = [];
+  const periodKey = `EVENT:${eventId}`;
+  const missionName = `참여 미션 — ${eventTitle}`;
+  if (hasReward(noteObj, periodKey, missionName)) return 0;
+  noteObj.rewards_log.push({ date: periodKey, missionName, status: 'completed', rewardGranted: coupons });
+  student.leaveCoupons = (student.leaveCoupons || 0) + coupons;
+  writeActivityEnvelope(student, noteObj);
+  return coupons;
+}

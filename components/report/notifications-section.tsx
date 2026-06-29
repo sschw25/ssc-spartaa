@@ -1,9 +1,15 @@
 'use client';
 
 import React from 'react';
-import { Bell, MessageSquare, CheckCircle2, AlertCircle, Calendar, RotateCcw, X } from 'lucide-react';
+import { Bell, MessageSquare, CheckCircle2, AlertCircle, Calendar, RotateCcw, CheckCheck } from 'lucide-react';
 
 export type StudentNotificationTone = 'blue' | 'emerald' | 'amber' | 'red' | 'slate';
+
+export interface NotificationThreadMessage {
+  id: string;
+  from: 'student' | 'admin';
+  text: string;
+}
 
 export interface StudentNotification {
   id: string;
@@ -14,6 +20,10 @@ export interface StudentNotification {
   meta?: string;
   date?: string;
   priority: number;
+  // 양방향 재답변 — 설정 시 알림 카드에 대화 내역 + 답장창 노출
+  replyKind?: 'request' | 'suggestion' | 'leave';
+  replyId?: string;
+  thread?: NotificationThreadMessage[]; // head(본문) 이후의 대화
 }
 
 const NOTIFICATION_TONE_ICON: Record<StudentNotificationTone, React.ElementType> = {
@@ -60,10 +70,70 @@ interface NotificationsSectionProps {
   onDismissNotification: (notificationId: string) => void;
   onRestoreNotification: (notificationId: string) => void;
   onRestoreAllNotifications: () => void;
+  onReplyToThread?: (kind: 'request' | 'suggestion' | 'leave', id: string, text: string) => Promise<boolean>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   slideDirRef: React.MutableRefObject<number>;
   formatNotificationDate: (value?: string) => string;
+}
+
+// 알림 카드 내 양방향 대화 + 재답변 입력 (학생)
+function NotificationThread({
+  notification,
+  onReplyToThread,
+}: {
+  notification: StudentNotification;
+  onReplyToThread?: (kind: 'request' | 'suggestion' | 'leave', id: string, text: string) => Promise<boolean>;
+}) {
+  const [text, setText] = React.useState('');
+  const [sending, setSending] = React.useState(false);
+  const convo = notification.thread || [];
+
+  const send = async () => {
+    if (!onReplyToThread || !notification.replyKind || !notification.replyId) return;
+    const trimmed = text.trim();
+    if (!trimmed || sending) return;
+    setSending(true);
+    const ok = await onReplyToThread(notification.replyKind, notification.replyId, trimmed);
+    setSending(false);
+    if (ok) setText('');
+  };
+
+  return (
+    <div className="mt-3 space-y-2">
+      {convo.length > 0 && (
+        <div className="space-y-1.5">
+          {convo.map((m) => (
+            <div key={m.id} className={`flex ${m.from === 'student' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold leading-4 whitespace-pre-wrap break-words ${m.from === 'student' ? 'bg-slate-900 text-white' : 'bg-white border border-[#0071E3]/20 text-slate-700'}`}>
+                <span className={`block text-[8px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'student' ? 'text-white/60' : 'text-[#0071E3]/70'}`}>
+                  {m.from === 'student' ? '나' : '코치'}
+                </span>
+                {m.text}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex items-end gap-2">
+        <textarea
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          rows={1}
+          placeholder="코치에게 답장하기..."
+          className="min-h-9 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15"
+        />
+        <button
+          type="button"
+          onClick={send}
+          disabled={sending || !text.trim()}
+          className="h-9 shrink-0 rounded-2xl bg-[#0071E3] px-3.5 text-[11px] font-black text-white shadow-sm transition hover:bg-[#0071E3]/90 disabled:opacity-40 active:scale-[0.98]"
+        >
+          {sending ? '전송중' : '답장'}
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export function NotificationsSection({
@@ -74,6 +144,7 @@ export function NotificationsSection({
   onDismissNotification,
   onRestoreNotification,
   onRestoreAllNotifications,
+  onReplyToThread,
   activeTab,
   setActiveTab,
   slideDirRef,
@@ -115,7 +186,7 @@ export function NotificationsSection({
             onClick={() => setShowDismissed((value) => !value)}
             className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-500 shadow-sm transition hover:bg-slate-50 active:scale-[0.98]"
           >
-            {showDismissed ? '지운 알림 접기' : `지운 알림 보기 ${dismissedCount}개`}
+            {showDismissed ? '확인한 알림 접기' : `확인한 알림 ${dismissedCount}개`}
           </button>
           {showDismissed && (
             <button
@@ -124,7 +195,7 @@ export function NotificationsSection({
               className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white px-3 text-[11px] font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98]"
             >
               <RotateCcw className="h-3.5 w-3.5" />
-              모두 복구
+              모두 다시 알림으로
             </button>
           )}
         </div>
@@ -136,16 +207,7 @@ export function NotificationsSection({
             const toneClass = NOTIFICATION_TONE_CLASS[notification.tone];
             const ToneIcon = NOTIFICATION_TONE_ICON[notification.tone];
             return (
-              <article key={notification.id} className={`relative rounded-3xl border p-4 pr-12 shadow-sm md:p-5 md:pr-14 ${toneClass.item}`}>
-                <button
-                  type="button"
-                  onClick={() => onDismissNotification(notification.id)}
-                  className="no-print absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-white/80 bg-white/90 text-slate-400 shadow-sm transition hover:text-slate-700 active:scale-95"
-                  aria-label={`${notification.title} 알림 지우기`}
-                  title="알림 지우기"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
+              <article key={notification.id} className={`relative rounded-3xl border p-4 shadow-sm md:p-5 ${toneClass.item}`}>
                 <div className="flex items-start gap-3">
                   <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${toneClass.icon}`}>
                     <ToneIcon className="h-4 w-4" />
@@ -164,18 +226,35 @@ export function NotificationsSection({
                         신청 내용: {notification.meta}
                       </p>
                     )}
+                    {notification.replyKind && notification.replyId && (
+                      <NotificationThread notification={notification} onReplyToThread={onReplyToThread} />
+                    )}
                   </div>
+                </div>
+                <div className="no-print mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => onDismissNotification(notification.id)}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[11px] font-black text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[0.98]"
+                    aria-label={`${notification.title} 확인했어요`}
+                    title="확인하면 알림 배지에서 사라집니다"
+                  >
+                    <CheckCheck className="h-3.5 w-3.5" />
+                    확인했어요
+                  </button>
                 </div>
               </article>
             );
           })}
         </div>
-      ) : (
+      ) : notificationCount === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
           <Bell className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-black text-slate-700">확인할 알림이 없습니다.</p>
           <p className="mt-1 text-xs font-semibold text-slate-400">신청 답변이나 코치 안내가 도착하면 이 화면 맨 위에 표시됩니다.</p>
         </div>
+      ) : (
+        <p className="px-1 text-xs font-semibold text-slate-400">아래의 모의고사 · OT · 증빙 응답 카드를 확인해 주세요.</p>
       )}
 
       {showDismissed && dismissedCount > 0 && (
@@ -183,7 +262,7 @@ export function NotificationsSection({
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Archived</p>
-              <h3 className="mt-1 text-sm font-black text-slate-800">지운 알림</h3>
+              <h3 className="mt-1 text-sm font-black text-slate-800">확인한 알림</h3>
             </div>
             <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-slate-400">{dismissedCount}개</span>
           </div>
@@ -197,8 +276,8 @@ export function NotificationsSection({
                     type="button"
                     onClick={() => onRestoreNotification(notification.id)}
                     className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-white/80 bg-white/90 text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-95"
-                    aria-label={`${notification.title} 알림 복구`}
-                    title="알림 복구"
+                    aria-label={`${notification.title} 다시 알림으로`}
+                    title="다시 알림으로 되돌리기"
                   >
                     <RotateCcw className="h-3.5 w-3.5" />
                   </button>

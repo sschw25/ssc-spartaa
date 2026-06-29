@@ -1,6 +1,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam, OtEvent, AdminAccount } from './types/student';
+import { Student, SharedMaterial, BookProgress, LectureProgress, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent } from './types/student';
 import { mergeOrphanMaterials } from './db';
+import { normalizeArrival } from './attendance-time';
 
 // ── 환경 변수 ────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -48,7 +49,7 @@ function rowToStudent(r: any): Student {
     parentPhone: r.parent_phone || undefined,
     studentPhone: r.student_phone || undefined,
     smsTargets: Array.isArray(r.sms_targets) ? r.sms_targets : ['parent'],
-    expectedArrival: r.expected_arrival === '09:00' ? '09:00' : '08:20',
+    expectedArrival: normalizeArrival(r.expected_arrival),
     enrollmentEndDate: r.enrollment_end_date || undefined,
     weeklyGradeCheck: Boolean(r.weekly_grade_check),
     seatNumber: r.seat_number != null ? Number(r.seat_number) : undefined,
@@ -63,10 +64,12 @@ function rowToStudent(r: any): Student {
     grades: r.grades || [],
     leaveRequests: r.leave_requests || [],
     leaveCoupons: Number(r.leave_coupons) || 0,
+    rewardRedemptions: r.reward_redemptions || [],
     penalties: r.penalties || [],
     smsLogs: r.sms_logs || [],
     mockExams: r.mock_exams || [],
     otEvents: r.ot_events || [],
+    eventParticipations: r.event_participations || [],
     studentState: r.student_state || {},
     saturdayLateExcuses: r.saturday_late_excuses || [],
     phoneSubmissions: r.phone_submissions || [],
@@ -81,6 +84,7 @@ function rowToStudent(r: any): Student {
       return item;
     }),
     ddays: r.ddays || [],
+    mealOrders: r.meal_orders || [],
     subjects,
   };
 }
@@ -116,15 +120,18 @@ function studentToRow(student: Student, nowIso: string) {
     grades: student.grades || [],
     leave_requests: student.leaveRequests || [],
     leave_coupons: student.leaveCoupons ?? 0,
+    reward_redemptions: student.rewardRedemptions || [],
     penalties: student.penalties || [],
     sms_logs: student.smsLogs || [],
     mock_exams: student.mockExams || [],
     ot_events: student.otEvents || [],
+    event_participations: student.eventParticipations || [],
     student_state: student.studentState || {},
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
     phone_submissions: student.phoneSubmissions || [],
     ddays: student.ddays || [],
+    meal_orders: student.mealOrders || [],
     // share_token / share_token_expires_at / share_password 는 의도적으로 제외한다.
     // 일반 학생 저장(마스킹된 객체 포함)이 학부모 공유 비밀번호 해시를 null로 덮어쓰던 버그 방지.
     // 공유 컬럼은 share-token 라우트의 patchSupabaseToken 만 전담하며, upsert는 누락 컬럼을 보존한다.
@@ -278,11 +285,11 @@ export async function setStudentNotifyInfoSupabase(studentId: string, info: Noti
   if (error) throw error;
 }
 
-// 지각 기준(등원 마감) 단일 컬럼 타깃 업데이트
-export async function setStudentExpectedArrivalSupabase(studentId: string, value: '08:20' | '09:00'): Promise<void> {
+// 지각 기준(등원 마감) 단일 컬럼 타깃 업데이트 — HH:MM 커스텀 시각 지원
+export async function setStudentExpectedArrivalSupabase(studentId: string, value: string): Promise<void> {
   const { error } = await getClient()
     .from('students')
-    .update({ expected_arrival: value === '09:00' ? '09:00' : '08:20' })
+    .update({ expected_arrival: normalizeArrival(value) })
     .eq('id', studentId);
   if (error) throw error;
 }
@@ -445,6 +452,7 @@ function rowToMockExam(r: any): MockExam {
     id: r.id,
     name: r.name,
     date: r.date,
+    campus: r.campus || undefined,
     createdAt: r.created_at || '',
     notifiedAt: r.notified_at || undefined,
   };
@@ -464,6 +472,7 @@ export async function saveMockExamSupabase(exam: MockExam): Promise<MockExam> {
     id: exam.id,
     name: exam.name,
     date: exam.date,
+    campus: exam.campus || null,
     created_at: exam.createdAt,
     notified_at: exam.notifiedAt || null,
   };
@@ -502,7 +511,9 @@ function rowToOtEvent(r: any): OtEvent {
     id: r.id,
     name: r.name,
     date: r.date,
+    message: r.message || undefined,
     targetExamTypes: r.target_exam_types || [],
+    campus: r.campus || undefined,
     createdAt: r.created_at || '',
     notifiedAt: r.notified_at || undefined,
   };
@@ -522,7 +533,9 @@ export async function saveOtEventSupabase(event: OtEvent): Promise<OtEvent> {
     id: event.id,
     name: event.name,
     date: event.date,
+    message: event.message || null,
     target_exam_types: event.targetExamTypes || [],
+    campus: event.campus || null,
     created_at: event.createdAt,
     notified_at: event.notifiedAt || null,
   };
@@ -549,6 +562,160 @@ export async function notifyOtEventSupabase(id: string, notifiedAt: string): Pro
     .single();
   if (error) throw error;
   return rowToOtEvent(data);
+}
+
+// ── 학원 캘린더 일정 & 참여 미션 마스터 (campus_events 테이블) ────
+function rowToCampusEvent(r: any): CampusEvent {
+  return {
+    id: r.id,
+    title: r.title,
+    date: r.date,
+    endDate: r.end_date || undefined,
+    startTime: r.start_time || undefined,
+    endTime: r.end_time || undefined,
+    campus: r.campus || undefined,
+    category: (r.category === 'mission' ? 'mission' : 'general'),
+    memo: r.memo || undefined,
+    color: r.color || undefined,
+    isMission: Boolean(r.is_mission),
+    couponReward: r.coupon_reward != null ? Number(r.coupon_reward) : undefined,
+    targetMode: (r.target_mode === 'students' ? 'students' : (r.target_mode === 'campus' ? 'campus' : undefined)),
+    targetStudentIds: Array.isArray(r.target_student_ids) ? r.target_student_ids : [],
+    notifiedAt: r.notified_at || undefined,
+    rewardedAt: r.rewarded_at || undefined,
+    createdAt: r.created_at || '',
+    createdBy: r.created_by || undefined,
+  };
+}
+
+export async function getCampusEventsSupabase(): Promise<CampusEvent[]> {
+  const { data, error } = await getClient()
+    .from('campus_events')
+    .select('*')
+    .order('date', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(rowToCampusEvent);
+}
+
+export async function saveCampusEventSupabase(event: CampusEvent): Promise<CampusEvent> {
+  const row = {
+    id: event.id,
+    title: event.title,
+    date: event.date,
+    end_date: event.endDate || null,
+    start_time: event.startTime || null,
+    end_time: event.endTime || null,
+    campus: event.campus || null,
+    category: event.category || 'general',
+    memo: event.memo || null,
+    color: event.color || null,
+    is_mission: Boolean(event.isMission),
+    coupon_reward: event.couponReward ?? null,
+    target_mode: event.targetMode || null,
+    target_student_ids: event.targetStudentIds || [],
+    notified_at: event.notifiedAt || null,
+    rewarded_at: event.rewardedAt || null,
+    created_at: event.createdAt,
+    created_by: event.createdBy || null,
+  };
+  const { data, error } = await getClient()
+    .from('campus_events')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToCampusEvent(data);
+}
+
+export async function deleteCampusEventSupabase(id: string): Promise<void> {
+  const { error } = await getClient().from('campus_events').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function notifyCampusEventSupabase(id: string, notifiedAt: string): Promise<CampusEvent> {
+  const { data, error } = await getClient()
+    .from('campus_events')
+    .update({ notified_at: notifiedAt })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToCampusEvent(data);
+}
+
+// 쿠폰 일괄 지급 완료 표시 (rewarded_at 설정)
+export async function markCampusEventRewardedSupabase(id: string, rewardedAt: string): Promise<CampusEvent> {
+  const { data, error } = await getClient()
+    .from('campus_events')
+    .update({ rewarded_at: rewardedAt })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToCampusEvent(data);
+}
+
+// ── 도시락 신청 라운드 마스터 (meal_plans 테이블) ─────────────
+function rowToMealPlan(r: any): MealPlan {
+  return {
+    id: r.id,
+    weekStart: r.week_start,
+    meals: Array.isArray(r.meals) ? r.meals : ['lunch'],
+    campus: r.campus || undefined,
+    deadline: r.deadline || undefined,
+    lunchPrice: r.lunch_price != null ? Number(r.lunch_price) : undefined,
+    dinnerPrice: r.dinner_price != null ? Number(r.dinner_price) : undefined,
+    closedDays: Array.isArray(r.closed_days) ? r.closed_days : [],
+    createdAt: r.created_at || '',
+    notifiedAt: r.notified_at || undefined,
+  };
+}
+
+export async function getMealPlansSupabase(): Promise<MealPlan[]> {
+  const { data, error } = await getClient()
+    .from('meal_plans')
+    .select('*')
+    .order('week_start', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(rowToMealPlan);
+}
+
+export async function saveMealPlanSupabase(plan: MealPlan): Promise<MealPlan> {
+  const row = {
+    id: plan.id,
+    week_start: plan.weekStart,
+    meals: plan.meals || ['lunch'],
+    campus: plan.campus || null,
+    deadline: plan.deadline || null,
+    lunch_price: plan.lunchPrice ?? null,
+    dinner_price: plan.dinnerPrice ?? null,
+    closed_days: plan.closedDays || [],
+    created_at: plan.createdAt,
+    notified_at: plan.notifiedAt || null,
+  };
+  const { data, error } = await getClient()
+    .from('meal_plans')
+    .upsert(row, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToMealPlan(data);
+}
+
+export async function deleteMealPlanSupabase(id: string): Promise<void> {
+  const { error } = await getClient().from('meal_plans').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function notifyMealPlanSupabase(id: string, notifiedAt: string): Promise<MealPlan> {
+  const { data, error } = await getClient()
+    .from('meal_plans')
+    .update({ notified_at: notifiedAt })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToMealPlan(data);
 }
 
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {

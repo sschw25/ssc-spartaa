@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, BookOpen, FileText, Shield, Ticket } from 'lucide-react';
-import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam } from '@/lib/types/student';
+import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
+  getLeaveCredits,
   MONTHLY_HALFDAY_QUOTA,
   MONTHLY_FULLDAY_QUOTA,
   kstYearMonth,
@@ -14,6 +15,7 @@ import { MaterialBenchmarkMap } from '@/lib/material-benchmark';
 import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
+import { buildDisplayThread } from '@/lib/thread';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
 
@@ -317,7 +319,12 @@ export function useReportState() {
   const [suggestionSubmitting, setSuggestionSubmitting] = useState(false);
   const [suggestionError, setSuggestionError] = useState('');
 
-  const [checklistForm, setChecklistForm] = useState({ sleepHours: 7, phoneSubmitted: true });
+  const [checklistForm, setChecklistForm] = useState<{
+    sleepHours: number;
+    phoneSubmitted: boolean;
+    phoneStatus: 'submitted' | 'locker' | 'off_hold';
+    phoneReason: string;
+  }>({ sleepHours: 7, phoneSubmitted: true, phoneStatus: 'submitted', phoneReason: '' });
   const [checklistSubmitting, setChecklistSubmitting] = useState(false);
   const [rewardBanner, setRewardBanner] = useState<{ show: boolean; reasons: string[] }>({ show: false, reasons: [] });
   const [swipeStart, setSwipeStart] = useState<{ x: number; y: number } | null>(null);
@@ -329,7 +336,7 @@ export function useReportState() {
   const [showSuggestionHistory, setShowSuggestionHistory] = useState(false);
 
   const [mockExams, setMockExams] = useState<MockExam[]>([]);
-  const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; date: string; reason: string }>(() => ({
+  const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; slot?: 'morning' | 'afternoon' | 'night' | 'fullday'; date: string; reason: string }>(() => ({
     type: 'morning',
     date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()),
     reason: '',
@@ -514,6 +521,42 @@ export function useReportState() {
     if (!student?.id) return;
     commitDismissedNotifications([]);
     setDismissedNotificationIds([]);
+  };
+
+  // 학생이 코치 답변에 재답변 — 서버 append 후 로컬 스레드 낙관적 갱신
+  const replyToThread = async (
+    kind: 'request' | 'suggestion' | 'leave',
+    id: string,
+    text: string,
+  ): Promise<boolean> => {
+    if (!student?.id) return false;
+    try {
+      const res = await fetch('/api/student/thread-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kind, id, message: text }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) return false;
+      const msg = { id: `local_${Date.now()}`, from: 'student' as const, text, at: new Date().toISOString() };
+      // 서버 seedLegacyThread와 동일하게: thread 비어있고 adminReply만 있으면 레거시 답변을 선승격
+      const appendTo = (arr?: any[]) => (arr || []).map((it) => {
+        if (it.id !== id) return it;
+        const base = (it.thread && it.thread.length > 0)
+          ? it.thread
+          : (it.adminReply ? [{ id: 'legacy', from: 'admin', text: it.adminReply, at: it.repliedAt || '' }] : []);
+        return { ...it, thread: [...base, msg] };
+      });
+      setStudent((prev) => {
+        if (!prev) return prev;
+        if (kind === 'leave') return { ...prev, leaveRequests: appendTo(prev.leaveRequests) };
+        if (kind === 'request') return { ...prev, changeRequests: appendTo(prev.changeRequests) };
+        return { ...prev, suggestionRequests: appendTo(prev.suggestionRequests) };
+      });
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const handleSharePasswordSubmit = async (e: React.FormEvent) => {
@@ -840,7 +883,9 @@ export function useReportState() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sleepHours: checklistForm.sleepHours,
-          phoneSubmitted: checklistForm.phoneSubmitted,
+          phoneStatus: checklistForm.phoneStatus,
+          phoneSubmitted: checklistForm.phoneStatus === 'submitted',
+          phoneReason: checklistForm.phoneReason,
         }),
       });
       const json = await res.json();
@@ -850,6 +895,8 @@ export function useReportState() {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
           setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 5000);
         }
+      } else if (json?.message) {
+        if (typeof window !== 'undefined') window.alert(json.message);
       }
     } catch {
       // noop
@@ -939,7 +986,7 @@ export function useReportState() {
       const res = await fetch('/api/student/leave', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: leaveForm.type, date: leaveForm.date, reason: leaveForm.reason, urgent }),
+        body: JSON.stringify({ type: leaveForm.type, slot: leaveForm.slot, date: leaveForm.date, reason: leaveForm.reason, urgent }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -964,6 +1011,26 @@ export function useReportState() {
       }
     } catch {
       // noop
+    }
+  };
+
+  // 반려된 휴가 신청에 대해 추가 메시지와 함께 재승인 요청 — 다시 '대기중'으로 전환
+  const reappealLeave = async (id: string, note: string) => {
+    try {
+      const res = await fetch('/api/student/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reappealId: id, reason: note }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.request) {
+        const updated = json.request as LeaveRequest;
+        setStudent((prev) => (prev ? { ...prev, leaveRequests: (prev.leaveRequests || []).map((r) => (r.id === id ? updated : r)) } : prev));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
     }
   };
 
@@ -1281,8 +1348,10 @@ export function useReportState() {
     : '시간표 외 구간';
 
   const thisMonthLeaveUsage = isStudentReport ? getMonthlyLeaveUsage(student.leaveRequests || [], kstYearMonth()) : null;
-  const homeHalfLeft = thisMonthLeaveUsage ? Math.max(0, MONTHLY_HALFDAY_QUOTA - thisMonthLeaveUsage.halfday) : MONTHLY_HALFDAY_QUOTA;
-  const homeFullLeft = thisMonthLeaveUsage ? Math.max(0, MONTHLY_FULLDAY_QUOTA - thisMonthLeaveUsage.fullday) : MONTHLY_FULLDAY_QUOTA;
+  // 교환 추가권(반차권/휴식권) 잔여를 기본 잔여에 합산
+  const homeLeaveCredits = isStudentReport ? getLeaveCredits(student.rewardRedemptions, student.leaveRequests) : { halfday: 0, fullday: 0 };
+  const homeHalfLeft = (thisMonthLeaveUsage ? Math.max(0, MONTHLY_HALFDAY_QUOTA - thisMonthLeaveUsage.halfday) : MONTHLY_HALFDAY_QUOTA) + homeLeaveCredits.halfday;
+  const homeFullLeft = (thisMonthLeaveUsage ? Math.max(0, MONTHLY_FULLDAY_QUOTA - thisMonthLeaveUsage.fullday) : MONTHLY_FULLDAY_QUOTA) + homeLeaveCredits.fullday;
   const homeLeaveCoupons = isStudentReport ? (student.leaveCoupons ?? 0) : 0;
   
   const homeElapsedMin = homeAttend.checkedIn && homeAttend.sinceToday && homeAttend.since && homeAttendNow > 0
@@ -1319,16 +1388,27 @@ export function useReportState() {
     const requestLabel = getRequestTypeLabel(request.requestType);
     const notificationDate = request.repliedAt || request.resolvedAt || request.createdAt || request.date;
 
-    if (request.adminReply) {
+    const requestConvo = buildDisplayThread({
+      headText: request.content || '',
+      headAt: request.createdAt,
+      adminReply: request.adminReply,
+      repliedAt: request.repliedAt,
+      thread: request.thread,
+    }).slice(1);
+
+    if (request.adminReply || (request.thread && request.thread.length > 0)) {
       return {
         id: `request-reply-${request.id}`,
         tone: 'blue' as const,
         label: '답변 도착',
         title: `${requestLabel}에 답변이 도착했어요`,
-        body: request.adminReply,
+        body: request.adminReply || '',
         meta: truncateNotificationText(request.content || ''),
         date: notificationDate,
         priority: 1,
+        thread: requestConvo,
+        replyKind: 'request' as const,
+        replyId: request.id,
       };
     }
 
@@ -1342,6 +1422,9 @@ export function useReportState() {
         meta: truncateNotificationText(request.content || ''),
         date: notificationDate,
         priority: 3,
+        thread: requestConvo,
+        replyKind: 'request' as const,
+        replyId: request.id,
       };
     }
 
@@ -1360,16 +1443,27 @@ export function useReportState() {
   const suggestionNotifications = (student.suggestionRequests || []).map((suggestion) => {
     const notificationDate = suggestion.repliedAt || suggestion.resolvedAt || suggestion.createdAt || suggestion.date;
 
-    if (suggestion.adminReply) {
+    const suggestionConvo = buildDisplayThread({
+      headText: suggestion.content || '',
+      headAt: suggestion.createdAt,
+      adminReply: suggestion.adminReply,
+      repliedAt: suggestion.repliedAt,
+      thread: suggestion.thread,
+    }).slice(1);
+
+    if (suggestion.adminReply || (suggestion.thread && suggestion.thread.length > 0)) {
       return {
         id: `suggestion-reply-${suggestion.id}`,
         tone: 'blue' as const,
         label: '건의 답변',
         title: '건의사항에 답변이 도착했어요',
-        body: suggestion.adminReply,
+        body: suggestion.adminReply || '',
         meta: truncateNotificationText(suggestion.content || ''),
         date: notificationDate,
         priority: 1,
+        thread: suggestionConvo,
+        replyKind: 'suggestion' as const,
+        replyId: suggestion.id,
       };
     }
 
@@ -1383,6 +1477,9 @@ export function useReportState() {
         meta: truncateNotificationText(suggestion.content || ''),
         date: notificationDate,
         priority: 3,
+        thread: suggestionConvo,
+        replyKind: 'suggestion' as const,
+        replyId: suggestion.id,
       };
     }
 
@@ -1584,6 +1681,7 @@ export function useReportState() {
     leaveError,
     submitLeave,
     cancelLeave,
+    reappealLeave,
     homeAttend,
     homeAttendNow,
     getCampusLabel,
@@ -1614,6 +1712,7 @@ export function useReportState() {
     dismissNotification,
     restoreNotification,
     restoreAllNotifications,
+    replyToThread,
     reportNavItems,
     tabIds,
     hasGradeThisWeek,

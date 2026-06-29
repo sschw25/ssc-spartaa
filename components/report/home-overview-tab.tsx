@@ -7,7 +7,6 @@ import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
-import { PhoneSubmissionCard } from './phone-submission-card';
 
 type DailyPlanEntry = {
   id: string;
@@ -54,8 +53,8 @@ interface HomeOverviewTabProps {
   rewardBanner: { show: boolean; reasons: string[] };
   setRewardBanner: React.Dispatch<React.SetStateAction<{ show: boolean; reasons: string[] }>>;
   submitChecklist: (e: React.FormEvent) => Promise<void>;
-  checklistForm: { sleepHours: number; phoneSubmitted: boolean };
-  setChecklistForm: React.Dispatch<React.SetStateAction<{ sleepHours: number; phoneSubmitted: boolean }>>;
+  checklistForm: { sleepHours: number; phoneSubmitted: boolean; phoneStatus: 'submitted' | 'locker' | 'off_hold'; phoneReason: string };
+  setChecklistForm: React.Dispatch<React.SetStateAction<{ sleepHours: number; phoneSubmitted: boolean; phoneStatus: 'submitted' | 'locker' | 'off_hold'; phoneReason: string }>>;
   checklistSubmitting: boolean;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -358,26 +357,45 @@ export function HomeOverviewTab({
                         </div>
                       </div>
 
-                      <div className="flex justify-between items-center">
-                        <label htmlFor="phoneSubmittedInput" className="text-xs font-bold text-slate-600">등원 시 휴대폰 제출:</label>
-                        <button
-                          id="phoneSubmittedInput"
-                          type="button"
-                          onClick={() => setChecklistForm(f => ({ ...f, phoneSubmitted: !f.phoneSubmitted }))}
-                          className={`rounded-xl px-3 py-1.5 text-xs font-black border transition active:scale-95 ${
-                            checklistForm.phoneSubmitted
-                              ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
-                              : 'bg-red-50 border-red-100 text-red-600'
-                          }`}
-                        >
-                          {checklistForm.phoneSubmitted ? '제출 완료 🟢' : '미제출 🔴'}
-                        </button>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-bold text-slate-600">등원 시 휴대폰:</label>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {([
+                            ['submitted', '제출완료', '🟢'],
+                            ['locker', '임시보관함', '📦'],
+                            ['off_hold', '전원끄고소지', '📴'],
+                          ] as Array<['submitted' | 'locker' | 'off_hold', string, string]>).map(([val, label, emoji]) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => setChecklistForm(f => ({ ...f, phoneStatus: val, phoneSubmitted: val === 'submitted' }))}
+                              className={`rounded-xl px-1.5 py-2 text-[11px] font-black border transition active:scale-95 leading-tight ${
+                                checklistForm.phoneStatus === val
+                                  ? 'bg-[#0071E3]/[0.06] border-[#0071E3] text-[#0071E3]'
+                                  : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
+                              }`}
+                            >
+                              <span className="block">{emoji}</span>
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                        {checklistForm.phoneStatus !== 'submitted' && (
+                          <textarea
+                            value={checklistForm.phoneReason}
+                            onChange={(e) => setChecklistForm(f => ({ ...f, phoneReason: e.target.value }))}
+                            rows={2}
+                            placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요 (관리자에게 전달돼요)"
+                            className="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none resize-none"
+                          />
+                        )}
+                        <p className="text-[10px] font-semibold text-slate-400">휴대폰은 원칙적으로 제출이에요. 부득이하면 임시보관함/전원끄고소지를 사유와 함께 신청해 주세요.</p>
                       </div>
                     </div>
 
                     <button
                       type="submit"
-                      disabled={checklistSubmitting}
+                      disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
                       className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black py-2.5 transition active:scale-95 shadow-sm disabled:opacity-50"
                     >
                       {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
@@ -387,7 +405,10 @@ export function HomeOverviewTab({
               }
 
               const isSleepShort = checklist.sleep_hours < 6;
-              const isPhoneNotSubmitted = !checklist.phone_submitted;
+              const phoneStatusLabel = checklist.phone_status === 'locker' ? '임시보관함'
+                : checklist.phone_status === 'off_hold' ? '전원끄고 소지'
+                : (checklist.phone_status === 'submitted' || checklist.phone_submitted) ? '제출 완료' : '미제출';
+              const isPhoneNotSubmitted = checklist.phone_status ? checklist.phone_status !== 'submitted' : !checklist.phone_submitted;
               
               let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800';
               let bannerEmoji = '✅';
@@ -426,21 +447,14 @@ export function HomeOverviewTab({
 
                   <div className="flex gap-4 text-[9px] font-black text-slate-500/80 border-t border-slate-100/50 pt-2.5">
                     <span>어젯밤 수면: <strong className="text-slate-800">{checklist.sleep_hours}시간</strong></span>
-                    <span>폰 수납: <strong className="text-slate-800">{checklist.phone_submitted ? '제출 완료' : '미제출'}</strong></span>
+                    <span>휴대폰: <strong className="text-slate-800">{phoneStatusLabel}</strong></span>
                   </div>
                 </div>
               );
             })()}
           </div>
 
-          {/* 휴대폰 보관 신청 (학생 보기에서만 노출) */}
-          {isStudentReport && (
-            <PhoneSubmissionCard
-              student={student}
-              setStudent={setStudent}
-              todayDate={getSeoulDateKey()}
-            />
-          )}
+          {/* 휴대폰 제출 방식은 위 '아침 자가 점검표'에서 3택(제출완료/임시보관함/전원끄고소지)으로 통합 신청 */}
 
           <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-4 shadow-sm md:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -567,16 +581,6 @@ export function HomeOverviewTab({
               </p>
             )}
           </div>
-
-          {/* 담당 코치 관리 배너 */}
-          {student.manager && (
-            <div className="flex items-center gap-2 rounded-xl bg-emerald-50/70 border border-emerald-100 px-3.5 py-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <p className="text-[11px] font-bold text-emerald-800">
-                <span className="font-black">{student.manager}</span> 코치님이 지금 {student.name}님 학습을 관리하고 있어요
-              </p>
-            </div>
-          )}
 
           {/* 홈 상태 카드 4개 */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

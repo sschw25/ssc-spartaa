@@ -87,6 +87,17 @@ export interface ProposedGoal {
   };
 }
 
+// 학생↔관리자 양방향 대화 메시지 (요청/건의/휴가 신청에 누적되는 스레드)
+// adminReply(단일 답변)와 별개로 thread[]에 시간순 메시지를 쌓아 재답변/재재답변을 지원.
+// consultation_logs / leave_requests JSONB 안에 중첩 저장 — 별도 컬럼/마이그레이션 불필요.
+export interface ThreadMessage {
+  id: string;
+  from: 'student' | 'admin';
+  text: string;
+  at: string;          // ISO
+  author?: string;     // 관리자 이름 (from==='admin'일 때 선택)
+}
+
 export interface ConsultationLog {
   id: string;
   date: string;       // 상담일 (YYYY-MM-DD)
@@ -98,8 +109,9 @@ export interface ConsultationLog {
   status?: 'pending' | 'resolved';                       // 처리 상태
   createdAt?: string;                                     // 신청 시각 (ISO)
   resolvedAt?: string;                                    // 처리 시각 (ISO)
-  adminReply?: string;                                    // 관리자 코멘트 답변 (학생에게 노출)
+  adminReply?: string;                                    // 관리자 최신 코멘트 답변 (학생에게 노출, 하위호환)
   repliedAt?: string;                                     // 답변 시각 (ISO)
+  thread?: ThreadMessage[];                               // 양방향 재답변 대화 (head=content 이후의 추가 메시지들)
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
 }
 
@@ -109,15 +121,39 @@ export type LeaveType = 'morning' | 'afternoon' | 'night' | 'fullday' | 'persona
 export interface LeaveRequest {
   id: string;
   type: LeaveType;        // 오전/오후/야간 반차, 휴식권(하루종일), 병가
+  slot?: 'morning' | 'afternoon' | 'night' | 'fullday'; // 개인사정 반차·병가의 시간대 선택
   date: string;           // 사용 희망일 (YYYY-MM-DD) — 월 한도 집계 기준
   reason?: string;        // 사유 (옵션 — 병가는 밴드채팅 영수증 증빙 안내)
   status: 'pending' | 'approved' | 'rejected';
   usedCoupon?: boolean;   // 쿠폰으로 추가 신청한 건 (관리자 표시용)
+  usedCredit?: boolean;   // 쿠폰 교환 '추가권'(반차권/휴식권)을 소모한 신청 — 기본 월한도와 별도 집계
   source?: 'student' | 'admin'; // 신청 주체 (없으면 student)
   urgent?: boolean;       // 전날 18:00시 이후 혹은 당일 오전 급작스러운 긴급 신청 여부
   createdAt: string;      // 신청 시각 (ISO)
   reviewedAt?: string;    // 처리(승인/반려) 시각 (ISO)
-  adminReply?: string;    // 관리자 코멘트 (학생에게 노출)
+  adminReply?: string;    // 관리자 최신 코멘트 (학생에게 노출, 하위호환)
+  thread?: ThreadMessage[];// 양방향 재답변 대화 (head=reason 이후의 추가 메시지들)
+  reappealedAt?: string;  // 반려 후 학생이 재승인 요청한 시각 (ISO) — 인박스에 '재요청'으로 표시
+  reappealReason?: string;// 재승인 요청 시 학생이 추가한 메시지
+}
+
+// 쿠폰 리워드 교환 내역 — 쿠폰을 반차권/휴식권/상품권/플래너로 교환
+export type RewardType = 'halfday' | 'restpass' | 'voucher' | 'planner';
+
+export interface RewardRedemption {
+  id: string;
+  type: RewardType;       // halfday(반차권) / restpass(휴식권) / voucher(상품권) / planner(플래너)
+  cost: number;           // 차감(예정) 쿠폰 수
+  // requested: 학생 교환 신청(쿠폰 미차감, 관리자 승인 대기) / pending: 승인됨·물품 지급대기 /
+  // fulfilled: 지급완료 / rejected: 반려(미차감)
+  status: 'requested' | 'pending' | 'fulfilled' | 'rejected';
+  source?: 'student' | 'admin'; // 신청 주체 (학생 신청형 vs 관리자 직접 교환)
+  createdAt: string;      // 신청/교환 시각 (ISO)
+  approvedAt?: string;    // 관리자 승인(쿠폰 차감) 시각 (ISO)
+  fulfilledAt?: string;   // 지급완료 시각 (ISO)
+  voucherCode?: string;   // 상품권 번호
+  note?: string;          // 플래너 지급일/메모 등
+  handledBy?: string;     // 처리 관리자
 }
 
 // 학생 휴대폰 제출 방식 신청 (소지 / 임시보관함)
@@ -190,6 +226,7 @@ export interface MockExam {
   name: string;          // "6월 모의고사"
   date: string;          // YYYY-MM-DD
   targetExamTypes?: string[]; // 대상 목표시험 유형 ([] = 전체, ['수능','모의고사'] 등)
+  campus?: string;       // 대상 센터 (wonju/chuncheon/chungju) — 없거나 'all'이면 전체 센터
   createdAt: string;
   notifiedAt?: string;   // 알림 발송 시각 (ISO)
 }
@@ -213,13 +250,92 @@ export interface OtParticipation {
 }
 
 // OT 일정 마스터 (ot_events 테이블)
+// 하나의 OT를 센터별로 다른 날짜로 등록(같은 name, campus·date만 다른 행)하고,
+// 각 행에 message를 담아 학생 알림에 함께 노출한다. 학생에게는 사용 날짜 3일 전부터 자동 노출.
 export interface OtEvent {
   id: string;
   name: string;          // "신학기 OT"
-  date: string;          // YYYY-MM-DD
+  date: string;          // YYYY-MM-DD (해당 센터의 OT 날짜)
+  message?: string;      // 알림과 함께 보낼 안내 메시지
   targetExamTypes?: string[];
+  campus?: string;       // 대상 센터 (wonju/chuncheon/chungju) — 없거나 'all'이면 전체 센터
   createdAt: string;
-  notifiedAt?: string;   // 알림 발송 시각 (ISO)
+  notifiedAt?: string;   // 알림 발송 시각 (ISO) — 수동 즉시 발송 시. 미설정이어도 D-3부터 자동 노출.
+}
+
+// ── 학원 캘린더 일정 & 참여 미션 (campus_events 테이블) ─────────────
+// 일반 일정(공지·행사)과 "참여 미션"(대상 선정 → 알림 → 수락 → 행사 후 쿠폰 일괄 지급)을
+// 하나의 엔티티로 통합. isMission=true 이면 미션 필드(couponReward/target/notifiedAt 등) 사용.
+export type CampusEventCategory = 'general' | 'mission';
+
+export interface CampusEvent {
+  id: string;
+  title: string;            // 일정/미션 이름 (예: "클린데이", "개원기념일 휴무")
+  date: string;             // 시작일 YYYY-MM-DD
+  endDate?: string;         // 종료일 (다중일 일정, 옵션)
+  startTime?: string;       // 시작 시각 HH:MM (옵션)
+  endTime?: string;         // 종료 시각 HH:MM (옵션)
+  campus?: string;          // 대상 센터 (wonju/chuncheon/chungju) — 없거나 'all'이면 전체 센터
+  category: CampusEventCategory;
+  memo?: string;            // 안내 메모 (학생 알림에 함께 노출)
+  color?: string;           // 캘린더 표시 색 (옵션)
+  // ── 참여 미션 전용 (category==='mission') ──
+  isMission?: boolean;      // 참여 후 쿠폰을 지급하는 미션 여부
+  couponReward?: number;    // 참여자에게 지급할 쿠폰 수
+  targetMode?: 'campus' | 'students'; // 대상 선정 방식 (센터 전체 / 특정 인원)
+  targetStudentIds?: string[];        // targetMode==='students' 일 때 대상 학생 ID
+  notifiedAt?: string;      // 학생 알림 발송 시각 (ISO)
+  rewardedAt?: string;      // 쿠폰 일괄 지급 완료 시각 (ISO)
+  createdAt: string;
+  createdBy?: string;       // 등록 관리자
+}
+
+// 학생별 참여 미션 응답 (Student.eventParticipations JSONB)
+export interface EventParticipation {
+  eventId: string;
+  status: 'accepted' | 'declined'; // 무응답은 기록 없음
+  respondedAt: string;
+  respondedBy?: 'student' | 'admin';
+  rewarded?: boolean;       // 쿠폰 지급 완료 여부
+}
+
+// 도시락 신청 — 센터별 주간(월~금) 라운드. 센터마다 점심만/점심+저녁.
+export type MealKind = 'lunch' | 'dinner';
+export type MealDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
+
+// 마스터: 주차별·센터별 신청 라운드 (meal_plans 테이블)
+export interface MealPlan {
+  id: string;
+  weekStart: string;        // 해당 주 월요일 YYYY-MM-DD
+  meals: MealKind[];        // ['lunch'] 또는 ['lunch','dinner']
+  campus?: string;          // 대상 센터 (없거나 'all'이면 전체 센터)
+  deadline?: string;        // 신청 마감 일시 (ISO) — 이후 학생 직접 신청 잠금
+  lunchPrice?: number;      // 점심 단가 (정산용)
+  dinnerPrice?: number;     // 저녁 단가 (정산용)
+  closedDays?: MealDay[];   // 휴무 요일 (공휴일/학원 휴무) — 신청·표·정산에서 제외
+  createdAt: string;
+  notifiedAt?: string;      // 알림 발송 시각 (ISO)
+}
+
+// 마감 후 추가 신청 (관리자 승인 대기) — 승인 시 selections 에 반영
+export interface MealAddRequest {
+  id: string;
+  day: MealDay;
+  meal: MealKind;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  reviewedAt?: string;
+}
+
+// 학생별 도시락 신청 (Student.mealOrders JSONB)
+export interface MealOrder {
+  planId: string;
+  // 요일별 끼니 신청. 값이 true면 먹음. 키 없으면 미신청.
+  selections: Partial<Record<MealDay, { lunch?: boolean; dinner?: boolean }>>;
+  updatedAt: string;
+  respondedBy?: 'student' | 'admin';
+  addRequests?: MealAddRequest[]; // 마감 후 추가 신청 내역
 }
 
 export interface SubjectProgress {
@@ -261,7 +377,7 @@ export interface Student {
   parentPhone?: string;
   studentPhone?: string;
   smsTargets?: Array<'parent' | 'student'>;
-  expectedArrival?: '08:20' | '09:00'; // 지각 기준(등원 마감) — 학생별 그룹, 기본 08:20
+  expectedArrival?: string; // 지각 기준(등원 마감) HH:MM — 기본 08:20, 수동 커스텀 시각(예: 09:40) 지원
   enrollmentEndDate?: string; // 등록(수강) 종료일 (YYYY-MM-DD) — 출결 시 D-3부터 학생에게 안내
   weeklyGradeCheck?: boolean; // 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
   seatNumber?: number;          // 지정 좌석 번호 (좌석 현황판 연동)
@@ -284,6 +400,8 @@ export interface Student {
   leaveRequests?: LeaveRequest[];
   // 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)
   leaveCoupons?: number;
+  // 쿠폰 리워드 교환/지급 내역
+  rewardRedemptions?: RewardRedemption[];
   // 토요 지각 증빙 내역
   saturdayLateExcuses?: SaturdayLateExcuse[];
 
@@ -298,6 +416,8 @@ export interface Student {
   // 모의고사 참여 상태
   mockExams?: MockExamParticipation[];
   otEvents?: OtParticipation[];
+  // 학원 캘린더 참여 미션 응답 내역
+  eventParticipations?: EventParticipation[];
   // 학생 활동 상태(뽀모도로/체크리스트/리워드/알림숨김) — specialNote(어드민 메모)와 분리된 컬럼
   studentState?: Record<string, unknown>;
   // 정기 외출/빠지는 시간대 목록
@@ -306,6 +426,8 @@ export interface Student {
   phoneSubmissions?: PhoneSubmission[];
   // D-Day 목록 (학생 개인 설정)
   ddays?: DDayEvent[];
+  // 도시락 신청 내역
+  mealOrders?: MealOrder[];
 }
 
 export interface AdminAccount {

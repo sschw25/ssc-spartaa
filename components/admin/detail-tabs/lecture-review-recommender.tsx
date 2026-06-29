@@ -1,0 +1,109 @@
+'use client';
+
+import React from 'react';
+
+// 강의 복습 추천 계산기 — 배속·강의시간·복습시간을 고려해
+// 한 세션(예: 오후 210분)에 들어갈 강의 수 / 복습시간을 제시한다.
+// 순수 계산 위젯(저장 없음). estimatedMinutesPerUnit/speedMultiplier 는 자료 설정값을 받는다.
+export function LectureReviewRecommender({
+  estimatedMinutesPerUnit,
+  speedMultiplier,
+}: {
+  estimatedMinutesPerUnit?: number | null;
+  speedMultiplier?: number | null;
+}) {
+  const [open, setOpen] = React.useState(false);
+  const [reviewMin, setReviewMin] = React.useState<number>(20);
+  const [sessionMin, setSessionMin] = React.useState<number>(210);
+
+  const lectureMin = estimatedMinutesPerUnit && estimatedMinutesPerUnit > 0 ? estimatedMinutesPerUnit : 60;
+  const speed = speedMultiplier && speedMultiplier > 0 ? speedMultiplier : 1.0;
+  const watchMin = lectureMin / speed; // 배속 적용 실제 시청시간
+  const perLecture = watchMin + Math.max(0, reviewMin); // 강의 1개당 소요(시청+복습)
+
+  const recommendedCount = perLecture > 0 ? Math.floor(sessionMin / perLecture) : 0;
+  const usedMin = Math.round(recommendedCount * perLecture);
+  const leftover = Math.max(0, sessionMin - usedMin);
+
+  const SESSION_PRESETS = [
+    { label: '오전 180', value: 180 },
+    { label: '오후 210', value: 210 },
+    { label: '야간 180', value: 180 },
+    { label: '종일 420', value: 420 },
+  ];
+
+  return (
+    <div className="rounded-lg border border-[#0071E3]/15 bg-[#F8FBFF] p-2.5 text-[10px]">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between font-bold text-[#0071E3]"
+      >
+        <span>🎬 복습 포함 추천 (배속·강의·복습 고려)</span>
+        <span>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-0.5">
+              <span className="block text-[#86868B] font-semibold">복습 시간 (분/강)</span>
+              <input
+                type="number"
+                min={0}
+                value={reviewMin}
+                onChange={(e) => setReviewMin(Math.max(0, Number(e.target.value) || 0))}
+                className="h-7 w-full rounded-md border border-black/[0.08] bg-white px-2 text-[10px] focus:outline-none"
+              />
+            </label>
+            <label className="space-y-0.5">
+              <span className="block text-[#86868B] font-semibold">세션 시간 (분)</span>
+              <input
+                type="number"
+                min={1}
+                value={sessionMin}
+                onChange={(e) => setSessionMin(Math.max(1, Number(e.target.value) || 1))}
+                className="h-7 w-full rounded-md border border-black/[0.08] bg-white px-2 text-[10px] focus:outline-none"
+              />
+            </label>
+          </div>
+
+          <div className="flex flex-wrap gap-1">
+            {SESSION_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => setSessionMin(p.value)}
+                className={`rounded-full border px-2 py-0.5 font-bold transition-colors ${
+                  sessionMin === p.value
+                    ? 'border-[#0071E3] bg-[#0071E3] text-white'
+                    : 'border-black/[0.08] bg-white text-[#86868B] hover:border-[#0071E3]/40'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-md border border-black/[0.05] bg-white p-2 space-y-1 text-[#434345]">
+            <p>
+              <span className="font-bold text-[#1D1D1F]">강의 {lectureMin}분 · {speed}배속</span>
+              {' '}→ 시청 {Math.round(watchMin)}분 + 복습 {reviewMin}분 = <span className="font-bold">{Math.round(perLecture)}분/강</span>
+            </p>
+            <p className="font-bold text-[#0071E3]">
+              {sessionMin}분 세션 → 약 {recommendedCount}강 추천 (사용 {usedMin}분 · 여유 {leftover}분)
+            </p>
+            {leftover > 0 && recommendedCount > 0 && (
+              <p className="text-[#86868B]">
+                남는 {leftover}분은 강당 복습 +{Math.floor(leftover / recommendedCount)}분으로 활용 가능
+              </p>
+            )}
+            {recommendedCount === 0 && (
+              <p className="text-[#A25F00]">강의 1개 소요({Math.round(perLecture)}분)가 세션 시간보다 깁니다. 배속을 높이거나 복습을 줄여보세요.</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
 import { isLeaveType } from '@/lib/leave';
+import { appendThreadMessage } from '@/lib/thread';
 import type { LeaveRequest } from '@/lib/types/student';
 
 // 관리자: 학생 대신 휴가/반차 수기 등록 (쿼터 무시, 즉시 승인 가능)
@@ -111,8 +112,11 @@ export async function PATCH(
   }
 
   const nowIso = new Date().toISOString();
-  if (reply !== null) {
-    target.adminReply = reply || undefined;
+  if (reply) {
+    appendThreadMessage(target, { from: 'admin', text: reply, author: '코치' });
+    target.adminReply = reply;
+  } else if (reply !== null) {
+    target.adminReply = undefined;
   }
   if (status) {
     target.status = status;

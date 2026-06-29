@@ -8,13 +8,15 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User
+  Target, BookOpen, Tv, User, Search
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, LeaveType, ProposedGoal } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
-import { getLeaveTypeLabel } from '@/lib/leave';
+import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
+import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
 import { getRequestTypeLabel } from '@/lib/student-requests';
+import { awaitingAdminReply, buildDisplayThread } from '@/lib/thread';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 type InboxCategory = 'all' | 'living' | 'counsel' | 'facility';
@@ -25,7 +27,7 @@ interface InboxItem {
   studentId: string;
   studentName: string;
   campus: string;
-  type: 'leave' | 'request' | 'suggestion' | 'ot_absence' | 'mock_absence';
+  type: 'leave' | 'request' | 'suggestion' | 'ot_absence' | 'mock_absence' | 'reward' | 'meal_add';
   category: 'living' | 'counsel' | 'facility';
   title: string;
   content: string;
@@ -52,7 +54,8 @@ export default function AdminInboxPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState<InboxCategory>('all');
-  const [hideCompleted, setHideCompleted] = useState(false);
+  const [hideCompleted, setHideCompleted] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [inboxSortField, setInboxSortField] = useState<'status' | 'date' | 'name'>('status');
   const [inboxSortOrder, setInboxSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
@@ -63,6 +66,8 @@ export default function AdminInboxPage() {
   const [bulkProcessing, setBulkProcessing] = useState(false);
   // OT/모의고사 일정 이름 매핑 (불참 신청 표시용)
   const [eventNames, setEventNames] = useState<Record<string, { name: string; date: string }>>({});
+  // 도시락 라운드 라벨 매핑 (추가신청 표시용)
+  const [mealPlanLabels, setMealPlanLabels] = useState<Record<string, string>>({});
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -86,13 +91,15 @@ export default function AdminInboxPage() {
   }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 2. 학생 데이터 및 신청 내역 수집
-  const loadStudents = async () => {
-    setLoading(true);
+  //    silent=true 면 로딩 스피너/전체 깜빡임 없이 백그라운드 동기화만 수행
+  const loadStudents = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
-      const [res, otRes, mockRes] = await Promise.all([
+      const [res, otRes, mockRes, mealRes] = await Promise.all([
         fetch('/api/admin/students', { cache: 'no-store' }),
         fetch('/api/admin/ot-events', { cache: 'no-store' }).catch(() => null),
         fetch('/api/admin/mock-exams', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/admin/meal-plans', { cache: 'no-store' }).catch(() => null),
       ]);
       if (res.ok) {
         const json = await res.json();
@@ -112,6 +119,12 @@ export default function AdminInboxPage() {
         for (const e of (j.exams || [])) names[e.id] = { name: e.name, date: e.date };
       }
       setEventNames(names);
+      if (mealRes && mealRes.ok) {
+        const j = await mealRes.json();
+        const labels: Record<string, string> = {};
+        for (const p of (j.plans || [])) labels[p.id] = `${weekRangeLabel(p.weekStart)} 주`;
+        setMealPlanLabels(labels);
+      }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
     } finally {
@@ -179,7 +192,13 @@ export default function AdminInboxPage() {
             statusText = '처리중';
             tone = 'blue';
           }
+          // 학생이 답변에 재답변하면(스레드 마지막=학생) 처리 대상으로 재노출
+          if (awaitingAdminReply(r.thread)) {
+            statusText = '처리중';
+            tone = 'blue';
+          }
 
+          const isReappeal = !!r.reappealedAt && r.status === 'pending';
           items.push({
             id: r.id,
             studentId: student.id,
@@ -187,14 +206,16 @@ export default function AdminInboxPage() {
             campus: student.campus,
             type: 'leave',
             category: 'living',
-            title: `반차/휴가 신청: ${getLeaveTypeLabel(r.type)}`,
-            content: r.reason || '(사유 없음)',
+            title: `${isReappeal ? '🔁 재승인 요청: ' : '반차/휴가 신청: '}${formatLeaveLabel(r.type, r.slot)}`,
+            content: isReappeal && r.reappealReason
+              ? `${r.reason || '(원 사유 없음)'}\n\n[재승인 요청 사유] ${r.reappealReason}`
+              : (r.reason || '(사유 없음)'),
             date: r.date,
             status: r.status,
             statusText,
             tone,
             adminReply: r.adminReply || '',
-            createdAt: r.createdAt || r.date,
+            createdAt: r.reappealedAt || r.createdAt || r.date,
             rawItem: r,
           });
         });
@@ -209,6 +230,10 @@ export default function AdminInboxPage() {
           statusText = '완료';
           tone = 'emerald';
         } else if (r.status === 'pending' && r.adminReply) {
+          statusText = '처리중';
+          tone = 'blue';
+        }
+        if (awaitingAdminReply(r.thread)) {
           statusText = '처리중';
           tone = 'blue';
         }
@@ -243,6 +268,10 @@ export default function AdminInboxPage() {
           statusText = '완료';
           tone = 'emerald';
         } else if (r.status === 'pending' && r.adminReply) {
+          statusText = '처리중';
+          tone = 'blue';
+        }
+        if (awaitingAdminReply(r.thread)) {
           statusText = '처리중';
           tone = 'blue';
         }
@@ -311,20 +340,95 @@ export default function AdminInboxPage() {
           rawItem: { examId: e.examId },
         });
       });
+
+      // 6) 쿠폰 교환 — 학생 신청(requested, 승인 필요) / 승인 후 물품 지급대기(pending)
+      (student.rewardRedemptions || []).forEach((rwd) => {
+        if (rwd.status === 'requested') {
+          items.push({
+            id: `reward:${rwd.id}`,
+            studentId: student.id,
+            studentName: student.name,
+            campus: student.campus,
+            type: 'reward',
+            category: 'living',
+            title: `쿠폰 교환 신청: ${getRewardLabel(rwd.type)}`,
+            content: `쿠폰 ${rwd.cost}장으로 ${getRewardLabel(rwd.type)} 교환을 신청했습니다. 승인하면 쿠폰이 차감됩니다.`,
+            date: (rwd.createdAt || '').slice(0, 10),
+            status: 'pending',
+            statusText: '접수중',
+            tone: 'amber',
+            adminReply: '',
+            createdAt: rwd.createdAt || '',
+            rawItem: rwd,
+          });
+        } else if (rwd.status === 'pending') {
+          items.push({
+            id: `reward:${rwd.id}`,
+            studentId: student.id,
+            studentName: student.name,
+            campus: student.campus,
+            type: 'reward',
+            category: 'living',
+            title: `리워드 지급 대기: ${getRewardLabel(rwd.type)}`,
+            content: `쿠폰 ${rwd.cost}장으로 ${getRewardLabel(rwd.type)}을(를) 교환했습니다. 휴가쿠폰관리 > 리워드 지급내역에서 지급 처리해 주세요.`,
+            date: (rwd.createdAt || '').slice(0, 10),
+            status: 'pending',
+            statusText: '접수중',
+            tone: 'amber',
+            adminReply: '',
+            createdAt: rwd.createdAt || '',
+            rawItem: rwd,
+          });
+        }
+      });
+
+      // 7) 도시락 마감 후 추가 신청 (승인 대기)
+      (student.mealOrders || []).forEach((o) => {
+        (o.addRequests || []).forEach((r) => {
+          if (r.status !== 'pending') return;
+          items.push({
+            id: `meal:${o.planId}:${r.id}`,
+            studentId: student.id,
+            studentName: student.name,
+            campus: student.campus,
+            type: 'meal_add',
+            category: 'living',
+            title: `도시락 추가 신청: ${mealPlanLabels[o.planId] || ''} ${MEAL_DAY_LABELS[r.day]} ${MEAL_KIND_LABELS[r.meal]}`,
+            content: r.reason || '(사유 없음)',
+            date: (r.createdAt || '').slice(0, 10),
+            status: 'pending',
+            statusText: '접수중',
+            tone: 'amber',
+            adminReply: '',
+            createdAt: r.createdAt || '',
+            rawItem: { planId: o.planId, requestId: r.id },
+          });
+        });
+      });
     });
 
     // 최신 신청일자 순 정렬
     return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [students, eventNames]);
+  }, [students, eventNames, mealPlanLabels]);
 
-  // 카테고리 필터링 반영
+  // 카테고리 + 검색 필터링 반영 (신청 원생 / 코치 답장 / 전달 텍스트)
   const filteredItems = React.useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return inboxItems.filter((item) => {
       if (activeCategory !== 'all' && item.category !== activeCategory) return false;
       if (hideCompleted && item.tone === 'emerald') return false;
+      if (q) {
+        const haystack = [
+          item.studentName,
+          item.adminReply,
+          item.content,
+          item.title,
+        ].join(' ').toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
-  }, [inboxItems, activeCategory, hideCompleted]);
+  }, [inboxItems, activeCategory, hideCompleted, searchQuery]);
 
   // 정렬된 인박스 아이템
   const sortedInboxItems = React.useMemo(() => {
@@ -378,6 +482,32 @@ export default function AdminInboxPage() {
       return;
     }
 
+    // 도시락 추가 신청 — 승인 시 selections 반영, 반려 시 거절
+    if (item.type === 'meal_add') {
+      const approve = actionStatus === 'approved' || actionStatus === 'resolved';
+      const res = await fetch(`/api/admin/students/${item.studentId}/meal-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: item.rawItem.planId, requestId: item.rawItem.requestId, approve, reject: !approve }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.success) throw new Error(j.message || '추가신청 처리 실패');
+      return;
+    }
+
+    // 쿠폰 교환 신청 — 승인 시 쿠폰 차감(+물품 지급대기), 반려 시 미차감 반려
+    if (item.type === 'reward') {
+      const approve = actionStatus === 'approved' || actionStatus === 'resolved';
+      const res = await fetch(`/api/admin/students/${item.studentId}/reward`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(approve ? { redemptionId: item.rawItem.id, approve: true } : { redemptionId: item.rawItem.id, reject: true }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok || !j.success) throw new Error(j.message || '교환 처리 실패');
+      return;
+    }
+
     let apiUrl = `/api/admin/students/${item.studentId}`;
     let body: any = {};
 
@@ -401,15 +531,62 @@ export default function AdminInboxPage() {
     if (!res.ok || !json.success) throw new Error(json.message || '요청 처리 실패');
   };
 
+  // 낙관적 로컬 업데이트 — 처리된 신청건의 상태/답변을 students 상태에 즉시 반영해
+  // 전체 새로고침(깜빡임) 없이 UI를 갱신한다. 이후 silent reload로 서버 상태와 재동기화.
+  const applyOptimistic = (
+    item: InboxItem,
+    actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending',
+    reply?: string,
+  ) => {
+    const replyTrim = reply?.trim() || '';
+    setStudents((prev) => prev.map((s) => {
+      if (s.id !== item.studentId) return s;
+      const next: Student = { ...s };
+      if (item.type === 'leave') {
+        next.leaveRequests = (s.leaveRequests || []).map((r) =>
+          r.id === item.id
+            ? { ...r, status: (actionStatus === 'resolved' ? 'approved' : actionStatus) as any, adminReply: replyTrim || r.adminReply }
+            : r);
+      } else if (item.type === 'request' || item.type === 'suggestion') {
+        const nextStatus = actionStatus === 'approved' || actionStatus === 'resolved' ? 'resolved' : actionStatus;
+        next.consultationLogs = (s.consultationLogs || []).map((l) =>
+          l.id === item.id
+            ? { ...l, status: nextStatus as any, adminReply: replyTrim || l.adminReply }
+            : l);
+      } else if (item.type === 'ot_absence') {
+        const ns = (actionStatus === 'approved' || actionStatus === 'resolved') ? 'absent' : 'undecided';
+        next.otEvents = (s.otEvents || []).map((e) =>
+          e.eventId === item.rawItem.eventId ? { ...e, status: ns as any } : e);
+      } else if (item.type === 'mock_absence') {
+        const ns = (actionStatus === 'approved' || actionStatus === 'resolved') ? 'absent' : 'undecided';
+        next.mockExams = (s.mockExams || []).map((e) =>
+          e.examId === item.rawItem.examId ? { ...e, status: ns as any } : e);
+      } else if (item.type === 'meal_add') {
+        const approve = actionStatus === 'approved' || actionStatus === 'resolved';
+        next.mealOrders = (s.mealOrders || []).map((o) => {
+          if (o.planId !== item.rawItem.planId) return o;
+          return {
+            ...o,
+            addRequests: (o.addRequests || []).map((r) =>
+              r.id === item.rawItem.requestId ? { ...r, status: (approve ? 'approved' : 'rejected') as any } : r),
+          };
+        });
+      }
+      return next;
+    }));
+  };
+
   const handleProcessRequest = async (actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending') => {
     if (!selectedItem) return;
     setProcessing(true);
+    const target = selectedItem;
     try {
-      await processRequestItem(selectedItem, actionStatus, replyText);
+      await processRequestItem(target, actionStatus, replyText);
+      applyOptimistic(target, actionStatus, replyText);
       toast.success('신청이 성공적으로 처리되었습니다.');
-      await loadStudents();
       setSelectedItem(null);
       setReplyText('');
+      loadStudents(true); // 백그라운드 재동기화(깜빡임 없음)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : '네트워크 에러가 발생했습니다.');
     } finally {
@@ -419,7 +596,7 @@ export default function AdminInboxPage() {
 
   // 다중 선택 일괄 승인 (완료되지 않은 건만 대상)
   const handleBulkApprove = async () => {
-    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료');
+    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료' && i.type !== 'reward');
     if (targets.length === 0) return;
     if (!confirm(`선택한 ${targets.length}건을 일괄 승인 처리할까요?`)) return;
     setBulkProcessing(true);
@@ -428,12 +605,13 @@ export default function AdminInboxPage() {
     for (const item of targets) {
       try {
         await processRequestItem(item, 'approved');
+        applyOptimistic(item, 'approved');
         ok++;
       } catch {
         fail++;
       }
     }
-    await loadStudents();
+    loadStudents(true); // 백그라운드 재동기화(깜빡임 없음)
     setSelectedIds(new Set());
     setSelectedItem(null);
     setBulkProcessing(false);
@@ -450,17 +628,17 @@ export default function AdminInboxPage() {
     });
   };
 
-  // 선택 변경 시 폼 바인딩 (초안 유실 경고)
+  // 선택 변경 시 폼 바인딩 (초안 유실 경고). 답변은 스레드에 append 되므로 새 메시지는 항상 빈 칸에서 시작.
   const handleSelectItem = (item: InboxItem) => {
     if (
       selectedItem &&
       selectedItem.id !== item.id &&
-      replyText.trim() !== selectedItem.adminReply.trim()
+      replyText.trim() !== ''
     ) {
       if (!window.confirm('작성 중인 답변이 저장되지 않습니다. 항목을 전환할까요?')) return;
     }
     setSelectedItem(item);
-    setReplyText(item.adminReply);
+    setReplyText('');
   };
 
   if (checkingAuth) {
@@ -480,7 +658,7 @@ export default function AdminInboxPage() {
           <Button
             size="sm"
             variant="outline"
-            onClick={loadStudents}
+            onClick={() => loadStudents()}
             className="rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-premium"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
@@ -493,6 +671,28 @@ export default function AdminInboxPage() {
         
         {/* 좌측: 카테고리 필터 및 요청 목록 */}
         <div className="lg:col-span-2 space-y-4">
+          {/* 검색 — 신청 원생 / 코치 답장 / 전달 텍스트 */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="원생 이름 · 신청 내용 · 코치 답변으로 검색"
+              className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-9 py-2.5 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 transition-all shadow-sm"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                aria-label="검색어 지우기"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
           <div className="flex flex-wrap gap-1.5 bg-[#F5F5F7] p-1 rounded-2xl border border-black/[0.02]">
             {CATEGORY_TABS.map((tab) => (
               <button
@@ -642,7 +842,7 @@ export default function AdminInboxPage() {
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="flex items-center gap-2 min-w-0">
-                        {item.statusText !== '완료' && (
+                        {item.statusText !== '완료' && item.type !== 'reward' && (
                           <input
                             type="checkbox"
                             checked={selectedIds.has(item.id)}
@@ -725,6 +925,36 @@ export default function AdminInboxPage() {
                   </p>
                 </div>
 
+                {/* 양방향 대화 내역 (학생 재답변 포함) */}
+                {(selectedItem.type === 'leave' || selectedItem.type === 'request' || selectedItem.type === 'suggestion') && (() => {
+                  const raw = selectedItem.rawItem || {};
+                  const convo = buildDisplayThread({
+                    headText: selectedItem.content,
+                    headAt: raw.createdAt || selectedItem.createdAt,
+                    adminReply: raw.adminReply,
+                    repliedAt: raw.repliedAt,
+                    thread: raw.thread,
+                  }).slice(1); // head(본문)는 위에서 이미 표시
+                  if (convo.length === 0) return null;
+                  return (
+                    <div className="space-y-2">
+                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">대화 내역</p>
+                      <div className="space-y-2">
+                        {convo.map((m) => (
+                          <div key={m.id} className={`flex ${m.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold whitespace-pre-wrap break-words ${m.from === 'admin' ? 'bg-[#0071E3]/[0.06] border border-[#0071E3]/15 text-slate-700' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
+                              <span className={`block text-[9px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'admin' ? 'text-[#0071E3]/70' : 'text-slate-400'}`}>
+                                {m.from === 'admin' ? (m.author || '코치') : '학생'}
+                              </span>
+                              {m.text}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -744,11 +974,11 @@ export default function AdminInboxPage() {
                 </button>
 
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코치 피드백 답변 작성</label>
+                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코치 답변 / 재답변 작성</label>
                   <textarea
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    placeholder="원생에게 보여질 실시간 코치 코멘트를 입력하세요..."
+                    placeholder="원생에게 보여질 코치 코멘트를 입력하세요. 보낼 때마다 대화에 누적됩니다."
                     rows={4}
                     className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-3.5 py-3 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                   />
@@ -835,7 +1065,50 @@ export default function AdminInboxPage() {
                 })()}
 
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  {selectedItem.type === 'ot_absence' || selectedItem.type === 'mock_absence' ? (
+                  {selectedItem.type === 'reward' ? (
+                    selectedItem.rawItem?.status === 'requested' ? (
+                      <div className="grid grid-cols-2 gap-2">
+                        <Button
+                          disabled={processing}
+                          onClick={() => handleProcessRequest('approved')}
+                          className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                        >
+                          <Check className="w-3.5 h-3.5 mr-1" /> 승인 (쿠폰 차감)
+                        </Button>
+                        <Button
+                          disabled={processing}
+                          onClick={() => handleProcessRequest('rejected')}
+                          className="rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" /> 반려
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        onClick={() => router.push('/admin/leave?tab=rewards')}
+                        className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5 mr-1 rotate-180" /> 휴가쿠폰관리 지급내역에서 처리
+                      </Button>
+                    )
+                  ) : selectedItem.type === 'meal_add' ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        disabled={processing}
+                        onClick={() => handleProcessRequest('approved')}
+                        className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                      >
+                        <Check className="w-3.5 h-3.5 mr-1" /> 추가 승인 (표 반영)
+                      </Button>
+                      <Button
+                        disabled={processing}
+                        onClick={() => handleProcessRequest('rejected')}
+                        className="rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1" /> 반려
+                      </Button>
+                    </div>
+                  ) : selectedItem.type === 'ot_absence' || selectedItem.type === 'mock_absence' ? (
                     <div className="grid grid-cols-2 gap-2">
                       <Button
                         disabled={processing}

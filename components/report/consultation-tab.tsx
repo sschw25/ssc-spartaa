@@ -7,27 +7,36 @@ import {
   COUPONS_PER_EXTRA_HALFDAY,
   LEAVE_TYPES,
   LEAVE_TYPE_ORDER,
+  LEAVE_SLOT_OPTIONS,
+  LEAVE_SLOT_LABELS,
   MONTHLY_FULLDAY_QUOTA,
   MONTHLY_HALFDAY_QUOTA,
   getLeaveTypeLabel,
+  formatLeaveLabel,
+  leaveNeedsSlot,
   getMonthlyLeaveUsage,
+  getLeaveCredits,
   kstYearMonth,
   yearMonthOf,
 } from '@/lib/leave';
+
+type LeaveSlotValue = 'morning' | 'afternoon' | 'night' | 'fullday';
 
 interface ConsultationTabProps {
   student: Student;
   isStudentReport: boolean;
   leaveForm: {
     type: LeaveType;
+    slot?: LeaveSlotValue;
     date: string;
     reason: string;
   };
-  setLeaveForm: React.Dispatch<React.SetStateAction<{ type: LeaveType; date: string; reason: string }>>;
+  setLeaveForm: React.Dispatch<React.SetStateAction<{ type: LeaveType; slot?: LeaveSlotValue; date: string; reason: string }>>;
   leaveSubmitting: boolean;
   leaveError: string;
   submitLeave: (e: React.FormEvent) => Promise<void>;
   cancelLeave: (id: string) => Promise<void>;
+  reappealLeave: (id: string, note: string) => Promise<boolean>;
   showLeaveHistory: boolean;
   setShowLeaveHistory: (show: boolean) => void;
   suggestionMessage: string;
@@ -53,6 +62,7 @@ export function ConsultationTab({
   leaveError,
   submitLeave,
   cancelLeave,
+  reappealLeave,
   showLeaveHistory,
   setShowLeaveHistory,
   suggestionMessage,
@@ -135,10 +145,12 @@ export function ConsultationTab({
         const leaveCoupons = student.leaveCoupons ?? 0;
         const selMonth = yearMonthOf(leaveForm.date) || kstYearMonth();
         const usage = getMonthlyLeaveUsage(leaveRequests, selMonth);
+        const credits = getLeaveCredits(student.rewardRedemptions, leaveRequests);
         const halfLeft = Math.max(0, MONTHLY_HALFDAY_QUOTA - usage.halfday);
         const fullLeft = Math.max(0, MONTHLY_FULLDAY_QUOTA - usage.fullday);
         const selCat = LEAVE_TYPES[leaveForm.type]?.category;
-        const overQuota = (selCat === 'halfday' && halfLeft <= 0) || (selCat === 'fullday' && fullLeft <= 0);
+        // 추가권(교환 반차권/휴식권)이 남아 있으면 기본 한도를 넘어도 신청 가능
+        const overQuota = (selCat === 'halfday' && halfLeft <= 0 && credits.halfday <= 0) || (selCat === 'fullday' && fullLeft <= 0 && credits.fullday <= 0);
         const isSick = selCat === 'sick';
         const [y, m] = selMonth.split('-');
         const monthLabel = `${y}년 ${parseInt(m)}월`;
@@ -159,10 +171,12 @@ export function ConsultationTab({
               <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">반차 잔여</p>
                 <p className="mt-0.5 text-sm font-black text-[#0071E3]">{halfLeft}<span className="text-[10px] font-bold text-slate-400">/{MONTHLY_HALFDAY_QUOTA}</span></p>
+                {credits.halfday > 0 && <p className="text-[9px] font-black text-amber-600">+{credits.halfday} 추가권</p>}
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">휴식권 잔여</p>
                 <p className="mt-0.5 text-sm font-black text-[#0071E3]">{fullLeft}<span className="text-[10px] font-bold text-slate-400">/{MONTHLY_FULLDAY_QUOTA}</span></p>
+                {credits.fullday > 0 && <p className="text-[9px] font-black text-amber-600">+{credits.fullday} 추가권</p>}
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">병가(이번달)</p>
@@ -184,7 +198,12 @@ export function ConsultationTab({
                   <button
                     key={t}
                     type="button"
-                    onClick={() => setLeaveForm((f) => ({ ...f, type: t }))}
+                    onClick={() => setLeaveForm((f) => ({
+                      ...f,
+                      type: t,
+                      // 시간대 선택이 필요한 종류로 바꾸면 기본 시간대(첫 옵션)를 자동 지정, 아니면 해제
+                      slot: leaveNeedsSlot(t) ? (LEAVE_SLOT_OPTIONS[t]![0]) : undefined,
+                    }))}
                     className={`flex flex-col items-start gap-0.5 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] shadow-sm' : 'border-slate-200 bg-white hover:border-[#0071E3]/40'}`}
                   >
                     <span className="text-[12px] font-black text-slate-700">{info?.icon} {info?.label}</span>
@@ -193,6 +212,28 @@ export function ConsultationTab({
                 );
               })}
             </div>
+
+            {/* 시간대 선택 — 개인사정 반차(오전/오후/야간) · 병가(오전/오후/야간/하루종일) */}
+            {leaveNeedsSlot(leaveForm.type) && (
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">시간대 선택</p>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {(LEAVE_SLOT_OPTIONS[leaveForm.type] || []).map((s) => {
+                    const sActive = leaveForm.slot === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setLeaveForm((f) => ({ ...f, slot: s }))}
+                        className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${sActive ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'}`}
+                      >
+                        {LEAVE_SLOT_LABELS[s]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* 날짜 + 사유 */}
             <form onSubmit={submitLeave} className="space-y-2">
@@ -250,7 +291,7 @@ export function ConsultationTab({
                       <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
                         <div className="flex items-center justify-between gap-2">
                           <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
+                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{LEAVE_TYPES[r.type]?.icon} {formatLeaveLabel(r.type, r.slot)}</span>
                             <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
                             {leaveStatusBadge(r.status, r.adminReply)}
                           </span>
@@ -285,7 +326,7 @@ export function ConsultationTab({
                               <div key={r.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 text-[11px]">
                                 <div className="flex items-center justify-between gap-2">
                                   <span className="flex min-w-0 items-center gap-1.5">
-                                    <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">{LEAVE_TYPES[r.type]?.icon} {getLeaveTypeLabel(r.type)}</span>
+                                    <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">{LEAVE_TYPES[r.type]?.icon} {formatLeaveLabel(r.type, r.slot)}</span>
                                     <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
                                     {leaveStatusBadge(r.status, r.adminReply)}
                                   </span>
@@ -295,6 +336,21 @@ export function ConsultationTab({
                                   <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
                                     코치 답변: {r.adminReply}
                                   </div>
+                                )}
+                                {r.status === 'rejected' && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      const note = window.prompt('재승인 요청 사유를 입력해 주세요. (코치에게 함께 전달됩니다)', '');
+                                      if (note === null) return;
+                                      const ok = await reappealLeave(r.id, note.trim());
+                                      if (ok) window.alert('재승인 요청이 접수되었습니다. 코치 확인 후 다시 안내드릴게요.');
+                                      else window.alert('재승인 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                                    }}
+                                    className="mt-2 w-full rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-black text-amber-700 transition hover:bg-amber-100"
+                                  >
+                                    ↻ 재승인 요청하기
+                                  </button>
                                 )}
                               </div>
                             ))}

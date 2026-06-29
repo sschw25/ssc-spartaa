@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
 import { LearningConsultationPanel } from '@/components/admin/detail-tabs/learning-consultation-panel';
+import { LectureReviewRecommender } from '@/components/admin/detail-tabs/lecture-review-recommender';
 
 export function ProgressTab() {
   const {
@@ -1589,6 +1590,13 @@ export function ProgressTab() {
                                             </Button>
                                           </div>
                                         </div>
+                                      </div>
+
+                                      <div className="mt-2">
+                                        <LectureReviewRecommender
+                                          estimatedMinutesPerUnit={lec.estimatedMinutesPerUnit}
+                                          speedMultiplier={lec.speedMultiplier}
+                                        />
                                       </div>
                                     </div>
 

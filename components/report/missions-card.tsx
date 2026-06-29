@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { Trophy, Ticket, Loader2, CheckCircle2, CalendarClock } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Trophy, Ticket, Loader2, CheckCircle2, CalendarClock, Gift, X } from 'lucide-react';
 
 interface Mission {
   id: string;
@@ -13,12 +13,25 @@ interface Mission {
   progress: string | null;
 }
 interface RecentReward { missionName: string; rewardGranted: number; date: string }
+type RewardType = 'halfday' | 'restpass' | 'voucher' | 'planner';
+interface RewardCatalogItem { type: RewardType; label: string; cost: number; physical: boolean }
+interface Redemption { id: string; type: RewardType; cost: number; status: 'requested' | 'pending' | 'fulfilled' | 'rejected'; createdAt: string }
 interface MissionsData {
   missions: Mission[];
   coupons: number;
+  couponsAvailable: number;
   couponsPerHalfday: number;
   recent: RecentReward[];
+  rewardCatalog: RewardCatalogItem[];
+  redemptions: Redemption[];
 }
+
+const REDEMPTION_STATUS: Record<Redemption['status'], { label: string; cls: string }> = {
+  requested: { label: '승인 대기', cls: 'bg-amber-100 text-amber-700' },
+  pending: { label: '지급 대기', cls: 'bg-blue-100 text-blue-700' },
+  fulfilled: { label: '완료', cls: 'bg-emerald-100 text-emerald-700' },
+  rejected: { label: '반려', cls: 'bg-slate-200 text-slate-500' },
+};
 
 const periodLabel = (p: Mission['period']) => (p === 'weekly' ? '매주' : p === 'monthly' ? '매월' : p === 'daily' ? '매일' : 'OT');
 const periodCls = (p: Mission['period']) =>
@@ -30,22 +43,55 @@ const periodCls = (p: Mission['period']) =>
 export function MissionsCard() {
   const [data, setData] = useState<MissionsData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exchanging, setExchanging] = useState<RewardType | null>(null);
+  const [exchangeError, setExchangeError] = useState('');
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/student/missions', { credentials: 'same-origin' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) setData(json);
+      }
+    } catch { /* noop */ }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const res = await fetch('/api/student/missions', { credentials: 'same-origin' });
-        if (res.ok) {
-          const json = await res.json();
-          if (!cancelled && json.success) setData(json);
-        }
-      } catch { /* noop */ } finally {
-        if (!cancelled) setLoading(false);
-      }
+      await load();
+      if (!cancelled) setLoading(false);
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [load]);
+
+  const requestExchange = async (type: RewardType) => {
+    if (exchanging) return;
+    setExchanging(type);
+    setExchangeError('');
+    try {
+      const res = await fetch('/api/student/reward', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ rewardType: type }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json.success) await load();
+      else setExchangeError(json.message || '교환 신청에 실패했습니다.');
+    } catch {
+      setExchangeError('네트워크 오류가 발생했습니다.');
+    } finally {
+      setExchanging(null);
+    }
+  };
+
+  const cancelExchange = async (id: string) => {
+    try {
+      const res = await fetch(`/api/student/reward?id=${id}`, { method: 'DELETE', credentials: 'same-origin' });
+      if (res.ok) await load();
+    } catch { /* noop */ }
+  };
 
   if (loading) {
     return (
@@ -54,9 +100,12 @@ export function MissionsCard() {
       </div>
     );
   }
-  if (!data || data.missions.length === 0) return null;
+  if (!data) return null;
+  if (data.missions.length === 0 && (data.rewardCatalog?.length ?? 0) === 0) return null;
 
   const toHalfday = data.couponsPerHalfday > 0 ? Math.floor(data.coupons / data.couponsPerHalfday) : 0;
+  const available = data.couponsAvailable ?? data.coupons;
+  const activeRedemptions = (data.redemptions || []).filter((r) => r.status === 'requested' || r.status === 'pending');
 
   return (
     <div className="no-print rounded-3xl border border-amber-200/60 bg-gradient-to-br from-amber-50/60 to-white p-5 md:p-6 shadow-sm space-y-4">
@@ -74,10 +123,13 @@ export function MissionsCard() {
         </div>
       </div>
 
+      {data.missions.length > 0 && (
       <p className="text-[11px] font-semibold text-slate-500 -mt-1">
         아래 미션을 달성하면 쿠폰이 자동 적립돼요. 쿠폰 {data.couponsPerHalfday}장이면 반차/휴식을 추가로 신청할 수 있어요.
       </p>
+      )}
 
+      {data.missions.length > 0 && (
       <div className="space-y-2.5">
         {data.missions.map((m) => (
           <div key={m.id} className={`rounded-2xl border p-3.5 flex items-start gap-3 ${m.earned ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white'}`}>
@@ -105,6 +157,70 @@ export function MissionsCard() {
           </div>
         ))}
       </div>
+      )}
+
+      {/* 쿠폰 교환 신청 — 관리자 승인 후 차감/지급 */}
+      {(data.rewardCatalog?.length ?? 0) > 0 && (
+        <div className="border-t border-amber-100 pt-3 space-y-2.5">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="flex items-center gap-1.5 text-[11px] font-black text-amber-700">
+              <Gift className="w-3.5 h-3.5" /> 쿠폰 교환
+            </p>
+            <span className="text-[10px] font-bold text-slate-400">교환 가능 쿠폰 {available}장 · 반차권/휴식권 즉시 · 실물은 승인 후</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {data.rewardCatalog.map((r) => {
+              const affordable = available >= r.cost;
+              const busy = exchanging === r.type;
+              return (
+                <button
+                  key={r.type}
+                  type="button"
+                  disabled={!affordable || busy}
+                  onClick={() => requestExchange(r.type)}
+                  className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${affordable ? 'border-amber-200 bg-white hover:border-amber-400' : 'border-slate-100 bg-slate-50 opacity-60'}`}
+                >
+                  <span className="min-w-0">
+                    <span className="block text-xs font-black text-slate-700">{r.label}</span>
+                    <span className="block text-[10px] font-bold text-amber-600">쿠폰 {r.cost}장{r.physical ? ' · 신청 후 지급' : ' · 즉시 교환'}</span>
+                  </span>
+                  {busy
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 shrink-0" />
+                    : <Ticket className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                </button>
+              );
+            })}
+          </div>
+          {exchangeError && <p className="text-[10px] font-bold text-red-500">{exchangeError}</p>}
+
+          {activeRedemptions.length > 0 && (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">진행 중 교환</p>
+              {activeRedemptions.map((r) => {
+                const meta = data.rewardCatalog.find((c) => c.type === r.type);
+                const st = REDEMPTION_STATUS[r.status];
+                return (
+                  <div key={r.id} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 text-[11px]">
+                    <span className="font-black text-slate-700">{meta?.label || r.type}</span>
+                    <span className="text-[10px] font-bold text-amber-600">{r.cost}장</span>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${st.cls}`}>{st.label}</span>
+                    {r.status === 'requested' && (
+                      <button
+                        type="button"
+                        onClick={() => cancelExchange(r.id)}
+                        className="ml-auto shrink-0 text-slate-300 transition-colors hover:text-red-500"
+                        aria-label="교환 신청 취소"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {data.recent.length > 0 && (
         <div className="border-t border-amber-100 pt-3 space-y-1.5">

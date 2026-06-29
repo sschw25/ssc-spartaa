@@ -19,8 +19,9 @@ import { Button } from '@/components/ui/button';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { Student, PhoneSubmission } from '@/lib/types/student';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
 
-type Arrival = '08:20' | '09:00';
+type Arrival = string;
 type StatusFilter = 'all' | 'present' | 'left' | 'absent' | 'late';
 
 interface Row {
@@ -70,7 +71,6 @@ interface SaturdayExcuseRow {
 type SortKey = 'name' | 'checkIn' | 'checkOut' | 'minutes' | 'arrival' | 'late';
 type SortDir = 'asc' | 'desc';
 
-const DEADLINE: Record<Arrival, number> = { '08:20': 500, '09:00': 540 };
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 const statusOptions: Array<{ key: StatusFilter; label: string }> = [
@@ -355,10 +355,11 @@ function AdminAttendanceContent() {
     };
   }, [date, checkingAuth, reloadKey]);
 
-  const changeArrival = async (id: string, value: Arrival) => {
+  const changeArrival = async (id: string, raw: string) => {
+    const value = normalizeArrival(raw);
     setData((prev) => prev && {
       ...prev,
-      rows: (prev.rows || []).map((r) => (r.id === id ? { ...r, expectedArrival: value, isLate: !r.isAbsent && r.checkInMin > DEADLINE[value] } : r)),
+      rows: (prev.rows || []).map((r) => (r.id === id ? { ...r, expectedArrival: value, isLate: !r.isAbsent && r.checkInMin > arrivalDeadlineMin(value) } : r)),
     });
     try {
       const res = await fetch(`/api/admin/students/${id}/arrival`, {
@@ -429,7 +430,7 @@ function AdminAttendanceContent() {
         case 'checkIn': return r.isAbsent ? Number.MAX_SAFE_INTEGER : r.checkInMin;
         case 'checkOut': return r.checkOutMin ?? Number.MAX_SAFE_INTEGER;
         case 'minutes': return r.minutes ?? -1;
-        case 'arrival': return DEADLINE[r.expectedArrival];
+        case 'arrival': return arrivalDeadlineMin(r.expectedArrival);
         case 'late': return (r.isLate ? 1 : 0) * 100000 + (r.isAbsent ? Number.MAX_SAFE_INTEGER : r.checkInMin);
       }
     };
@@ -440,6 +441,17 @@ function AdminAttendanceContent() {
       return (va - vb) * dir;
     });
   }, [data, campusFilter, statusFilter, query, sortKey, sortDir]);
+
+  // 휴대폰 미제출(임시보관함/소지) 신청을 학생별로 매핑 — 출결판 '휴대폰' 칸 v표시용
+  const phoneFlagByStudent = useMemo(() => {
+    const m = new Map<string, PhoneSubmissionWithStudent>();
+    for (const s of phoneSubmissions) {
+      if (s.status === 'rejected') continue;
+      m.set(s.studentId, s); // 같은 학생 다건이면 최신 항목으로 덮어씀
+    }
+    return m;
+  }, [phoneSubmissions]);
+  const phoneTypeLabel = (t: PhoneSubmission['type']) => (t === 'locker' ? '임시보관함' : '전원끄고 소지');
 
   const renderSortIcon = (k: SortKey) =>
     sortKey !== k ? <ChevronsUpDown className="w-3 h-3 text-[#C7C7CC]" />
@@ -761,6 +773,7 @@ function AdminAttendanceContent() {
                       {renderTh('minutes', '체류', 'hidden sm:table-cell')}
                       {renderTh('arrival', '지각기준')}
                       {renderTh('late', '상태')}
+                      <th className="px-4 py-3 text-center font-bold text-[#1D1D1F]" title="휴대폰 미제출(임시보관함/소지) 신청 시 자동 체크">휴대폰</th>
                       <th className="px-4 py-3 text-left font-bold text-[#1D1D1F]">수정</th>
                     </tr>
                   </thead>
@@ -794,14 +807,33 @@ function AdminAttendanceContent() {
                           </td>
                           <td className="px-4 py-3 text-[#86868B] hidden sm:table-cell whitespace-nowrap">{r.isAbsent ? '-' : fmtMin(r.minutes)}</td>
                           <td className="px-4 py-3">
-                            <select
-                              value={r.expectedArrival}
-                              onChange={(e) => changeArrival(r.id, e.target.value as Arrival)}
-                              className="text-[11px] font-bold bg-white border border-black/[0.1] rounded-lg px-2 py-1 outline-none cursor-pointer hover:border-[#0071E3]"
-                            >
-                              <option value="08:20">08:20까지</option>
-                              <option value="09:00">09:00까지</option>
-                            </select>
+                            <div className="flex items-center gap-1">
+                              {['08:20', '09:00'].map((preset) => (
+                                <button
+                                  key={preset}
+                                  type="button"
+                                  onClick={() => changeArrival(r.id, preset)}
+                                  className={`text-[10px] font-bold rounded-md px-1.5 py-1 border transition-colors ${
+                                    r.expectedArrival === preset
+                                      ? 'bg-[#0071E3] text-white border-[#0071E3]'
+                                      : 'bg-white text-[#86868B] border-black/[0.1] hover:border-[#0071E3]'
+                                  }`}
+                                >
+                                  {preset}
+                                </button>
+                              ))}
+                              <input
+                                type="time"
+                                value={r.expectedArrival}
+                                onChange={(e) => { if (e.target.value) changeArrival(r.id, e.target.value); }}
+                                title="수동 지각 기준 시각 (예: 09:40)"
+                                className={`w-[88px] text-[11px] font-bold bg-white border rounded-md px-1.5 py-1 outline-none focus:border-[#0071E3] ${
+                                  r.expectedArrival !== '08:20' && r.expectedArrival !== '09:00'
+                                    ? 'border-[#0071E3] text-[#0071E3]'
+                                    : 'border-black/[0.1]'
+                                }`}
+                              />
+                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {r.isAbsent ? (
@@ -815,6 +847,20 @@ function AdminAttendanceContent() {
                             ) : (
                               <span className="px-2 py-0.5 rounded-full border text-[10px] font-bold text-blue-700 bg-blue-50 border-blue-100">하원</span>
                             )}
+                          </td>
+                          <td className="px-4 py-3 text-center whitespace-nowrap">
+                            {(() => {
+                              const sub = phoneFlagByStudent.get(r.id);
+                              if (!sub) return <span className="text-[#C7C7CC]">—</span>;
+                              return (
+                                <span
+                                  className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700"
+                                  title={`${phoneTypeLabel(sub.type)}${sub.reason ? ` · ${sub.reason}` : ''}`}
+                                >
+                                  ✓ {phoneTypeLabel(sub.type)}
+                                </span>
+                              );
+                            })()}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">

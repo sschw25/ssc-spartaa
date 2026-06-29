@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { activeBackend, getStudentsSummary, getSessionsInRange } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
-
-const DEADLINE_MIN: Record<string, number> = { '08:20': 8 * 60 + 20, '09:00': 9 * 60 };
+import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
 
 function seoulMin(iso: string): number {
   const label = new Intl.DateTimeFormat('en-GB', {
@@ -43,8 +42,8 @@ export async function GET() {
 
     const rows = Array.from(firstInByStudentDate.entries()).map(([sid, byDate]) => {
       const stu = studentMap.get(sid)!;
-      const expectedArrival = (stu.expectedArrival === '09:00' ? '09:00' : '08:20') as '08:20' | '09:00';
-      const deadline = DEADLINE_MIN[expectedArrival];
+      const expectedArrival = normalizeArrival(stu.expectedArrival);
+      const deadline = arrivalDeadlineMin(expectedArrival);
       const attendedDays = byDate.size;
       let lateDays = 0;
       byDate.forEach((min) => { if (min > deadline) lateDays += 1; });

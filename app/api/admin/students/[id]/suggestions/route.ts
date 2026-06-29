@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { getStudentById, saveStudent } from '@/lib/store';
+import { appendThreadMessage } from '@/lib/thread';
 
 export async function PATCH(
   request: Request,
@@ -40,7 +41,8 @@ export async function PATCH(
   }
 
   const nowIso = new Date().toISOString();
-  if (reply !== null) {
+  if (reply) {
+    appendThreadMessage(target, { from: 'admin', text: reply, author: '코치' });
     target.adminReply = reply;
     target.repliedAt = nowIso;
   }

@@ -1,7 +1,7 @@
 import fs from 'fs'
 import path from 'path'
 import Link from 'next/link'
-import { ChevronRight, ArrowLeft } from 'lucide-react'
+import { ChevronLeft, Sparkles } from 'lucide-react'
 import { Navbar } from '@/components/ssc/navbar'
 import { Facilities } from '@/components/ssc/facilities'
 import { defaultFacilities } from '@/components/ssc/facilities-data'
@@ -92,7 +92,7 @@ export default function StreamPage({
   const bgImage = facilitiesWithImages.length > 0 ? facilitiesWithImages[0].image : undefined
 
   return (
-    <main className="overflow-x-hidden pb-16 md:pb-0 bg-[#F5F5F7]">
+    <main className="overflow-x-hidden pb-16 md:pb-0 bg-[#F8F9FA] text-[#1D1D1F]">
       <Navbar />
 
       <StreamStructuredData
@@ -103,22 +103,32 @@ export default function StreamPage({
         faqs={content.faqs}
       />
 
-      {/* Stream Specific Hero (iOS 26 — brand accent glow) */}
-      <section id="hero" className="relative pt-24 pb-14 px-4 sm:px-6 bg-[#F5F5F7] min-h-[400px] flex items-center justify-center border-b border-black/[0.03] overflow-hidden">
-        {/* Brand accent glow (systemIndigo → systemBlue, premium marketing) */}
-        <div className="pointer-events-none absolute -top-24 left-1/2 -translate-x-1/2 w-[680px] h-[420px] rounded-full blur-[120px] opacity-60" style={{ background: 'radial-gradient(ellipse at center, rgba(88,86,214,0.18), rgba(0,122,255,0.10) 45%, transparent 70%)' }} />
-        <div className="relative max-w-[64rem] w-full mx-auto text-center">
+      {/* 뒤로가기 & 서브 네비게이션 (면접 페이지 디자인 정렬) */}
+      <div className="pt-20 bg-white border-b border-[#E5E7EB]">
+        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+          <Link
+            href={`/${campus}`}
+            className="inline-flex items-center gap-1 text-[#86868B] hover:text-[#1D1D1F] text-sm transition-colors"
+          >
+            <ChevronLeft size={16} />
+            {campusName}캠퍼스 홈
+          </Link>
+          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#F5F5F7] text-[#86868B]">
+            {content.name} 전문 과정
+          </span>
+        </div>
+      </div>
+
+      {/* Stream Hero (면접 페이지 디자인 정렬) */}
+      <section id="hero" className="bg-white py-16 md:py-24 border-b border-[#E5E7EB]">
+        <div className="max-w-4xl mx-auto px-4 text-center">
           <BlurFade delay={0.1} yOffset={20}>
-            <Link 
-              href={`/${campus}`} 
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white border border-black/5 text-[#86868B] text-xs font-semibold uppercase tracking-widest hover:bg-black/5 hover:text-black transition-all mb-8 shadow-sm"
-            >
-              <ArrowLeft size={14} /> Back to {campusName} Campus
-            </Link>
+            <div className="flex items-center justify-center mb-6">
+              <AvailabilityBadge campusName={config.name} />
+            </div>
           </BlurFade>
 
           <BlurFade delay={0.2} yOffset={20}>
-            <AvailabilityBadge campusName={config.name} />
             <div className="mb-6">
               {stream === 'gongmuwon' ? (
                 <div className="inline-flex items-center gap-3">
@@ -127,46 +137,42 @@ export default function StreamPage({
                   <span className="text-sm md:text-base font-black tracking-tight text-[#007AFF]">커넥츠프랩</span>
                 </div>
               ) : (
-                <p className="brand-accent-text text-[11px] sm:text-xs font-extrabold tracking-[0.2em] uppercase">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#007AFF] text-xs font-semibold uppercase tracking-wider">
+                  <Sparkles size={12} />
                   SSC SPARTA {content.name}
-                </p>
+                </div>
               )}
             </div>
           </BlurFade>
-          
+
           <BlurFade delay={0.3} yOffset={20}>
-            <h1 
-              className="main-title mb-8 text-balance drop-shadow-sm"
-            >
+            <h1 className="text-3xl md:text-5xl font-bold tracking-tight text-[#1D1D1F] leading-tight mb-6 text-balance break-keep">
               <RhythmicText text={content.hero.title.replaceAll('{{region}}', campusName)} />
             </h1>
           </BlurFade>
 
           <BlurFade delay={0.4} yOffset={20}>
-            <div 
-              className="text-[#434345] font-medium tracking-tight mb-6 text-balance"
-              style={{ fontSize: 'var(--font-size-body-lg)' }}
-            >
+            <div className="text-base md:text-lg text-[#86868B] max-w-2xl mx-auto leading-relaxed mb-6 text-balance break-keep">
               <RhythmicText text={content.hero.subtitle.replaceAll('{{region}}', campusName)} />
             </div>
           </BlurFade>
 
           {content.hero.description && (
             <BlurFade delay={0.5} yOffset={20}>
-               <div className="text-[#86868B] text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium tracking-tight">
+              <div className="text-sm text-[#86868B] max-w-2xl mx-auto leading-relaxed break-keep">
                 <RhythmicText text={content.hero.description.replaceAll('{{region}}', campusName)} />
-               </div>
+              </div>
             </BlurFade>
           )}
 
           <BlurFade delay={0.6} yOffset={20}>
-            <div className="mt-12">
-               <a 
-                 href="#cta" 
-                 className="inline-flex items-center rounded-full bg-[#1D1D1F] text-white font-semibold hover:bg-black hover:scale-105 active:scale-95 transition-all shadow-[0_4px_14px_rgba(0,0,0,0.15)] btn-fluid"
-               >
-                 상담 예약하기
-               </a>
+            <div className="mt-10">
+              <a
+                href="#cta"
+                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-xl bg-[#007AFF] text-white font-semibold hover:bg-blue-700 hover:scale-102 active:scale-98 transition-all shadow-md shadow-blue-500/10"
+              >
+                상담 예약하기
+              </a>
             </div>
           </BlurFade>
         </div>

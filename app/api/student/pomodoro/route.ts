@@ -22,13 +22,19 @@ export async function POST(req: NextRequest) {
   const minutes = typeof body.minutes === 'number' && body.minutes > 0
     ? Math.min(120, Math.round(body.minutes))
     : 50;
+  // 집중 이탈(알트탭/창전환) 횟수 — 0~1000으로 클램프
+  const distractions = typeof body.distractions === 'number' && body.distractions > 0
+    ? Math.min(1000, Math.round(body.distractions))
+    : 0;
 
   if (!noteObj.pomodoro_sessions) noteObj.pomodoro_sessions = {};
   if (!noteObj.pomodoro_minutes) noteObj.pomodoro_minutes = {};
+  if (!noteObj.pomodoro_distractions) noteObj.pomodoro_distractions = {};
 
   const todayKey = getSeoulDateKey();
   noteObj.pomodoro_sessions[todayKey] = (noteObj.pomodoro_sessions[todayKey] || 0) + 1;
   noteObj.pomodoro_minutes[todayKey] = (noteObj.pomodoro_minutes[todayKey] || 0) + minutes;
+  noteObj.pomodoro_distractions[todayKey] = (noteObj.pomodoro_distractions[todayKey] || 0) + distractions;
 
   writeActivityEnvelope(student, noteObj);
   await saveStudent(student);
@@ -43,6 +49,7 @@ export async function POST(req: NextRequest) {
     success: true,
     pomodoroCount: noteObj.pomodoro_sessions[todayKey],
     pomodoroMinutes: noteObj.pomodoro_minutes[todayKey],
+    pomodoroDistractions: noteObj.pomodoro_distractions[todayKey],
     specialNote: serializeClientActivityNoteFromStudent(updatedStudent || student),
     leaveCoupons: updatedStudent?.leaveCoupons || 0,
     rewardGranted: rewardResult.granted,

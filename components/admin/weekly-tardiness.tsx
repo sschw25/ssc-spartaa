@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Loader2 } from 'lucide-react';
 
-interface Row { id: string; name: string; campus: string; expectedArrival: '08:20' | '09:00'; attendedDays: number; lateDays: number; lateRate: number }
+interface Row { id: string; name: string; campus: string; expectedArrival: string; attendedDays: number; lateDays: number; lateRate: number }
 interface Data {
   configured: boolean;
   weekStart?: string;
@@ -50,7 +50,7 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
     const val = (r: Row): number | string => {
       switch (sortKey) {
         case 'name': return r.name;
-        case 'arrival': return r.expectedArrival === '09:00' ? 540 : 500;
+        case 'arrival': { const [h, m] = (r.expectedArrival || '08:20').split(':').map(Number); return (h || 8) * 60 + (m || 0); }
         case 'attended': return r.attendedDays;
         case 'late': return r.lateDays * 1000 + r.lateRate;
         case 'rate': return r.lateRate;

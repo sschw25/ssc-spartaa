@@ -99,6 +99,25 @@ export function ExecutionPlanTab({
 }: ExecutionPlanTabProps) {
   const [showRealignBox, setShowRealignBox] = React.useState(false);
   const [validationError, setValidationError] = React.useState('');
+  // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코치에게 '요청'으로 전달
+  const [realignRequesting, setRealignRequesting] = React.useState<null | 'keepTargetDate' | 'keepPace'>(null);
+  const [realignRequested, setRealignRequested] = React.useState(false);
+
+  const requestRealign = async (mode: 'keepTargetDate' | 'keepPace') => {
+    if (realignRequesting) return;
+    setRealignRequesting(mode);
+    const modeLabel = mode === 'keepTargetDate'
+      ? '목표 완료일 유지 (하루 학습량을 늘려 따라잡기)'
+      : '학습 페이스 유지 (완료 목표일을 뒤로 조정)';
+    const message = `[복귀/진도 재조정 요청] 오랜만에 복귀했거나 진도가 많이 밀려 학습계획 재설정이 필요합니다.\n희망 방식: ${modeLabel}\n코치님이 검토 후 반영하거나 상담을 안내해 주세요.`;
+    try {
+      await sendRequest('plan', message);
+      setRealignRequested(true);
+      setShowRealignBox(false);
+    } finally {
+      setRealignRequesting(null);
+    }
+  };
 
   const REQUEST_TYPE_LABEL: Record<string, string> = {
     progress: '진도 정정',
@@ -202,8 +221,8 @@ export function ExecutionPlanTab({
         </span>
       </div>
 
-      {/* 오래 쉬고 온 학생을 위한 진도 일괄 재조정 기능 */}
-      {isStudentReport && realignStudentPlans && (
+      {/* 오래 쉬고 온 학생을 위한 진도 재조정 — 학생이 직접 실행하지 않고 코치에게 '요청'으로 전달 (#11) */}
+      {isStudentReport && (
         <div className="no-print rounded-3xl border border-amber-300 bg-amber-50/60 p-4 md:p-5 shadow-sm space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -211,19 +230,19 @@ export function ExecutionPlanTab({
                 🔄 오랜만에 복귀하셨거나 진도가 많이 밀렸나요?
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-500">
-                현재 진도 완료 위치를 기준으로 남은 학습 계획을 다시 촘촘하게 일괄 분배합니다.
+                계획 재설정은 코치 검토가 필요해요. 희망하는 방식을 코치에게 요청하면, 검토 후 반영하거나 상담을 안내해 드려요.
               </p>
             </div>
-            {!showRealignBox ? (
+            {!realignRequested && !showRealignBox && (
               <button
                 type="button"
-                disabled={realigningPlans}
                 onClick={() => setShowRealignBox(true)}
-                className="rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-[10px] font-black px-4 py-2 shadow-sm transition active:scale-[0.98] whitespace-nowrap self-start sm:self-auto disabled:opacity-50"
+                className="rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-[10px] font-black px-4 py-2 shadow-sm transition active:scale-[0.98] whitespace-nowrap self-start sm:self-auto"
               >
-                {realigningPlans ? '재설정 중...' : '계획 일괄 재설정 시작'}
+                계획 재조정 요청하기
               </button>
-            ) : (
+            )}
+            {!realignRequested && showRealignBox && (
               <button
                 type="button"
                 onClick={() => setShowRealignBox(false)}
@@ -231,48 +250,42 @@ export function ExecutionPlanTab({
               >
                 취소
               </button>
-            )
-            }
+            )}
           </div>
 
-          {showRealignBox && (
+          {realignRequested ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+              코치에게 계획 재조정 요청을 보냈어요. 검토 후 반영하거나 상담을 안내해 드릴게요. (아래 ‘학습 관련 요청’에서 진행 상황 확인)
+            </div>
+          ) : showRealignBox && (
             <div className="pt-3 border-t border-amber-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up">
               <button
                 type="button"
-                disabled={realigningPlans}
-                onClick={async () => {
-                  if (window.confirm("기존에 설정한 목표 완료일을 지키기 위해 하루 공부량을 늘려서 재조정합니다. 계속하시겠습니까?")) {
-                    await realignStudentPlans('keepTargetDate');
-                    setShowRealignBox(false);
-                  }
-                }}
-                className="p-3.5 rounded-2xl border border-[#0071E3]/20 bg-white hover:bg-[#0071E3]/[0.02] text-left transition shadow-sm hover:border-[#0071E3]/40 group"
+                disabled={!!realignRequesting}
+                onClick={() => requestRealign('keepTargetDate')}
+                className="p-3.5 rounded-2xl border border-[#0071E3]/20 bg-white hover:bg-[#0071E3]/[0.02] text-left transition shadow-sm hover:border-[#0071E3]/40 disabled:opacity-50 group"
               >
                 <div className="text-[11px] font-black text-[#0071E3] flex items-center justify-between">
-                  <span>📅 기존 완료 목표일 유지하기 (추천)</span>
-                  <span className="text-[9px] font-bold bg-[#0071E3]/10 px-1.5 py-0.5 rounded">기본값</span>
+                  <span>📅 목표 완료일 유지 요청 (추천)</span>
+                  <span className="text-[9px] font-bold bg-[#0071E3]/10 px-1.5 py-0.5 rounded">{realignRequesting === 'keepTargetDate' ? '전송 중' : '기본값'}</span>
                 </div>
                 <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
-                  원래 약속된 목표일에 끝내기 위해, 밀렸던 분량만큼 앞으로 공부해야 할 하루 목표치가 늘어납니다.
+                  원래 약속된 목표일에 끝내기 위해, 밀렸던 분량만큼 하루 목표치를 늘리는 방향으로 코치에게 요청합니다.
                 </p>
               </button>
 
               <button
                 type="button"
-                disabled={realigningPlans}
-                onClick={async () => {
-                  if (window.confirm("원래 설정했던 하루 학습 강도를 유지하며, 목표 완료일이 뒤로 밀리도록 재조정합니다. 계속하시겠습니까?")) {
-                    await realignStudentPlans('keepPace');
-                    setShowRealignBox(false);
-                  }
-                }}
-                className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition shadow-sm hover:border-[#86868B]/40"
+                disabled={!!realignRequesting}
+                onClick={() => requestRealign('keepPace')}
+                className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition shadow-sm hover:border-[#86868B]/40 disabled:opacity-50"
               >
                 <div className="text-[11px] font-black text-slate-800">
-                  🐢 기존 학습 페이스 유지하기
+                  🐢 학습 페이스 유지 요청 {realignRequesting === 'keepPace' && <span className="text-[9px] text-slate-400">(전송 중)</span>}
                 </div>
                 <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
-                  하루 학습 강도는 무리하지 않게 유지하는 대신, 남은 분량만큼 완독/완강 예정일이 현실적으로 늦춰집니다.
+                  하루 학습 강도는 유지하는 대신, 남은 분량만큼 완료 목표일을 늦추는 방향으로 코치에게 요청합니다.
                 </p>
               </button>
             </div>

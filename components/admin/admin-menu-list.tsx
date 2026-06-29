@@ -19,6 +19,7 @@ import {
   Trophy,
   Inbox,
   Sparkles,
+  Utensils,
   PinOff,
   Pin,
 } from 'lucide-react';
@@ -87,7 +88,7 @@ export function AdminMenuList({
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-3">
+      <div className="flex flex-1 flex-col gap-1 overflow-y-auto p-3">
         {/* 메인 */}
         <p className="px-3 pt-1 pb-1.5 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">메인</p>
         <button
@@ -106,9 +107,17 @@ export function AdminMenuList({
           <Inbox className="w-4 h-4 text-[#0071E3]" />
           통합 인박스
         </button>
+        <button
+          type="button"
+          onClick={() => onNavigate('/admin/calendar')}
+          className={menuButtonClass(pathname === '/admin/calendar')}
+        >
+          <CalendarDays className="w-4 h-4 text-[#0071E3]" />
+          캘린더
+        </button>
 
         {/* 원생 관리 */}
-        <p className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">원생 관리</p>
+        <p className="px-3 pt-4 pb-2 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">원생 관리</p>
         <button
           type="button"
           onClick={() => onNavigate('/admin/consultation')}
@@ -127,7 +136,7 @@ export function AdminMenuList({
         </button>
 
         {/* 출결 · 생활 */}
-        <p className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">출결 · 생활</p>
+        <p className="px-3 pt-4 pb-2 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">출결 · 생활</p>
         <button
           type="button"
           onClick={() => onNavigate('/admin/attendance')}
@@ -166,6 +175,14 @@ export function AdminMenuList({
         </button>
         <button
           type="button"
+          onClick={() => onNavigate('/admin/meals')}
+          className={menuButtonClass(pathname === '/admin/meals')}
+        >
+          <Utensils className="w-4 h-4 text-[#0071E3]" />
+          도시락 신청
+        </button>
+        <button
+          type="button"
           onClick={() => onNavigate('/admin/penalties')}
           className={menuButtonClass(pathname === '/admin/penalties')}
         >
@@ -180,17 +197,9 @@ export function AdminMenuList({
           <Calendar className="w-4 h-4 text-[#0071E3]" />
           휴가 쿠폰 관리
         </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('/admin/leave/by-date')}
-          className={menuButtonClass(pathname === '/admin/leave/by-date')}
-        >
-          <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-          날짜별 휴식·반차
-        </button>
 
         {/* 소통 */}
-        <p className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">소통</p>
+        <p className="px-3 pt-4 pb-2 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">소통</p>
         <button
           type="button"
           onClick={() => onNavigate('/admin/messages')}
@@ -201,7 +210,7 @@ export function AdminMenuList({
         </button>
 
         {/* 통계 */}
-        <p className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">통계</p>
+        <p className="px-3 pt-4 pb-2 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">통계</p>
         <button
           type="button"
           onClick={() => onNavigate('/admin/leaderboard')}
@@ -222,7 +231,7 @@ export function AdminMenuList({
         {/* 설정 (슈퍼 관리자용) */}
         {adminSession && (adminSession.campus === 'all' || adminSession.role === 'super') && (
           <>
-            <p className="px-3 pt-3 pb-1.5 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">설정</p>
+            <p className="px-3 pt-4 pb-2 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">설정</p>
             <button
               type="button"
               onClick={() => onNavigate('/admin/accounts')}

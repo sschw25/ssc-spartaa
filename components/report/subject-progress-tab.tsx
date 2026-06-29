@@ -134,24 +134,12 @@ export function SubjectProgressTab({
         const allBooksCount = allBooks.length;
         const allLecturesCount = allLectures.length;
         const currentPages = allBooks.reduce((sum, b) => sum + (b.currentPage || 0), 0);
-        const completedLectures = allLectures.reduce((sum, l) => sum + (l.completedLectures || 0), 0);
 
-        const expectedPages = completedLectures * 2;
-        const paceScore = expectedPages > 0 ? Math.min(100, Math.round((currentPages / expectedPages) * 100)) : (currentPages > 0 ? 100 : 0);
-
-        let paceStatus = '적정';
-        let paceColor = '#34C759';
-        let paceBgClass = 'bg-emerald-500';
-
-        if (paceScore < 40) {
-          paceStatus = '부족';
-          paceColor = '#F56300';
-          paceBgClass = 'bg-amber-500';
-        } else if (paceScore < 80) {
-          paceStatus = '양호';
-          paceColor = '#0071E3';
-          paceBgClass = 'bg-blue-500';
-        }
+        // #15 — 강의:자습 비율을 점수화(부족/양호/적정)하지 않는다. 강의 비중이 높은 시기엔
+        // 자습 비중이 낮은 게 자연스럽다. 단순히 "교재(문제풀이) 진행률"을 중립적으로 시각화.
+        const totalBookPages = allBooks.reduce((sum, b) => sum + (b.totalPages || 0), 0);
+        const selfStudyPct = totalBookPages > 0 ? Math.round((currentPages / totalBookPages) * 100) : 0;
+        const paceColor = '#0071E3';
 
         return (
           <div className="space-y-4">
@@ -220,15 +208,15 @@ export function SubjectProgressTab({
                 );
               })()}
 
-              {/* 2. 문제풀이 Pace 도넛 */}
+              {/* 2. 교재(문제풀이) 진행률 — 강의:자습 비율을 점수화하지 않고 중립적으로 진행 정도만 표시 (#15) */}
               {(() => {
                 const PR = 40; const PC = 2 * Math.PI * PR;
-                const paceDash = Math.max(0, (paceScore / 100)) * PC;
+                const paceDash = Math.max(0, (selfStudyPct / 100)) * PC;
                 return (
                   <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col gap-3">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">문제풀이 Pace 지수</p>
-                      <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">인강 수강 대비 자습 풀이 비율</p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">교재 문제풀이 진행</p>
+                      <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">지금 교재 풀이가 이만큼 진행됐어요</p>
                     </div>
                     <div className="flex items-center gap-4">
                       <div className="relative shrink-0" style={{ width: 100, height: 100 }}>
@@ -240,29 +228,17 @@ export function SubjectProgressTab({
                             style={{ transition: 'stroke-dasharray 0.6s ease' }} />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <p className="text-sm font-black leading-none" style={{ color: paceColor }}>{paceScore}%</p>
-                          <p className="text-[8px] font-bold text-slate-400 mt-0.5">Pace</p>
+                          <p className="text-sm font-black leading-none" style={{ color: paceColor }}>{selfStudyPct}%</p>
+                          <p className="text-[8px] font-bold text-slate-400 mt-0.5">진행</p>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 flex-1">
-                        <div className={`rounded-2xl px-3 py-2 text-center ${paceBgClass} text-white`}>
-                          <p className="text-xs font-black">{paceStatus}</p>
+                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center">
+                          <p className="text-[11px] font-black text-slate-700">교재 {currentPages.toLocaleString()}p 진행</p>
                         </div>
                         <p className="text-[9px] font-bold text-slate-400 leading-relaxed text-center px-1">
-                          {paceStatus === '적정' && '인강-교재 밸런스 최적'}
-                          {paceStatus === '양호' && '풀이량을 조금 더 늘려봐요'}
-                          {paceStatus === '부족' && '스스로 푸는 시간이 부족해요'}
+                          기본강의 수강 시기엔 자습 비중이 낮은 게 자연스러워요. 강의·자습 비율은 과목 특성에 따라 달라요.
                         </p>
-                        <div className="flex items-center gap-1.5 justify-center">
-                          {[25, 50, 75, 100].map(mark => (
-                            <div key={mark} className="flex-1 h-1.5 rounded-full overflow-hidden bg-slate-100">
-                              <div
-                                className="h-full rounded-full transition-all duration-500"
-                                style={{ width: paceScore >= mark ? '100%' : `${(paceScore % 25) / 25 * 100}%`, backgroundColor: paceColor }}
-                              />
-                            </div>
-                          ))}
-                        </div>
                       </div>
                     </div>
                   </div>

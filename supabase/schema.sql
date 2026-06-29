@@ -63,6 +63,8 @@ alter table students add column if not exists weekly_grade_check boolean not nul
 alter table students add column if not exists leave_requests jsonb not null default '[]'::jsonb;
 -- 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)
 alter table students add column if not exists leave_coupons integer not null default 0;
+-- 쿠폰 리워드 교환/지급 내역 (RewardRedemption[])
+alter table students add column if not exists reward_redemptions jsonb not null default '[]'::jsonb;
 
 -- 좌석 현황판 지정 좌석 번호
 alter table students add column if not exists seat_number integer;
@@ -94,6 +96,9 @@ alter table students add column if not exists ot_events jsonb not null default '
 -- 학생 활동 상태(뽀모도로/체크리스트/리워드/알림숨김) — specialNote(어드민 메모)와 분리
 alter table students add column if not exists student_state jsonb not null default '{}'::jsonb;
 
+-- 학원 캘린더 참여 미션 응답 내역 (eventParticipations)
+alter table students add column if not exists event_participations jsonb not null default '[]'::jsonb;
+
 -- 등하원/순공 세션 (QR 출결)
 create table if not exists study_sessions (
   id          text primary key,
@@ -124,6 +129,8 @@ create table if not exists mock_exams (
 create index if not exists idx_mock_exams_date on mock_exams (date desc);
 -- 기존 mock_exams 테이블에 알림 발송 시각 컬럼 보강 (누락 시 일정 저장 실패)
 alter table mock_exams add column if not exists notified_at timestamptz;
+-- 센터별 모의고사 구분 (없으면 전체 센터)
+alter table mock_exams add column if not exists campus text;
 
 -- OT 일정 마스터
 create table if not exists ot_events (
@@ -136,6 +143,56 @@ create table if not exists ot_events (
 );
 
 create index if not exists idx_ot_events_date on ot_events (date desc);
+-- 센터별 OT 구분 (없으면 전체 센터)
+alter table ot_events add column if not exists campus text;
+-- OT 알림과 함께 보낼 안내 메시지
+alter table ot_events add column if not exists message text;
+
+-- 학원 캘린더 일정 & 참여 미션 마스터
+-- 일반 일정(공지·행사)과 참여 미션(대상 선정→알림→수락→행사 후 쿠폰 일괄 지급)을 통합.
+create table if not exists campus_events (
+  id                 text primary key,
+  title              text not null,
+  date               date not null,                 -- 시작일
+  end_date           date,                           -- 종료일(다중일, 옵션)
+  start_time         text,                           -- HH:MM (옵션)
+  end_time           text,                           -- HH:MM (옵션)
+  campus             text,                           -- 없으면 전체 센터
+  category           text not null default 'general',-- 'general' | 'mission'
+  memo               text,                           -- 안내 메모
+  color              text,                           -- 표시 색(옵션)
+  is_mission         boolean not null default false, -- 참여 후 쿠폰 지급 미션 여부
+  coupon_reward      integer,                        -- 참여자 지급 쿠폰 수
+  target_mode        text,                           -- 'campus' | 'students'
+  target_student_ids jsonb not null default '[]'::jsonb,
+  notified_at        timestamptz,                    -- 학생 알림 발송 시각
+  rewarded_at        timestamptz,                    -- 쿠폰 일괄 지급 완료 시각
+  created_at         timestamptz not null default now(),
+  created_by         text
+);
+
+create index if not exists idx_campus_events_date on campus_events (date desc);
+
+-- 도시락 신청 라운드 마스터 (주차별·센터별)
+create table if not exists meal_plans (
+  id           text primary key,
+  week_start   date not null,                       -- 해당 주 월요일
+  meals        jsonb not null default '["lunch"]'::jsonb, -- ['lunch'] | ['lunch','dinner']
+  campus       text,                                -- 없으면 전체 센터
+  deadline     timestamptz,                         -- 신청 마감 일시
+  lunch_price  integer,                             -- 점심 단가(정산)
+  dinner_price integer,                             -- 저녁 단가(정산)
+  closed_days  jsonb not null default '[]'::jsonb,  -- 휴무 요일(['mon',...]) — 신청·표·정산 제외
+  created_at   timestamptz not null default now(),
+  notified_at  timestamptz
+);
+
+create index if not exists idx_meal_plans_week on meal_plans (week_start desc);
+-- 기존 meal_plans 테이블 보강 (이미 생성된 경우)
+alter table meal_plans add column if not exists closed_days jsonb not null default '[]'::jsonb;
+
+-- 학생별 도시락 신청 (요일×끼니 selections + 마감후 추가신청)
+alter table students add column if not exists meal_orders jsonb not null default '[]'::jsonb;
 
 -- 좌석 현황판 수동 상태
 create table if not exists seat_statuses (

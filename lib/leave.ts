@@ -1,6 +1,6 @@
 // 휴가/반차/휴식권/병가 신청 — 단일 진실 소스 (라벨/교시/월 한도/쿠폰 규칙)
 // 학생 신청 화면(report)·신청 API·관리자 수집 페이지(/admin/leave)가 모두 이 모듈을 사용.
-import type { LeaveRequest, LeaveType } from './types/student';
+import type { LeaveRequest, LeaveType, RewardRedemption } from './types/student';
 
 export type LeaveCategory = 'halfday' | 'fullday' | 'sick' | 'personal_halfday' | 'personal_fullday';
 
@@ -27,11 +27,58 @@ export function getLeaveTypeLabel(type?: string): string {
   return (isLeaveType(type) && LEAVE_TYPES[type].label) || '휴가';
 }
 
+// 시간대(교시) 선택 — 개인사정 반차(오전/오후/야간), 병가(오전/오후/야간/하루종일)
+export type LeaveSlot = 'morning' | 'afternoon' | 'night' | 'fullday';
+export const LEAVE_SLOT_LABELS: Record<LeaveSlot, string> = {
+  morning: '오전 (1~2교시)',
+  afternoon: '오후 (3~5교시)',
+  night: '야간 (6~7교시)',
+  fullday: '하루 종일',
+};
+// 종류별 허용 시간대. 키가 있는 종류만 시간대 선택을 요구한다.
+export const LEAVE_SLOT_OPTIONS: Partial<Record<LeaveType, LeaveSlot[]>> = {
+  personal_halfday: ['morning', 'afternoon', 'night'],
+  sick: ['morning', 'afternoon', 'night', 'fullday'],
+};
+export function leaveNeedsSlot(type: LeaveType): boolean {
+  return !!LEAVE_SLOT_OPTIONS[type];
+}
+export function isValidSlotFor(type: LeaveType, slot: unknown): slot is LeaveSlot {
+  const opts = LEAVE_SLOT_OPTIONS[type];
+  return !!opts && typeof slot === 'string' && (opts as string[]).includes(slot);
+}
+export function getLeaveSlotLabel(slot?: string): string {
+  return slot && slot in LEAVE_SLOT_LABELS ? LEAVE_SLOT_LABELS[slot as LeaveSlot] : '';
+}
+// 표시용 통합 라벨: "병가 · 오전 (1~2교시)"
+export function formatLeaveLabel(type?: string, slot?: string): string {
+  const base = getLeaveTypeLabel(type);
+  const s = getLeaveSlotLabel(slot);
+  return s ? `${base} · ${s}` : base;
+}
+
 // 월 한도: 반차 2개 / 휴식권 1개. 병가는 한도 미차감(영수증 증빙으로 별도 처리).
 export const MONTHLY_HALFDAY_QUOTA = 2;
 export const MONTHLY_FULLDAY_QUOTA = 1;
 // 반차 1회 추가 신청에 필요한 쿠폰 수
 export const COUPONS_PER_EXTRA_HALFDAY = 3;
+
+// 쿠폰 리워드 교환 카탈로그 (3장=반차권, 6장=휴식권, 9장=상품권/플래너)
+import type { RewardType } from '@/lib/types/student';
+export const REWARD_CATALOG: { type: RewardType; label: string; cost: number; physical: boolean }[] = [
+  { type: 'halfday', label: '반차권', cost: 3, physical: false },
+  { type: 'restpass', label: '휴식권', cost: 6, physical: false },
+  { type: 'voucher', label: '상품권', cost: 9, physical: true },
+  { type: 'planner', label: '플래너', cost: 9, physical: true },
+];
+
+export function getRewardMeta(type: RewardType) {
+  return REWARD_CATALOG.find((r) => r.type === type);
+}
+
+export function getRewardLabel(type: RewardType): string {
+  return getRewardMeta(type)?.label ?? type;
+}
 
 // KST 기준 해당 날짜의 'YYYY-MM' (월 한도 집계 키)
 export function kstYearMonth(d: Date = new Date()): string {
@@ -56,6 +103,7 @@ export interface LeaveUsage {
 }
 
 // 특정 월(YYYY-MM)의 사용량 집계. 반려(rejected) 건은 제외, 대기/승인은 한도에 포함.
+// 쿠폰 교환 추가권을 소모한 신청(usedCredit)은 기본 월한도와 별도이므로 제외한다.
 export function getMonthlyLeaveUsage(
   requests: LeaveRequest[] | undefined,
   yearMonth: string
@@ -63,6 +111,7 @@ export function getMonthlyLeaveUsage(
   const usage: LeaveUsage = { halfday: 0, fullday: 0, sick: 0 };
   for (const r of requests || []) {
     if (r.status === 'rejected') continue;
+    if (r.usedCredit) continue; // 추가권 사용분은 기본 한도에서 제외
     if (yearMonthOf(r.date) !== yearMonth) continue;
     const cat = LEAVE_TYPES[r.type]?.category;
     if (cat === 'halfday') usage.halfday += 1;
@@ -70,6 +119,26 @@ export function getMonthlyLeaveUsage(
     else if (cat === 'sick') usage.sick += 1;
   }
   return usage;
+}
+
+// 쿠폰 교환으로 받은 '추가권' 잔여 (반차권/휴식권). 교환완료(fulfilled) 수에서 소모분을 차감.
+// 추가 컬럼 없이 rewardRedemptions + leaveRequests에서 파생 — 반려 시 소모분이 빠져 자동 복구된다.
+export interface LeaveCredits { halfday: number; fullday: number; }
+export function getLeaveCredits(
+  redemptions: RewardRedemption[] | undefined,
+  requests: LeaveRequest[] | undefined,
+): LeaveCredits {
+  const earnedHalf = (redemptions || []).filter((r) => r.type === 'halfday' && r.status === 'fulfilled').length;
+  const earnedFull = (redemptions || []).filter((r) => r.type === 'restpass' && r.status === 'fulfilled').length;
+  let usedHalf = 0;
+  let usedFull = 0;
+  for (const r of requests || []) {
+    if (!r.usedCredit || r.status === 'rejected') continue;
+    const cat = LEAVE_TYPES[r.type]?.category;
+    if (cat === 'halfday') usedHalf += 1;
+    else if (cat === 'fullday') usedFull += 1;
+  }
+  return { halfday: Math.max(0, earnedHalf - usedHalf), fullday: Math.max(0, earnedFull - usedFull) };
 }
 
 // 해당 신청이 기본 월 한도를 초과하는지 (초과 시 쿠폰/밴드채팅 안내 대상).

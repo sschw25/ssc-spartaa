@@ -1,8 +1,11 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getOtEvents, getStudentById } from '@/lib/store';
+import { getSeoulDateKey } from '@/lib/student-activity';
 
-// 학생: 응답 대기 중인 OT 목록 (notifiedAt 설정 + 아직 미응답)
+// 학생: 응답 대기 중인 OT 목록.
+// 노출 조건: (1) 학생 캠퍼스 대상(전체 또는 일치) (2) 아직 미응답(또는 미정)
+//   (3) 관리자 수동 발송됨(notifiedAt) 또는 OT 날짜 3일 전부터(D-3 이후) 자동 노출
 export async function GET() {
   const studentId = await getStudentSessionId();
   if (!studentId) {
@@ -19,11 +22,22 @@ export async function GET() {
   } catch {
     return NextResponse.json({ success: true, events: [] });
   }
+  const todayKey = getSeoulDateKey();
+  const todayMs = new Date(`${todayKey}T00:00:00+09:00`).getTime();
+  const daysUntil = (ymd: string): number => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd || '')) return Infinity;
+    return Math.round((new Date(`${ymd}T00:00:00+09:00`).getTime() - todayMs) / 86400000);
+  };
   const myResponses = new Map((student.otEvents || []).map((e) => [e.eventId, e]));
   const pending = allEvents.filter((event) => {
-    if (!event.notifiedAt) return false;
+    // 센터 대상 필터
+    if (event.campus && event.campus !== 'all' && event.campus !== student.campus) return false;
+    // 미응답(또는 미정)만
     const r = myResponses.get(event.id);
-    return !r || r.status === 'undecided';
+    if (r && r.status !== 'undecided') return false;
+    // 수동 발송됐거나, 사용 3일 전부터 자동 노출
+    if (event.notifiedAt) return true;
+    return daysUntil(event.date) <= 3;
   });
   return NextResponse.json({ success: true, events: pending });
 }

@@ -17,6 +17,7 @@ import { isWeeklyGradeMissing, enrollmentDaysLeft } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { MissionSummaryWidget } from '@/components/admin/mission-summary-widget';
+import { MissingArrivalWidget } from '@/components/admin/missing-arrival-widget';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { AnimatedNumber } from '@/components/admin/animated-number';
@@ -723,11 +724,11 @@ export default function AdminDashboardPage() {
                 평균진도 {averageProgress}%
               </button>
               <button
-                onClick={() => router.push('/admin/leave/by-date')}
+                onClick={() => router.push('/admin/calendar')}
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
               >
                 <Calendar className="w-3.5 h-3.5" />
-                날짜별 휴식반차
+                캘린더
               </button>
             </div>
           </div>
@@ -876,6 +877,13 @@ export default function AdminDashboardPage() {
             onSelectStudentId={handleOpenStudentById}
           />
           <AdminLeaderboard
+            campusFilter={campusFilter}
+            refreshSignal={attendanceRefresh}
+            onSelectStudentId={handleOpenStudentById}
+          />
+        </div>
+        <div className="mt-5">
+          <MissingArrivalWidget
             campusFilter={campusFilter}
             refreshSignal={attendanceRefresh}
             onSelectStudentId={handleOpenStudentById}

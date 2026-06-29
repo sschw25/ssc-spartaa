@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam, OtEvent, AdminAccount } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent } from './types/student';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
@@ -25,6 +25,15 @@ import {
   saveOtEventSupabase,
   deleteOtEventSupabase,
   notifyOtEventSupabase,
+  getCampusEventsSupabase,
+  saveCampusEventSupabase,
+  deleteCampusEventSupabase,
+  notifyCampusEventSupabase,
+  markCampusEventRewardedSupabase,
+  getMealPlansSupabase,
+  saveMealPlanSupabase,
+  deleteMealPlanSupabase,
+  notifyMealPlanSupabase,
   type NotifyInfo,
   getOpenSessionSupabase,
   getOpenSessionsSupabase,
@@ -163,7 +172,7 @@ export async function setStudentNotifyInfo(studentId: string, info: NotifyInfo):
   return setStudentNotifyInfoSupabase(studentId, info);
 }
 
-export async function setStudentExpectedArrival(studentId: string, value: '08:20' | '09:00'): Promise<void> {
+export async function setStudentExpectedArrival(studentId: string, value: string): Promise<void> {
   if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 지각 기준을 저장할 수 있습니다.');
   return setStudentExpectedArrivalSupabase(studentId, value);
 }
@@ -262,4 +271,51 @@ export async function notifyOtEvent(id: string, notifiedAt: string): Promise<OtE
   return notifyOtEventSupabase(id, notifiedAt);
 }
 
-export type { MockExam, OtEvent };
+// ── 학원 캘린더 일정 & 참여 미션 ──
+export async function getCampusEvents(): Promise<CampusEvent[]> {
+  requireSupabase();
+  return getCampusEventsSupabase();
+}
+
+export async function saveCampusEvent(event: CampusEvent): Promise<CampusEvent> {
+  requireSupabase();
+  return saveCampusEventSupabase(event);
+}
+
+export async function deleteCampusEvent(id: string): Promise<void> {
+  requireSupabase();
+  return deleteCampusEventSupabase(id);
+}
+
+export async function notifyCampusEvent(id: string, notifiedAt: string): Promise<CampusEvent> {
+  requireSupabase();
+  return notifyCampusEventSupabase(id, notifiedAt);
+}
+
+export async function markCampusEventRewarded(id: string, rewardedAt: string): Promise<CampusEvent> {
+  requireSupabase();
+  return markCampusEventRewardedSupabase(id, rewardedAt);
+}
+
+// ── 도시락 신청 라운드 ──
+export async function getMealPlans(): Promise<MealPlan[]> {
+  requireSupabase();
+  return getMealPlansSupabase();
+}
+
+export async function saveMealPlan(plan: MealPlan): Promise<MealPlan> {
+  requireSupabase();
+  return saveMealPlanSupabase(plan);
+}
+
+export async function deleteMealPlan(id: string): Promise<void> {
+  requireSupabase();
+  return deleteMealPlanSupabase(id);
+}
+
+export async function notifyMealPlan(id: string, notifiedAt: string): Promise<MealPlan> {
+  requireSupabase();
+  return notifyMealPlanSupabase(id, notifiedAt);
+}
+
+export type { MockExam, OtEvent, MealPlan, CampusEvent };

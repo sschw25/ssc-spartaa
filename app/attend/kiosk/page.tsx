@@ -247,7 +247,7 @@ export default function AttendKioskPage() {
                   <button
                     type="button"
                     onClick={() => setShowKeypad(true)}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl bg-white/[0.06] border border-white/10 h-12 text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-white active:scale-[0.98]"
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.06] border border-white/10 h-12 text-sm font-bold text-slate-300 transition hover:bg-white/10 hover:text-white active:scale-[0.98]"
                   >
                     <Hash className="size-4" />
                     휴대폰이 없다면 번호로 체크
@@ -255,7 +255,7 @@ export default function AttendKioskPage() {
                 </div>
               ) : (
                 /* ── 번호 키패드 카드 ── */
-                <div className="rounded-[24px] bg-white p-5 text-slate-950 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+                <div className="rounded-[28px] bg-white p-5 text-slate-950 shadow-2xl animate-in fade-in zoom-in-95 duration-300">
                   <div className="flex items-center justify-between px-1 pb-3">
                     <button
                       type="button"
@@ -267,8 +267,10 @@ export default function AttendKioskPage() {
                     </button>
                     <p className="text-xs font-bold text-slate-400">전화번호 끝 4자리</p>
                   </div>
-                  <div className="flex h-16 items-center justify-center rounded-xl bg-slate-100 text-3xl font-black tracking-[0.18em]">
-                    {phone || '----'}
+                  <div className="flex h-16 items-center justify-center rounded-2xl bg-slate-100 text-3xl font-black tracking-[0.18em]">
+                    {phone
+                      ? phone
+                      : <span className="text-base font-bold tracking-normal text-slate-300">끝 4자리를 입력하세요</span>}
                   </div>
 
                   <div className="mt-4 grid grid-cols-3 gap-2">
@@ -277,7 +279,7 @@ export default function AttendKioskPage() {
                         key={key}
                         type="button"
                         onClick={() => pressKey(key)}
-                        className="grid aspect-[1.35] place-items-center rounded-xl bg-slate-100 text-2xl font-black transition hover:bg-slate-200 active:scale-[0.98]"
+                        className="grid aspect-[1.35] place-items-center rounded-2xl bg-slate-100 text-2xl font-black transition hover:bg-slate-200 active:scale-[0.98]"
                       >
                         {key === 'clear' ? (
                           <RotateCcw className="size-6" />
@@ -294,7 +296,7 @@ export default function AttendKioskPage() {
                     <button
                       type="button"
                       disabled
-                      className="mt-4 flex h-14 w-full items-center justify-center rounded-xl bg-slate-700 text-base font-black text-white transition"
+                      className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-slate-700 text-base font-black text-white transition"
                     >
                       <Loader2 className="animate-spin size-6" />
                     </button>
@@ -307,7 +309,7 @@ export default function AttendKioskPage() {
                           submitPhone(undefined, 'check-in');
                         }}
                         disabled={phone.length < 4}
-                        className="flex h-14 items-center justify-center rounded-xl bg-emerald-600 text-base font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                        className="flex h-14 items-center justify-center rounded-2xl bg-emerald-600 text-base font-black text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
                       >
                         등원
                       </button>
@@ -318,7 +320,7 @@ export default function AttendKioskPage() {
                           submitPhone(undefined, 'check-out');
                         }}
                         disabled={phone.length < 4}
-                        className="flex h-14 items-center justify-center rounded-xl bg-sky-600 text-base font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                        className="flex h-14 items-center justify-center rounded-2xl bg-sky-600 text-base font-black text-white transition hover:bg-sky-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
                       >
                         하원
                       </button>
@@ -329,7 +331,7 @@ export default function AttendKioskPage() {
                           submitPhone(undefined, 'outing');
                         }}
                         disabled={phone.length < 4}
-                        className="flex h-14 items-center justify-center rounded-xl bg-amber-600 text-base font-black text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                        className="flex h-14 items-center justify-center rounded-2xl bg-amber-600 text-base font-black text-white transition hover:bg-amber-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
                       >
                         외출
                       </button>
@@ -340,7 +342,7 @@ export default function AttendKioskPage() {
                           submitPhone(undefined, 'return');
                         }}
                         disabled={phone.length < 4}
-                        className="flex h-14 items-center justify-center rounded-xl bg-blue-600 text-base font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
+                        className="flex h-14 items-center justify-center rounded-2xl bg-blue-600 text-base font-black text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-500 active:scale-[0.98]"
                       >
                         복귀
                       </button>

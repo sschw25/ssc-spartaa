@@ -5,7 +5,7 @@ import { getMissionConfig } from '@/lib/mission-engine';
 import { readActivityEnvelope } from '@/lib/student-activity';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { MISSION_ORDER, MISSION_META, type MissionId } from '@/lib/missions';
-import { COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
+import { COUPONS_PER_EXTRA_HALFDAY, REWARD_CATALOG } from '@/lib/leave';
 
 const weekdayOfYmd = (ymd: string) => new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=일 6=토
 const fmtMin = (m: number) => {
@@ -116,11 +116,23 @@ export async function GET() {
     .reverse()
     .map((l) => ({ missionName: l.missionName, rewardGranted: l.rewardGranted || 0, date: l.date }));
 
+  // 쿠폰 교환 카탈로그(3=반차권/6=휴식권/9=상품권·플래너) + 내 교환 신청/내역
+  const redemptions = (student.rewardRedemptions || [])
+    .slice()
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .map((r) => ({ id: r.id, type: r.type, cost: r.cost, status: r.status, createdAt: r.createdAt }));
+  const committed = (student.rewardRedemptions || [])
+    .filter((r) => r.status === 'requested' || r.status === 'pending')
+    .reduce((sum, r) => sum + (r.cost || 0), 0);
+
   return NextResponse.json({
     success: true,
     missions,
     coupons: student.leaveCoupons ?? 0,
+    couponsAvailable: Math.max(0, (student.leaveCoupons ?? 0) - committed),
     couponsPerHalfday: COUPONS_PER_EXTRA_HALFDAY,
+    rewardCatalog: REWARD_CATALOG,
+    redemptions,
     recent,
   });
 }

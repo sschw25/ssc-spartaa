@@ -50,8 +50,7 @@ export function LearningConsultationPanel() {
     isConsultationDraftDirty,
     lastSavedConsultationContent,
     loadCurrentStudySummaryTemplate,
-    loadEtcStudyTemplate,
-    loadNotionTemplate,
+    learningLogs,
     scrollToSubjectCard,
     selectedConsultationPlanItems,
     selectedPlanCount,
@@ -62,14 +61,81 @@ export function LearningConsultationPanel() {
     setConsultationPlanModes,
     setIsConsultationDraftDirty,
     setIsConsultationPlanDirty,
+    setIsLearningInputOpen,
     setLastSavedConsultationContent,
     setSelectedConsultationPlanItems,
     subjectsState,
     syncConsultationContent,
+    // 생활상담 (탭 분리)
+    lifeComment,
+    setLifeComment,
+    studentLifeComment,
+    setStudentLifeComment,
+    handleSaveLifeComment,
+    loading,
   } = useDetailSheet();
+
+  // 상담 작성 모드: 학습상담 / 생활상담 (한 화면에서 탭으로 전환)
+  const [consultMode, setConsultMode] = React.useState<'learning' | 'life'>('learning');
+
+  // 기존 학습상담 내역 유무 — 없으면 학습/교재 입력으로 안내
+  const hasLearningHistory = (learningLogs || []).length > 0;
 
   return (
     <form onSubmit={(e) => e.preventDefault()} className="space-y-3.5 p-4 rounded-xl border border-[#0071E3]/15 bg-[#F8FBFF] shadow-sm">
+      {/* 학습상담 / 생활상담 탭 */}
+      <div className="flex items-center gap-1 bg-[#EEF2F7] p-0.5 rounded-xl">
+        <button
+          type="button"
+          onClick={() => setConsultMode('learning')}
+          className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${consultMode === 'learning' ? 'bg-white text-[#0071E3] shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+        >
+          학습상담
+        </button>
+        <button
+          type="button"
+          onClick={() => setConsultMode('life')}
+          className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${consultMode === 'life' ? 'bg-white text-[#0071E3] shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+        >
+          생활상담
+        </button>
+      </div>
+
+      {consultMode === 'life' ? (
+        <div className="space-y-3">
+          <div>
+            <h4 className="text-xs font-bold text-[#1D1D1F]">생활 상담 기록 작성</h4>
+            <p className="text-[10px] text-[#86868B] mt-0.5">생활 면담 내용을 정리하면 면담 이력으로 누적됩니다.</p>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold text-[#86868B]">생활 코멘트 (학부모 공유)</Label>
+            <Textarea
+              placeholder="생활 태도, 출결, 면담 내용 등 학부모와 공유할 코멘트를 입력하세요."
+              value={lifeComment}
+              onChange={(e) => setLifeComment(e.target.value)}
+              className="rounded-lg border-black/[0.08] text-xs bg-white min-h-[96px]"
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] font-semibold text-[#86868B]">학생 공유 코멘트</Label>
+            <Textarea
+              placeholder="학생 본인에게 전달할 격려/조언을 입력하세요."
+              value={studentLifeComment}
+              onChange={(e) => setStudentLifeComment(e.target.value)}
+              className="rounded-lg border-black/[0.08] text-xs bg-white min-h-[72px]"
+            />
+          </div>
+          <Button
+            type="button"
+            onClick={handleSaveLifeComment}
+            disabled={loading}
+            className="w-full h-9 rounded-lg bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold"
+          >
+            생활 상담 기록 저장
+          </Button>
+        </div>
+      ) : (
+      <>
       <div className="admin-fit-row flex items-center justify-between gap-3">
         <div>
           <h4 className="text-xs font-bold text-[#1D1D1F]">학습 상담 기록 작성</h4>
@@ -84,24 +150,26 @@ export function LearningConsultationPanel() {
           >
             현재 학습상황 불러오기
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={loadNotionTemplate}
-            className="text-[10px] text-[#0071E3] font-bold p-0 h-auto hover:bg-transparent"
-          >
-            기본 템플릿
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={loadEtcStudyTemplate}
-            className="text-[10px] text-[#0071E3] font-bold p-0 h-auto hover:bg-transparent"
-          >
-            기타 학습상담
-          </Button>
         </div>
       </div>
+
+      {!hasLearningHistory && (
+        <div className="flex flex-col gap-2 rounded-lg border border-[#FF9500]/25 bg-[#FF9500]/[0.06] p-3 text-[10px]">
+          <span className="font-bold text-[#A25F00]">상담내역이 없어 학습/교재 입력으로 진행합니다.</span>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setIsLearningInputOpen?.(true);
+              const first = subjectsState[0];
+              if (first) scrollToSubjectCard(first.name);
+            }}
+            className="h-7 self-start rounded-lg border-[#FF9500]/30 bg-white text-[10px] font-bold text-[#A25F00] px-2.5"
+          >
+            학습/교재 입력으로 이동 →
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-lg border border-black/[0.04] bg-white p-3 text-[10px] text-[#434345]">
         <div className="font-bold text-[#1D1D1F] mb-1">현재 학습상황 요약</div>
@@ -328,6 +396,8 @@ export function LearningConsultationPanel() {
           </>
         )}
       </div>
+      </>
+      )}
     </form>
   );
 }

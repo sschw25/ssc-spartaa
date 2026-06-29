@@ -1,8 +1,10 @@
 import type { DetailedPlan } from '@/lib/types/student';
 
+export type PhoneStatus = 'submitted' | 'locker' | 'off_hold'; // 제출완료 / 임시보관함 / 전원종료후소지
 export type DailyChecklistEntry = {
   sleep_hours?: number;
-  phone_submitted?: boolean;
+  phone_submitted?: boolean;       // 하위호환: phone_status==='submitted' 와 동치
+  phone_status?: PhoneStatus;      // 등원 시 휴대폰 처리 방식 (3택)
   submitted_at?: string;
 };
 
@@ -16,6 +18,7 @@ export type SpecialNoteEnvelope = {
   noteText?: string;
   pomodoro_sessions?: Record<string, number>;
   pomodoro_minutes?: Record<string, number>;
+  pomodoro_distractions?: Record<string, number>; // 날짜별 집중 이탈(알트탭/창전환) 횟수
   daily_checklist?: Record<string, DailyChecklistEntry>;
   dismissed_notifications?: string[];
   rewards_log?: unknown[];
@@ -57,6 +60,9 @@ function copyChecklistRecord(value: unknown): Record<string, DailyChecklistEntry
     const sleepHours = Number(item.sleep_hours);
     if (Number.isFinite(sleepHours)) entry.sleep_hours = sleepHours;
     if (typeof item.phone_submitted === 'boolean') entry.phone_submitted = item.phone_submitted;
+    if (item.phone_status === 'submitted' || item.phone_status === 'locker' || item.phone_status === 'off_hold') {
+      entry.phone_status = item.phone_status;
+    }
     if (typeof item.submitted_at === 'string') entry.submitted_at = item.submitted_at;
     if (Object.keys(entry).length > 0) output[key] = entry;
   }
@@ -73,11 +79,13 @@ function buildClientNote(note: SpecialNoteEnvelope): string | undefined {
   const clientNote: SpecialNoteEnvelope = {};
   const pomodoroSessions = copyNumberRecord(note.pomodoro_sessions);
   const pomodoroMinutes = copyNumberRecord(note.pomodoro_minutes);
+  const pomodoroDistractions = copyNumberRecord(note.pomodoro_distractions);
   const dailyChecklist = copyChecklistRecord(note.daily_checklist);
   const dismissedNotifications = copyStringArray(note.dismissed_notifications);
 
   if (pomodoroSessions) clientNote.pomodoro_sessions = pomodoroSessions;
   if (pomodoroMinutes) clientNote.pomodoro_minutes = pomodoroMinutes;
+  if (pomodoroDistractions) clientNote.pomodoro_distractions = pomodoroDistractions;
   if (dailyChecklist) clientNote.daily_checklist = dailyChecklist;
   if (dismissedNotifications) clientNote.dismissed_notifications = dismissedNotifications;
 
@@ -124,7 +132,11 @@ export function serializeClientActivityNoteFromStudent(student: StudentLike): st
 
 export function getPomodoroStatsFromStudent(student: StudentLike, dateKey = getSeoulDateKey()) {
   const note = readActivityEnvelope(student);
-  return { sessions: note.pomodoro_sessions?.[dateKey] || 0, minutes: note.pomodoro_minutes?.[dateKey] || 0 };
+  return {
+    sessions: note.pomodoro_sessions?.[dateKey] || 0,
+    minutes: note.pomodoro_minutes?.[dateKey] || 0,
+    distractions: note.pomodoro_distractions?.[dateKey] || 0,
+  };
 }
 
 export function getPomodoroStats(specialNote?: string | null, dateKey = getSeoulDateKey()) {
@@ -137,6 +149,11 @@ export function getPomodoroStats(specialNote?: string | null, dateKey = getSeoul
 
 export function getDailyChecklist(specialNote?: string | null, dateKey = getSeoulDateKey()) {
   return parseSpecialNoteEnvelope(specialNote).daily_checklist?.[dateKey] || null;
+}
+
+// 관리자용: specialNote + student_state 머지 후 오늘 체크리스트 조회
+export function getDailyChecklistFromStudent(student: StudentLike, dateKey = getSeoulDateKey()): DailyChecklistEntry | null {
+  return readActivityEnvelope(student).daily_checklist?.[dateKey] || null;
 }
 
 export function getPlanDailyCompletion(plan: DetailedPlan, dateKey: string): PlanDailyCompletion {

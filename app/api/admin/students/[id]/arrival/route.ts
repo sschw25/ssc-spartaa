@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { setStudentExpectedArrival } from '@/lib/store';
+import { normalizeArrival } from '@/lib/attendance-time';
 
-// 관리자: 학생별 지각 기준(등원 마감 08:20 / 09:00) 설정
+// 관리자: 학생별 지각 기준(등원 마감) 설정 — 기본 08:20, HH:MM 커스텀 시각 지원
 export async function POST(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -13,7 +14,7 @@ export async function POST(
   const { id } = await params;
   try {
     const { expectedArrival } = await request.json();
-    const value: '08:20' | '09:00' = expectedArrival === '09:00' ? '09:00' : '08:20';
+    const value = normalizeArrival(expectedArrival);
     await setStudentExpectedArrival(id, value);
     return NextResponse.json({ success: true, expectedArrival: value });
   } catch (e: any) {

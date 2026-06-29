@@ -52,10 +52,14 @@ export default function MockExamPage() {
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [updating, setUpdating] = useState<string | null>(null);
 
+  // 관리자 센터 (범위 관리자는 자동 고정)
+  const [adminCampus, setAdminCampus] = useState<string>('all');
+
   // 새 일정 등록 폼
   const [newName, setNewName] = useState('');
   const [newDate, setNewDate] = useState('');
   const [newTargetTypes, setNewTargetTypes] = useState<string[]>([]);
+  const [newCampus, setNewCampus] = useState<string>('all'); // 'all'=전체 센터
   const [adding, setAdding] = useState(false);
 
   // 불참자 알림 발송
@@ -95,6 +99,13 @@ export default function MockExamPage() {
       try {
         const res = await fetch('/api/admin/auth/me');
         if (!res.ok) { router.replace('/admin'); return; }
+        try {
+          const me = await res.json();
+          if (me?.campus && me.campus !== 'all') {
+            setAdminCampus(me.campus);
+            setNewCampus(me.campus);
+          }
+        } catch { /* noop */ }
         loadAll();
       } catch {
         router.replace('/admin');
@@ -112,7 +123,7 @@ export default function MockExamPage() {
       const res = await fetch('/api/admin/mock-exams', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newName.trim(), date: newDate, targetExamTypes: newTargetTypes }),
+        body: JSON.stringify({ name: newName.trim(), date: newDate, targetExamTypes: newTargetTypes, campus: newCampus }),
       });
       const json = await res.json();
       if (json.success) {
@@ -320,6 +331,18 @@ export default function MockExamPage() {
               onChange={(e) => setNewDate(e.target.value)}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
             />
+            <select
+              value={newCampus}
+              onChange={(e) => setNewCampus(e.target.value)}
+              disabled={adminCampus !== 'all'}
+              title={adminCampus !== 'all' ? '담당 센터로 자동 지정됩니다' : '대상 센터 선택'}
+              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70"
+            >
+              <option value="all">전체 센터</option>
+              <option value="wonju">원주</option>
+              <option value="chuncheon">춘천</option>
+              <option value="chungju">충주</option>
+            </select>
             <Button
               onClick={addExam}
               disabled={adding}
@@ -381,6 +404,9 @@ export default function MockExamPage() {
                           {exam.name}
                         </span>
                         <span className="text-[11px] font-semibold text-slate-400">{exam.date}</span>
+                        <span className="rounded-lg bg-slate-200/70 text-slate-600 px-1.5 py-0.5 text-[9px] font-black">
+                          {exam.campus && exam.campus !== 'all' ? getCampusLabel(exam.campus) : '전체 센터'}
+                        </span>
                         {exam.notifiedAt && (
                           <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
                             <Bell className="w-2 h-2" /> 알림됨

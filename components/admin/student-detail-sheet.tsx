@@ -20,7 +20,7 @@ import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } from '@/lib/student-requests';
 import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
-import { getDailyChecklist, getPomodoroStats, getSeoulDateKey } from '@/lib/student-activity';
+import { getDailyChecklist, getPomodoroStats, getPomodoroStatsFromStudent, getSeoulDateKey } from '@/lib/student-activity';
 import { toast } from 'sonner';
 import {
   Calendar, User,
@@ -3654,6 +3654,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                     </span>
                   );
                 })()}
+                {(() => {
+                  const { distractions } = getPomodoroStatsFromStudent(student);
+                  if (!distractions) return null;
+                  return (
+                    <span className="inline-flex items-center text-[10px] font-semibold bg-amber-500/20 border border-amber-400/40 text-amber-300 px-2 py-0.5 rounded shadow-sm" title="뽀모도로 집중 중 창 전환·알트탭 횟수">
+                      오늘 집중이탈: {distractions}회
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
@@ -3769,7 +3778,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                           key={qr}
                           type="button"
                           disabled={resolvingReqId === req.id}
-                          onClick={() => actOnRequest(req.id, { reply: qr })}
+                          onClick={() => setReplyDrafts((d) => ({ ...d, [req.id]: (d[req.id]?.trim() ? d[req.id].trim() + ' ' : '') + qr }))}
                           className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
                         >
                           {qr}
@@ -3847,7 +3856,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                           key={qr}
                           type="button"
                           disabled={resolvingReqId === req.id}
-                          onClick={() => actOnSuggestion(req.id, { reply: qr })}
+                          onClick={() => setReplyDrafts((d) => ({ ...d, [req.id]: (d[req.id]?.trim() ? d[req.id].trim() + ' ' : '') + qr }))}
                           className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
                         >
                           {qr}
@@ -4008,7 +4017,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           })()}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-5 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
+            <TabsList className="grid grid-cols-6 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger id="admin-tab-progress" value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학습 관리</span>
@@ -4029,15 +4038,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 <span className="hidden sm:inline">벌점 관리</span>
                 <span className="sm:hidden">벌점</span>
               </TabsTrigger>
-              <TabsTrigger id="admin-tab-ddays" value="ddays" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
-                <CalendarDays className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">D-Day</span>
-                <span className="sm:hidden">D-Day</span>
-              </TabsTrigger>
               <TabsTrigger id="admin-tab-info" value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <User className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학생 정보</span>
                 <span className="sm:hidden">정보</span>
+              </TabsTrigger>
+              <TabsTrigger id="admin-tab-ddays" value="ddays" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">D-Day</span>
+                <span className="sm:hidden">D-Day</span>
               </TabsTrigger>
             </TabsList>
 
@@ -4099,6 +4108,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setSelectedConsultationPlanItems,
                 syncConsultationContent,
                 loading,
+                lifeComment,
+                setLifeComment,
+                studentLifeComment,
+                setStudentLifeComment,
+                handleSaveLifeComment,
                 materialBenchmarks,
                 materialTargetDates,
                 newMaterialAuthor,
