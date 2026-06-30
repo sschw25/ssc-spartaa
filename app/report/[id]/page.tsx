@@ -196,6 +196,7 @@ function StudentReportInner() {
     mockExams,
     whyConsultation,
     consultationBookings,
+    consultationHistory,
   } = useReportState();
 
   if (!mounted) return null;
@@ -547,6 +548,7 @@ function StudentReportInner() {
               campus={student.campus}
               bookings={consultationBookings || []}
               whyConsultation={whyConsultation}
+              consultationHistory={consultationHistory || []}
             />
           </section>
         )}

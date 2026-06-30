@@ -7,11 +7,13 @@ import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
 import { serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
+import { buildConsultationDigest } from '@/lib/consultation-digest';
 
 function buildMaskedStudent(
   student: Student,
   audience: 'parent' | 'student',
   consultationBookings: ConsultationBooking[] = [],
+  consultationHistory: any[] = [],
 ) {
   return {
     id: student.id,
@@ -48,6 +50,7 @@ function buildMaskedStudent(
           mockExams: student.mockExams || [],
           seatAlerts: student.seatAlerts || [],
           consultationBookings,
+          consultationHistory,
         }
       : {}),
   };
@@ -150,12 +153,23 @@ export async function GET(
     }
 
     // 학생 본인 리포트에는 상담 예약(센터 원장에서 본인 건만)을 함께 전달한다.
-    const myBookings = audience === 'student'
-      ? (await getConsultationBookings(student.campus).catch(() => []))
-          .filter((b) => b.studentId === student.id && b.status === 'booked')
-          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+    const myAllBookings = audience === 'student'
+      ? (await getConsultationBookings(student.campus).catch(() => [])).filter((b) => b.studentId === student.id)
       : [];
-    const maskedStudent = buildMaskedStudent(student, audience, myBookings);
+    const myBookings = myAllBookings.filter((b) => b.status === 'booked');
+    const consultationHistory = myAllBookings
+      .filter((b) => b.status === 'done' || b.status === 'noshow')
+      .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      .map((b) => ({
+        id: b.id,
+        date: b.date,
+        slot: b.slot,
+        status: b.status,
+        counselor: b.counselor,
+        note: b.logId ? ((student.consultationLogs || []).find((l) => l.id === b.logId)?.content || undefined) : undefined,
+        digest: buildConsultationDigest(student, b.date),
+      }));
+    const maskedStudent = buildMaskedStudent(student, audience, myBookings, consultationHistory);
 
     const students = await getStudents();
     const materialBenchmarks = buildMaterialBenchmarks(students);

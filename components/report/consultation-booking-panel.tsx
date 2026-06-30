@@ -22,11 +22,22 @@ interface WhyConsultation {
   planEndDate: string;
 }
 
+interface ConsultationHistoryItem {
+  id: string;
+  date: string;
+  slot: string;
+  status: 'done' | 'noshow';
+  counselor: string;
+  note?: string;
+  digest?: { label: string; detail?: string }[];
+}
+
 interface ConsultationBookingPanelProps {
   studentId: string;
   campus: string;
   bookings: ConsultationBooking[];
   whyConsultation?: WhyConsultation | null;
+  consultationHistory?: ConsultationHistoryItem[];
 }
 
 const weekdayLabel = (w?: Weekday) => (w ? WEEKDAY_LABEL[w] : '');
@@ -44,7 +55,8 @@ const mondayOf = (date: string) => {
   return dt.toISOString().slice(0, 10);
 };
 
-export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookingPanelProps) {
+export function ConsultationBookingPanel({ whyConsultation, consultationHistory }: ConsultationBookingPanelProps) {
+  const history: ConsultationHistoryItem[] = consultationHistory || [];
   const [loading, setLoading] = useState(true);
   const [calendar, setCalendar] = useState<CalendarDay[]>([]);
   const [myBooking, setMyBooking] = useState<ConsultationBooking | null>(null);
@@ -337,6 +349,51 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
       ) : (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-3.5 py-4 text-[11px] font-semibold text-amber-800">
           이번 주와 다음 주 상담이 모두 마감됐어요. 아래 추가·긴급 상담 신청을 이용해 주세요.
+        </div>
+      )}
+
+      {/* 지난 상담 타임라인 */}
+      {history.length > 0 && (
+        <div className="border-t border-[#0071E3]/10 pt-4 space-y-3">
+          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">지난 상담</p>
+          {history.map((h) => (
+            <div
+              key={h.id}
+              className={`rounded-2xl border px-3.5 py-3 space-y-1.5 ${
+                h.status === 'noshow'
+                  ? 'border-rose-200 bg-rose-50/60'
+                  : 'border-emerald-200 bg-emerald-50/60'
+              }`}
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black ${
+                  h.status === 'noshow'
+                    ? 'bg-rose-100 text-rose-700'
+                    : 'bg-emerald-100 text-emerald-700'
+                }`}>
+                  {h.status === 'noshow' ? '미참석' : '완료'}
+                </span>
+                <span className="text-[11px] font-bold text-slate-700">
+                  {h.date} {h.slot}
+                </span>
+                {h.counselor && (
+                  <span className="text-[10px] font-semibold text-slate-400">{h.counselor}</span>
+                )}
+              </div>
+              {h.note && (
+                <p className="text-[11px] font-semibold text-slate-700 leading-5">{h.note}</p>
+              )}
+              {Array.isArray(h.digest) && h.digest.length > 0 && (
+                <ul className="space-y-0.5 mt-1">
+                  {h.digest.map((d, i) => (
+                    <li key={i} className="text-[10px] font-semibold text-slate-500 leading-4">
+                      · {d.label}{d.detail ? ` (${d.detail})` : ''}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
         </div>
       )}
 
