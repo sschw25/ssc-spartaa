@@ -8,6 +8,7 @@ import {
   Loader2, CalendarClock, Search, Check, X, RefreshCw, Plus, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { buildConsultationDigest } from '@/lib/consultation-digest';
 import { Student, ConsultationBooking, BlackoutEntry } from '@/lib/types/student';
 import {
   CONSULTATION_SLOT_TIMES,
@@ -57,6 +58,11 @@ export default function AdminConsultationBookingsPage() {
   const [grids, setGrids] = useState<Record<string, DaySlotGrid[]>>({});
   const [blackoutsMap, setBlackoutsMap] = useState<Record<string, BlackoutEntry[]>>({});
   const [today, setToday] = useState('');
+
+  // 완료 처리 모달 상태
+  const [completeTarget, setCompleteTarget] = useState<ConsultationBooking | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [completeBusy, setCompleteBusy] = useState(false);
 
   // 관리자 직접 예약 폼
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -197,6 +203,55 @@ export default function AdminConsultationBookingsPage() {
     const ok = await patchBooking(bk, { status }, `resolve_${bk.id}`);
     if (ok) toast.success(status === 'done' ? '완료 처리했어요' : '노쇼로 기록했어요');
   };
+
+  async function openCompleteModal(booking: ConsultationBooking) {
+    setCompleteTarget(booking);
+    setNoteDraft('[상담 메모]\n');
+    try {
+      const res = await fetch(`/api/admin/students/${booking.studentId}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const digest = buildConsultationDigest(json.data, booking.date);
+        const prefilled = digest.length
+          ? `[그날 변경사항]\n${digest.map((d) => `- ${d.label}${d.detail ? ` (${d.detail})` : ''}`).join('\n')}\n\n[상담 메모]\n`
+          : '[상담 메모]\n';
+        setNoteDraft(prefilled);
+      }
+    } catch {
+      // 조회 실패해도 기본 폼으로 진행
+    }
+  }
+
+  async function submitComplete() {
+    if (!completeTarget) return;
+    const b = completeTarget;
+    setCompleteBusy(true);
+    try {
+      const noteRes = await fetch(`/api/admin/students/${b.studentId}/consultation`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: b.date, content: noteDraft, type: 'learning' }),
+      });
+      const noteJson = await noteRes.json();
+      if (!noteJson.success) { toast.error(noteJson.message || '상담 기록 저장 실패'); return; }
+      const newLogId: string | undefined = noteJson.data?.consultationLogs?.[0]?.id;
+
+      const patchRes = await fetch('/api/admin/consultation-bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campus: b.campus, id: b.id, status: 'done', ...(newLogId ? { logId: newLogId } : {}) }),
+      });
+      const patchJson = await patchRes.json();
+      if (!patchJson.success) { toast.error(patchJson.message || '완료 처리 실패'); return; }
+
+      toast.success('상담 완료로 기록했어요');
+      setCompleteTarget(null);
+      setNoteDraft('');
+      await loadData();
+    } finally {
+      setCompleteBusy(false);
+    }
+  }
 
   const assignExtraToSlot = async (booking: ConsultationBooking, date: string, slot: string, counselor: string) => {
     const ok = await patchBooking(
@@ -451,10 +506,10 @@ export default function AdminConsultationBookingsPage() {
                                       <button
                                         type="button"
                                         disabled={!!busy[`resolve_${bk.id}`]}
-                                        onClick={() => resolveBooking(bk, 'done')}
+                                        onClick={() => openCompleteModal(bk)}
                                         className="flex-1 rounded-md bg-emerald-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-emerald-600 transition-colors disabled:opacity-50"
                                       >
-                                        {busy[`resolve_${bk.id}`] ? '…' : '완료'}
+                                        완료
                                       </button>
                                       <button
                                         type="button"
@@ -492,6 +547,49 @@ export default function AdminConsultationBookingsPage() {
           )}
         </section>
       </main>
+
+      {/* 완료 처리 모달 */}
+      {completeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div
+            className="w-full max-w-lg rounded-3xl border border-white/20 shadow-2xl p-6 space-y-4"
+            style={{
+              background: 'rgba(255,255,255,0.82)',
+              backdropFilter: 'blur(28px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+            }}
+          >
+            <h3 className="text-sm font-black text-[#1D1D1F] leading-snug">
+              {completeTarget.studentName} · {completeTarget.date} {completeTarget.slot} 상담 완료
+            </h3>
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              rows={6}
+              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-[#1D1D1F] leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+              placeholder="상담 내용을 작성하세요"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setCompleteTarget(null); setNoteDraft(''); }}
+                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-[#1D1D1F] hover:bg-[#E5E5EA] transition-colors"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                disabled={completeBusy}
+                onClick={submitComplete}
+                className="h-9 rounded-2xl bg-emerald-500 px-5 text-[12px] font-black text-white hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {completeBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                완료 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
