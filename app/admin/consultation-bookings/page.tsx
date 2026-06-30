@@ -193,6 +193,11 @@ export default function AdminConsultationBookingsPage() {
     if (ok) toast.success('처리완료로 표시했습니다.');
   };
 
+  const resolveBooking = async (bk: ConsultationBooking, status: 'done' | 'noshow') => {
+    const ok = await patchBooking(bk, { status }, `resolve_${bk.id}`);
+    if (ok) toast.success(status === 'done' ? '완료 처리했어요' : '노쇼로 기록했어요');
+  };
+
   const assignExtraToSlot = async (booking: ConsultationBooking, date: string, slot: string, counselor: string) => {
     const ok = await patchBooking(
       booking,
@@ -408,27 +413,79 @@ export default function AdminConsultationBookingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {CONSULTATION_SLOT_TIMES.map((slot) => (
-                    <tr key={slot} className="border-b border-black/[0.03] last:border-0">
-                      <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-[#86868B] border-r border-black/[0.04]">{slot}</td>
-                      {grid.map((d) => {
-                        const cell = d.slots.find((s) => s.slot === slot);
-                        const bk = cell?.booking || null;
-                        return (
-                          <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] align-middle">
-                            {bk ? (
-                              <button type="button" onClick={() => cancelBooking(bk)} title="클릭하여 예약 취소"
-                                className="w-full rounded-lg bg-[#0071E3]/10 px-1.5 py-1 text-[11px] font-bold text-[#0071E3] hover:bg-red-50 hover:text-red-600 transition-colors">
-                                {bk.studentName}
-                              </button>
-                            ) : (
-                              <span className="text-[#C7C7CC]">·</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {(() => {
+                    const nowHHMM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+                    return CONSULTATION_SLOT_TIMES.map((slot) => (
+                      <tr key={slot} className="border-b border-black/[0.03] last:border-0">
+                        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-[#86868B] border-r border-black/[0.04]">{slot}</td>
+                        {grid.map((d) => {
+                          const cell = d.slots.find((s) => s.slot === slot);
+                          const bk = cell?.booking || null;
+                          const isPast = bk ? (bk.date < today || (bk.date === today && bk.slot <= nowHHMM)) : false;
+                          return (
+                            <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] align-middle">
+                              {bk ? (
+                                <div className="space-y-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openStudentSheet(bk.studentId)}
+                                    title="학생 정보 보기"
+                                    className={`w-full rounded-lg px-1.5 py-1 text-[11px] font-bold transition-colors ${
+                                      bk.status === 'done'
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : bk.status === 'noshow'
+                                        ? 'bg-amber-50 text-amber-700'
+                                        : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-red-50 hover:text-red-600'
+                                    }`}
+                                  >
+                                    {bk.studentName}
+                                  </button>
+                                  {bk.status === 'done' && (
+                                    <span className="inline-block w-full rounded-full bg-emerald-100 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700">완료</span>
+                                  )}
+                                  {bk.status === 'noshow' && (
+                                    <span className="inline-block w-full rounded-full bg-amber-100 px-1.5 py-0.5 text-center text-[9px] font-black text-amber-700">노쇼</span>
+                                  )}
+                                  {isPast && bk.status === 'booked' && (
+                                    <div className="flex gap-0.5">
+                                      <button
+                                        type="button"
+                                        disabled={!!busy[`resolve_${bk.id}`]}
+                                        onClick={() => resolveBooking(bk, 'done')}
+                                        className="flex-1 rounded-md bg-emerald-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                                      >
+                                        {busy[`resolve_${bk.id}`] ? '…' : '완료'}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={!!busy[`resolve_${bk.id}`]}
+                                        onClick={() => resolveBooking(bk, 'noshow')}
+                                        className="flex-1 rounded-md bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-rose-600 transition-colors disabled:opacity-50"
+                                      >
+                                        {busy[`resolve_${bk.id}`] ? '…' : '노쇼'}
+                                      </button>
+                                    </div>
+                                  )}
+                                  {!isPast && bk.status === 'booked' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelBooking(bk)}
+                                      title="클릭하여 예약 취소"
+                                      className="w-full rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    >
+                                      취소
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[#C7C7CC]">·</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
