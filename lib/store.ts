@@ -2,6 +2,8 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
+import fs from 'fs';
+import path from 'path';
 import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking, BlackoutEntry, SeatAlert } from './types/student';
 import { isSlotFree } from './consultation-schedule';
 import {
@@ -59,6 +61,8 @@ import {
   deleteAdminAccountSupabase,
   getAppSettingSupabase,
   setAppSettingSupabase,
+  getSeatAbsenceMarksSupabase,
+  getAttendedDaysSupabase,
 } from './supabase';
 
 export type { StudySession } from './supabase';
@@ -502,6 +506,28 @@ export async function deleteMealPlan(id: string): Promise<void> {
 export async function notifyMealPlan(id: string, notifiedAt: string | null): Promise<MealPlan> {
   requireSupabase();
   return notifyMealPlanSupabase(id, notifiedAt);
+}
+
+// 기간 내 수기 결석 마크. Supabase 또는 로컬(data/seat_statuses.json) 폴백.
+export async function getSeatAbsenceMarks(from: string, to: string): Promise<{ date: string; seatKey: string }[]> {
+  if (isSupabaseConfigured()) return getSeatAbsenceMarksSupabase(from, to);
+  const p = path.join(process.cwd(), 'data', 'seat_statuses.json');
+  if (!fs.existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((r: any) => r && r.status === 'absent' && typeof r.date === 'string' && r.date >= from && r.date <= to && typeof r.seat_key === 'string')
+      .map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
+  } catch {
+    return [];
+  }
+}
+
+// 기간 내 등원일 집합. 세션은 Supabase 전용 → 미설정 시 빈 집합(전부 결석 분류됨).
+export async function getAttendedDays(from: string, to: string): Promise<Set<string>> {
+  if (!isSupabaseConfigured()) return new Set();
+  return getAttendedDaysSupabase(from, to);
 }
 
 export type { MockExam, OtEvent, MealPlan, CampusEvent };
