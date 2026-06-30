@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, updateStudentById } from '@/lib/store';
 import type { SeatAlert } from '@/lib/types/student';
 
 // 관리자: 출결판에서 "자리에 없음"으로 확인된 학생들에게 미착석 알림을 발송한다.
@@ -55,8 +55,11 @@ export async function POST(request: Request) {
         createdAt: nowIso,
         createdBy: session.campus === 'all' ? '관리자' : session.campus,
       };
-      student.seatAlerts = [...(student.seatAlerts || []), alert];
-      await saveStudent(student);
+      const r = await updateStudentById(student.id, (fresh) => {
+        fresh.seatAlerts = [...(fresh.seatAlerts || []), alert];
+      });
+      if (r === 'not_found') { skipped.push(id); continue; }
+      if (typeof r === 'string') { lastError = '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.'; skipped.push(id); continue; }
       notified.push(id);
     } catch (error) {
       lastError = error instanceof Error ? error.message : '저장 실패';

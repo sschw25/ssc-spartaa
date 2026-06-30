@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import { generateDetailedPlans } from '@/lib/progress-plan';
 import { appendThreadMessage } from '@/lib/thread';
 
@@ -32,14 +32,12 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: '처리 상태 또는 답변이 필요합니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(id);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
-  }
-
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(id, (student) => {
   const target = (student.consultationLogs || []).find((l) => l.id === requestId && l.type === 'request');
   if (!target) {
-    return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+    errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+    return false;
   }
 
   const nowIso = new Date().toISOString();
@@ -225,7 +223,15 @@ export async function PATCH(
       }
     }
   }
-  await saveStudent(student);
+  });
 
-  return NextResponse.json({ success: true, student });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
+
+  return NextResponse.json({ success: true, student: result });
 }

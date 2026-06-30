@@ -133,6 +133,31 @@ export async function patchStudentProgress(
   return patchStudentProgressSupabase(student, originalUpdatedAt);
 }
 
+/**
+ * 단일 학생을 낙관적 잠금으로 안전하게 수정한다.
+ * fresh 재조회 → mutate 적용 → updated_at 조건부 저장. 버전 충돌 시 최대 attempts회 재시도하여
+ * 전체 row upsert 가 동시 저장(쿠폰/휴가/알림/관리자 처리 등)을 덮어쓰는 유실을 방지한다.
+ * - mutate 가 명시적으로 false 를 반환하면 검증 실패로 보고 즉시 'abort' 반환(저장하지 않음).
+ *   mutate 클로저에서 바깥 변수에 에러 응답/결과를 담아 호출부에서 사용할 수 있다.
+ * - 반환: 저장된 Student | 'not_found'(학생 없음) | 'conflict'(재시도 소진) | 'abort'(mutate가 false 반환)
+ */
+export async function updateStudentById(
+  id: string,
+  mutate: (student: Student) => boolean | void | Promise<boolean | void>,
+  attempts = 3,
+): Promise<Student | 'not_found' | 'conflict' | 'abort'> {
+  for (let i = 0; i < attempts; i++) {
+    const student = await getStudentById(id);
+    if (!student) return 'not_found';
+    const originalUpdatedAt = student.updatedAt ?? '';
+    const ok = await mutate(student);
+    if (ok === false) return 'abort';
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved !== 'conflict') return saved;
+  }
+  return 'conflict';
+}
+
 // 필드 단위 저장: 진도(subjects) 컬럼만. 다른 컬럼(쿠폰/벌점 등)과 동시 저장돼도 충돌 안 함.
 // 로컬(dev)에서는 전체 저장으로 폴백.
 export async function patchStudentSubjects(student: Student): Promise<Student> {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent, patchStudentProgress } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import { getRewardMeta } from '@/lib/leave';
 import type { RewardRedemption, RewardType } from '@/lib/types/student';
 
@@ -28,15 +28,11 @@ export async function POST(req: NextRequest) {
 
   const nowIso = new Date().toISOString();
 
-  // optimistic locking: 최대 2회 시도, conflict 시 fresh 데이터로 재검증·재시도.
-  // 쿠폰은 환금성 인앱 통화 → 더블클릭/다중탭/적립과의 동시 저장으로 잔액·교환내역이 유실되지 않게 한다.
-  for (let attempt = 0; attempt < 2; attempt++) {
-    const student = await getStudentById(studentId);
-    if (!student) {
-      return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-    }
-    const originalUpdatedAt = student.updatedAt ?? '';
-
+  // 낙관적 잠금 재시도로 저장 — 동시 저장(더블클릭/다중탭/적립)에 잔액·교환내역이 유실되지 않게 한다.
+  // 쿠폰은 환금성 인앱 통화 → 잔액 검사·차감을 fresh 데이터에 대해 원자적으로 수행한다.
+  let errorResponse: NextResponse | null = null;
+  let redemption: RewardRedemption | null = null;
+  const result = await updateStudentById(studentId, (student) => {
     // 미차감 신청이므로, 이미 신청/승인대기 중인 쿠폰을 제외한 가용 쿠폰으로 한도 검사
     const balance = student.leaveCoupons ?? 0;
     const committed = (student.rewardRedemptions || [])
@@ -44,13 +40,14 @@ export async function POST(req: NextRequest) {
       .reduce((sum, r) => sum + (r.cost || 0), 0);
     const available = balance - committed;
     if (available < meta.cost) {
-      return NextResponse.json(
+      errorResponse = NextResponse.json(
         { success: false, message: `쿠폰이 부족합니다. (가용 ${available} / 필요 ${meta.cost})` },
         { status: 400 },
       );
+      return false;
     }
 
-    const redemption: RewardRedemption = meta.physical
+    redemption = meta.physical
       ? {
           // 상품권/플래너 — 신청(미차감), 관리자 승인 대기
           id: `rwd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -74,17 +71,20 @@ export async function POST(req: NextRequest) {
       student.leaveCoupons = balance - meta.cost;
     }
     student.rewardRedemptions = [redemption, ...(student.rewardRedemptions || [])];
+  });
 
-    const saved = await patchStudentProgress(student, originalUpdatedAt);
-    if (saved === 'conflict') continue;
-
-    return NextResponse.json({ success: true, redemption, leaveCoupons: student.leaveCoupons ?? 0 });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json(
+      { success: false, message: '교환 처리 충돌이 발생했습니다. 다시 시도해주세요.' },
+      { status: 409 },
+    );
   }
 
-  return NextResponse.json(
-    { success: false, message: '교환 처리 충돌이 발생했습니다. 다시 시도해주세요.' },
-    { status: 409 },
-  );
+  return NextResponse.json({ success: true, redemption, leaveCoupons: result.leaveCoupons ?? 0 });
 }
 
 // 학생: 본인이 올린 '신청(requested)' 교환을 취소 (승인 전에만 가능)
@@ -98,21 +98,26 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, message: '취소할 신청이 없습니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    const target = (student.rewardRedemptions || []).find((r) => r.id === id);
+    if (!target) {
+      errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+      return false;
+    }
+    if (target.status !== 'requested') {
+      errorResponse = NextResponse.json({ success: false, message: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 });
+      return false;
+    }
+    student.rewardRedemptions = (student.rewardRedemptions || []).filter((r) => r.id !== id);
+  });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  const target = (student.rewardRedemptions || []).find((r) => r.id === id);
-  if (!target) {
-    return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
-  if (target.status !== 'requested') {
-    return NextResponse.json({ success: false, message: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 });
-  }
-
-  student.rewardRedemptions = (student.rewardRedemptions || []).filter((r) => r.id !== id);
-  await saveStudent(student);
 
   return NextResponse.json({ success: true });
 }

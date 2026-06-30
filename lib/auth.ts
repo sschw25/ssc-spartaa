@@ -4,6 +4,18 @@ import { getStudentById } from './store';
 
 export const STUDENT_SESSION_COOKIE = 'student-session';
 
+// 관리자 계정의 허용 campus/role 값 (AdminAccount 타입과 일치)
+export const ADMIN_CAMPUSES = ['all', 'wonju', 'chuncheon', 'chungju'] as const;
+export const ADMIN_ROLES = ['super', 'campus_admin'] as const;
+export type AdminCampus = (typeof ADMIN_CAMPUSES)[number];
+export type AdminRole = (typeof ADMIN_ROLES)[number];
+export function isValidAdminCampus(v: unknown): v is AdminCampus {
+  return typeof v === 'string' && (ADMIN_CAMPUSES as readonly string[]).includes(v);
+}
+export function isValidAdminRole(v: unknown): v is AdminRole {
+  return typeof v === 'string' && (ADMIN_ROLES as readonly string[]).includes(v);
+}
+
 export interface AdminSession {
   id: string;
   username: string;

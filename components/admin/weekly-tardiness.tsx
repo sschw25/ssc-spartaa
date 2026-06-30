@@ -16,6 +16,20 @@ type SortDir = 'asc' | 'desc';
 
 const campusLabel = (v: string) => ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' } as Record<string, string>)[v] || '기타';
 
+// 렌더 중에 컴포넌트를 새로 만들면 매 렌더마다 트리가 재생성되므로, 정렬 헤더 컴포넌트는 모듈 스코프로 분리한다.
+function SortIcon({ active, dir }: { active: boolean; dir: SortDir }) {
+  if (!active) return <ChevronsUpDown className="w-3 h-3 text-[#C7C7CC]" />;
+  return dir === 'asc' ? <ChevronUp className="w-3 h-3 text-[#0071E3]" /> : <ChevronDown className="w-3 h-3 text-[#0071E3]" />;
+}
+
+function Th({ k, label, className = '', sortKey, sortDir, onSort }: { k: SortKey; label: string; className?: string; sortKey: SortKey; sortDir: SortDir; onSort: (k: SortKey) => void }) {
+  return (
+    <th className={`px-4 py-3 ${className}`}>
+      <button onClick={() => onSort(k)} className="inline-flex items-center gap-1 font-bold text-[#1D1D1F] hover:text-[#0071E3]">{label} <SortIcon active={sortKey === k} dir={sortDir} /></button>
+    </th>
+  );
+}
+
 export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
   const [data, setData] = useState<Data | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,15 +77,6 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
     });
   }, [data, campusFilter, sortKey, sortDir]);
 
-  const SortIcon = ({ k }: { k: SortKey }) =>
-    sortKey !== k ? <ChevronsUpDown className="w-3 h-3 text-[#C7C7CC]" />
-      : sortDir === 'asc' ? <ChevronUp className="w-3 h-3 text-[#0071E3]" /> : <ChevronDown className="w-3 h-3 text-[#0071E3]" />;
-  const Th = ({ k, label, className = '' }: { k: SortKey; label: string; className?: string }) => (
-    <th className={`px-4 py-3 ${className}`}>
-      <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 font-bold text-[#1D1D1F] hover:text-[#0071E3]">{label} <SortIcon k={k} /></button>
-    </th>
-  );
-
   if (loading) return <div className="flex items-center justify-center py-16 bg-white rounded-2xl border border-black/[0.05]"><Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" /><span className="text-xs text-[#86868B]">불러오는 중…</span></div>;
   if (error) return <div className="py-16 text-center text-sm text-red-600 font-semibold bg-white rounded-2xl border border-black/[0.05]">{error}</div>;
 
@@ -91,11 +96,11 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
           <table className="w-full text-xs">
             <thead className="bg-[#F5F5F7] text-left border-b border-black/[0.05]">
               <tr>
-                <Th k="name" label="이름" />
-                <Th k="arrival" label="지각기준" />
-                <Th k="attended" label="출석일" />
-                <Th k="late" label="지각일" />
-                <Th k="rate" label="지각률" />
+                <Th k="name" label="이름" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <Th k="arrival" label="지각기준" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <Th k="attended" label="출석일" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <Th k="late" label="지각일" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
+                <Th k="rate" label="지각률" sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} />
               </tr>
             </thead>
             <tbody>

@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import Link from 'next/link'
 import { CAMPUS_CONFIG } from '@/lib/campus-config'
 
 export function Footer() {
@@ -10,11 +11,11 @@ export function Footer() {
         
         {/* SEO Internal Links */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 text-[12px] font-semibold text-[#434345] border-b border-black/5 pb-6">
-          <a href="/wonju/gongmuwon" className="text-[#007AFF] hover:underline">원주 공무원학원</a>
+          <Link href="/wonju/gongmuwon" className="text-[#007AFF] hover:underline">원주 공무원학원</Link>
           <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
-          <a href="/chuncheon/gongmuwon" className="hover:text-[#007AFF] hover:underline">춘천 공무원학원</a>
+          <Link href="/chuncheon/gongmuwon" className="hover:text-[#007AFF] hover:underline">춘천 공무원학원</Link>
           <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
-          <a href="/chungju/gongmuwon" className="hover:text-[#007AFF] hover:underline">충주 공무원학원</a>
+          <Link href="/chungju/gongmuwon" className="hover:text-[#007AFF] hover:underline">충주 공무원학원</Link>
         </div>
 
         {/* Company Info Block */}

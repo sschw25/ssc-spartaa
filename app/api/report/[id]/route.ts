@@ -56,7 +56,8 @@ export async function GET(
   const { searchParams } = new URL(request.url);
   const audience = searchParams.get('audience') === 'student' ? 'student' : 'parent';
   const shareToken = searchParams.get('token');
-  const sharePasswordInput = searchParams.get('pw');
+  // 공유 비밀번호는 헤더로 받는다 — URL 쿼리에 실으면 브라우저 히스토리/서버·프록시 로그/리퍼러에 남는다.
+  const sharePasswordInput = request.headers.get('x-report-password') || '';
 
   // 토큰 기반 접근 (학부모 공유 링크) — 세션 인증 우선순위에서 제외
   if (shareToken) {

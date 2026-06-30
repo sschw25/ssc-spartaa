@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
-import { getStudents, saveStudent, getSessionsByDate } from '@/lib/store';
-import type { SaturdayLateExcuse, PenaltyRecord } from '@/lib/types/student';
+import { getAdminSession, type AdminSession } from '@/lib/auth';
+import { getStudents, updateStudentById, getSessionsByDate } from '@/lib/store';
+import type { SaturdayLateExcuse, PenaltyRecord, Student } from '@/lib/types/student';
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
+
+// 캠퍼스 관리자는 본인 캠퍼스 학생만, 슈퍼 관리자('all')는 전원 접근 가능
+const canAccessStudent = (session: AdminSession, student: Pick<Student, 'campus'>) =>
+  session.campus === 'all' || student.campus === session.campus;
 
 function getPrevSaturday(refDate = new Date()): string {
   const date = new Date(refDate);
@@ -15,25 +19,28 @@ function getPrevSaturday(refDate = new Date()): string {
 }
 
 export async function GET(req: NextRequest) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
   const { searchParams } = new URL(req.url);
   const dateParam = searchParams.get('date');
-  
-  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam || '') 
-    ? dateParam! 
+
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam || '')
+    ? dateParam!
     : getPrevSaturday();
 
   try {
-    const [students, sessions] = await Promise.all([
+    const [allStudents, sessions] = await Promise.all([
       getStudents(),
       getSessionsByDate(date)
     ]);
 
+    // 캠퍼스 관리자는 본인 캠퍼스 학생만 노출
+    const students = allStudents.filter((s) => canAccessStudent(session, s));
     const attendedStudentIds = new Set(sessions.map(s => s.student_id));
-    
+
     const rows = students.map(student => {
       const hasAttended = attendedStudentIds.has(student.id);
       
@@ -70,7 +77,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -101,9 +109,7 @@ export async function POST(req: NextRequest) {
       for (const id of studentIds) {
         const student = students.find(s => s.id === id);
         if (!student) continue;
-
-        const excuses = student.saturdayLateExcuses || [];
-        const existingIdx = excuses.findIndex(e => e.date === date);
+        if (!canAccessStudent(session, student)) continue; // 타 캠퍼스 학생은 건너뜀
 
         const newExcuse: SaturdayLateExcuse = {
           id: `excuse_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -112,15 +118,19 @@ export async function POST(req: NextRequest) {
           requestedAt: nowIso,
         };
 
-        if (existingIdx >= 0) {
-          excuses[existingIdx] = newExcuse;
-        } else {
-          excuses.push(newExcuse);
-        }
+        const r = await updateStudentById(student.id, (fresh) => {
+          const excuses = fresh.saturdayLateExcuses || [];
+          const existingIdx = excuses.findIndex(e => e.date === date);
 
-        student.saturdayLateExcuses = excuses;
-        await saveStudent(student);
-        updatedStudents.push(student.id);
+          if (existingIdx >= 0) {
+            excuses[existingIdx] = newExcuse;
+          } else {
+            excuses.push(newExcuse);
+          }
+
+          fresh.saturdayLateExcuses = excuses;
+        });
+        if (r !== 'not_found' && typeof r !== 'string') updatedStudents.push(student.id);
       }
 
       return NextResponse.json({ success: true, message: `${updatedStudents.length}명에게 증빙 요청을 보냈습니다.` });
@@ -132,44 +142,58 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: '올바른 처리 정보가 아닙니다.' }, { status: 400 });
       }
 
-      const students = await getStudents();
-      const student = students.find(s => s.id === studentId);
-      if (!student) {
+      const snapshot = await getStudents();
+      const snapStudent = snapshot.find(s => s.id === studentId);
+      if (!snapStudent) {
         return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
       }
-
-      const excuses = student.saturdayLateExcuses || [];
-      const excuse = excuses.find(e => e.date === date);
-      if (!excuse) {
-        return NextResponse.json({ success: false, message: '해당 날짜의 증빙 요청 내역이 없습니다.' }, { status: 404 });
+      if (!canAccessStudent(session, snapStudent)) {
+        return NextResponse.json({ success: false, message: '해당 학생에 접근할 권한이 없습니다.' }, { status: 403 });
       }
 
-      excuse.status = decision as 'excused' | 'unexcused_late';
-      excuse.resolvedAt = nowIso;
-      
-      if (decision === 'unexcused_late') {
-        excuse.demeritPoint = demeritPoint;
-        
-        const penalties = student.penalties || [];
-        const todayStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
-        const newPenalty: PenaltyRecord = {
-          id: `penalty_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-          date: todayStr,
-          points: demeritPoint,
-          reason: `[${date} 토요일] 지각/결석 사유 증빙 미제출 또는 단순지각`,
-          type: 'penalty',
-          awardedBy: '관리자(토요증빙시스템)',
-          createdAt: nowIso
-        };
-        student.penalties = [...penalties, newPenalty];
+      let resolveError: NextResponse | null = null;
+      const result = await updateStudentById(studentId, (student) => {
+        const excuses = student.saturdayLateExcuses || [];
+        const excuse = excuses.find(e => e.date === date);
+        if (!excuse) {
+          resolveError = NextResponse.json({ success: false, message: '해당 날짜의 증빙 요청 내역이 없습니다.' }, { status: 404 });
+          return false;
+        }
+
+        excuse.status = decision as 'excused' | 'unexcused_late';
+        excuse.resolvedAt = nowIso;
+
+        if (decision === 'unexcused_late') {
+          excuse.demeritPoint = demeritPoint;
+
+          const penalties = student.penalties || [];
+          const todayStr = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+          const newPenalty: PenaltyRecord = {
+            id: `penalty_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            date: todayStr,
+            points: demeritPoint,
+            reason: `[${date} 토요일] 지각/결석 사유 증빙 미제출 또는 단순지각`,
+            type: 'penalty',
+            awardedBy: '관리자(토요증빙시스템)',
+            createdAt: nowIso
+          };
+          student.penalties = [...penalties, newPenalty];
+        }
+
+        student.saturdayLateExcuses = excuses;
+      });
+
+      if (resolveError) return resolveError;
+      if (result === 'not_found') {
+        return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
+      }
+      if (typeof result === 'string') {
+        return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
       }
 
-      student.saturdayLateExcuses = excuses;
-      await saveStudent(student);
-
-      return NextResponse.json({ 
-        success: true, 
-        message: decision === 'excused' ? '사유 참작 처리되었습니다.' : `지각 벌점 ${demeritPoint}점이 부여되었습니다.` 
+      return NextResponse.json({
+        success: true,
+        message: decision === 'excused' ? '사유 참작 처리되었습니다.' : `지각 벌점 ${demeritPoint}점이 부여되었습니다.`
       });
     }
 

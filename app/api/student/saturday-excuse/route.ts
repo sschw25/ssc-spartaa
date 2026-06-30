@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
@@ -29,34 +29,40 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const student = await getStudentById(studentId);
-    if (!student) {
+    let errorResponse: NextResponse | null = null;
+    const result = await updateStudentById(studentId, (student) => {
+      const excuses = student.saturdayLateExcuses || [];
+      const target = excuses.find(e => e.date === date);
+
+      if (!target) {
+        errorResponse = NextResponse.json({ success: false, message: '해당 일자의 지각 증빙 요청이 존재하지 않습니다.' }, { status: 404 });
+        return false;
+      }
+
+      if (target.status !== 'pending') {
+        errorResponse = NextResponse.json({ success: false, message: '이미 제출했거나 처리가 완료된 증빙 건입니다.' }, { status: 400 });
+        return false;
+      }
+
+      // 증빙 회신 업데이트
+      target.status = 'submitted';
+      target.reason = reason.trim();
+      target.submittedAt = new Date().toISOString();
+
+      student.saturdayLateExcuses = excuses;
+    });
+    if (errorResponse) return errorResponse;
+    if (result === 'not_found') {
       return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     }
-
-    const excuses = student.saturdayLateExcuses || [];
-    const target = excuses.find(e => e.date === date);
-
-    if (!target) {
-      return NextResponse.json({ success: false, message: '해당 일자의 지각 증빙 요청이 존재하지 않습니다.' }, { status: 404 });
+    if (typeof result === 'string') {
+      return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
     }
 
-    if (target.status !== 'pending') {
-      return NextResponse.json({ success: false, message: '이미 제출했거나 처리가 완료된 증빙 건입니다.' }, { status: 400 });
-    }
-
-    // 증빙 회신 업데이트
-    target.status = 'submitted';
-    target.reason = reason.trim();
-    target.submittedAt = new Date().toISOString();
-
-    student.saturdayLateExcuses = excuses;
-    await saveStudent(student);
-
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       message: '사유 증빙 회신이 완료되었습니다.',
-      saturdayLateExcuses: student.saturdayLateExcuses 
+      saturdayLateExcuses: result.saturdayLateExcuses
     });
   } catch (error: unknown) {
     console.error('saturday-excuse submit error:', error);

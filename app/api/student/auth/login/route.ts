@@ -92,16 +92,18 @@ export async function POST(request: Request) {
         }
       }
 
+      // 취약 폴백(이름 + 전화 끝 4자리). 학생 ID 끝 4자리 추측 경로는 제거했고,
+      // 남은 전화 끝 4자리 경로도 기본 비활성 — ALLOW_LEGACY_STUDENT_LOGIN=1 일 때만 허용한다.
+      // (정식 경로는 로그인ID+비밀번호. 비밀번호 미설정 학생은 관리자가 비밀번호를 발급해야 한다.)
+      const legacyPhoneLoginEnabled = process.env.ALLOW_LEGACY_STUDENT_LOGIN === '1';
       const normalizedCode = normalizeCode(authCode || phoneLast4);
-      if (normalizedCode.length === 4) {
+      if (legacyPhoneLoginEnabled && normalizedCode.length === 4) {
         const students = await getStudentsSummary();
         const matches = students.filter((student) => {
           const studentName = normalizeName(student.name);
           const contactDigits = onlyDigits(student.contact);
-          const studentCode = normalizeCode(student.id).slice(-4);
           const matchesPhone = /^\d{4}$/.test(normalizedCode) && contactDigits.endsWith(normalizedCode);
-          const matchesStudentCode = studentCode === normalizedCode;
-          return studentName === normalizedName && (matchesPhone || matchesStudentCode);
+          return studentName === normalizedName && matchesPhone;
         });
 
         if (matches.length > 0) {

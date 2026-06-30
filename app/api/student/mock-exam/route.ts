@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { MockExamParticipation } from '@/lib/types/student';
 
 // 학생: 모의고사 참여/불참 응답 제출
@@ -34,11 +34,6 @@ export async function POST(req: NextRequest) {
   }
   const status: MockExamParticipation['status'] = chosen === 'absent' ? 'absent_requested' : 'attending';
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const nowIso = new Date().toISOString();
   const entry: MockExamParticipation = {
     examId,
@@ -48,9 +43,16 @@ export async function POST(req: NextRequest) {
     respondedBy: 'student',
   };
 
-  const others = (student.mockExams || []).filter((e) => e.examId !== examId);
-  student.mockExams = [...others, entry];
-  await saveStudent(student);
+  const result = await updateStudentById(studentId, (student) => {
+    const others = (student.mockExams || []).filter((e) => e.examId !== examId);
+    student.mockExams = [...others, entry];
+  });
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
   return NextResponse.json({ success: true, entry });
 }

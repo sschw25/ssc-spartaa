@@ -2,10 +2,14 @@ import crypto from 'crypto';
 
 // 키오스크 QR용 짧은 만료 서명 토큰.
 // 30초 윈도우마다 토큰이 바뀌고, 검증 시 현재/직전 윈도우만 허용 → 캡처본을 나중에/원격에서 재사용 불가.
-const SECRET = process.env.ATTEND_TOKEN_SECRET || 'ssc-attend-dev-secret-change-me';
+// 운영에서는 ATTEND_TOKEN_SECRET 필수. 미설정 시 공개된 기본값으로 토큰을 발급/검증하지 않는다(fail-closed).
+// (개발 환경에서만 임시 기본값 허용 — 로컬 키오스크 테스트용)
+const SECRET = process.env.ATTEND_TOKEN_SECRET
+  || (process.env.NODE_ENV === 'production' ? '' : 'ssc-attend-dev-secret-change-me');
 const WINDOW_MS = 30_000;
 
 function sign(windowId: number): string {
+  if (!SECRET) throw new Error('ATTEND_TOKEN_SECRET이 설정되지 않았습니다. 운영에서는 반드시 환경 변수로 지정해야 합니다.');
   return crypto.createHmac('sha256', SECRET).update(String(windowId)).digest('base64url').slice(0, 20);
 }
 
@@ -22,6 +26,7 @@ export function createAttendToken(now: number = Date.now()): string {
 }
 
 export function verifyAttendToken(token: string, now: number = Date.now()): boolean {
+  if (!SECRET) return false; // 시크릿 미설정 시 어떤 토큰도 통과시키지 않는다(fail-closed)
   if (!token || !token.includes('.')) return false;
   const [wStr, sig] = token.split('.');
   const w = Number(wStr);

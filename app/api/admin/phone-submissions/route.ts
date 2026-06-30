@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
-import { getStudents, getStudentById, saveStudent } from '@/lib/store';
+import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
+import { getStudents, updateStudentById } from '@/lib/store';
+import type { PhoneSubmission } from '@/lib/types/student';
 
 function kstDateStr(): string {
   return new Intl.DateTimeFormat('ko-KR', {
@@ -10,14 +11,17 @@ function kstDateStr(): string {
 
 // 관리자: 특정 날짜의 모든 휴대폰 제출 신청 조회
 export async function GET(req: NextRequest) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   const date = req.nextUrl.searchParams.get('date') || kstDateStr();
 
   try {
     const students = await getStudents();
-    const submissions = students.flatMap((s) =>
+    // 캠퍼스 관리자는 본인 캠퍼스 학생만 조회 (슈퍼 관리자 'all'은 전원)
+    const scoped = session.campus === 'all' ? students : students.filter((s) => s.campus === session.campus);
+    const submissions = scoped.flatMap((s) =>
       (s.phoneSubmissions || [])
         .filter((sub) => sub.date === date)
         .map((sub) => ({
@@ -36,7 +40,7 @@ export async function GET(req: NextRequest) {
 
 // 관리자: 신청 승인/반려
 export async function PATCH(req: NextRequest) {
-  if (!(await isAdmin())) {
+  if (!(await getAdminSession())) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -55,21 +59,33 @@ export async function PATCH(req: NextRequest) {
   }
   const adminReply = String(body?.adminReply ?? '').trim().slice(0, 300) || undefined;
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
-  const idx = (student.phoneSubmissions || []).findIndex((s) => s.id === submissionId);
-  if (idx === -1) {
-    return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+  // 캠퍼스 관리자는 본인 캠퍼스 학생만 승인/반려 가능
+  if (!(await canAdminAccessStudent(studentId))) {
+    return NextResponse.json({ success: false, message: '해당 학생에 접근할 권한이 없습니다.' }, { status: 403 });
   }
 
   const nowIso = new Date().toISOString();
-  student.phoneSubmissions = (student.phoneSubmissions || []).map((s, i) =>
-    i === idx ? { ...s, status, reviewedAt: nowIso, adminReply } : s,
-  );
-  await saveStudent(student);
+  let errorResponse: NextResponse | null = null;
+  let updatedSubmission: PhoneSubmission | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    const idx = (student.phoneSubmissions || []).findIndex((s) => s.id === submissionId);
+    if (idx === -1) {
+      errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+      return false;
+    }
+    student.phoneSubmissions = (student.phoneSubmissions || []).map((s, i) =>
+      i === idx ? { ...s, status, reviewedAt: nowIso, adminReply } : s,
+    );
+    updatedSubmission = student.phoneSubmissions[idx];
+  });
 
-  return NextResponse.json({ success: true, submission: student.phoneSubmissions[idx] });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
+
+  return NextResponse.json({ success: true, submission: updatedSubmission });
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { isAdmin, canAdminAccessStudent } from '@/lib/auth';
 import { activeBackend, getStudentById, deleteSessionsByStudentDate, setManualAttendance } from '@/lib/store';
 
 const HM = /^\d{2}:\d{2}$/;
@@ -21,6 +21,10 @@ export async function POST(request: Request) {
     }
     if (!(await getStudentById(studentId))) {
       return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    // 캠퍼스 관리자는 본인 캠퍼스 학생만 수정 가능 (슈퍼 관리자는 전원)
+    if (!(await canAdminAccessStudent(studentId))) {
+      return NextResponse.json({ success: false, message: '해당 학생에 접근할 권한이 없습니다.' }, { status: 403 });
     }
 
     if (clear || !checkIn) {

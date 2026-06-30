@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, isValidAdminCampus, isValidAdminRole } from '@/lib/auth';
 import { getAdminAccounts, saveAdminAccount, deleteAdminAccount } from '@/lib/store';
 import { AdminAccount } from '@/lib/types/student';
 
@@ -10,7 +10,7 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getAdminSession();
-  if (!session || (session.campus !== 'all' && session.role !== 'super')) {
+  if (!session || session.role !== 'super') {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
   }
 
@@ -22,6 +22,14 @@ export async function PUT(
     // 세션 토큰 구분자(':')·서명 구분자('.') 오염 방지
     if (username && (String(username).includes(':') || String(username).includes('.'))) {
       return NextResponse.json({ success: false, message: '아이디에 : 또는 . 는 사용할 수 없습니다.' }, { status: 400 });
+    }
+
+    // campus/role 은 값이 주어졌을 때 허용 목록만 (임의 문자열로 권한·소속 위조 방지)
+    if (campus !== undefined && !isValidAdminCampus(campus)) {
+      return NextResponse.json({ success: false, message: '캠퍼스 값이 올바르지 않습니다.' }, { status: 400 });
+    }
+    if (role !== undefined && !isValidAdminRole(role)) {
+      return NextResponse.json({ success: false, message: '역할 값이 올바르지 않습니다.' }, { status: 400 });
     }
 
     // 기존 계정 조회
@@ -78,7 +86,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getAdminSession();
-  if (!session || (session.campus !== 'all' && session.role !== 'super')) {
+  if (!session || session.role !== 'super') {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
   }
 

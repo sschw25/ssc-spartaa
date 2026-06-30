@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { randomBytes, randomInt } from 'crypto';
 import { hash } from 'bcryptjs';
@@ -46,12 +46,13 @@ export async function POST(
     if (isSupabaseConfigured()) {
       await patchSupabaseToken(id, token, expiresAt, passwordHash);
     } else {
-      const student = await getStudentById(id);
-      if (!student) return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
-      student.shareToken = token;
-      student.shareTokenExpiresAt = expiresAt;
-      student.sharePasswordHash = passwordHash;
-      await saveStudent(student);
+      const result = await updateStudentById(id, (student) => {
+        student.shareToken = token;
+        student.shareTokenExpiresAt = expiresAt;
+        student.sharePasswordHash = passwordHash;
+      });
+      if (result === 'not_found') return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
+      if (typeof result === 'string') return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
     }
     // plaintext password는 응답에 한 번만 포함 — 이후 DB에서는 해시만 존재
     return NextResponse.json({ success: true, token, password, expiresAt });
@@ -75,12 +76,13 @@ export async function DELETE(
     if (isSupabaseConfigured()) {
       await patchSupabaseToken(id, null, null, null);
     } else {
-      const student = await getStudentById(id);
-      if (!student) return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
-      student.shareToken = undefined;
-      student.shareTokenExpiresAt = undefined;
-      student.sharePasswordHash = undefined;
-      await saveStudent(student);
+      const result = await updateStudentById(id, (student) => {
+        student.shareToken = undefined;
+        student.shareTokenExpiresAt = undefined;
+        student.sharePasswordHash = undefined;
+      });
+      if (result === 'not_found') return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });
+      if (typeof result === 'string') return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
     }
     return NextResponse.json({ success: true });
   } catch (e: any) {

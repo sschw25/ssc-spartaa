@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { getAdminSession } from '@/lib/auth';
+import { getAdminSession, isValidAdminCampus, isValidAdminRole } from '@/lib/auth';
 import { getAdminAccounts, getAdminAccountByUsername, saveAdminAccount } from '@/lib/store';
 import { AdminAccount } from '@/lib/types/student';
 
 // 1. 관리자 계정 목록 조회 (슈퍼 관리자 전용)
 export async function GET() {
   const session = await getAdminSession();
-  if (!session || (session.campus !== 'all' && session.role !== 'super')) {
+  if (!session || session.role !== 'super') {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
   }
 
@@ -32,7 +32,7 @@ export async function GET() {
 // 2. 신규 관리자 계정 추가 (슈퍼 관리자 전용)
 export async function POST(request: Request) {
   const session = await getAdminSession();
-  if (!session || (session.campus !== 'all' && session.role !== 'super')) {
+  if (!session || session.role !== 'super') {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
   }
 
@@ -41,6 +41,11 @@ export async function POST(request: Request) {
 
     if (!username || !password || !campus || !role) {
       return NextResponse.json({ success: false, message: '필수 정보를 모두 입력해 주세요.' }, { status: 400 });
+    }
+
+    // campus/role 은 허용된 값만 (임의 문자열로 권한·소속을 위조하지 못하게)
+    if (!isValidAdminCampus(campus) || !isValidAdminRole(role)) {
+      return NextResponse.json({ success: false, message: '캠퍼스 또는 역할 값이 올바르지 않습니다.' }, { status: 400 });
     }
 
     // 세션 토큰 구분자(':')·서명 구분자('.') 오염 방지
