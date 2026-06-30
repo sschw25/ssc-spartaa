@@ -9,6 +9,7 @@ import {
   getStudentsSummarySupabase,
   getStudentByIdSupabase,
   saveStudentSupabase,
+  createStudentWithPasswordHashSupabase,
   patchStudentProgressSupabase,
   patchStudentSubjectsSupabase,
   patchStudentProfileSupabase,
@@ -17,6 +18,7 @@ import {
   saveSharedMaterialSupabase,
   getStudentAuthRecordsSupabase,
   setStudentPasswordHashSupabase,
+  applyStudentPasswordChangeSupabase,
   setStudentNotifyInfoSupabase,
   setStudentExpectedArrivalSupabase,
   getMockExamsSupabase,
@@ -145,6 +147,13 @@ export async function saveStudent(student: Student): Promise<Student> {
   return isSupabaseConfigured() ? saveStudentSupabase(student) : saveStudentLocal(student);
 }
 
+export async function createStudentWithPasswordHash(student: Student, passwordHash: string): Promise<Student> {
+  if (!isSupabaseConfigured()) {
+    return saveStudentLocal({ ...student, passwordHash });
+  }
+  return createStudentWithPasswordHashSupabase(student, passwordHash);
+}
+
 // 진도 PATCH 전용: Supabase 에서 optimistic locking, 로컬에서는 일반 저장.
 export async function patchStudentProgress(
   student: Student,
@@ -228,6 +237,41 @@ export async function setStudentPasswordHash(studentId: string, hash: string): P
     return;
   }
   return setStudentPasswordHashSupabase(studentId, hash);
+}
+
+type PendingPasswordChange = { hash?: string; requestedAt?: string };
+
+export async function approvePendingStudentPasswordChange(
+  studentId: string,
+  attempts = 3,
+): Promise<Student | 'not_found' | 'no_pending' | 'conflict'> {
+  for (let i = 0; i < attempts; i++) {
+    const student = await getStudentById(studentId);
+    if (!student) return 'not_found';
+
+    const pending = student.studentState?.passwordChange as PendingPasswordChange | undefined;
+    if (!pending?.hash) return 'no_pending';
+
+    const nextState = { ...(student.studentState || {}) };
+    delete nextState.passwordChange;
+
+    if (!isSupabaseConfigured()) {
+      return saveStudentLocal({
+        ...student,
+        passwordHash: pending.hash,
+        studentState: nextState,
+      });
+    }
+
+    const saved = await applyStudentPasswordChangeSupabase(
+      studentId,
+      pending.hash,
+      nextState,
+      student.updatedAt ?? '',
+    );
+    if (saved !== 'conflict') return saved;
+  }
+  return 'conflict';
 }
 
 export async function setStudentNotifyInfo(studentId: string, info: NotifyInfo): Promise<void> {

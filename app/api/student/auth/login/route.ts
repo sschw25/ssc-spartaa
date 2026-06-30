@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import bcrypt from 'bcryptjs';
 import { getStudentsSummary, getStudentAuthRecords, getStudentById } from '@/lib/store';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { signStudentSession, STUDENT_SESSION_COOKIE } from '@/lib/auth';
+import { compareAttendanceCode } from '@/lib/attendance-code';
 
 const kstToday = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
 
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { loginId, password, name, authCode, phoneLast4 } = body;
 
-    // 1. 아이디/비밀번호 로그인
+    // 1. 아이디/출결번호 로그인
     if (loginId && password) {
       const normalizedId = String(loginId).trim().toLowerCase();
       const records = await getStudentAuthRecords();
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         const matchesName = r.name && normalizeName(r.name) === normalizeName(normalizedId);
 
         if ((matchesLoginId || matchesName) && r.password_hash) {
-          if (await bcrypt.compare(String(password), r.password_hash)) {
+          if (await compareAttendanceCode(password, r.password_hash)) {
             verified.push(r);
           }
         }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
 
       if (verified.length === 0) {
         return NextResponse.json(
-          { success: false, message: '아이디 또는 비밀번호가 올바르지 않습니다.' },
+          { success: false, message: '아이디 또는 출결번호가 올바르지 않습니다.' },
           { status: 401 }
         );
       }
@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
     }
 
-    // 2. 하위 호환 폴백: 이름 + 비밀번호/확인코드 로그인
+    // 2. 하위 호환 폴백: 이름 + 출결번호/확인코드 로그인
     const normalizedName = normalizeName(name);
     if (normalizedName) {
       if (password) {
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         const verified = [];
         for (const r of records) {
           if (normalizeName(r.name) === normalizedName && r.password_hash) {
-            if (await bcrypt.compare(String(password), r.password_hash)) verified.push(r);
+            if (await compareAttendanceCode(password, r.password_hash)) verified.push(r);
           }
         }
         if (verified.length > 0) {
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
 
       // 취약 폴백(이름 + 전화 끝 4자리). 학생 ID 끝 4자리 추측 경로는 제거했고,
       // 남은 전화 끝 4자리 경로도 기본 비활성 — ALLOW_LEGACY_STUDENT_LOGIN=1 일 때만 허용한다.
-      // (정식 경로는 로그인ID+비밀번호. 비밀번호 미설정 학생은 관리자가 비밀번호를 발급해야 한다.)
+      // (정식 경로는 로그인ID+출결번호. 출결번호 미설정 학생은 관리자가 출결번호를 발급해야 한다.)
       const legacyPhoneLoginEnabled = process.env.ALLOW_LEGACY_STUDENT_LOGIN === '1';
       const normalizedCode = normalizeCode(authCode || phoneLast4);
       if (legacyPhoneLoginEnabled && normalizedCode.length === 4) {
@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json(
-      { success: false, message: '아이디와 비밀번호를 올바르게 입력해 주세요.' },
+      { success: false, message: '아이디와 출결번호를 올바르게 입력해 주세요.' },
       { status: 400 }
     );
   } catch (error) {

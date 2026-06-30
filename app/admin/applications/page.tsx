@@ -277,7 +277,7 @@ export default function AdminApplicationsPage() {
         {/* 출결번호 변경 신청 */}
         <section className="space-y-3">
           <div>
-            <h2 className="flex items-center gap-1.5 text-sm font-black text-[#1D1D1F]">
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-[#1D1D1F]">
               <KeyRound className="w-4 h-4 text-[#0071E3]" /> 출결번호 변경 신청
             </h2>
             <p className="mt-1 text-[11px] font-semibold text-[#86868B]">
@@ -301,14 +301,14 @@ export default function AdminApplicationsPage() {
                 return (
                   <div key={req.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-black text-base text-[#1D1D1F]">{req.name}</span>
-                      <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
+                      <span className="font-semibold text-base text-[#1D1D1F]">{req.name}</span>
+                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
                         ID {req.loginId}
                       </Badge>
-                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-black">
+                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
                         <Building2 className="w-3 h-3" /> {campusLabel(req.campus)}
                       </span>
-                      <span className="flex items-center gap-1 text-[10px] font-semibold text-[#86868B]">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-[#86868B]">
                         <Clock className="w-3 h-3" /> {formatDateTime(req.requestedAt)}
                       </span>
                     </div>
@@ -317,7 +317,7 @@ export default function AdminApplicationsPage() {
                         size="sm"
                         disabled={isBusy}
                         onClick={() => approvePassword(req)}
-                        className="h-9 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold px-4"
+                        className="h-9 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold px-4"
                       >
                         {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Check className="w-3.5 h-3.5 mr-1.5" />}
                         승인
@@ -327,7 +327,7 @@ export default function AdminApplicationsPage() {
                         variant="outline"
                         disabled={isBusy}
                         onClick={() => rejectPassword(req)}
-                        className="h-9 rounded-xl border-black/[0.08] text-xs font-bold px-4 text-red-600 bg-white"
+                        className="h-9 rounded-xl border-black/[0.08] text-xs font-semibold px-4 text-red-600 bg-white"
                       >
                         <X className="w-3.5 h-3.5 mr-1.5" /> 반려
                       </Button>
@@ -340,7 +340,7 @@ export default function AdminApplicationsPage() {
         </section>
 
         {/* 가입신청 */}
-        <h2 className="flex items-center gap-1.5 text-sm font-black text-[#1D1D1F] pt-2">
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-[#1D1D1F] pt-2">
           <UserPlus className="w-4 h-4 text-[#0071E3]" /> 가입신청
         </h2>
 
@@ -364,15 +364,15 @@ export default function AdminApplicationsPage() {
                   {/* 신청 정보 */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-black text-base text-[#1D1D1F]">{app.name}</span>
-                      <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
+                      <span className="font-semibold text-base text-[#1D1D1F]">{app.name}</span>
+                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
                         ID {app.loginId}
                       </Badge>
-                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-black">
+                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
                         <Building2 className="w-3 h-3" /> 희망 {campusLabel(app.campus)}
                       </span>
                     </div>
-                    <span className="flex items-center gap-1 text-[10px] font-semibold text-[#86868B]">
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-[#86868B]">
                       <Clock className="w-3 h-3" /> {formatDateTime(app.createdAt)}
                     </span>
                   </div>
@@ -397,7 +397,7 @@ export default function AdminApplicationsPage() {
 
                   {/* 승인 정보 입력 */}
                   <div className="rounded-xl border border-black/[0.06] bg-[#F9F9FB] p-4 space-y-3">
-                    <h4 className="text-xs font-bold text-[#1D1D1F]">승인 정보</h4>
+                    <h4 className="text-xs font-semibold text-[#1D1D1F]">승인 정보</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-[#1D1D1F]">캠퍼스</Label>
@@ -440,7 +440,7 @@ export default function AdminApplicationsPage() {
                           onChange={(e) => updateDraft(app.id, { enrollStartDate: e.target.value })}
                           className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                         />
-                        <p className="text-[10px] text-[#86868B]">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
+                        <p className="text-[11px] text-[#86868B]">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-[#1D1D1F]">등록 종료일</Label>
@@ -469,7 +469,7 @@ export default function AdminApplicationsPage() {
                       size="sm"
                       disabled={isBusy}
                       onClick={() => approve(app)}
-                      className="h-9 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold px-4"
+                      className="h-9 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-semibold px-4"
                     >
                       {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Check className="w-3.5 h-3.5 mr-1.5" />}
                       승인
@@ -479,7 +479,7 @@ export default function AdminApplicationsPage() {
                       variant="outline"
                       disabled={isBusy}
                       onClick={() => reject(app)}
-                      className="h-9 rounded-xl border-black/[0.08] text-xs font-bold px-4 text-red-600 bg-white"
+                      className="h-9 rounded-xl border-black/[0.08] text-xs font-semibold px-4 text-red-600 bg-white"
                     >
                       <X className="w-3.5 h-3.5 mr-1.5" /> 반려
                     </Button>

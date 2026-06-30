@@ -135,8 +135,8 @@ export default function StudentSignupPage() {
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
-            <h1 className="max-w-xl text-3xl font-bold tracking-tight text-[#111827] md:text-5xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#111827] md:text-5xl">
               학생 가입신청
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
@@ -153,12 +153,12 @@ export default function StudentSignupPage() {
                   <CheckCircle2 className="h-7 w-7" />
                 </div>
                 <div className="space-y-2">
-                  <h2 className="text-xl font-bold tracking-tight">가입신청 완료</h2>
+                  <h2 className="text-xl font-semibold tracking-tight">가입신청 완료</h2>
                   <p className="text-sm leading-6 text-[#64748B]">{successMsg}</p>
                 </div>
                 <Button
                   asChild
-                  className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-bold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
+                  className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-semibold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
                 >
                   <Link href="/student/login">
                     로그인 화면으로 이동
@@ -170,7 +170,7 @@ export default function StudentSignupPage() {
           ) : (
             <>
               <CardHeader className="space-y-2 pb-5">
-                <CardTitle className="text-xl font-bold tracking-tight">가입신청하기</CardTitle>
+                <CardTitle className="text-xl font-semibold tracking-tight">가입신청하기</CardTitle>
                 <CardDescription className="text-sm text-[#64748B]">
                   아래 정보를 입력해 가입을 신청해 주세요.
                 </CardDescription>
@@ -362,7 +362,7 @@ export default function StudentSignupPage() {
                   <Button
                     type="submit"
                     disabled={loading}
-                    className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-bold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
+                    className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-semibold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
                   >
                     {loading ? (
                       <>

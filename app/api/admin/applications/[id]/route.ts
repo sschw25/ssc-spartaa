@@ -3,8 +3,8 @@ import { getAdminSession } from '@/lib/auth';
 import {
   getStudentApplications,
   removeStudentApplication,
-  saveStudent,
-  setStudentPasswordHash,
+  createStudentWithPasswordHash,
+  deleteStudent,
   getStudentAuthRecords,
 } from '@/lib/store';
 import type { Student } from '@/lib/types/student';
@@ -85,10 +85,18 @@ export async function POST(
       awaySchedules: [],
     };
 
-    const saved = await saveStudent(newStudent);
-    // 비밀번호 해시는 students upsert 가 건드리지 않으므로 전용 경로로 저장(신청 시 해시 그대로 이전)
-    await setStudentPasswordHash(studentId, application.passwordHash);
-    await removeStudentApplication(id);
+    const saved = await createStudentWithPasswordHash(newStudent, application.passwordHash);
+    try {
+      await removeStudentApplication(id);
+    } catch (removeError) {
+      console.error('approved student created but application removal failed:', removeError);
+      try {
+        await deleteStudent(studentId);
+      } catch (rollbackError) {
+        console.error('failed to rollback approved student after application removal failure:', rollbackError);
+      }
+      throw removeError;
+    }
 
     return NextResponse.json({ success: true, data: saved, message: `${application.name} 원생이 승인되었습니다.` });
   } catch (error) {

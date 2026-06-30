@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getStudentAuthRecords, getStudentById, updateStudentById } from '@/lib/store';
-import { normalizeAttendanceCode, validateAttendanceCode } from '@/lib/attendance-code';
+import { compareAttendanceCode, normalizeAttendanceCode, validateAttendanceCode } from '@/lib/attendance-code';
 
 const normalizeName = (value: unknown) => String(value || '').trim().replace(/\s+/g, '').toLowerCase();
 
-// 공개: 학생 비밀번호(출결번호) 변경 '신청'. 본인 확인(현재 비번) 후 새 출결번호를 대기열에 적재한다.
+// 공개: 학생 출결번호 변경 '신청'. 본인 확인(현재 출결번호) 후 새 출결번호를 대기열에 적재한다.
 // 실제 적용은 관리자가 승인할 때 이뤄진다(student_state.passwordChange 에 해시 보관).
 export async function POST(request: Request) {
   const rl = rateLimit(`pw-change:${clientIp(request)}`, 5, 10 * 60 * 1000);
@@ -33,13 +33,13 @@ export async function POST(request: Request) {
   }
 
   try {
-    // 본인 확인: 아이디(또는 이름) + 현재 비밀번호 일치
+    // 본인 확인: 아이디(또는 이름) + 현재 출결번호 일치
     const records = await getStudentAuthRecords();
     const verified = [];
     for (const r of records) {
       const matches = (r.login_id && r.login_id.toLowerCase() === loginIdRaw)
         || (r.name && normalizeName(r.name) === normalizeName(loginIdRaw));
-      if (matches && r.password_hash && await bcrypt.compare(currentPassword, r.password_hash)) {
+      if (matches && r.password_hash && await compareAttendanceCode(currentPassword, r.password_hash)) {
         verified.push(r);
       }
     }

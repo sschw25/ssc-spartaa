@@ -24,7 +24,7 @@ function StudentLoginForm() {
     const trimmedId = loginId.trim().toLowerCase();
 
     if (!trimmedId || !password) {
-      setErrorMsg('아이디와 비밀번호를 입력해 주세요.');
+      setErrorMsg('아이디와 출결번호를 입력해 주세요.');
       return;
     }
 
@@ -40,7 +40,7 @@ function StudentLoginForm() {
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        setErrorMsg(data.message || '아이디 또는 비밀번호가 올바르지 않습니다.');
+        setErrorMsg(data.message || '아이디 또는 출결번호가 올바르지 않습니다.');
         return;
       }
 
@@ -65,8 +65,8 @@ function StudentLoginForm() {
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
-            <p className="text-xs font-bold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
-            <h1 className="max-w-xl text-3xl font-bold tracking-tight text-[#111827] md:text-5xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#111827] md:text-5xl">
               학생 결과지 로그인
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
@@ -77,9 +77,9 @@ function StudentLoginForm() {
 
         <Card className="rounded-2xl border-black/[0.06] bg-white shadow-xl">
           <CardHeader className="space-y-2 pb-5">
-            <CardTitle className="text-xl font-bold tracking-tight">내 결과지 보기</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight">내 결과지 보기</CardTitle>
             <CardDescription className="text-sm text-[#64748B]">
-              설정된 로그인 ID와 비밀번호를 입력해 주세요.
+              설정된 로그인 ID와 출결번호를 입력해 주세요.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -110,29 +110,30 @@ function StudentLoginForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="student-password" className="text-sm font-semibold">
-                  비밀번호
+                  출결번호
                 </Label>
                 <div className="relative">
                   <LockKeyhole className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
                   <Input
                     id="student-password"
                     type="password"
+                    inputMode="numeric"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="비밀번호 입력"
+                    placeholder="출결번호 입력"
                     autoComplete="current-password"
                     className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                   />
                 </div>
                 <p className="text-xs leading-5 text-[#64748B]">
-                  비밀번호를 모르거나 분실한 경우, 담당 코멘터 선생님께 말씀해 주세요.
+                  출결번호를 모르거나 분실한 경우, 담당 코멘터 선생님께 말씀해 주세요.
                 </p>
               </div>
 
               <Button
                 type="submit"
                 disabled={loading}
-                className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-bold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
+                className="!h-12 w-full rounded-xl bg-[#0071E3] text-sm font-semibold text-white hover:bg-[#005DB9] shadow-[0_4px_14px_rgba(0,113,227,0.3)]"
               >
                 {loading ? (
                   <>

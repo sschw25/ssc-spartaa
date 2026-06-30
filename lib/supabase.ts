@@ -223,6 +223,21 @@ export async function saveStudentSupabase(student: Student): Promise<Student> {
   return rowToStudent(data);
 }
 
+export async function createStudentWithPasswordHashSupabase(student: Student, passwordHash: string): Promise<Student> {
+  const nowIso = new Date().toISOString();
+  const row = { ...studentToRow(student, nowIso), password_hash: passwordHash };
+  const { data, error } = await getClient()
+    .from('students')
+    .insert(row)
+    .select()
+    .single();
+  if (error) {
+    console.error('[createStudentWithPasswordHashSupabase] students insert 실패:', error.message, error.details || '', error.hint || '', error.code || '');
+    throw new Error(`학생 생성 실패(students insert): ${error.message}${error.details ? ` — ${error.details}` : ''}${error.hint ? ` [${error.hint}]` : ''}`);
+  }
+  return rowToStudent(data);
+}
+
 export async function deleteStudentSupabase(id: string): Promise<boolean> {
   const { error } = await getClient().from('students').delete().eq('id', id);
   if (error) throw error;
@@ -325,6 +340,25 @@ export async function getStudentAuthRecordsSupabase(): Promise<StudentAuthRecord
 export async function setStudentPasswordHashSupabase(studentId: string, hash: string): Promise<void> {
   const { error } = await getClient().from('students').update({ password_hash: hash }).eq('id', studentId);
   if (error) throw error;
+}
+
+export async function applyStudentPasswordChangeSupabase(
+  studentId: string,
+  hash: string,
+  studentState: Record<string, unknown>,
+  originalUpdatedAt: string,
+): Promise<Student | 'conflict'> {
+  const nowIso = new Date().toISOString();
+  const { data, error } = await getClient()
+    .from('students')
+    .update({ password_hash: hash, student_state: studentState, updated_at: nowIso })
+    .eq('id', studentId)
+    .eq('updated_at', originalUpdatedAt)
+    .select()
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return 'conflict';
+  return rowToStudent(data);
 }
 
 export interface NotifyInfo {
