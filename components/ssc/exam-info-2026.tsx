@@ -18,7 +18,7 @@ export function ExamInfo2026({ data }: { data: ExamInfo }) {
           transition={{ duration: 0.6, ease: EASE }}
           className="mb-16 text-center"
         >
-          <p className="inline-flex items-center gap-1.5 text-[#007AFF] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">
+          <p className="inline-flex items-center gap-1.5 text-[#007AFF] text-[11px] sm:text-xs font-semibold tracking-[0.2em] uppercase mb-4">
             <Sparkles size={13} strokeWidth={2} /> 2026 Exam Update
           </p>
           <h2 className="section-title mb-4 leading-tight whitespace-pre-line">{data.title}</h2>

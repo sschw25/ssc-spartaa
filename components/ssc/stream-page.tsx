@@ -2,7 +2,6 @@ import fs from 'fs'
 import path from 'path'
 import Link from 'next/link'
 import { ChevronLeft, Sparkles } from 'lucide-react'
-import { Navbar } from '@/components/ssc/navbar'
 import { Facilities } from '@/components/ssc/facilities'
 import { defaultFacilities } from '@/components/ssc/facilities-data'
 import { Testimonials } from '@/components/ssc/testimonials'
@@ -68,7 +67,7 @@ export default function StreamPage({
             }
           })
       }
-    } catch (e) {}
+    } catch {}
   }
 
   // Priority order: check facility first, then interior (so facility images take precedence)
@@ -94,8 +93,6 @@ export default function StreamPage({
 
   return (
     <main className="stream-tone overflow-x-hidden pb-16 md:pb-0 bg-[#F8F9FA] text-[#1D1D1F]">
-      <Navbar />
-
       <StreamStructuredData
         campus={campus}
         stream={stream}
@@ -105,7 +102,7 @@ export default function StreamPage({
       />
 
       {/* 뒤로가기 & 서브 네비게이션 (면접 페이지 디자인 정렬) */}
-      <div className="pt-20 bg-white border-b border-[#E5E7EB]">
+      <div className="bg-white border-b border-[#E5E7EB]">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link
             href={`/${campus}`}

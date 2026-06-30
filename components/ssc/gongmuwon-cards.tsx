@@ -12,7 +12,7 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
 
   const handleScroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const { scrollLeft, clientWidth } = scrollRef.current
+      const { scrollLeft } = scrollRef.current
       const cardWidth = 320 + 24 // 카드 너비 + gap
       const scrollAmount = direction === 'left' ? -cardWidth : cardWidth
       scrollRef.current.scrollTo({
@@ -61,45 +61,67 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
             </h2>
           </div>
           
-          {/* Scroll Navigation Controls (Only show if cards are scrollable - hidden in desktop grid) */}
+          {/* Scroll Navigation Controls */}
           <div className="flex md:hidden items-center gap-3">
-            {/* Mobile does not need navigation buttons as touch drag is standard, keeping hidden */}
+            <button
+              type="button"
+              onClick={() => handleScroll('left')}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-[#1D1D1F] shadow-sm transition-transform active:scale-95"
+              aria-label="이전 카드 보기"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <span className="inline-flex h-11 items-center gap-1.5 rounded-full bg-[#F5F5F7] px-4 text-[11px] font-semibold tracking-tight text-[#86868B]">
+              옆으로 넘겨보기
+              <ChevronRight size={14} />
+            </span>
+            <button
+              type="button"
+              onClick={() => handleScroll('right')}
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-black/5 bg-white text-[#1D1D1F] shadow-sm transition-transform active:scale-95"
+              aria-label="다음 카드 보기"
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
         </div>
 
         {/* Horizontal Card Carousel (Mobile: flex scroll / Desktop: grid layout) */}
-        <div
-          ref={scrollRef}
-          className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 md:pb-0 -mx-6 px-6 md:mx-0 md:px-0 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-        >
-          {cardsData.map((card) => (
-            <div
-              key={card.id}
-              className="group relative rounded-[28px] bg-[#F5F5F7] border border-black/[0.02] p-8 shadow-sm flex flex-col justify-between min-h-[300px] w-[290px] sm:w-[320px] md:w-full shrink-0 md:shrink snap-start hover:shadow-md hover:border-black/5 transition-all duration-300"
-            >
-              {/* Card Header */}
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-300">
-                    {card.icon}
+        <div className="relative -mx-6 md:mx-0">
+          <div
+            ref={scrollRef}
+            className="flex md:grid md:grid-cols-3 gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory pb-4 md:pb-0 px-6 md:px-0 scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+          >
+            {cardsData.map((card) => (
+              <div
+                key={card.id}
+                className="group relative rounded-[28px] bg-[#F5F5F7] border border-black/[0.02] p-8 shadow-sm flex flex-col justify-between min-h-[300px] w-[290px] sm:w-[320px] md:w-full shrink-0 md:shrink snap-start hover:shadow-md hover:border-black/5 transition-all duration-300"
+              >
+                {/* Card Header */}
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="p-3 rounded-2xl bg-white shadow-sm group-hover:scale-110 transition-transform duration-300">
+                      {card.icon}
+                    </div>
+                    <span className="text-[11px] font-semibold tracking-tight text-[#86868B] px-3 py-1 rounded-full bg-black/[0.04]">
+                      {card.badge}
+                    </span>
                   </div>
-                  <span className="text-[11px] font-semibold tracking-tight text-[#86868B] px-3 py-1 rounded-full bg-black/[0.04]">
-                    {card.badge}
-                  </span>
+
+                  <h3 className="text-xl font-semibold tracking-tight text-[#1D1D1F] leading-tight mb-4 whitespace-pre-line">
+                    {card.title}
+                  </h3>
                 </div>
 
-                <h3 className="text-xl font-semibold tracking-tight text-[#1D1D1F] leading-tight mb-4 whitespace-pre-line">
-                  {card.title}
-                </h3>
+                {/* Card Body Description */}
+                <p className="text-sm font-medium text-[#86868B] leading-relaxed tracking-tight">
+                  {card.description}
+                </p>
+                
               </div>
-
-              {/* Card Body Description */}
-              <p className="text-sm font-medium text-[#86868B] leading-relaxed tracking-tight">
-                {card.description}
-              </p>
-              
-            </div>
-          ))}
+            ))}
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-white to-transparent md:hidden" />
         </div>
         
       </div>

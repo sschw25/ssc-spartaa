@@ -67,7 +67,7 @@ export function Testimonials({
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading */}
         <div className="mb-16 text-center fade-in-up">
-          <p className="text-[#007AFF] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">학생들의 치열한 기록</p>
+          <p className="text-[#007AFF] text-[11px] sm:text-xs font-semibold tracking-[0.2em] uppercase mb-4">학생들의 치열한 기록</p>
           <h2 
             className="font-semibold text-[#1D1D1F] tracking-tighter mb-6 whitespace-pre-line break-keep drop-shadow-sm text-balance"
             style={{ fontSize: 'var(--font-size-section-title)' }}
@@ -85,17 +85,17 @@ export function Testimonials({
         <div className="flex md:hidden items-center justify-center gap-4 mb-6">
           <button
             onClick={() => handleScroll('left')}
-            className="w-9 h-9 rounded-full border border-black/5 flex items-center justify-center bg-white text-[#1D1D1F] active:scale-95 transition-all shadow-sm"
+            className="w-11 h-11 rounded-full border border-black/5 flex items-center justify-center bg-white text-[#1D1D1F] active:scale-95 transition-all shadow-sm"
             aria-label="이전 후기"
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="text-[11px] font-bold text-[#86868B] uppercase tracking-wider">
+          <span className="text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">
             후기 넘겨보기
           </span>
           <button
             onClick={() => handleScroll('right')}
-            className="w-9 h-9 rounded-full border border-black/5 flex items-center justify-center bg-white text-[#1D1D1F] active:scale-95 transition-all shadow-sm"
+            className="w-11 h-11 rounded-full border border-black/5 flex items-center justify-center bg-white text-[#1D1D1F] active:scale-95 transition-all shadow-sm"
             aria-label="다음 후기"
           >
             <ChevronRight size={18} />
@@ -107,7 +107,7 @@ export function Testimonials({
           ref={scrollRef}
           className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-8 -mx-4 px-4 md:grid md:grid-cols-2 lg:grid-cols-3 md:gap-6 md:overflow-visible md:snap-none md:mx-0 md:px-0 md:pb-0 [&::-webkit-scrollbar]:hidden mb-12 scroll-smooth"
         >
-          {testimonials.map((t, i) => (
+          {testimonials.map((t) => (
             <article
               key={t.name}
               className="snap-center shrink-0 w-[85vw] md:w-auto fade-in-up"
@@ -129,9 +129,13 @@ export function Testimonials({
           ))}
         </div>
 
+        <p className="fade-in-up delay-200 mx-auto mt-4 max-w-2xl text-center text-[11px] sm:text-xs font-medium leading-relaxed text-[#86868B] break-keep">
+          *위 후기는 합격자와의 인터뷰 내용을 재구성한 것입니다. 다양한 합격수기 전문을 보려면 블로그에서 확인해보세요.
+        </p>
+
         {/* 더보기 링크 */}
         {reviewUrl && (
-          <div className="fade-in-up delay-200 flex justify-center mt-24">
+          <div className="fade-in-up delay-200 flex justify-center mt-8">
             <a
               href={reviewUrl}
               target="_blank"
@@ -139,9 +143,7 @@ export function Testimonials({
               className="inline-flex items-center gap-4 pl-10 pr-14 py-3.5 rounded-full border border-black/10 text-[15px] font-semibold text-[#1D1D1F] hover:bg-[#1D1D1F] hover:text-white hover:border-black transition-all"
             >
               블로그에서 생생한 후기 더보기
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M2.5 7H11.5M11.5 7L8 3.5M11.5 7L8 10.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <ChevronRight size={16} strokeWidth={2.5} />
             </a>
           </div>
         )}

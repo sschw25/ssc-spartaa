@@ -27,7 +27,7 @@ function Metric({ metric }: { metric: string }) {
 
   if (!match) {
     return (
-      <span ref={ref} className="text-[#0A84FF] text-3xl md:text-4xl font-black tracking-tighter">
+      <span ref={ref} className="text-[#0A84FF] text-3xl md:text-4xl font-semibold tracking-tighter">
         {metric}
       </span>
     )
@@ -146,7 +146,7 @@ export function ManagementShowcase({ data }: { data: ManagementSection }) {
           transition={{ duration: 0.6, ease: EASE }}
           className="mb-14 text-center"
         >
-          <p className="text-[#0A84FF] text-[11px] sm:text-xs font-bold tracking-[0.2em] uppercase mb-4">
+          <p className="text-[#0A84FF] text-[11px] sm:text-xs font-semibold tracking-[0.2em] uppercase mb-4">
             Learning Management
           </p>
           <h2 className="section-title text-white mb-4 leading-tight whitespace-pre-line">{data.title}</h2>

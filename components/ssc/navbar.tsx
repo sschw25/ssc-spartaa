@@ -124,16 +124,16 @@ export function Navbar() {
       >
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           {/* Logo - Simplified with clean gothic text and partnership logic */}
-          <Link href="/" className="flex items-center gap-1 group">
-            <div className="flex items-baseline gap-1">
-              <span className="text-base md:text-[17px] font-semibold tracking-tighter text-[#1D1D1F]">SSC</span>
-              <span className="text-base md:text-[17px] font-semibold tracking-tighter text-[#1D1D1F]">
+          <Link href="/" className="flex items-center gap-1 group leading-none">
+            <div className="inline-flex items-center gap-1 leading-none">
+              <span className="text-base md:text-[17px] font-semibold leading-none tracking-tighter text-[#1D1D1F]">SSC</span>
+              <span className="text-base md:text-[17px] font-semibold leading-none tracking-tighter text-[#1D1D1F]">
                 스파르타
               </span>
               {isGongmuwonPage && (
-                <div className="flex items-center gap-1.5 ml-1 animate-in fade-in slide-in-from-left-2 duration-700">
-                  <span className="text-[#86868B] text-[10px] md:text-xs font-light opacity-60">X</span>
-                  <span className="text-base md:text-[17px] font-semibold text-[#007AFF] tracking-tight">커넥츠프랩</span>
+                <div className="inline-flex items-center gap-1.5 ml-1 leading-none animate-in fade-in slide-in-from-left-2 duration-700">
+                  <span className="text-[#86868B] text-[11px] md:text-xs font-light leading-none opacity-60">X</span>
+                  <span className="text-base md:text-[17px] font-semibold leading-none text-[#007AFF] tracking-tight">커넥츠프랩</span>
                 </div>
               )}
             </div>
@@ -219,7 +219,7 @@ export function Navbar() {
               {/* Mobile Menu Items - Dynamic Link Grid */}
               {isCampusPage && (
                 <div className="flex flex-col gap-2 border-b border-black/[0.05] pb-4">
-                  <p className="text-[#86868B] text-[10px] font-semibold tracking-[0.2em] uppercase px-2 mb-1">
+                  <p className="text-[#86868B] text-[11px] font-semibold tracking-[0.2em] uppercase px-2 mb-1">
                     프로그램 바로가기
                   </p>
                   <div className="grid grid-cols-2 gap-2">

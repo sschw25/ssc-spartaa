@@ -22,7 +22,7 @@ function Counter({ value, suffix = '' }: { value: number; suffix?: string }) {
   }, [inView, value, spring])
 
   return (
-    <motion.span ref={ref} className="text-4xl md:text-6xl font-semibold tracking-tighter text-[#1D1D1F]">
+    <motion.span ref={ref} className="text-[30px] leading-none sm:text-4xl md:text-6xl font-semibold tracking-tighter text-[#1D1D1F] tabular-nums">
       {displayValue}
     </motion.span>
   )
@@ -30,21 +30,21 @@ function Counter({ value, suffix = '' }: { value: number; suffix?: string }) {
 
 export function AnimatedStats() {
   return (
-    <section id="stats" className="py-24 bg-white border-b border-black/[0.03]">
+    <section id="stats" className="py-12 sm:py-16 md:py-24 bg-white border-b border-black/[0.03]">
       <div className="max-w-[64rem] mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
-          <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-3 gap-3 sm:gap-8 md:gap-12 text-center">
+          <div className="min-w-0 flex flex-col gap-2">
             <Counter value={500} suffix="+" />
-            <p className="text-[#86868B] text-sm font-medium tracking-tight uppercase">누적 최종 합격자 수</p>
+            <p className="text-[#86868B] text-[11px] sm:text-sm font-medium leading-snug tracking-tight uppercase break-keep">누적 최종 합격자 수</p>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="min-w-0 flex flex-col gap-2">
             <Counter value={11} suffix="H+" />
-            <p className="text-[#86868B] text-sm font-medium tracking-tight uppercase">학생 평균 실제 순공 시간</p>
+            <p className="text-[#86868B] text-[11px] sm:text-sm font-medium leading-snug tracking-tight uppercase break-keep">학생 평균 실제 순공 시간</p>
           </div>
-          <div className="flex flex-col items-center gap-2">
+          <div className="min-w-0 flex flex-col items-center gap-2">
             <Counter value={56} suffix="%" />
-            <p className="text-[#86868B] text-sm font-medium tracking-tight uppercase">스파르타를 버텨낸 사람들의 합격률</p>
-            <p className="text-[#AEAEB2] text-[10px] font-medium tracking-tight mt-0.5">
+            <p className="text-[#86868B] text-[11px] sm:text-sm font-medium leading-snug tracking-tight uppercase break-keep">스파르타를 버텨낸 사람들의 합격률</p>
+            <p className="text-[#AEAEB2] text-[11px] font-medium leading-snug tracking-tight mt-0.5 break-keep">
               * 1년 이상 스파르타 경험 인증 합격자 수 추산 기준
             </p>
           </div>
