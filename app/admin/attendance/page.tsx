@@ -71,6 +71,25 @@ interface SaturdayExcuseRow {
 type SortKey = 'name' | 'checkIn' | 'checkOut' | 'minutes' | 'arrival' | 'late';
 type SortDir = 'asc' | 'desc';
 
+interface AbsenceRankRow {
+  studentId: string;
+  name: string;
+  campus: string;
+  absentDays: number;
+  leftDays: number;
+  totalMarks: number;
+  lastDate: string;
+}
+
+function rangeFor(p: 'week' | 'month' | 'last30'): { from: string; to: string } {
+  const fmt = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d);
+  const to = fmt(new Date());
+  if (p === 'month') return { from: to.slice(0, 8) + '01', to };
+  const days = p === 'week' ? 6 : 29;
+  const fromD = new Date(Date.now() - days * 86400000);
+  return { from: fmt(fromD), to };
+}
+
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 const statusOptions: Array<{ key: StatusFilter; label: string }> = [
@@ -127,6 +146,12 @@ function AdminAttendanceContent() {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [reloadKey, setReloadKey] = useState(0);
   const [edits, setEdits] = useState<Record<string, { checkIn: string; checkOut: string }>>({});
+
+  // 이탈·결석 순위 탭 상태
+  const [tab, setTab] = useState<'detail' | 'ranking'>('detail');
+  const [period, setPeriod] = useState<'week' | 'month' | 'last30'>('month');
+  const [ranking, setRanking] = useState<AbsenceRankRow[]>([]);
+  const [rankingLoading, setRankingLoading] = useState(false);
 
   // 토요 지각 증빙용 상태
   const [satDate, setSatDate] = useState('');
@@ -457,6 +482,21 @@ function AdminAttendanceContent() {
     sortKey !== k ? <ChevronsUpDown className="w-3 h-3 text-[#C7C7CC]" />
       : sortDir === 'asc' ? <ChevronUp className="w-3 h-3 text-[#0071E3]" /> : <ChevronDown className="w-3 h-3 text-[#0071E3]" />;
 
+  const loadRanking = useCallback(async () => {
+    setRankingLoading(true);
+    try {
+      const { from, to } = rangeFor(period);
+      const res = await fetch(`/api/admin/attendance/absence-ranking?from=${from}&to=${to}`);
+      const json = await res.json();
+      if (json.success) setRanking(json.rows as AbsenceRankRow[]);
+      else { setRanking([]); toast.error(json.message || '집계 실패'); }
+    } finally {
+      setRankingLoading(false);
+    }
+  }, [period]);
+
+  useEffect(() => { if (tab === 'ranking') loadRanking(); }, [tab, loadRanking]);
+
   const renderTh = (k: SortKey, label: string, className = '') => (
     <th className={`px-4 py-3 ${className}`}>
       <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 font-bold text-[#1D1D1F] hover:text-[#0071E3]">
@@ -550,6 +590,21 @@ function AdminAttendanceContent() {
             </div>
           )}
         </div>
+
+        {/* 탭 토글 (일별 모드에서만 표시) */}
+        {mode === 'daily' && (
+          <div className="glass-capsule inline-flex p-0.5 rounded-full">
+            {([['detail', '상세'], ['ranking', '이탈·결석 순위']] as const).map(([k, label]) => (
+              <button
+                key={k}
+                onClick={() => setTab(k)}
+                className={`px-3.5 py-1.5 rounded-full text-[13px] transition-all ${tab === k ? 'bg-white text-[#1D1D1F] shadow-sm font-semibold' : 'text-[#86868B] font-medium'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {mode === 'weekly' ? (
           <WeeklyTardiness campusFilter={campusFilter} />
@@ -699,6 +754,67 @@ function AdminAttendanceContent() {
           </div>
         ) : (
           <>
+            {tab === 'ranking' ? (
+              <div className="space-y-3">
+                {/* 기간 프리셋 */}
+                <div className="flex gap-2 flex-wrap">
+                  {(['week', 'month', 'last30'] as const).map((p) => (
+                    <button
+                      key={p}
+                      onClick={() => setPeriod(p)}
+                      className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${period === p ? 'bg-[#1D1D1F] text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
+                    >
+                      {p === 'week' ? '이번주' : p === 'month' ? '이번달' : '지난 30일'}
+                    </button>
+                  ))}
+                  {rankingLoading && <Loader2 className="w-4 h-4 text-[#0071E3] animate-spin self-center" />}
+                </div>
+                {/* 요약 */}
+                <div className="text-sm text-[#86868B] font-medium">
+                  대상 {ranking.length}명 · 총 결석 <span className="text-rose-600 font-semibold">{ranking.reduce((s, r) => s + r.absentDays, 0)}</span>일 · 총 이탈 <span className="text-amber-600 font-semibold">{ranking.reduce((s, r) => s + r.leftDays, 0)}</span>일
+                </div>
+                {/* 표 */}
+                <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-[#F5F5F7] text-left border-b border-black/[0.05]">
+                      <tr>
+                        <th className="px-4 py-3 font-bold text-[#1D1D1F] w-10">#</th>
+                        <th className="px-4 py-3 font-bold text-[#1D1D1F]">학생</th>
+                        <th className="px-4 py-3 font-bold text-rose-600">결석일</th>
+                        <th className="px-4 py-3 font-bold text-amber-600">이탈일</th>
+                        <th className="px-4 py-3 font-bold text-[#1D1D1F]">총X</th>
+                        <th className="px-4 py-3 font-bold text-[#1D1D1F]">최근</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ranking.map((r, i) => (
+                        <tr
+                          key={r.studentId}
+                          onClick={() => handleOpenStudentInfo(r.studentId)}
+                          className="border-b border-black/[0.04] hover:bg-[#F5F5F7]/60 cursor-pointer"
+                        >
+                          <td className="px-4 py-3 text-[#86868B] font-semibold">{i + 1}</td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
+                            <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
+                          </td>
+                          <td className="px-4 py-3 text-rose-600 font-semibold">{r.absentDays}</td>
+                          <td className="px-4 py-3 text-amber-600 font-semibold">{r.leftDays}</td>
+                          <td className="px-4 py-3 text-[#1D1D1F] font-medium">{r.totalMarks}</td>
+                          <td className="px-4 py-3 text-[#86868B]">{r.lastDate || '-'}</td>
+                        </tr>
+                      ))}
+                      {!rankingLoading && ranking.length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center text-[#86868B] py-10 text-sm">해당 기간 기록 없음</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ) : (
+            <>
             {s && (
               <div className="flex flex-wrap gap-2 text-[13px] font-medium">
                 <span className="px-3 py-1.5 rounded-full bg-emerald-500/12 text-emerald-700">정시 {s.ontime}</span>
@@ -892,6 +1008,8 @@ function AdminAttendanceContent() {
             <p className="text-[10px] text-[#86868B] text-center">
               이름 검색, 상태 필터, 등·하원 시간 수정, 결석 처리를 한 화면에서 처리할 수 있습니다.
             </p>
+            </>
+            )}
           </>
         )}
 
