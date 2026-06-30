@@ -2,7 +2,9 @@
 
 import React from 'react';
 import { Calendar, Trash2, MessageSquare } from 'lucide-react';
-import { LeaveType, Student } from '@/lib/types/student';
+import { LeaveType, Student, ConsultationBooking } from '@/lib/types/student';
+import { isConsultationCampus } from '@/lib/consultation-schedule';
+import { ConsultationBookingPanel } from './consultation-booking-panel';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
   LEAVE_TYPES,
@@ -16,6 +18,8 @@ import {
   leaveNeedsSlot,
   getMonthlyLeaveUsage,
   getLeaveCredits,
+  isAutoApprovedLeave,
+  kstToday,
   kstYearMonth,
   yearMonthOf,
 } from '@/lib/leave';
@@ -51,6 +55,8 @@ interface ConsultationTabProps {
   homeHalfLeft: number;
   homeFullLeft: number;
   homeLeaveCoupons: number;
+  whyConsultation?: { subjectName: string; materialTitle: string; type: 'book' | 'lecture'; planEndDate: string } | null;
+  consultationBookings?: ConsultationBooking[];
 }
 
 export function ConsultationTab({
@@ -77,15 +83,17 @@ export function ConsultationTab({
   homeHalfLeft,
   homeFullLeft,
   homeLeaveCoupons,
+  whyConsultation,
+  consultationBookings,
 }: ConsultationTabProps) {
   if (!isStudentReport) return null;
 
-  const getTimelineStatusBadge = (status: string, adminReply?: string) => {
+  const getTimelineStatusBadge = (status: string, adminReply?: string, autoApproved?: boolean) => {
     if (status === 'approved') {
       return (
         <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-700">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-          승인
+          {autoApproved ? '⚡ 자동 승인' : '승인'}
         </span>
       );
     }
@@ -139,6 +147,16 @@ export function ConsultationTab({
         </div>
       </div>
 
+      {/* 클리닉 상담 예약 (학생 셀프 예약) — 상담 운영 센터에서만 노출 */}
+      {isConsultationCampus(student.campus) && (
+        <ConsultationBookingPanel
+          studentId={student.id}
+          campus={student.campus}
+          bookings={consultationBookings || []}
+          whyConsultation={whyConsultation}
+        />
+      )}
+
       {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
       {(() => {
         const leaveRequests = student.leaveRequests || [];
@@ -154,7 +172,7 @@ export function ConsultationTab({
         const isSick = selCat === 'sick';
         const [y, m] = selMonth.split('-');
         const monthLabel = `${y}년 ${parseInt(m)}월`;
-        const leaveStatusBadge = (s: string, reply?: string) => getTimelineStatusBadge(s, reply);
+        const leaveStatusBadge = (s: string, reply?: string, auto?: boolean) => getTimelineStatusBadge(s, reply, auto);
         return (
           <div id="student-leave-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
             <div>
@@ -162,7 +180,7 @@ export function ConsultationTab({
                 <Calendar className="w-4 h-4" /> 휴가 · 반차 · 휴식권 신청
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-400">
-                신청하면 담당 코멘터가 검토 후 승인해요. 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.
+                반차는 잔여 한도 내에서 <span className="font-black text-emerald-600">신청 즉시 자동 승인</span>돼요(아래 내역에서 확인). 휴식권·개인사정·병가는 코멘터 검토 후 승인되며, 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.
               </p>
             </div>
 
@@ -279,81 +297,86 @@ export function ConsultationTab({
             </form>
 
             {(() => {
-              const pending = leaveRequests.filter(r => r.status === 'pending');
-              const completed = leaveRequests.filter(r => r.status !== 'pending');
+              const today = kstToday();
+              // 날짜(사용일) 기준 분리: 오늘 이후=예정/진행 중, 오늘 이전=지난 내역.
+              // 자동 승인된 반차도 사용일이 지나기 전까지는 예정 내역에 그대로 노출되어
+              // 학생이 '자동 승인됨'을 바로 확인할 수 있다.
+              const upcoming = leaveRequests
+                .filter((r) => r.date >= today)
+                .sort((a, b) => a.date.localeCompare(b.date));
+              const past = leaveRequests
+                .filter((r) => r.date < today)
+                .sort((a, b) => b.date.localeCompare(a.date));
+
+              const reappealBtn = (r: typeof leaveRequests[number]) => (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const note = window.prompt('재승인 요청 사유를 입력해 주세요. (코멘터에게 함께 전달됩니다)', '');
+                    if (note === null) return;
+                    const ok = await reappealLeave(r.id, note.trim());
+                    if (ok) window.alert('재승인 요청이 접수되었습니다. 코멘터 확인 후 다시 안내드릴게요.');
+                    else window.alert('재승인 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                  }}
+                  className="mt-2 w-full rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-black text-amber-700 transition hover:bg-amber-100"
+                >
+                  ↻ 재승인 요청하기
+                </button>
+              );
+
+              const renderItem = (r: typeof leaveRequests[number], muted: boolean) => {
+                const auto = isAutoApprovedLeave(r);
+                return (
+                  <div key={r.id} className={`rounded-2xl border border-slate-100 p-3 text-[11px] ${muted ? 'bg-slate-50/50' : 'bg-white'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="flex min-w-0 flex-wrap items-center gap-1.5">
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black text-slate-500 ${muted ? 'border border-slate-200 bg-white' : 'bg-slate-100'}`}>{LEAVE_TYPES[r.type]?.icon} {formatLeaveLabel(r.type, r.slot)}</span>
+                        <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
+                        {leaveStatusBadge(r.status, r.adminReply, auto)}
+                      </span>
+                      {r.status === 'pending' && (
+                        <button type="button" onClick={() => { if (window.confirm('이 휴가 신청을 취소할까요?')) cancelLeave(r.id); }} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+                    {r.reason && <p className={`mt-1.5 whitespace-pre-wrap break-words font-semibold ${muted ? 'text-slate-500' : 'text-slate-600'}`}>{r.reason}</p>}
+                    {r.adminReply && (
+                      <div className={`mt-2 rounded-xl border border-[#0071E3]/15 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3] ${muted ? 'bg-white' : 'bg-[#0071E3]/[0.05]'}`}>
+                        코멘터 답변: {r.adminReply}
+                      </div>
+                    )}
+                    {r.status === 'rejected' && reappealBtn(r)}
+                  </div>
+                );
+              };
+
               return (
-                (pending.length > 0 || completed.length > 0) && (
+                (upcoming.length > 0 || past.length > 0) && (
                   <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
                     <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 휴가 신청 내역</p>
-                    
-                    {/* 대기중 휴가 */}
-                    {pending.map((r) => (
-                      <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{LEAVE_TYPES[r.type]?.icon} {formatLeaveLabel(r.type, r.slot)}</span>
-                            <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
-                            {leaveStatusBadge(r.status, r.adminReply)}
-                          </span>
-                          <button type="button" onClick={() => { if (window.confirm('이 휴가 신청을 취소할까요?')) cancelLeave(r.id); }} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
-                            <Trash2 className="w-3 h-3" />
-                          </button>
-                        </div>
-                        {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.reason}</p>}
-                        {r.adminReply && (
-                          <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                            코멘터 답변: {r.adminReply}
-                          </div>
-                        )}
-                      </div>
-                    ))}
 
-                    {/* 지난 휴가 내역 보기 */}
-                    {completed.length > 0 && (
+                    {/* 예정·진행 중 (사용일이 오늘 이후) — 자동 승인된 반차 포함 */}
+                    {upcoming.map((r) => renderItem(r, false))}
+                    {upcoming.length === 0 && past.length > 0 && (
+                      <p className="text-[10px] font-semibold text-slate-400">예정된 휴가 신청이 없어요.</p>
+                    )}
+
+                    {/* 지난 휴가 신청 (사용일이 지남) */}
+                    {past.length > 0 && (
                       <div className="space-y-2">
                         <button
                           type="button"
                           onClick={() => setShowLeaveHistory(!showLeaveHistory)}
                           className="flex w-full items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2 text-left text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 hover:border-slate-300"
                         >
-                          <span>지난 휴가 신청 보기 ({completed.length}건)</span>
+                          <span>지난 휴가 신청 보기 ({past.length}건)</span>
                           <span className="text-[10px]">{showLeaveHistory ? '접기 ▲' : '펼치기 ▼'}</span>
                         </button>
 
                         {showLeaveHistory && (
                           <div className="space-y-2 pl-1 border-l-2 border-slate-100 ml-1">
-                            {completed.map((r) => (
-                              <div key={r.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 text-[11px]">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="flex min-w-0 items-center gap-1.5">
-                                    <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">{LEAVE_TYPES[r.type]?.icon} {formatLeaveLabel(r.type, r.slot)}</span>
-                                    <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
-                                    {leaveStatusBadge(r.status, r.adminReply)}
-                                  </span>
-                                </div>
-                                {r.reason && <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.reason}</p>}
-                                {r.adminReply && (
-                                  <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-white px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                    코멘터 답변: {r.adminReply}
-                                  </div>
-                                )}
-                                {r.status === 'rejected' && (
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      const note = window.prompt('재승인 요청 사유를 입력해 주세요. (코멘터에게 함께 전달됩니다)', '');
-                                      if (note === null) return;
-                                      const ok = await reappealLeave(r.id, note.trim());
-                                      if (ok) window.alert('재승인 요청이 접수되었습니다. 코멘터 확인 후 다시 안내드릴게요.');
-                                      else window.alert('재승인 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
-                                    }}
-                                    className="mt-2 w-full rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-black text-amber-700 transition hover:bg-amber-100"
-                                  >
-                                    ↻ 재승인 요청하기
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                            {past.map((r) => renderItem(r, true))}
                           </div>
                         )}
                       </div>

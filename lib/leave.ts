@@ -80,16 +80,32 @@ export function getRewardLabel(type: RewardType): string {
   return getRewardMeta(type)?.label ?? type;
 }
 
-// KST 기준 해당 날짜의 'YYYY-MM' (월 한도 집계 키)
-export function kstYearMonth(d: Date = new Date()): string {
+// KST 기준 오늘 날짜 'YYYY-MM-DD'
+export function kstToday(d: Date = new Date()): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  })
-    .format(d)
-    .slice(0, 7);
+  }).format(d);
+}
+
+// KST 기준 해당 날짜의 'YYYY-MM' (월 한도 집계 키)
+export function kstYearMonth(d: Date = new Date()): string {
+  return kstToday(d).slice(0, 7);
+}
+
+// 자동 승인된 반차 여부 — 신규 autoApproved 플래그 + 구버전 adminReply 텍스트 폴백.
+// (이 플래그가 생기기 전 자동 승인된 기존 신청도 '자동 승인'으로 표시되도록 한다.)
+export function isAutoApprovedLeave(r: {
+  status: string;
+  autoApproved?: boolean;
+  adminReply?: string;
+}): boolean {
+  return (
+    r.status === 'approved' &&
+    (r.autoApproved === true || (!!r.adminReply && r.adminReply.includes('자동 승인')))
+  );
 }
 
 export function yearMonthOf(ymd: string): string {

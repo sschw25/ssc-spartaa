@@ -1473,13 +1473,16 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     reviewPasses: ReviewPassSetting[] = [],
     overrideSpeedMultiplier?: number,
     overrideEstimatedMinutes?: number | null,
-    overrideCategory?: string
+    overrideCategory?: string,
+    // 새로 만드는 교재/강의는 아직 subjectsState에 없어 부모 과목 조회가 실패한다.
+    // 이때 호출부가 부모 과목을 직접 넘겨 studyDays/studyTime이 누락되지 않게 한다.
+    parentSubjectHint?: SubjectProgress | null
   ): { plans: DetailedPlan[], calculatedTargetDate: string } => {
     const parentSubject = subjectsState.find((s) => {
       const hasBook = s.books?.some((b) => b.id === materialId);
       const hasLecture = s.lectures?.some((l) => l.id === materialId);
       return hasBook || hasLecture;
-    });
+    }) ?? parentSubjectHint ?? undefined;
     const studyDays = parentSubject?.studyDays;
     let speedMultiplier = overrideSpeedMultiplier ?? 1.0;
     if (overrideSpeedMultiplier === undefined && type === 'lecture' && parentSubject) {
@@ -2147,7 +2150,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             const diffTime = targetDate.getTime() - today.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             const weeks = Math.max(1, Math.ceil(diffDays / 7));
-            const { plans } = generateDetailedPlans(newBook.id, newBook.totalPages, 'book', 'weeks', weeks, 0, newBook.unit);
+            const { plans } = generateDetailedPlans(newBook.id, newBook.totalPages, 'book', 'weeks', weeks, 0, newBook.unit, [], undefined, undefined, undefined, sub);
             newBook.detailedPlans = plans;
             newBook.goalValue = weeks;
           }
@@ -2238,7 +2241,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             const diffTime = targetDate.getTime() - today.getTime();
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
             const weeks = Math.max(1, Math.ceil(diffDays / 7));
-            const { plans } = generateDetailedPlans(newLecture.id, newLecture.totalLectures, 'lecture', 'weeks', weeks);
+            const { plans } = generateDetailedPlans(newLecture.id, newLecture.totalLectures, 'lecture', 'weeks', weeks, 0, undefined, [], undefined, undefined, undefined, sub);
             newLecture.detailedPlans = plans;
             newLecture.goalValue = weeks;
           }
@@ -3482,7 +3485,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             goalType,
             plan.amount,
             0,
-            undefined
+            undefined,
+            [],
+            undefined,
+            undefined,
+            undefined,
+            subject // 신규 강의 — 부모 과목 직접 전달(studyDays/studyTime 반영)
           );
           subject.lectures.push({
             id: newLecId,
@@ -3513,7 +3521,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             goalType,
             plan.amount,
             0,
-            plan.unit
+            plan.unit,
+            [],
+            undefined,
+            undefined,
+            undefined,
+            subject // 신규 교재 — 부모 과목 직접 전달(studyDays/studyTime 반영)
           );
           subject.books.push({
             id: newBookId,

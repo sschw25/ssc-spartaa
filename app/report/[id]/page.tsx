@@ -192,6 +192,8 @@ function StudentReportInner() {
     realignStudentPlans,
     realigningPlans,
     mockExams,
+    whyConsultation,
+    consultationBookings,
   } = useReportState();
 
   if (!mounted) return null;
@@ -530,6 +532,8 @@ function StudentReportInner() {
           homeHalfLeft={homeHalfLeft}
           homeFullLeft={homeFullLeft}
           homeLeaveCoupons={homeLeaveCoupons}
+          whyConsultation={whyConsultation}
+          consultationBookings={consultationBookings}
         />
         {/* 7. 벌점 탭 */}
         <PenaltiesTab

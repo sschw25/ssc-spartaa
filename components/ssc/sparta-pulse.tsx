@@ -9,10 +9,6 @@ import { ACADEMY_TIMETABLE } from '@/lib/academy-timetable'
 const fmtClock = (d: Date) =>
   d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const fmtMs = (d: Date) => d.getMilliseconds().toString().padStart(3, '0').slice(0, 2)
-const toMinutes = (s: string) => {
-  const [h, m] = s.split(':').map(Number)
-  return h * 60 + m
-}
 
 export function SpartaPulse() {
   const [mounted, setMounted] = useState(false)
@@ -61,9 +57,6 @@ export function SpartaPulse() {
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
-
-  // 진행 바 주기(초) — 교시 길이. activeStep 이 바뀔 때만 재계산되며 time state 의존 제거.
-  const durationSec = activeStep ? (toMinutes(activeStep.end) - toMinutes(activeStep.start)) * 60 : 0
 
   return (
     <div className="w-full bg-[#0A0A0B] text-white overflow-hidden">
@@ -129,22 +122,6 @@ export function SpartaPulse() {
           </div>
         </div>
 
-        {/* Rapid Progress Bar - Sharp & Professional */}
-        {activeStep && (
-          <div className="absolute bottom-0 left-0 w-full h-[3px] bg-white/[0.05]">
-             <motion.div
-               key={activeStep.label}
-               initial={{ width: 0 }}
-               animate={{ width: '100%' }}
-               transition={{
-                 duration: durationSec,
-                 ease: "linear",
-                 repeat: Infinity
-               }}
-               className="h-full bg-gradient-to-r from-[#007AFF] to-[#40a3ff]"
-             />
-          </div>
-        )}
       </div>
     </div>
   )

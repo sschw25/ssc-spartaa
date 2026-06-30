@@ -2,7 +2,8 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking } from './types/student';
+import { isSlotFree } from './consultation-schedule';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
@@ -128,6 +129,59 @@ export async function removeStudentApplication(id: string): Promise<StudentAppli
   const found = list.find((a) => a.id === id) || null;
   if (found) await setAppSetting(STUDENT_APPLICATIONS_KEY, list.filter((a) => a.id !== id));
   return found;
+}
+
+
+// ── 상담 예약 원장 (센터별 app_settings 키-값 JSON 배열) ──
+// 슬롯 점유는 센터 전체가 공유하는 자원이라 학생 컬럼이 아닌 중앙 원장에 보관한다.
+// 신규 테이블/마이그레이션 없이 운영. 예약은 소량이라 read-modify-write 로 충분하며,
+// 생성 직전 슬롯 비어있음을 재검증해 동시 중복 예약을 방지한다.
+const CONSULTATION_BOOKINGS_KEY_PREFIX = 'consultation_bookings:';
+
+export async function getConsultationBookings(campus: string): Promise<ConsultationBooking[]> {
+  const value = await getAppSetting(`${CONSULTATION_BOOKINGS_KEY_PREFIX}${campus}`);
+  return Array.isArray(value) ? (value as ConsultationBooking[]) : [];
+}
+
+// 여러 센터의 예약을 한 번에 조회(마스터 계정 전체 보기용).
+export async function getConsultationBookingsForCampuses(campuses: string[]): Promise<ConsultationBooking[]> {
+  const lists = await Promise.all(campuses.map((c) => getConsultationBookings(c)));
+  return lists.flat();
+}
+
+async function saveConsultationBookings(campus: string, list: ConsultationBooking[]): Promise<void> {
+  await setAppSetting(`${CONSULTATION_BOOKINGS_KEY_PREFIX}${campus}`, list);
+}
+
+// 정규 예약 생성(자동 수락). 슬롯 점유 재검증 후 추가. 이미 점유 시 'taken' 반환.
+// (관리자 직접 배정은 forceAssign=true 로 점유 검증을 건너뛸 수 있다.)
+export async function addConsultationBooking(
+  booking: ConsultationBooking,
+  forceAssign = false,
+): Promise<ConsultationBooking | 'taken'> {
+  const list = await getConsultationBookings(booking.campus);
+  if (booking.kind === 'regular' && booking.slot && !forceAssign) {
+    if (!isSlotFree(booking.date, booking.slot, list)) return 'taken';
+  }
+  const next = [...list, booking];
+  await saveConsultationBookings(booking.campus, next);
+  return booking;
+}
+
+// 예약 부분 수정(취소/완료/담당자 회신/슬롯 배정 등). 없으면 null.
+export async function patchConsultationBooking(
+  campus: string,
+  id: string,
+  patch: Partial<ConsultationBooking>,
+): Promise<ConsultationBooking | null> {
+  const list = await getConsultationBookings(campus);
+  const idx = list.findIndex((b) => b.id === id);
+  if (idx < 0) return null;
+  const updated = { ...list[idx], ...patch };
+  const next = list.slice();
+  next[idx] = updated;
+  await saveConsultationBookings(campus, next);
+  return updated;
 }
 
 

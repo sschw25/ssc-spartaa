@@ -130,6 +130,7 @@ export async function POST(req: NextRequest) {
       date,
       reason: reason || undefined,
       status: autoApprove ? 'approved' : 'pending',
+      ...(autoApprove ? { autoApproved: true } : {}),
       urgent,
       ...(usedCredit ? { usedCredit: true } : {}),
       createdAt: nowIso,

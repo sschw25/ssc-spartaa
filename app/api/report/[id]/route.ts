@@ -1,13 +1,18 @@
 import { NextResponse } from 'next/server';
 import { compare } from 'bcryptjs';
-import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams } from '@/lib/store';
+import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams, getConsultationBookings } from '@/lib/store';
+import type { ConsultationBooking } from '@/lib/types/student';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
 import { serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
 
-function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
+function buildMaskedStudent(
+  student: Student,
+  audience: 'parent' | 'student',
+  consultationBookings: ConsultationBooking[] = [],
+) {
   return {
     id: student.id,
     name: student.name,
@@ -42,6 +47,7 @@ function buildMaskedStudent(student: Student, audience: 'parent' | 'student') {
           penalties: student.penalties || [],
           mockExams: student.mockExams || [],
           seatAlerts: student.seatAlerts || [],
+          consultationBookings,
         }
       : {}),
   };
@@ -143,7 +149,13 @@ export async function GET(
       );
     }
 
-    const maskedStudent = buildMaskedStudent(student, audience);
+    // 학생 본인 리포트에는 상담 예약(센터 원장에서 본인 건만)을 함께 전달한다.
+    const myBookings = audience === 'student'
+      ? (await getConsultationBookings(student.campus).catch(() => []))
+          .filter((b) => b.studentId === student.id)
+          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      : [];
+    const maskedStudent = buildMaskedStudent(student, audience, myBookings);
 
     const students = await getStudents();
     const materialBenchmarks = buildMaterialBenchmarks(students);

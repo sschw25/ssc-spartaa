@@ -10,6 +10,7 @@ import {
   MONTHLY_HALFDAY_QUOTA,
   MONTHLY_FULLDAY_QUOTA,
   kstYearMonth,
+  formatLeaveLabel,
 } from '@/lib/leave';
 import { MaterialBenchmarkMap } from '@/lib/material-benchmark';
 import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
@@ -998,6 +999,10 @@ export function useReportState() {
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, leaveRequests: [json.request, ...(prev.leaveRequests || [])] } : prev));
         setLeaveForm((f) => ({ ...f, reason: '' }));
+        // 반차 자동 승인 시 즉시 안내 — 학생이 '자동 승인됨'을 바로 인지하도록
+        if (json.request?.autoApproved) {
+          window.alert(`✅ ${json.request.date} 반차가 자동 승인되었습니다. 신청 내역에서 확인할 수 있어요.`);
+        }
       } else {
         setLeaveError(json.message || '신청에 실패했습니다.');
       }
@@ -1252,13 +1257,32 @@ export function useReportState() {
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
 
-  const allEndDates = (student.subjects || []).flatMap(sub => [
-    ...(sub.books || []).flatMap(b => (b.detailedPlans || []).map(p => p.endDate)),
-    ...(sub.lectures || []).flatMap(l => (l.detailedPlans || []).map(p => p.endDate))
+  // 모든 detailedPlans 의 endDate 를 모으되, 가장 늦은(=계획이 가장 늦게 끝나는) 자료가
+  // 어느 과목/교재(or 강의)인지도 함께 잡아둔다 → "왜 상담 예정인지" 안내에 사용.
+  type EndDateSource = { endDate: string; subjectName: string; materialTitle: string; type: 'book' | 'lecture' };
+  const allEndDateSources: EndDateSource[] = (student.subjects || []).flatMap(sub => [
+    ...(sub.books || []).flatMap(b => (b.detailedPlans || []).map(p => ({
+      endDate: p.endDate, subjectName: sub.name, materialTitle: b.title, type: 'book' as const,
+    }))),
+    ...(sub.lectures || []).flatMap(l => (l.detailedPlans || []).map(p => ({
+      endDate: p.endDate, subjectName: sub.name, materialTitle: l.name, type: 'lecture' as const,
+    }))),
   ]);
 
-  const finishDateStr = allEndDates.length > 0
-    ? allEndDates.reduce((max, cur) => cur > max ? cur : max, allEndDates[0])
+  const latestEndDateSource = allEndDateSources.length > 0
+    ? allEndDateSources.reduce((max, cur) => (cur.endDate > max.endDate ? cur : max), allEndDateSources[0])
+    : null;
+
+  const finishDateStr = latestEndDateSource ? latestEndDateSource.endDate : null;
+
+  // 학생 상담 패널용: 가장 늦게 끝나는 학습 계획의 과목/자료 정보 (없으면 null)
+  const whyConsultation = latestEndDateSource
+    ? {
+        subjectName: latestEndDateSource.subjectName,
+        materialTitle: latestEndDateSource.materialTitle,
+        type: latestEndDateSource.type,
+        planEndDate: latestEndDateSource.endDate,
+      }
     : null;
 
   let nextConsultationText = '추후 안내';
@@ -1501,6 +1525,36 @@ export function useReportState() {
     };
   });
 
+  // 휴가/반차 신청에 코멘터 답변(또는 양방향 대화)이 달린 건 — 알림 영역에서 대화·재답장 노출.
+  // 답변/스레드가 없는 신청은 전용 휴가 화면에서만 다루므로 알림 중복을 피해 제외한다.
+  const leaveNotifications = (student.leaveRequests || [])
+    .filter((leave) => leave.adminReply || (leave.thread && leave.thread.length > 0))
+    .map((leave) => {
+      const leaveLabel = formatLeaveLabel(leave.type, leave.slot);
+      const notificationDate = leave.reviewedAt || leave.createdAt || leave.date;
+      const leaveConvo = buildDisplayThread({
+        headText: leave.reason || leaveLabel,
+        headAt: leave.createdAt,
+        adminReply: leave.adminReply,
+        repliedAt: leave.reviewedAt,
+        thread: leave.thread,
+      }).slice(1);
+
+      return {
+        id: `leave-reply-${leave.id}`,
+        tone: 'blue' as const,
+        label: '휴가 답변',
+        title: `${leaveLabel} 신청에 답변이 도착했어요`,
+        body: leave.adminReply || '',
+        meta: truncateNotificationText(leave.reason || leaveLabel),
+        date: notificationDate,
+        priority: 1,
+        thread: leaveConvo,
+        replyKind: 'leave' as const,
+        replyId: leave.id,
+      };
+    });
+
   const systemNotifications = [
     // 출결판 미착석 알림(관리자 발송) — 확인(dismiss) 전까지 누적 노출
     ...((student.seatAlerts || []).map((alert) => ({
@@ -1553,14 +1607,16 @@ export function useReportState() {
           tone: 'slate' as const,
           label: '상담 예정',
           title: '다음 클리닉 상담 예정 기간',
-          body: nextConsultationText,
+          body: whyConsultation
+            ? `${nextConsultationText} · ${whyConsultation.subjectName} 『${whyConsultation.materialTitle}』 계획 종료 기준`
+            : nextConsultationText,
           date: finishDateStr,
           priority: 6,
         }]
       : []),
   ];
 
-  const allStudentNotifications = [...requestNotifications, ...suggestionNotifications, ...systemNotifications].sort((a, b) => {
+  const allStudentNotifications = [...requestNotifications, ...suggestionNotifications, ...leaveNotifications, ...systemNotifications].sort((a, b) => {
     const priorityDiff = a.priority - b.priority;
     if (priorityDiff !== 0) return priorityDiff;
     return (b.date || '').localeCompare(a.date || '');
@@ -1641,6 +1697,8 @@ export function useReportState() {
     handleSharePasswordSubmit,
     student,
     setStudent,
+    whyConsultation,
+    consultationBookings: student.consultationBookings || [],
     materialBenchmarks,
     studyStats,
     mockExams,

@@ -116,6 +116,28 @@ export interface ConsultationLog {
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
 }
 
+// 상담 예약 — 센터별 상담 시간표 슬롯에 학생이 신청(자동 수락). 슬롯 점유는 센터 공유 자원이라
+// app_settings 예약 원장(consultation_bookings:{campus})에 보관하고, 리포트 API가 학생 본인 예약만 추려 전달한다.
+// kind='regular' 은 정규 슬롯 예약(슬롯 점유), kind='extra' 는 만석/긴급 시 추가신청(슬롯 미점유, 관리자 처리).
+export interface ConsultationBooking {
+  id: string;             // cbk_${ts}_${rand}
+  studentId: string;
+  studentName: string;
+  campus: string;         // wonju | chuncheon | chungju
+  date: string;           // 예약일 (YYYY-MM-DD) — extra 는 비어있을 수 있음
+  weekday?: 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
+  slot: string;           // 시작 시각 'HH:MM' — extra 는 ''(미지정) 가능
+  counselor: string;      // 담당자 라벨(부원장/센터장/매니저)
+  kind: 'regular' | 'extra'; // 정규 슬롯 / 추가·긴급 신청
+  status: 'booked' | 'cancelled' | 'done'; // 예약중 / 취소 / 완료(상담 종료)
+  reason?: string;        // 추가·긴급 신청 사유 등
+  source: 'student' | 'admin'; // 신청 주체
+  createdAt: string;      // 신청 시각 (ISO)
+  cancelledAt?: string;   // 취소 시각 (ISO)
+  resolvedAt?: string;    // extra 처리/상담 완료 시각 (ISO)
+  adminReply?: string;    // 관리자 코멘트(추가신청 처리 회신 등)
+}
+
 // 휴가/반차/휴식권/병가 신청 (상담 변경신청과 별개의 전용 구조 — 월 한도/쿠폰 차원 존재)
 export type LeaveType = 'morning' | 'afternoon' | 'night' | 'fullday' | 'personal_halfday' | 'personal_fullday' | 'sick';
 
@@ -126,6 +148,7 @@ export interface LeaveRequest {
   date: string;           // 사용 희망일 (YYYY-MM-DD) — 월 한도 집계 기준
   reason?: string;        // 사유 (옵션 — 병가는 밴드채팅 영수증 증빙 안내)
   status: 'pending' | 'approved' | 'rejected';
+  autoApproved?: boolean; // 반차 잔여/추가권으로 신청 즉시 자동 승인된 건 — 학생에게 '자동 승인' 배지로 표시
   usedCoupon?: boolean;   // 쿠폰으로 추가 신청한 건 (관리자 표시용)
   usedCredit?: boolean;   // 쿠폰 교환 '추가권'(반차권/휴식권)을 소모한 신청 — 기본 월한도와 별도 집계
   source?: 'student' | 'admin'; // 신청 주체 (없으면 student)
@@ -448,6 +471,8 @@ export interface Student {
   mealOrders?: MealOrder[];
   // 출결판 미착석 알림(관리자 발송) — 학생 페이지 알림으로 노출, 확인 시 dismiss
   seatAlerts?: SeatAlert[];
+  // 상담 예약 내역 (리포트 API가 app_settings 예약 원장에서 본인 건만 추려 전달 — 학생 컬럼 미저장)
+  consultationBookings?: ConsultationBooking[];
 }
 
 // 출결판에서 관리자가 "자리에 없음"으로 확인해 학생에게 보낸 알림
