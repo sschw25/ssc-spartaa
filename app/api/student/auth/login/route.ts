@@ -1,9 +1,26 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
-import { getStudentsSummary, getStudentAuthRecords } from '@/lib/store';
+import { getStudentsSummary, getStudentAuthRecords, getStudentById } from '@/lib/store';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { signStudentSession, STUDENT_SESSION_COOKIE } from '@/lib/auth';
+
+const kstToday = () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+
+// 이용 시작일 게이트: enrollStartDate 가 오늘(KST) 이후면 로그인 차단(승인됐지만 아직 시작 전).
+// 차단 시 NextResponse, 통과 시 null.
+async function startDateGate(studentId: string): Promise<NextResponse | null> {
+  const student = await getStudentById(studentId);
+  const start = student?.enrollStartDate;
+  if (start && /^\d{4}-\d{2}-\d{2}$/.test(start) && start > kstToday()) {
+    const [, m, d] = start.split('-');
+    return NextResponse.json(
+      { success: false, message: `이용 시작일은 ${Number(m)}월 ${Number(d)}일입니다. 시작일부터 로그인하실 수 있습니다.` },
+      { status: 403 },
+    );
+  }
+  return null;
+}
 
 const SESSION_COOKIE_OPTS = {
   httpOnly: true,
@@ -65,6 +82,8 @@ export async function POST(request: Request) {
       }
 
       const me = verified[0];
+      const gate = await startDateGate(me.id);
+      if (gate) return gate;
       const cookieStore = await cookies();
       cookieStore.set(STUDENT_SESSION_COOKIE, signStudentSession(me.id), SESSION_COOKIE_OPTS);
       return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
@@ -86,6 +105,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, message: '동명이인이 있어 관리자 확인이 필요합니다.' }, { status: 409 });
           }
           const me = verified[0];
+          const gate = await startDateGate(me.id);
+          if (gate) return gate;
           const cookieStore = await cookies();
           cookieStore.set(STUDENT_SESSION_COOKIE, signStudentSession(me.id), SESSION_COOKIE_OPTS);
           return NextResponse.json({ success: true, studentName: me.name, reportUrl: `/report/${me.id}?audience=student` });
@@ -111,6 +132,8 @@ export async function POST(request: Request) {
             return NextResponse.json({ success: false, message: '동명이인이 있어 관리자 확인이 필요합니다.' }, { status: 409 });
           }
           const student = matches[0];
+          const gate = await startDateGate(student.id);
+          if (gate) return gate;
           const cookieStore = await cookies();
           cookieStore.set(STUDENT_SESSION_COOKIE, signStudentSession(student.id), SESSION_COOKIE_OPTS);
           return NextResponse.json({
