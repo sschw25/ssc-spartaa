@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { rateLimit, clientIp } from '@/lib/rate-limit';
 import { getStudentAuthRecords, getStudentApplications, addStudentApplication } from '@/lib/store';
+import { normalizeAttendanceCode, validateAttendanceCode } from '@/lib/attendance-code';
 import type { StudentApplication } from '@/lib/types/student';
 
 const onlyDigits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
 
   const name = String(body.name ?? '').trim().slice(0, 40);
   const loginId = normalizeLoginId(body.loginId);
-  const password = String(body.password ?? '');
+  const code = normalizeAttendanceCode(body.password); // 비밀번호 = 출결번호(숫자 6자리)
   const studentPhone = onlyDigits(body.studentPhone);
   const parentPhone = onlyDigits(body.parentPhone);
   const contact = String(body.contact ?? '').trim().slice(0, 40);
@@ -46,11 +47,13 @@ export async function POST(request: Request) {
   if (loginId.length < 4) {
     return NextResponse.json({ success: false, message: '로그인 아이디는 영문/숫자 4자 이상이어야 합니다.' }, { status: 400 });
   }
-  if (password.length < 4) {
-    return NextResponse.json({ success: false, message: '비밀번호는 4자 이상이어야 합니다.' }, { status: 400 });
-  }
   if (!studentPhone && !parentPhone) {
     return NextResponse.json({ success: false, message: '본인 또는 학부모 연락처 중 하나는 입력해 주세요.' }, { status: 400 });
+  }
+  // 출결번호(비밀번호): 숫자 6자리 + 휴대폰 번호와 비중복
+  const codeError = validateAttendanceCode(code, [studentPhone, parentPhone]);
+  if (codeError) {
+    return NextResponse.json({ success: false, message: codeError }, { status: 400 });
   }
 
   try {
@@ -65,7 +68,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: '이미 사용 중인 아이디입니다. 다른 아이디를 입력해 주세요.' }, { status: 409 });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(code, 10);
     const application: StudentApplication = {
       id: `app_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       name,

@@ -147,11 +147,18 @@ function StudentLoginForm() {
                 )}
               </Button>
 
-              <div className="text-center text-sm text-[#64748B]">
-                처음이신가요?{' '}
-                <Link href="/student/signup" className="font-semibold text-[#0071E3] hover:underline">
-                  가입신청하기
-                </Link>
+              <div className="space-y-2 text-center text-sm text-[#64748B]">
+                <div>
+                  처음이신가요?{' '}
+                  <Link href="/student/signup" className="font-semibold text-[#0071E3] hover:underline">
+                    가입신청하기
+                  </Link>
+                </div>
+                <div>
+                  <Link href="/student/password-change" className="font-semibold text-[#0071E3] hover:underline">
+                    출결번호 변경 신청
+                  </Link>
+                </div>
               </div>
             </form>
           </CardContent>
