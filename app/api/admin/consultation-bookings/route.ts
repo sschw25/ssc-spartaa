@@ -162,6 +162,7 @@ export async function PATCH(request: Request) {
     slot?: unknown;
     date?: unknown;
     counselor?: unknown;
+    logId?: unknown;
   };
   try {
     body = await request.json();
@@ -185,11 +186,15 @@ export async function PATCH(request: Request) {
   const status =
     body?.status === 'booked' ? 'booked' :
     body?.status === 'cancelled' ? 'cancelled' :
-    body?.status === 'done' ? 'done' : null;
+    body?.status === 'done' ? 'done' :
+    body?.status === 'noshow' ? 'noshow' : null;
   if (status) {
     patch.status = status;
     const nowIso = new Date().toISOString();
-    if (status === 'done') patch.resolvedAt = nowIso;
+    if (status === 'done' || status === 'noshow') {
+      patch.resolvedAt = nowIso;
+      patch.resolvedBy = session.username;
+    }
     if (status === 'cancelled') patch.cancelledAt = nowIso;
   }
 
@@ -214,6 +219,10 @@ export async function PATCH(request: Request) {
   }
   if (typeof body?.counselor === 'string') {
     patch.counselor = body.counselor.trim();
+  }
+
+  if (typeof body?.logId === 'string') {
+    patch.logId = body.logId;
   }
 
   if (Object.keys(patch).length === 0) {

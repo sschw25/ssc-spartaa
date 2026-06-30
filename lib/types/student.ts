@@ -137,12 +137,14 @@ export interface ConsultationBooking {
   slot: string;           // 시작 시각 'HH:MM' — extra 는 ''(미지정) 가능
   counselor: string;      // 담당자 라벨(부원장/센터장/매니저)
   kind: 'regular' | 'extra'; // 정규 슬롯 / 추가·긴급 신청
-  status: 'booked' | 'cancelled' | 'done'; // 예약중 / 취소 / 완료(상담 종료)
+  status: 'booked' | 'cancelled' | 'done' | 'noshow'; // 예약중/취소/완료/노쇼
   reason?: string;        // 추가·긴급 신청 사유 등
   source: 'student' | 'admin'; // 신청 주체
   createdAt: string;      // 신청 시각 (ISO)
   cancelledAt?: string;   // 취소 시각 (ISO)
   resolvedAt?: string;    // extra 처리/상담 완료 시각 (ISO)
+  resolvedBy?: string;     // 완료/노쇼 처리한 관리자(username)
+  logId?: string;          // 완료 시 생성된 ConsultationLog id(결과 노트 하드 연결)
   adminReply?: string;    // 관리자 코멘트(추가신청 처리 회신 등)
 }
 
