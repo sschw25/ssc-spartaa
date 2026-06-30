@@ -212,26 +212,60 @@ function effectiveMinForDate(todayStr: string, nowDateStr: string, nowMin: numbe
   return cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
 }
 
+// 휴가/반차 한 건이 가리는 시간대 종류.
+// 시간대(slot)가 지정된 신청(개인사정 반차·병가)은 slot을 우선 적용하고,
+// slot이 없으면 타입으로 판단한다. (휴식권/개인사정 휴가=하루 종일)
+type LeaveBlockKind = 'fullday' | 'morning' | 'afternoon' | 'night';
+function leaveBlockKind(leave: LeaveRequest): LeaveBlockKind | null {
+  if (leave.slot === 'fullday' || leave.slot === 'morning' || leave.slot === 'afternoon' || leave.slot === 'night') {
+    return leave.slot;
+  }
+  switch (leave.type) {
+    case 'fullday':
+    case 'sick':
+    case 'personal_fullday':
+      return 'fullday';
+    case 'morning':
+    case 'afternoon':
+    case 'night':
+      return leave.type;
+    default:
+      return null; // slot 없는 개인사정 반차 등 — 시간대 불명이면 미반영
+  }
+}
+
+// 교시 idx(0~6: 1~7교시)가 해당 시간대에 포함되는지
+function leaveKindCoversPeriod(kind: LeaveBlockKind | null, idx: number): boolean {
+  switch (kind) {
+    case 'fullday': return true;
+    case 'morning': return idx < 2;            // 1~2교시
+    case 'afternoon': return idx >= 2 && idx <= 4; // 3~5교시
+    case 'night': return idx >= 5 && idx <= 6; // 6~7교시
+    default: return false;
+  }
+}
+
+// 해당 시간대 휴가일 때, 이 하원 시각이 승인된(미승인 아님) 것인지
+function leaveKindAllowsCheckout(kind: LeaveBlockKind | null, checkOutMin: number): boolean {
+  switch (kind) {
+    case 'fullday': return true;
+    case 'morning': return checkOutMin <= 12 * 60 + 30;
+    case 'afternoon': return checkOutMin >= 12 * 60 + 30 && checkOutMin <= 17 * 60 + 40;
+    case 'night': return checkOutMin >= 17 * 60 + 40;
+    default: return false;
+  }
+}
+
+function approvedLeavesOn(student: Student | null, today: string): LeaveRequest[] {
+  return student
+    ? (student.leaveRequests || []).filter((r) => r.date === today && r.status === 'approved')
+    : [];
+}
+
 function isApprovedLeaveCheckout(student: Student | null, today: string, checkOutMin: number): boolean {
   if (!student) return false;
-
-  return (student.leaveRequests || [])
-    .filter((r) => r.date === today && r.status === 'approved')
-    .some((leave) => {
-      switch (leave.type) {
-        case 'fullday':
-        case 'sick':
-          return true;
-        case 'morning':
-          return checkOutMin <= 12 * 60 + 30;
-        case 'afternoon':
-          return checkOutMin >= 12 * 60 + 30 && checkOutMin <= 17 * 60 + 40;
-        case 'night':
-          return checkOutMin >= 17 * 60 + 40;
-        default:
-          return false;
-      }
-    });
+  return approvedLeavesOn(student, today)
+    .some((leave) => leaveKindAllowsCheckout(leaveBlockKind(leave), checkOutMin));
 }
 
 function isApprovedAwayCheckout(
@@ -276,20 +310,8 @@ interface PeriodState {
 }
 
 function isApprovedLeavePeriod(student: Student | null, todayStr: string, idx: number): boolean {
-  const approvedLeaves = student
-    ? (student.leaveRequests || []).filter((r) => r.date === todayStr && r.status === 'approved')
-    : [];
-
-  return approvedLeaves.some((leave) => {
-    const type = leave.type;
-    return (
-      type === 'fullday' ||
-      type === 'sick' ||
-      (type === 'morning' && idx < 2) ||
-      (type === 'afternoon' && idx >= 2 && idx <= 4) ||
-      (type === 'night' && idx >= 5 && idx <= 6)
-    );
-  });
+  return approvedLeavesOn(student, todayStr)
+    .some((leave) => leaveKindCoversPeriod(leaveBlockKind(leave), idx));
 }
 
 function computePeriods(
@@ -300,19 +322,12 @@ function computePeriods(
   nowMin: number,
 ): PeriodStatus[] {
   const cmp = todayStr.localeCompare(nowDateStr);
-  const effectiveNow = cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
 
+  // 출결판은 '수기 점검' 도구다. 등원(세션) 사실로 출석을 자동으로 채우지 않는다.
+  // (등원만 찍고 이탈하는 경우를 잡으려고 직접 점검하므로 자동 출석 표시는 목적과 어긋남)
+  // 기본은 공란으로 두고, 승인 휴가/반차·정기 외출처럼 '미리 안 오는' 사유만 X로 표시한다.
   return PERIODS.map((period, idx) => {
-    const covered = sessions.some((session) => {
-      const inM = kstMin(session.check_in);
-      let outM = session.check_out ? kstMin(session.check_out) : effectiveNow;
-      if (outM < inM) outM += 1440;
-      return inM < period.end && outM > period.start;
-    });
-    if (covered) return 'present';
-
-    const leavePeriod = isApprovedLeavePeriod(student, todayStr, idx);
-    if (leavePeriod) return 'absent';
+    if (isApprovedLeavePeriod(student, todayStr, idx)) return 'absent';
     if (cmp > 0 || (cmp === 0 && period.start >= nowMin)) return 'future';
     return 'absent';
   });
@@ -409,17 +424,17 @@ function createDemoSeatBoardData(today: string): {
     makeDemoStudent('demo-warning', '임박D3', 5, today, {
       enrollmentEndDate: threeDaysLater,
     }),
-    makeDemoStudent('demo-away-return', '금요일외출', 6, today, {
+    makeDemoStudent('demo-away-return', '정기외출1430', 6, today, {
       enrollmentEndDate: nextMonth,
-      awaySchedules: [{ awayTime: '14:30', days: [4], until: 'forever' }],
+      awaySchedules: [{ awayTime: '14:30', days: [], until: 'forever' }],
     }),
     makeDemoStudent('demo-away-leave', '정기외출하원', 7, today, {
       enrollmentEndDate: nextMonth,
       awaySchedules: [{ awayTime: '18:30', days: [], until: 'forever' }],
     }),
-    makeDemoStudent('demo-approved-half', '승인오후하원', 8, today, {
+    makeDemoStudent('demo-approved-half', '개인사정오후', 8, today, {
       enrollmentEndDate: nextMonth,
-      leaveRequests: [{ id: 'leave-demo-approved-half', type: 'afternoon', date: today, reason: '샘플 오후 반차', ...leaveBase }],
+      leaveRequests: [{ id: 'leave-demo-approved-half', type: 'personal_halfday', slot: 'afternoon', date: today, reason: '샘플 개인사정 오후 반차', ...leaveBase }],
     }),
     makeDemoStudent('demo-unauthorized', '미승인조기하원', 9, today, {
       enrollmentEndDate: nextMonth,
@@ -441,8 +456,8 @@ function createDemoSeatBoardData(today: string): {
     makeDemoSession('sess-demo-unauthorized', 'demo-unauthorized', today, '09:00', '17:30'),
   ];
 
+  // 수기 결석표시 예시 (기본은 공란, 클릭한 교시만 X)
   const periodOverrides = new Map<string, PeriodStatus>([
-    ['demo-new:0', 'present'],
     ['demo-new:1', 'absent'],
   ]);
   const phoneNoSubmitMap = new Map<string, Set<'D' | 'E' | 'N'>>([
@@ -501,6 +516,7 @@ function PeriodCell({
   }
 
   // 정기외출/빠지는 시간대 — 겹치는 교시는 세션 유무/미래 여부와 무관하게 X 표시한다.
+  // 단, 외출이 '시작'하는 교시에는 X 대신 외출 시각을 적어 둔다(엑셀 출결판처럼).
   if (isAwayAbsent) {
     return (
       <div
@@ -511,7 +527,9 @@ function PeriodCell({
         onClick={onClick}
         className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}
       >
-        <span className="text-[10px] font-black leading-none text-slate-500">X</span>
+        {awayTime?.includes(':')
+          ? <TimeHM hm={awayTime} cls="text-amber-500" />
+          : <span className="text-[10px] font-black leading-none text-slate-500">X</span>}
       </div>
     );
   }
@@ -712,24 +730,11 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
 
       {/* 휴대폰 보관 상태 박스 (D/E/N) — 클릭으로 미제출 토글 */}
       <div className="flex gap-[3px] mt-0.5" onClick={(e) => e.stopPropagation()}>
-        {([
-          { label: 'D', indices: [0, 1] },
-          { label: 'E', indices: [2, 3, 4] },
-          { label: 'N', indices: [5, 6] },
-        ] as const).map(({ label, indices }) => {
-          // 외출 관련(출발/이후) 교시가 하나라도 있으면 폰 가져간 것 → x
-          // 아니라면 블록 전체가 결석일 때만 x (출석 교시 하나라도 있으면 라벨)
-          const hasDeparture = indices.some((i) => {
-            const p = periods[i];
-            return !!p && (p.isAwayAbsent || p.isLeaveAbsent || p.isCheckoutAbsent || !!p.awayTime);
-          });
-          const allConfirmedAbsent = indices.every((i) => {
-            const p = periods[i];
-            return !p || p.status === 'absent';
-          });
-          const anyAbsent = hasDeparture || allConfirmedAbsent;
+        {(['D', 'E', 'N'] as const).map((label) => {
+          // 휴대폰 제출 여부는 출결과 별개. 기본은 제출(라벨 표시),
+          // 관리자가 클릭해 미제출로 표시한 블록만 x.
           const manualNoSubmit = phoneNoSubmit?.has(label) ?? false;
-          const showX = anyAbsent || manualNoSubmit;
+          const showX = manualNoSubmit;
           return (
             <div
               key={label}
@@ -807,7 +812,7 @@ interface RowProps {
   nowMin: number;
   periodOverrides: Map<string, PeriodStatus>;
   phoneNoSubmitMap?: Map<string, Set<'D' | 'E' | 'N'>>;
-  onTogglePeriod: (key: string, current: PeriodStatus) => void;
+  onTogglePeriod: (key: string) => void;
   onTogglePhone: (studentId: string, block: 'D' | 'E' | 'N') => void;
   onCardClick: (student: Student) => void;
   onNameClick: (student: Student) => void;
@@ -886,7 +891,7 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
             todayStr={today}
             onTogglePeriod={
               student
-                ? (idx) => onTogglePeriod(`${student.id}:${idx}`, periods[idx].status)
+                ? (idx) => onTogglePeriod(`${student.id}:${idx}`)
                 : undefined
             }
             onClick={student ? () => onCardClick(student) : undefined}
@@ -966,7 +971,7 @@ export default function SeatBoardPage() {
     return true;
   }
 
-  async function handleTogglePeriod(key: string, current: PeriodStatus) {
+  async function handleTogglePeriod(key: string) {
     if (!isDemoMode && !ensureEditableToday()) return;
     const parts = key.split(':');
     const studentId = parts[0];
@@ -977,18 +982,15 @@ export default function SeatBoardPage() {
       setPeriodOverrides((previous) => {
         const next = new Map(previous);
         if (is8th) {
+          // 심야(A) = 1~7교시 전체 결석 일괄 표시/해제 단축
+          const allMarked = Array.from({ length: 7 }).every((_, i) => previous.get(`${studentId}:${i}`) === 'absent');
           for (let i = 0; i < 8; i++) {
-            next.set(`${studentId}:${i}`, 'absent');
+            if (allMarked) next.delete(`${studentId}:${i}`); else next.set(`${studentId}:${i}`, 'absent');
           }
           return next;
         }
-        if (current === 'present') {
-          next.set(key, 'absent');
-        } else if (current === 'absent') {
-          next.delete(key);
-        } else {
-          next.set(key, 'present');
-        }
+        // 공란(기본) ↔ X(결석 수기표시) 토글. 다시 누르면 공란으로 되돌린다.
+        if (next.get(key) === 'absent') next.delete(key); else next.set(key, 'absent');
         return next;
       });
       return;
@@ -1054,27 +1056,15 @@ export default function SeatBoardPage() {
       return;
     }
 
-    let nextStatus: PeriodStatus | 'delete' = 'present';
-    if (current === 'present') {
-      nextStatus = 'absent';
-    } else if (current === 'absent') {
-      nextStatus = 'delete';
-    } else {
-      nextStatus = 'present';
-    }
-
+    // 공란(기본) ↔ X(결석 수기표시) 토글. 표시한 셀을 다시 누르면 공란으로 되돌린다.
+    const isMarked = periodOverrides.get(key) === 'absent';
     const previous = new Map(periodOverrides);
     const next = new Map(previous);
-    
-    if (nextStatus === 'delete') {
-      next.delete(key);
-    } else {
-      next.set(key, nextStatus);
-    }
+    if (isMarked) next.delete(key); else next.set(key, 'absent');
     setPeriodOverrides(next);
 
     try {
-      if (nextStatus === 'delete') {
+      if (isMarked) {
         const response = await fetch(`/api/admin/seat-status?date=${today}&seatKey=${key}`, {
           method: 'DELETE',
           credentials: 'same-origin',
@@ -1086,7 +1076,7 @@ export default function SeatBoardPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ date: today, seatKey: key, status: nextStatus }),
+          body: JSON.stringify({ date: today, seatKey: key, status: 'absent' }),
         });
         const json = await response.json().catch(() => ({}));
         if (!response.ok || !json.success) throw new Error(json.message || 'save failed');
@@ -1200,8 +1190,9 @@ export default function SeatBoardPage() {
               const block = phoneMatch[2] as 'D' | 'E' | 'N';
               if (!phoneNext.has(sid)) phoneNext.set(sid, new Set());
               phoneNext.get(sid)!.add(block);
-            } else if (value === 'present' || value === 'absent') {
-              next.set(key, value);
+            } else if (value === 'absent') {
+              // 출결판은 결석(X) 수기표시만 저장한다. (과거 'present' override는 공란으로 무시)
+              next.set(key, 'absent');
             }
           }
           setPeriodOverrides(next);
@@ -1537,26 +1528,28 @@ export default function SeatBoardPage() {
         {/* 범례 */}
         <div className="mt-3 flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] bg-[#1D1D1F]/[0.06] border border-[#1D1D1F]/[0.12] rounded-[3px] flex items-center justify-center">
-              <span className="text-[10px] font-black text-[#1D1D1F]/70">/</span>
+            <div className="w-[17px] h-[17px] bg-white border border-slate-200 rounded-[3px] flex items-center justify-center">
+              <span className="text-[7px] font-bold text-slate-300">3</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500">출석</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] bg-red-50 border border-red-200/60 rounded-[3px] flex items-center justify-center">
-              <span className="text-[10px] font-black text-red-400">X</span>
-            </div>
-            <span className="text-[11px] font-bold text-slate-500">결석</span>
+            <span className="text-[11px] font-bold text-slate-500">공란(점검 전·교시번호)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-[17px] h-[17px] bg-amber-50 border border-amber-300 rounded-[3px] flex items-center justify-center">
-              <span className="text-[10px] font-black text-amber-600">/</span>
+              <span className="text-[10px] font-black text-amber-600">X</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500">수동 변경</span>
+            <span className="text-[11px] font-bold text-slate-500">수기 결석표시(클릭)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] border border-slate-200 rounded-[3px]" />
-            <span className="text-[11px] font-bold text-slate-500">미래교시</span>
+            <div className="w-[17px] h-[17px] bg-blue-50 border border-blue-200 rounded-[3px] flex items-center justify-center">
+              <span className="text-[10px] font-black text-blue-500">X</span>
+            </div>
+            <span className="text-[11px] font-bold text-slate-500">승인 휴가·반차</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-[17px] h-[17px] bg-slate-50 border border-slate-300 rounded-[3px] flex items-center justify-center">
+              <span className="text-[10px] font-black text-slate-500">X</span>
+            </div>
+            <span className="text-[11px] font-bold text-slate-500">정기 외출</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
@@ -1569,7 +1562,7 @@ export default function SeatBoardPage() {
           <span className="text-[10px] text-slate-400">
             1(09~10:50) · 2(11:10~12:30) · 3(13:50~15) · 4(15:10~16:20) · 5(16:30~17:40) · 6(18:50~20:20) · 7(20:30~22) · 심야(22:10~23:20)
           </span>
-          <span className="text-[10px] text-slate-400">· 60초마다 자동 갱신 · 교시 셀 클릭 시 수동 변경</span>
+          <span className="text-[10px] text-slate-400">· 기본은 공란 — 자리에 없으면 해당 교시 셀을 눌러 X로 근거를 남기세요 · 60초마다 자동 갱신</span>
         </div>
 
       </main>

@@ -83,7 +83,7 @@ export const CAMPUS_LAYOUTS: Record<CampusKey, LayoutPage[]> = {
       // 메인 구역(57~85) + 오른쪽 2강의실 구역(86~100) + 집중관리반(101~104)
       rows: [
         [57,  58,  59,  null, 60,  61,  62,  63,  64,  null, null, 86,  null, 94],
-        [null, null, null, null, null, null, null, null, null, null, null, 87, null, 95],
+        [null, null, null, null, null, null, null, 74,  null, null, null, 87, null, 95],
         [65,  66,  67,  null, 69,  71,  null, 73,  null, 76,  null, 88,  null, 96],
         [null, null, null, null, 68,  70,  null, 72,  null, 75,  null, 89,  null, 97],
         [null, null, null, null, null, null, null, null, null, null, null, 90,  null, 98],
