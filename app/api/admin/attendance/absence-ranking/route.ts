@@ -3,6 +3,8 @@ import { getAdminSession } from '@/lib/auth';
 import { getStudents, getSeatAbsenceMarks, getAttendedDays } from '@/lib/store';
 import { buildAbsenceRanking } from '@/lib/absence-stats';
 
+const VALID_CAMPUSES = ['wonju', 'chuncheon', 'chungju'];
+
 function kstToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
 }
@@ -37,6 +39,9 @@ export async function GET(request: Request) {
     if (session.campus !== 'all') {
       students = students.filter((s) => s.campus === session.campus);
     } else if (campusFilter) {
+      if (!VALID_CAMPUSES.includes(campusFilter)) {
+        return NextResponse.json({ success: false, message: '센터가 올바르지 않습니다.', rows: [] }, { status: 400 });
+      }
       students = students.filter((s) => s.campus === campusFilter);
     }
 

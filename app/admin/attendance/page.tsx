@@ -486,14 +486,15 @@ function AdminAttendanceContent() {
     setRankingLoading(true);
     try {
       const { from, to } = rangeFor(period);
-      const res = await fetch(`/api/admin/attendance/absence-ranking?from=${from}&to=${to}`);
+      const c = campusFilter !== 'all' ? `&campus=${campusFilter}` : '';
+      const res = await fetch(`/api/admin/attendance/absence-ranking?from=${from}&to=${to}${c}`);
       const json = await res.json();
       if (json.success) setRanking(json.rows as AbsenceRankRow[]);
       else { setRanking([]); toast.error(json.message || '집계 실패'); }
     } finally {
       setRankingLoading(false);
     }
-  }, [period]);
+  }, [period, campusFilter]);
 
   useEffect(() => { if (tab === 'ranking') loadRanking(); }, [tab, loadRanking]);
 
