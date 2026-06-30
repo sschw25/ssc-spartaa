@@ -1,9 +1,5 @@
 import React from 'react'
-import Link from 'next/link'
 import {
-  ChevronLeft,
-  Calendar,
-  Clock,
   MapPin,
   CheckCircle,
   AlertTriangle,
@@ -11,7 +7,6 @@ import {
   BookOpen,
   Users,
   Target,
-  FileText,
   Phone,
   Rocket,
   Lightbulb,
@@ -109,22 +104,6 @@ export default function ChuncheonInterviewPage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <Navbar />
-
-      {/* 뒤로가기 & 서브 네비게이션 */}
-      <div className="pt-20 bg-white border-b border-[#E5E7EB]">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link
-            href="/chuncheon"
-            className="inline-flex items-center gap-1 text-[#86868B] hover:text-[#1D1D1F] text-sm transition-colors"
-          >
-            <ChevronLeft size={16} />
-            춘천캠퍼스 홈
-          </Link>
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#F5F5F7] text-[#86868B]">
-            강원 지방직·교육행정직 대비
-          </span>
-        </div>
-      </div>
 
       {/* Hero Section */}
       <section className="bg-white py-16 md:py-24 border-b border-[#E5E7EB]">
