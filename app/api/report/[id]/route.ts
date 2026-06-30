@@ -9,11 +9,21 @@ import { serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
 import { buildConsultationDigest } from '@/lib/consultation-digest';
 
+interface ConsultationHistoryEntry {
+  id: string;
+  date: string;
+  slot: string;
+  status: 'done' | 'noshow';
+  counselor: string;
+  note?: string;
+  digest: { kind: string; label: string; detail?: string }[];
+}
+
 function buildMaskedStudent(
   student: Student,
   audience: 'parent' | 'student',
   consultationBookings: ConsultationBooking[] = [],
-  consultationHistory: any[] = [],
+  consultationHistory: ConsultationHistoryEntry[] = [],
 ) {
   return {
     id: student.id,
@@ -156,7 +166,9 @@ export async function GET(
     const myAllBookings = audience === 'student'
       ? (await getConsultationBookings(student.campus).catch(() => [])).filter((b) => b.studentId === student.id)
       : [];
-    const myBookings = myAllBookings.filter((b) => b.status === 'booked');
+    const myBookings = myAllBookings
+      .filter((b) => b.status === 'booked')
+      .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
     const consultationHistory = myAllBookings
       .filter((b) => b.status === 'done' || b.status === 'noshow')
       .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
@@ -164,7 +176,7 @@ export async function GET(
         id: b.id,
         date: b.date,
         slot: b.slot,
-        status: b.status,
+        status: b.status as 'done' | 'noshow',
         counselor: b.counselor,
         note: b.logId ? ((student.consultationLogs || []).find((l) => l.id === b.logId)?.content || undefined) : undefined,
         digest: buildConsultationDigest(student, b.date),

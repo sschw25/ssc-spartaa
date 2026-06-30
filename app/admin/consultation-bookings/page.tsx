@@ -71,6 +71,7 @@ export default function AdminConsultationBookingsPage() {
   const [completeTarget, setCompleteTarget] = useState<ConsultationBooking | null>(null);
   const [noteDraft, setNoteDraft] = useState('');
   const [completeBusy, setCompleteBusy] = useState(false);
+  const [pendingLogId, setPendingLogId] = useState<string | null>(null);
 
   // 관리자 직접 예약 폼
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -215,6 +216,7 @@ export default function AdminConsultationBookingsPage() {
   async function openCompleteModal(booking: ConsultationBooking) {
     setCompleteTarget(booking);
     setNoteDraft('[상담 메모]\n');
+    setPendingLogId(null);
     try {
       const res = await fetch(`/api/admin/students/${booking.studentId}`);
       const json = await res.json();
@@ -235,26 +237,34 @@ export default function AdminConsultationBookingsPage() {
     const b = completeTarget;
     setCompleteBusy(true);
     try {
-      const noteRes = await fetch(`/api/admin/students/${b.studentId}/consultation`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: b.date, content: noteDraft, type: 'learning' }),
-      });
-      const noteJson = await noteRes.json();
-      if (!noteJson.success) { toast.error(noteJson.message || '상담 기록 저장 실패'); return; }
-      const newLogId: string | undefined = noteJson.data?.consultationLogs?.[0]?.id;
+      let logId = pendingLogId;
+      if (!logId) {
+        const noteRes = await fetch(`/api/admin/students/${b.studentId}/consultation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: b.date, content: noteDraft, type: 'learning' }),
+        });
+        const noteJson = await noteRes.json();
+        if (!noteJson.success) { toast.error(noteJson.message || '상담 기록 저장 실패'); return; }
+        logId = noteJson.data?.consultationLogs?.[0]?.id || null;
+        setPendingLogId(logId);
+      }
 
       const patchRes = await fetch('/api/admin/consultation-bookings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campus: b.campus, id: b.id, status: 'done', ...(newLogId ? { logId: newLogId } : {}) }),
+        body: JSON.stringify({ campus: b.campus, id: b.id, status: 'done', ...(logId ? { logId } : {}) }),
       });
       const patchJson = await patchRes.json();
-      if (!patchJson.success) { toast.error(patchJson.message || '완료 처리 실패'); return; }
+      if (!patchJson.success) {
+        toast.error((patchJson.message || '완료 처리 실패') + ' (메모는 저장됨 — 다시 시도해 주세요)');
+        return; // pendingLogId 보존 → 재시도 시 노트 중복 생성 안 함
+      }
 
       toast.success('상담 완료로 기록했어요');
       setCompleteTarget(null);
       setNoteDraft('');
+      setPendingLogId(null);
       await loadData();
     } finally {
       setCompleteBusy(false);

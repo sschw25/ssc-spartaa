@@ -221,8 +221,8 @@ export async function PATCH(request: Request) {
     patch.counselor = body.counselor.trim();
   }
 
-  if (typeof body?.logId === 'string') {
-    patch.logId = body.logId;
+  if (typeof body?.logId === 'string' && status === 'done') {
+    patch.logId = body.logId.slice(0, 64);
   }
 
   if (Object.keys(patch).length === 0) {
@@ -237,8 +237,9 @@ export async function PATCH(request: Request) {
     const finalSlot = patch.slot !== undefined ? patch.slot : existing?.slot;
     if (finalSlot && finalDate) {
       const wd = getWeekdayKey(finalDate);
-      if (!wd || !slotsForDay(campus, wd).includes(finalSlot)) {
-        return NextResponse.json({ success: false, message: '해당 날짜에는 운영하지 않는 시간대예요. (담당자 출장일은 일찍 마감)' }, { status: 400 });
+      const bo = await getConsultationBlackouts(campus);
+      if (!wd || !availableSlotsForDate(campus, wd, finalDate, bo).includes(finalSlot)) {
+        return NextResponse.json({ success: false, message: '해당 날짜에는 운영하지 않거나 담당자 휴무로 막힌 시간대예요.' }, { status: 400 });
       }
     }
   }

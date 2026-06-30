@@ -96,8 +96,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '이미 예약된 상담이 있습니다.' }, { status: 409 });
   }
 
-  // 캘린더(이번 주~다음 주) 기준으로 날짜·슬롯 재검증
-  const calendar = getBookableCalendar(student.campus, kstToday(), kstNowHHMM(), bookings);
+  // 캘린더(이번 주~다음 주) 기준으로 날짜·슬롯 재검증 (blackout 포함)
+  const blackouts = await getConsultationBlackouts(student.campus);
+  const calendar = getBookableCalendar(student.campus, kstToday(), kstNowHHMM(), bookings, blackouts);
   const day = calendar.find((d) => d.date === date);
   if (!day) {
     return NextResponse.json({ success: false, message: '지금 예약 가능한 날짜가 아니에요. 새로고침 후 다시 선택해 주세요.' }, { status: 409 });
