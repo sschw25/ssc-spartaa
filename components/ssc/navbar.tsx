@@ -17,6 +17,16 @@ const navItems = [
     ]
   },
   {
+    label: '면접반',
+    href: '#programs',
+    stream: 'interview',
+    campuses: [
+      { name: '원주 캠퍼스', href: '/wonju/interview' },
+      { name: '춘천 캠퍼스', href: '/chuncheon/interview' },
+      { name: '충주 캠퍼스', href: '/chungju/interview' }
+    ]
+  },
+  {
     label: '경찰',
     href: '#programs',
     stream: 'police',

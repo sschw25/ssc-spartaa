@@ -1,7 +1,6 @@
 import fs from 'fs'
 import path from 'path'
-import Link from 'next/link'
-import { ChevronLeft, Sparkles } from 'lucide-react'
+import { Sparkles } from 'lucide-react'
 import { Facilities } from '@/components/ssc/facilities'
 import { defaultFacilities } from '@/components/ssc/facilities-data'
 import { Testimonials } from '@/components/ssc/testimonials'
@@ -100,22 +99,6 @@ export default function StreamPage({
         description={content.hero.description?.replaceAll('{{region}}', campusName) || ''}
         faqs={content.faqs}
       />
-
-      {/* 뒤로가기 & 서브 네비게이션 (면접 페이지 디자인 정렬) */}
-      <div className="bg-white border-b border-[#E5E7EB]">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link
-            href={`/${campus}`}
-            className="inline-flex items-center gap-1 text-[#86868B] hover:text-[#1D1D1F] text-sm transition-colors"
-          >
-            <ChevronLeft size={16} />
-            {campusName}캠퍼스 홈
-          </Link>
-          <span className="text-xs font-semibold px-3 py-1 rounded-full bg-[#F5F5F7] text-[#86868B]">
-            {content.name} 전문 과정
-          </span>
-        </div>
-      </div>
 
       {/* Stream Hero (면접 페이지 디자인 정렬) */}
       <section id="hero" className="bg-white py-16 md:py-24 border-b border-[#E5E7EB]">

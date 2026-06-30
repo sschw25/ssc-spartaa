@@ -51,8 +51,8 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
       <div className="max-w-[64rem] w-full mx-auto px-6">
         
         {/* Section Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
-          <div>
+        <div className="flex flex-col items-center gap-6 mb-10 text-center">
+          <div className="max-w-2xl">
             <p className="text-[#007AFF] text-[11px] font-semibold tracking-[0.18em] uppercase mb-3">
               Why SSC Sparta
             </p>
@@ -62,7 +62,7 @@ export default function GongmuwonCards({ campusName }: GongmuwonCardsProps) {
           </div>
           
           {/* Scroll Navigation Controls */}
-          <div className="flex md:hidden items-center gap-3">
+          <div className="flex md:hidden items-center justify-center gap-3">
             <button
               type="button"
               onClick={() => handleScroll('left')}
