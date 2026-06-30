@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking, BlackoutEntry } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking, BlackoutEntry, SeatAlert } from './types/student';
 import { isSlotFree } from './consultation-schedule';
 import {
   isSupabaseConfigured,
@@ -505,3 +505,24 @@ export async function notifyMealPlan(id: string, notifiedAt: string | null): Pro
 }
 
 export type { MockExam, OtEvent, MealPlan, CampusEvent };
+
+// ── 상담 D-1 리마인더 ──
+
+// 상담 D-1 리마인더 알림 생성. 같은 예약에 이미 보냈으면 false(멱등).
+export async function createConsultationReminderAlert(booking: ConsultationBooking): Promise<boolean> {
+  const dedupeId = `creminder_${booking.id}`;
+  const result = await updateStudentById(booking.studentId, (student) => {
+    const alerts = student.seatAlerts || [];
+    if (alerts.some((a: SeatAlert) => a.id === dedupeId)) return false; // 이미 발송 → 저장 스킵(abort)
+    student.seatAlerts = [...alerts, {
+      id: dedupeId,
+      date: booking.date,
+      period: 0,
+      periodLabel: '상담',
+      message: `내일 ${booking.slot} 상담 예약이 있어요. (${booking.counselor})`,
+      createdAt: new Date().toISOString(),
+      createdBy: 'system',
+    }];
+  });
+  return result !== 'not_found' && result !== 'abort' && result !== 'conflict';
+}

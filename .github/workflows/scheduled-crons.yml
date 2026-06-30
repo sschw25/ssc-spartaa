@@ -21,6 +21,7 @@ on:
     - cron: '0 4-6 * * 1'    # 도시락 반복 템플릿 (월요일 13·14·15시 KST = 04·05·06시 UTC). 보통 월 오후 2시 고정이라 매시 정각 몇 번이면 충분(idempotent).
     - cron: '59 14 * * 0'    # 주간 미션 정산 (일 14:59 UTC = 일 23:59 KST)
     - cron: '30 15 1 * *'    # 월간 미션 정산 (매월 1일 15:30 UTC = 1일 00:30 KST, 지난달분)
+    - cron: '0 10 * * *'    # 상담 D-1 리마인더 (매일 19:00 KST = 10:00 UTC)
   workflow_dispatch:
     inputs:
       target:
@@ -28,7 +29,7 @@ on:
         required: true
         default: sweep
         type: choice
-        options: [sweep, meal, weekly, monthly]
+        options: [sweep, meal, weekly, monthly, remind]
 
 concurrency:
   group: scheduled-crons
@@ -56,6 +57,7 @@ jobs:
             '0 4-6 * * 1'|manual:meal)     Q='/api/admin/meal-routines/run' ;;
             '59 14 * * 0'|manual:weekly)   Q='/api/admin/missions/settle?scope=weekly' ;;
             '30 15 1 * *'|manual:monthly)  Q='/api/admin/missions/settle?scope=monthly&prev=1' ;;
+            '0 10 * * *'|manual:remind)    Q='/api/admin/consultation/remind' ;;
             *)                             Q='/api/admin/attendance/sweep' ;;
           esac
           echo "GET ${BASE}${Q}"
