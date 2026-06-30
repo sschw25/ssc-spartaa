@@ -1,6 +1,6 @@
 import { Student } from './types/student';
 import { getStudentById, patchStudentProgress, getStudySessions, activeBackend } from './store';
-import { getMissionConfig } from './mission-engine';
+import { getActiveMissionConfig } from './mission-engine';
 import { MISSION_META } from './missions';
 import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
 
@@ -31,7 +31,7 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
     noteObj.rewards_log = [];
   }
 
-  const config = await getMissionConfig();
+  const config = await getActiveMissionConfig();
   const todayKey = getSeoulDateKey();
   const grantedMissions: string[] = [];
   let couponsToGrant = 0;

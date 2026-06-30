@@ -3,7 +3,7 @@ import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, getConsultationBookings, addConsultationBooking, patchConsultationBooking } from '@/lib/store';
 import {
   CONSULTATION_SLOT_TIMES,
-  computeOpenDate,
+  getBookableCalendar,
   isConsultationCampus,
 } from '@/lib/consultation-schedule';
 import type { ConsultationBooking } from '@/lib/types/student';
@@ -32,7 +32,7 @@ function findMyActiveRegular(bookings: ConsultationBooking[], studentId: string)
   );
 }
 
-// GET: 현재 개방된 운영일 + 빈 슬롯 + 내 예약 조회
+// GET: 이번 주~다음 주 운영일 캘린더 + 빈 슬롯 + 내 예약 조회
 export async function GET() {
   const studentId = await getStudentSessionId();
   if (!studentId) {
@@ -49,13 +49,13 @@ export async function GET() {
   }
 
   const bookings = await getConsultationBookings(student.campus);
-  const open = computeOpenDate(student.campus, kstToday(), kstNowHHMM(), bookings);
+  const calendar = getBookableCalendar(student.campus, kstToday(), kstNowHHMM(), bookings);
   const myBooking = findMyActiveRegular(bookings, studentId);
 
   return NextResponse.json({
     success: true,
     available: true,
-    open,
+    calendar,
     myBooking,
     slotTimes: CONSULTATION_SLOT_TIMES,
   });
@@ -95,13 +95,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '이미 예약된 상담이 있습니다.' }, { status: 409 });
   }
 
-  // 개방일/빈 슬롯 재검증
-  const open = computeOpenDate(student.campus, kstToday(), kstNowHHMM(), bookings);
-  if (!open || date !== open.date) {
+  // 캘린더(이번 주~다음 주) 기준으로 날짜·슬롯 재검증
+  const calendar = getBookableCalendar(student.campus, kstToday(), kstNowHHMM(), bookings);
+  const day = calendar.find((d) => d.date === date);
+  if (!day) {
     return NextResponse.json({ success: false, message: '지금 예약 가능한 날짜가 아니에요. 새로고침 후 다시 선택해 주세요.' }, { status: 409 });
   }
-  if (!open.freeSlots.includes(slot)) {
-    return NextResponse.json({ success: false, message: '이미 마감된 시간입니다. 다시 선택해 주세요.' }, { status: 409 });
+  if (!day.freeSlots.includes(slot)) {
+    return NextResponse.json({ success: false, message: '이미 마감되었거나 지난 시간입니다. 다시 선택해 주세요.' }, { status: 409 });
   }
 
   const booking: ConsultationBooking = {
@@ -110,9 +111,9 @@ export async function POST(req: NextRequest) {
     studentName: student.name,
     campus: student.campus,
     date,
-    weekday: open.weekday,
+    weekday: day.weekday,
     slot,
-    counselor: open.counselor,
+    counselor: day.counselor,
     kind: 'regular',
     status: 'booked',
     source: 'student',

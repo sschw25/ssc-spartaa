@@ -1,17 +1,18 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
-import { CalendarClock, Trash2, CheckCircle2, MessageSquarePlus } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { CalendarClock, Trash2, CheckCircle2, MessageSquarePlus, Star } from 'lucide-react';
 import { WEEKDAY_LABEL, type Weekday } from '@/lib/consultation-schedule';
 import type { ConsultationBooking } from '@/lib/types/student';
 
-interface OpenAvailability {
+interface CalendarDay {
   date: string;
   weekday: Weekday;
   counselor: string;
   freeSlots: string[];
   takenSlots: string[];
   isToday: boolean;
+  full: boolean;
 }
 
 interface WhyConsultation {
@@ -29,11 +30,25 @@ interface ConsultationBookingPanelProps {
 }
 
 const weekdayLabel = (w?: Weekday) => (w ? WEEKDAY_LABEL[w] : '');
+const isDeputy = (counselor: string) => counselor.includes('부원장');
+// 'YYYY-MM-DD' → 'M/D'
+const mdLabel = (date: string) => {
+  const [, m, d] = date.split('-');
+  return `${Number(m)}/${Number(d)}`;
+};
+// 해당 날짜가 속한 주의 월요일(UTC 자정 기준, TZ 무관)
+const mondayOf = (date: string) => {
+  const dt = new Date(`${date}T00:00:00Z`);
+  const dow = dt.getUTCDay();
+  dt.setUTCDate(dt.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  return dt.toISOString().slice(0, 10);
+};
 
 export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookingPanelProps) {
   const [loading, setLoading] = useState(true);
-  const [open, setOpen] = useState<OpenAvailability | null>(null);
+  const [calendar, setCalendar] = useState<CalendarDay[]>([]);
   const [myBooking, setMyBooking] = useState<ConsultationBooking | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedSlot, setSelectedSlot] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -51,10 +66,16 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
       const res = await fetch('/api/student/consultation-booking', { cache: 'no-store' });
       const data = await res.json();
       if (data?.success && data?.available) {
-        setOpen(data.open ?? null);
+        const days: CalendarDay[] = data.calendar ?? [];
+        setCalendar(days);
         setMyBooking(data.myBooking ?? null);
+        // 선택 날짜 유지(있으면), 없으면 빈 슬롯이 있는 첫 운영일 자동 선택
+        setSelectedDate((prev) => {
+          if (prev && days.some((d) => d.date === prev && !d.full)) return prev;
+          return days.find((d) => !d.full)?.date ?? '';
+        });
       } else {
-        setOpen(null);
+        setCalendar([]);
         setMyBooking(null);
       }
     } catch {
@@ -68,8 +89,33 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
     refresh();
   }, [refresh]);
 
+  // 선택 날짜가 바뀌면 슬롯 선택 초기화
+  useEffect(() => {
+    setSelectedSlot('');
+  }, [selectedDate]);
+
+  // 이번 주 / 다음 주로 그룹핑
+  const weekGroups = useMemo(() => {
+    if (calendar.length === 0) return [] as { label: string; days: CalendarDay[] }[];
+    // 기준: 첫 운영일이 속한 주를 '이번 주', 그 다음 주를 '다음 주'
+    const thisMonday = mondayOf(calendar[0].date);
+    const nextMonday = (() => {
+      const dt = new Date(`${thisMonday}T00:00:00Z`);
+      dt.setUTCDate(dt.getUTCDate() + 7);
+      return dt.toISOString().slice(0, 10);
+    })();
+    const thisWeek = calendar.filter((d) => d.date < nextMonday);
+    const nextWeek = calendar.filter((d) => d.date >= nextMonday);
+    const groups: { label: string; days: CalendarDay[] }[] = [];
+    if (thisWeek.length) groups.push({ label: '이번 주', days: thisWeek });
+    if (nextWeek.length) groups.push({ label: '다음 주', days: nextWeek });
+    return groups;
+  }, [calendar]);
+
+  const selectedDay = calendar.find((d) => d.date === selectedDate) || null;
+
   const submitBooking = async () => {
-    if (!open || !selectedSlot) return;
+    if (!selectedDay || !selectedSlot) return;
     setSubmitting(true);
     setError('');
     setSuccessMsg('');
@@ -77,7 +123,7 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
       const res = await fetch('/api/student/consultation-booking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: open.date, slot: selectedSlot }),
+        body: JSON.stringify({ date: selectedDay.date, slot: selectedSlot }),
       });
       const data = await res.json();
       if (data?.success) {
@@ -148,6 +194,8 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
     }
   };
 
+  const hasAnyOpen = calendar.some((d) => !d.full);
+
   return (
     <div className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
       <div>
@@ -155,10 +203,11 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
           <CalendarClock className="h-3.5 w-3.5" /> 클리닉 상담 예약
         </div>
         <h4 className="mt-2 flex items-center gap-2 text-sm font-black text-[#0071E3]">
-          상담 시간을 직접 예약해요
+          원하는 날짜·시간을 직접 예약해요
         </h4>
         <p className="mt-1 text-[10px] font-semibold leading-5 text-slate-400">
-          앞 운영일 슬롯이 먼저 차고, 다 차면 다음 운영일이 열려요. 한 번에 한 건만 예약할 수 있어요.
+          이번 주와 다음 주 상담일이 모두 열려 있어요. 날짜를 고르고 원하는 시간을 선택하세요.{' '}
+          <span className="inline-flex items-center gap-0.5 text-[#0071E3]"><Star className="h-3 w-3" /> 표시는 부원장 상담일</span>이에요. 한 번에 한 건만 예약할 수 있어요.
         </p>
       </div>
 
@@ -204,52 +253,90 @@ export function ConsultationBookingPanel({ whyConsultation }: ConsultationBookin
             시간 변경이 필요하면 예약을 취소한 뒤 다시 예약해 주세요.
           </p>
         </div>
-      ) : open ? (
-        /* 개방된 운영일 + 슬롯 선택 */
-        <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-3">
-            <p className="text-[12px] font-black text-slate-800">
-              {open.date}({weekdayLabel(open.weekday)}){open.isToday ? ' · 오늘' : ''}
-            </p>
-            <p className="mt-0.5 text-[10px] font-bold text-slate-400">담당: {open.counselor}</p>
-            <p className="mt-1.5 text-[10px] font-semibold text-slate-400">
-              현재 {open.date}({weekdayLabel(open.weekday)}) 상담이 먼저 마감되면 다음 운영일이 열려요.
-            </p>
-          </div>
-
-          <div>
-            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">시간 선택</p>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-              {open.freeSlots.map((slot) => {
-                const active = selectedSlot === slot;
-                return (
-                  <button
-                    key={slot}
-                    type="button"
-                    onClick={() => setSelectedSlot(slot)}
-                    className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'}`}
-                  >
-                    {slot}
-                  </button>
-                );
-              })}
+      ) : hasAnyOpen ? (
+        /* 캘린더: 날짜 선택 → 시간 선택 */
+        <div className="space-y-4">
+          {weekGroups.map((group) => (
+            <div key={group.label}>
+              <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">{group.label}</p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {group.days.map((day) => {
+                  const active = selectedDate === day.date;
+                  const deputy = isDeputy(day.counselor);
+                  return (
+                    <button
+                      key={day.date}
+                      type="button"
+                      disabled={day.full}
+                      onClick={() => setSelectedDate(day.date)}
+                      className={`relative flex flex-col items-center rounded-xl border px-1.5 py-2 transition active:scale-[0.97] ${
+                        day.full
+                          ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300'
+                          : active
+                          ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'
+                      }`}
+                    >
+                      {deputy && !day.full && (
+                        <Star className="absolute right-1 top-1 h-2.5 w-2.5 fill-current text-[#0071E3]" />
+                      )}
+                      <span className="text-[12px] font-black">
+                        {mdLabel(day.date)}({weekdayLabel(day.weekday)})
+                      </span>
+                      <span className="text-[9px] font-bold">{day.counselor}</span>
+                      <span className={`mt-0.5 text-[9px] font-bold ${day.full ? 'text-slate-300' : 'text-emerald-600'}`}>
+                        {day.full ? '마감' : `${day.freeSlots.length}자리`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          ))}
 
-          <button
-            type="button"
-            onClick={submitBooking}
-            disabled={submitting || !selectedSlot}
-            className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
-          >
-            {submitting ? '예약 중...' : selectedSlot ? `${selectedSlot} 상담 신청하기` : '시간을 선택해 주세요'}
-          </button>
+          {selectedDay && !selectedDay.full && (
+            <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-3">
+              <p className="text-[11px] font-black text-slate-700">
+                {mdLabel(selectedDay.date)}({weekdayLabel(selectedDay.weekday)}) · 담당 {selectedDay.counselor}
+                {isDeputy(selectedDay.counselor) ? ' (부원장 상담)' : ''}
+              </p>
+              <p className="mt-2 mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">시간 선택</p>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {selectedDay.freeSlots.map((slot) => {
+                  const active = selectedSlot === slot;
+                  return (
+                    <button
+                      key={slot}
+                      type="button"
+                      onClick={() => setSelectedSlot(slot)}
+                      className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'}`}
+                    >
+                      {slot}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={submitBooking}
+                disabled={submitting || !selectedSlot}
+                className="mt-3 w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+              >
+                {submitting
+                  ? '예약 중...'
+                  : selectedSlot
+                  ? `${mdLabel(selectedDay.date)}(${weekdayLabel(selectedDay.weekday)}) ${selectedSlot} 상담 신청하기`
+                  : '시간을 선택해 주세요'}
+              </button>
+            </div>
+          )}
           {successMsg && <p className="text-[10px] font-bold text-emerald-600">{successMsg}</p>}
           {error && <p className="text-[10px] font-bold text-red-500">{error}</p>}
         </div>
       ) : (
         <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-3.5 py-4 text-[11px] font-semibold text-amber-800">
-          지금은 예약 가능한 상담 시간이 없어요. 아래 추가·긴급 상담 신청을 이용해 주세요.
+          이번 주와 다음 주 상담이 모두 마감됐어요. 아래 추가·긴급 상담 신청을 이용해 주세요.
         </div>
       )}
 

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfile, updateStudentById } from '@/lib/store';
+import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfile, updateStudentById, removeConsultationBookingsForStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
+import { isConsultationCampus } from '@/lib/consultation-schedule';
 
 // 0. 특정 원생 단건 조회
 export async function GET(
@@ -90,8 +91,16 @@ export async function DELETE(
   }
 
   try {
+    // 삭제 전에 센터를 확보해 두고(상담 예약 정리에 필요), 삭제 성공 시 그 학생의
+    // 상담 예약(특히 긴급 extra)을 원장에서 함께 제거한다 — 관리자 화면의 유령 레코드 방지.
+    const existing = await getStudentById(id);
     const success = await deleteStudent(id);
     if (success) {
+      if (existing && isConsultationCampus(existing.campus)) {
+        await removeConsultationBookingsForStudent(existing.campus, id).catch((e) =>
+          console.warn('상담 예약 정리 실패(무시):', e),
+        );
+      }
       return NextResponse.json({ success: true, message: '원생이 삭제되었습니다.' });
     }
     return NextResponse.json({ success: false, message: '삭제할 원생을 찾을 수 없습니다.' }, { status: 404 });

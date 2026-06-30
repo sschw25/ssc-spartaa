@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
-import { getMissionConfig, saveMissionConfig } from '@/lib/mission-engine';
+import { getMissionConfig, saveMissionConfig, getMissionsEnabled, setMissionsEnabled } from '@/lib/mission-engine';
 import { normalizeMissionConfig } from '@/lib/missions';
 
 // 미션 설정 조회
@@ -9,8 +9,8 @@ export async function GET() {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   try {
-    const config = await getMissionConfig();
-    return NextResponse.json({ success: true, config });
+    const [config, enabled] = await Promise.all([getMissionConfig(), getMissionsEnabled()]);
+    return NextResponse.json({ success: true, config, enabled });
   } catch (e) {
     return NextResponse.json(
       { success: false, message: e instanceof Error ? e.message : '설정 조회 실패' },
@@ -33,7 +33,13 @@ export async function PUT(request: Request) {
   try {
     const config = normalizeMissionConfig(body?.config ?? body);
     await saveMissionConfig(config);
-    return NextResponse.json({ success: true, config });
+    // 마스터 스위치는 body.enabled 가 명시된 경우에만 갱신(기존 동작 호환)
+    let enabled = await getMissionsEnabled();
+    if (typeof body?.enabled === 'boolean') {
+      await setMissionsEnabled(body.enabled);
+      enabled = body.enabled;
+    }
+    return NextResponse.json({ success: true, config, enabled });
   } catch (e) {
     return NextResponse.json(
       { success: false, message: e instanceof Error ? e.message : '설정 저장 실패' },

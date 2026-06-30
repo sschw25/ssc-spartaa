@@ -191,6 +191,59 @@ export function computeOpenDate(
   return null;
 }
 
+// 해당 날짜가 속한 주의 월요일(YYYY-MM-DD).
+function mondayOf(dateStr: string): string {
+  const dow = new Date(`${dateStr}T00:00:00Z`).getUTCDay(); // 0=일 .. 6=토
+  const diff = dow === 0 ? -6 : 1 - dow;
+  return addDaysStr(dateStr, diff);
+}
+
+export interface CalendarDay {
+  date: string;
+  weekday: Weekday;
+  counselor: string;
+  freeSlots: string[];   // 예약 가능한 빈 시각
+  takenSlots: string[];  // 이미 찬 시각
+  isToday: boolean;
+  full: boolean;         // 빈 슬롯이 0이면 true(마감)
+}
+
+/**
+ * 이번 주 ~ 다음 주(다음 주 일요일까지)의 운영일 캘린더.
+ * 과거 날짜와 오늘의 지난 시각은 제외하고, 각 운영일의 빈/찬 슬롯을 함께 반환한다.
+ * 학생이 원하는 날짜·시간을 직접 골라 신청할 수 있도록 단일 개방일 제한 없이 모두 노출한다.
+ */
+export function getBookableCalendar(
+  campus: ConsultationCampus,
+  todayDate: string,
+  nowHHMM: string,
+  bookings: ConsultationBooking[],
+): CalendarDay[] {
+  const horizonEnd = addDaysStr(mondayOf(todayDate), 13); // 다음 주 일요일
+  const out: CalendarDay[] = [];
+  for (let date = todayDate; date <= horizonEnd; date = addDaysStr(date, 1)) {
+    const weekday = getWeekdayKey(date);
+    if (!weekday) continue;
+    const counselor = counselorFor(campus, weekday);
+    if (!counselor) continue;
+    const daySlots = slotsForDay(campus, weekday);
+    const taken = activeBookingsOn(bookings, date);
+    const freeSlots = daySlots.filter(
+      (s) => !taken.has(s) && slotIsFuture(date, s, todayDate, nowHHMM),
+    );
+    out.push({
+      date,
+      weekday,
+      counselor,
+      freeSlots,
+      takenSlots: daySlots.filter((s) => taken.has(s)),
+      isToday: date === todayDate,
+      full: freeSlots.length === 0,
+    });
+  }
+  return out;
+}
+
 // 특정 (날짜, 슬롯)이 비어있는지 — 예약 생성 직전 재검증용.
 export function isSlotFree(
   date: string,

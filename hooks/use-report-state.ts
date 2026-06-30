@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, BookOpen, FileText, Shield, Ticket } from 'lucide-react';
+import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, CalendarClock, BookOpen, FileText, Shield, Ticket } from 'lucide-react';
+import { isConsultationCampus } from '@/lib/consultation-schedule';
 import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
@@ -1644,6 +1645,9 @@ export function useReportState() {
         { href: '#execution-plan', label: '실행 계획표', meta: '학습 플래너', icon: Sparkles },
         { href: '#coach-feedback', label: '코멘팅 소견', meta: '학생 피드백', icon: MessageSquare },
         { href: '#student-requests', label: '반차 신청', meta: `반차 ${homeHalfLeft}회 남음`, icon: Calendar },
+        ...(isConsultationCampus(student.campus)
+          ? [{ href: '#clinic-booking', label: '클리닉 상담', meta: '날짜·시간 예약', icon: CalendarClock }]
+          : []),
         { href: '#student-missions', label: '쿠폰 미션', meta: `쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Ticket },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },

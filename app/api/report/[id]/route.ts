@@ -152,7 +152,7 @@ export async function GET(
     // 학생 본인 리포트에는 상담 예약(센터 원장에서 본인 건만)을 함께 전달한다.
     const myBookings = audience === 'student'
       ? (await getConsultationBookings(student.campus).catch(() => []))
-          .filter((b) => b.studentId === student.id)
+          .filter((b) => b.studentId === student.id && b.status === 'booked')
           .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
       : [];
     const maskedStudent = buildMaskedStudent(student, audience, myBookings);

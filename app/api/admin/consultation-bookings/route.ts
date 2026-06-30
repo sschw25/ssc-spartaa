@@ -10,6 +10,7 @@ import {
   buildDaySlotGrid,
   isConsultationCampus,
   getWeekdayKey,
+  slotsForDay,
   CAMPUS_CONSULTATION,
   type ConsultationCampus,
   type DaySlotGrid,
@@ -104,6 +105,11 @@ export async function POST(request: Request) {
   }
   const counselor =
     CAMPUS_CONSULTATION[student.campus].days.find((d) => d.weekday === weekday)?.counselor ?? '';
+
+  // 그날 실제 운영 슬롯(부원장 출장일 마감캡 포함)을 벗어난 시각은 거부 — 유령 예약 방지.
+  if (!slotsForDay(student.campus, weekday).includes(slot)) {
+    return NextResponse.json({ success: false, message: '해당 날짜에는 운영하지 않는 시간대예요. (담당자 출장일은 일찍 마감)' }, { status: 400 });
+  }
 
   const booking: ConsultationBooking = {
     id: `cbk_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -200,6 +206,20 @@ export async function PATCH(request: Request) {
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ success: false, message: '변경할 내용이 없습니다.' }, { status: 400 });
+  }
+
+  // 날짜·슬롯을 바꾸는 경우, 바뀐 (날짜→요일)의 실제 운영 슬롯을 벗어나지 않는지 검증.
+  // (부원장 출장일은 15:30 마감 → 그 뒤 시각은 거부. 관리자 그리드에 안 보이는 유령 예약 방지.)
+  if ((patch.slot !== undefined || patch.date !== undefined) && isConsultationCampus(campus)) {
+    const existing = (await getConsultationBookingsForCampuses([campus])).find((b) => b.id === id);
+    const finalDate = patch.date !== undefined ? patch.date : existing?.date;
+    const finalSlot = patch.slot !== undefined ? patch.slot : existing?.slot;
+    if (finalSlot && finalDate) {
+      const wd = getWeekdayKey(finalDate);
+      if (!wd || !slotsForDay(campus, wd).includes(finalSlot)) {
+        return NextResponse.json({ success: false, message: '해당 날짜에는 운영하지 않는 시간대예요. (담당자 출장일은 일찍 마감)' }, { status: 400 });
+      }
+    }
   }
 
   const updated = await patchConsultationBooking(campus, id, patch);

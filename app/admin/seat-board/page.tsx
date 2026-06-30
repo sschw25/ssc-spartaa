@@ -942,6 +942,8 @@ export default function SeatBoardPage() {
   const [loading, setLoading] = useState(true);
   const [campus, setCampus] = useState<CampusKey>('wonju');
   const [pageIdx, setPageIdx] = useState(0);
+  // '수동변경 초기화'는 평소 숨겨두고, 구역 탭 끝의 ⋯ 버튼을 눌렀을 때만 노출한다(오조작 방지).
+  const [showResetTool, setShowResetTool] = useState(false);
   // 수동 교시 override: key = "{studentId}:{periodIdx}"
   const [periodOverrides, setPeriodOverrides] = useState<Map<string, PeriodStatus>>(new Map());
   // 폰 미제출 수동 표시: studentId → Set<'D'|'E'|'N'>
@@ -984,7 +986,8 @@ export default function SeatBoardPage() {
         if (is8th) {
           // 심야(A) = 1~7교시 전체 결석 일괄 표시/해제 단축
           const allMarked = Array.from({ length: 7 }).every((_, i) => previous.get(`${studentId}:${i}`) === 'absent');
-          for (let i = 0; i < 8; i++) {
+          // 8교시(심야 A)는 수기 출석 대상이 아니므로 1~7교시(idx 0~6)만 일괄 토글한다.
+          for (let i = 0; i < 7; i++) {
             if (allMarked) next.delete(`${studentId}:${i}`); else next.set(`${studentId}:${i}`, 'absent');
           }
           return next;
@@ -1011,14 +1014,15 @@ export default function SeatBoardPage() {
       const next = new Map(previous);
 
       if (hasNonAbsentOverride) {
-        for (let i = 0; i < 8; i++) {
+        // 8교시(심야 A)는 수기 출석 대상이 아니므로 1~7교시(idx 0~6)만 기록한다.
+        for (let i = 0; i < 7; i++) {
           next.set(`${studentId}:${i}`, 'absent');
         }
         setPeriodOverrides(next);
 
         try {
           await Promise.all(
-            Array.from({ length: 8 }).map((_, i) =>
+            Array.from({ length: 7 }).map((_, i) =>
               fetch('/api/admin/seat-status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1033,14 +1037,15 @@ export default function SeatBoardPage() {
           toast.error('수동 변경 저장에 실패했습니다.');
         }
       } else {
-        for (let i = 0; i < 8; i++) {
+        // 1~7교시(idx 0~6)만 해제. 8교시는 애초에 기록하지 않는다.
+        for (let i = 0; i < 7; i++) {
           next.delete(`${studentId}:${i}`);
         }
         setPeriodOverrides(next);
 
         try {
           await Promise.all(
-            Array.from({ length: 8 }).map((_, i) =>
+            Array.from({ length: 7 }).map((_, i) =>
               fetch(`/api/admin/seat-status?date=${today}&seatKey=${studentId}:${i}`, {
                 method: 'DELETE',
                 credentials: 'same-origin',
@@ -1473,11 +1478,26 @@ export default function SeatBoardPage() {
               {p.label}
             </button>
           ))}
-          {/* 수동 override 리셋 */}
+          {/* 숨겨진 도구 토글: 평소엔 점 3개(⋯)만 보이고, 누르면 '수동변경 초기화'가 나타난다. */}
           {hasOverrides && (
             <button
-              onClick={clearPeriodOverrides}
-              className="ml-2 px-3 py-1.5 rounded-xl text-xs font-black border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all"
+              type="button"
+              onClick={() => setShowResetTool((v) => !v)}
+              aria-label="추가 도구"
+              title="추가 도구"
+              className={`ml-2 px-2.5 py-1.5 rounded-xl text-xs font-black border transition-all ${
+                showResetTool
+                  ? 'border-[#1D1D1F]/15 bg-[#1D1D1F]/[0.04] text-[#1D1D1F]'
+                  : 'border-black/[0.06] bg-white text-slate-400 hover:text-[#1D1D1F]'
+              }`}
+            >
+              ⋯
+            </button>
+          )}
+          {hasOverrides && showResetTool && (
+            <button
+              onClick={() => { clearPeriodOverrides(); setShowResetTool(false); }}
+              className="px-3 py-1.5 rounded-xl text-xs font-black border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all"
             >
               수동변경 초기화
             </button>

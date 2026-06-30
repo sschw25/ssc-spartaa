@@ -168,6 +168,19 @@ export async function addConsultationBooking(
   return booking;
 }
 
+// 학생 삭제 시, 그 학생의 상담 예약을 센터 원장에서 제거(고아 레코드 방지).
+// 제거 건수를 반환. 0이면 변경 없음.
+export async function removeConsultationBookingsForStudent(
+  campus: string,
+  studentId: string,
+): Promise<number> {
+  const list = await getConsultationBookings(campus);
+  const next = list.filter((b) => b.studentId !== studentId);
+  const removed = list.length - next.length;
+  if (removed > 0) await saveConsultationBookings(campus, next);
+  return removed;
+}
+
 // 예약 부분 수정(취소/완료/담당자 회신/슬롯 배정 등). 없으면 null.
 export async function patchConsultationBooking(
   campus: string,

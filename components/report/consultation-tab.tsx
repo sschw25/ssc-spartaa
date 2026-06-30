@@ -2,9 +2,7 @@
 
 import React from 'react';
 import { Calendar, Trash2, MessageSquare } from 'lucide-react';
-import { LeaveType, Student, ConsultationBooking } from '@/lib/types/student';
-import { isConsultationCampus } from '@/lib/consultation-schedule';
-import { ConsultationBookingPanel } from './consultation-booking-panel';
+import { LeaveType, Student } from '@/lib/types/student';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
   LEAVE_TYPES,
@@ -55,8 +53,6 @@ interface ConsultationTabProps {
   homeHalfLeft: number;
   homeFullLeft: number;
   homeLeaveCoupons: number;
-  whyConsultation?: { subjectName: string; materialTitle: string; type: 'book' | 'lecture'; planEndDate: string } | null;
-  consultationBookings?: ConsultationBooking[];
 }
 
 export function ConsultationTab({
@@ -83,8 +79,6 @@ export function ConsultationTab({
   homeHalfLeft,
   homeFullLeft,
   homeLeaveCoupons,
-  whyConsultation,
-  consultationBookings,
 }: ConsultationTabProps) {
   if (!isStudentReport) return null;
 
@@ -146,16 +140,6 @@ export function ConsultationTab({
           </div>
         </div>
       </div>
-
-      {/* 클리닉 상담 예약 (학생 셀프 예약) — 상담 운영 센터에서만 노출 */}
-      {isConsultationCampus(student.campus) && (
-        <ConsultationBookingPanel
-          studentId={student.id}
-          campus={student.campus}
-          bookings={consultationBookings || []}
-          whyConsultation={whyConsultation}
-        />
-      )}
 
       {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
       {(() => {

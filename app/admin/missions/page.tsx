@@ -17,6 +17,7 @@ export default function MissionsPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [config, setConfig] = useState<ConfigMap>(normalizeMissionConfig(DEFAULT_MISSION_CONFIG));
+  const [enabled, setEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -28,7 +29,10 @@ export default function MissionsPage() {
       const res = await fetch('/api/admin/missions', { cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) setConfig(normalizeMissionConfig(json.config));
+        if (json.success) {
+          setConfig(normalizeMissionConfig(json.config));
+          setEnabled(json.enabled !== false);
+        }
       }
     } catch {
       toast.error('미션 설정을 불러오지 못했습니다.');
@@ -78,11 +82,12 @@ export default function MissionsPage() {
       const res = await fetch('/api/admin/missions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ config, enabled }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
         setConfig(normalizeMissionConfig(json.config));
+        setEnabled(json.enabled !== false);
         setDirty(false);
         toast.success('미션 설정이 저장되었습니다.');
       } else {
@@ -165,6 +170,23 @@ export default function MissionsPage() {
           </div>
         </div>
 
+        {/* 전체 마스터 스위치 — OFF 면 학생에게 미션이 노출되지 않고 자동 지급도 멈춤(쿠폰 잔액·교환은 유지) */}
+        <div className={`rounded-2xl border p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm transition ${enabled ? 'border-emerald-200 bg-emerald-50/50' : 'border-slate-200 bg-slate-50'}`}>
+          <div className="flex items-start gap-2.5 min-w-0">
+            <Trophy className={`w-5 h-5 shrink-0 mt-0.5 ${enabled ? 'text-emerald-600' : 'text-slate-400'}`} />
+            <p className="text-xs font-semibold text-slate-600 leading-relaxed">
+              <b className="text-slate-800">쿠폰 미션 사용</b> — {enabled
+                ? '학생에게 미션이 노출되고 조건 충족 시 쿠폰이 자동 적립됩니다.'
+                : '전체 OFF — 학생에게 미션이 보이지 않고 자동 지급도 멈춥니다. (이미 적립한 쿠폰의 잔액·교환은 그대로 유지)'}
+            </p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" className="sr-only peer" checked={enabled}
+              onChange={(e) => { setEnabled(e.target.checked); setDirty(true); }} />
+            <div className="w-12 h-7 bg-slate-200 rounded-full peer peer-checked:bg-emerald-500 transition-colors after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-5" />
+          </label>
+        </div>
+
         {/* 쿠폰 경제 안내 */}
         <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-4 flex items-start gap-3">
           <Ticket className="w-5 h-5 text-[#0071E3] shrink-0 mt-0.5" />
@@ -200,7 +222,12 @@ export default function MissionsPage() {
         {loading ? (
           <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-[#0071E3] mx-auto" /></div>
         ) : (
-          <div className="space-y-3">
+          <div className={`space-y-3 transition ${enabled ? '' : 'opacity-60'}`}>
+            {!enabled && (
+              <p className="text-[11px] font-bold text-slate-400">
+                쿠폰 미션이 전체 OFF 상태입니다. 아래 개별 설정은 다시 켜야 적용됩니다.
+              </p>
+            )}
             {MISSION_ORDER.map((id) => {
               const meta = MISSION_META[id];
               const c = config[id];

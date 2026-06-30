@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, getStudySessions, getStudyMinutesByStudent } from '@/lib/store';
-import { getMissionConfig } from '@/lib/mission-engine';
+import { getActiveMissionConfig } from '@/lib/mission-engine';
 import { readActivityEnvelope } from '@/lib/student-activity';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { MISSION_ORDER, MISSION_META, type MissionId } from '@/lib/missions';
@@ -20,7 +20,7 @@ export async function GET() {
   if (!studentId) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
-  const [student, config] = await Promise.all([getStudentById(studentId), getMissionConfig()]);
+  const [student, config] = await Promise.all([getStudentById(studentId), getActiveMissionConfig()]);
   if (!student) {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }

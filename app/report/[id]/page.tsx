@@ -10,6 +10,8 @@ import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab } from '@/components/report/consultation-tab';
+import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
+import { isConsultationCampus } from '@/lib/consultation-schedule';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
 import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
@@ -532,9 +534,23 @@ function StudentReportInner() {
           homeHalfLeft={homeHalfLeft}
           homeFullLeft={homeFullLeft}
           homeLeaveCoupons={homeLeaveCoupons}
-          whyConsultation={whyConsultation}
-          consultationBookings={consultationBookings}
         />
+
+        {/* 6-1. 클리닉 상담 예약 탭 (상담 운영 센터 학생 전용) */}
+        {isStudentReport && isConsultationCampus(student.campus) && (
+          <section
+            id="clinic-booking"
+            className={`scroll-mt-24 print-card ${activeTab === 'clinic-booking' ? '' : 'hidden print:block'}`}
+          >
+            <ConsultationBookingPanel
+              studentId={student.id}
+              campus={student.campus}
+              bookings={consultationBookings || []}
+              whyConsultation={whyConsultation}
+            />
+          </section>
+        )}
+
         {/* 7. 벌점 탭 */}
         <PenaltiesTab
           student={student}

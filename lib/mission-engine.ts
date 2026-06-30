@@ -13,6 +13,7 @@ import {
 import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
 
 const MISSION_CONFIG_KEY = 'mission_config';
+const MISSION_MASTER_KEY = 'missions_master_enabled';
 
 export async function getMissionConfig() {
   const raw = await getAppSetting(MISSION_CONFIG_KEY);
@@ -21,6 +22,28 @@ export async function getMissionConfig() {
 
 export async function saveMissionConfig(cfg: ReturnType<typeof normalizeMissionConfig>) {
   await setAppSetting(MISSION_CONFIG_KEY, cfg);
+}
+
+// 쿠폰 미션 전체 마스터 스위치 — 명시적으로 false 로 저장된 경우에만 OFF(기본 ON).
+// OFF 면 학생에게 미션이 노출되지 않고 자동 지급(정산·OT·뽀모도로·정시등원)도 멈춘다.
+// 이미 적립된 쿠폰의 잔액/교환은 영향받지 않는다(미션 카드의 교환 UI는 계속 노출).
+export async function getMissionsEnabled(): Promise<boolean> {
+  const raw = await getAppSetting(MISSION_MASTER_KEY);
+  return raw !== false;
+}
+
+export async function setMissionsEnabled(enabled: boolean): Promise<void> {
+  await setAppSetting(MISSION_MASTER_KEY, !!enabled);
+}
+
+// 런타임 지급/노출용 설정 — 마스터 OFF 면 모든 미션을 enabled=false 로 강제한다.
+// 관리자 설정 화면은 개별 토글 원본을 봐야 하므로 getMissionConfig()(원본)를 쓰고, 이 함수는 쓰지 않는다.
+export async function getActiveMissionConfig() {
+  const [config, master] = await Promise.all([getMissionConfig(), getMissionsEnabled()]);
+  if (master) return config;
+  const gated = {} as ReturnType<typeof normalizeMissionConfig>;
+  for (const id of MISSION_ORDER) gated[id] = { ...config[id], enabled: false };
+  return gated;
 }
 
 function hasReward(noteObj: any, periodKey: string, missionName: string): boolean {
@@ -54,7 +77,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   const runWeekly = scope === 'all' || scope === 'weekly';
   const runMonthly = scope === 'all' || scope === 'monthly';
 
-  const config = await getMissionConfig();
+  const config = await getActiveMissionConfig();
   const { todayStr, weekStart, monthStart } = getPeriodBounds();
   const weekKey = weekStart;             // 주 시작일(YYYY-MM-DD)
 
@@ -204,7 +227,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
 // OT 참여 쿠폰 즉시 지급 (이벤트 기반·멱등) — student 객체를 변형하고 지급한 쿠폰 수를 반환.
 // 저장(saveStudent)은 호출부 책임. 미션 비활성/이미 지급 시 0 반환.
 export async function grantOtAttendance(student: Student, eventId: string): Promise<number> {
-  const config = await getMissionConfig();
+  const config = await getActiveMissionConfig();
   const m = config.ot_attendance;
   if (!m.enabled) return 0;
   const noteObj: any = readActivityEnvelope(student);
