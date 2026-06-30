@@ -116,6 +116,14 @@ export interface ConsultationLog {
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
 }
 
+// 상담 담당자 휴무/출장으로 특정 날짜(또는 일부 슬롯)를 예약 불가로 막는 차단 항목.
+// 센터별 app_settings 키 consultation_blackouts:{campus} 에 JSON 배열로 보관(마이그레이션 불필요).
+export interface BlackoutEntry {
+  date: string;             // YYYY-MM-DD
+  scope: 'fullday' | string[]; // 'fullday'=그날 전체, string[]=막을 슬롯 시각('HH:MM') 목록
+  reason?: string;          // 사유(관리자 표시용)
+}
+
 // 상담 예약 — 센터별 상담 시간표 슬롯에 학생이 신청(자동 수락). 슬롯 점유는 센터 공유 자원이라
 // app_settings 예약 원장(consultation_bookings:{campus})에 보관하고, 리포트 API가 학생 본인 예약만 추려 전달한다.
 // kind='regular' 은 정규 슬롯 예약(슬롯 점유), kind='extra' 는 만석/긴급 시 추가신청(슬롯 미점유, 관리자 처리).
@@ -129,12 +137,14 @@ export interface ConsultationBooking {
   slot: string;           // 시작 시각 'HH:MM' — extra 는 ''(미지정) 가능
   counselor: string;      // 담당자 라벨(부원장/센터장/매니저)
   kind: 'regular' | 'extra'; // 정규 슬롯 / 추가·긴급 신청
-  status: 'booked' | 'cancelled' | 'done'; // 예약중 / 취소 / 완료(상담 종료)
+  status: 'booked' | 'cancelled' | 'done' | 'noshow'; // 예약중/취소/완료/노쇼
   reason?: string;        // 추가·긴급 신청 사유 등
   source: 'student' | 'admin'; // 신청 주체
   createdAt: string;      // 신청 시각 (ISO)
   cancelledAt?: string;   // 취소 시각 (ISO)
   resolvedAt?: string;    // extra 처리/상담 완료 시각 (ISO)
+  resolvedBy?: string;     // 완료/노쇼 처리한 관리자(username)
+  logId?: string;          // 완료 시 생성된 ConsultationLog id(결과 노트 하드 연결)
   adminReply?: string;    // 관리자 코멘트(추가신청 처리 회신 등)
 }
 

@@ -1703,6 +1703,7 @@ export function useReportState() {
     setStudent,
     whyConsultation,
     consultationBookings: student.consultationBookings || [],
+    consultationHistory: (student as any).consultationHistory || [],
     materialBenchmarks,
     studyStats,
     mockExams,

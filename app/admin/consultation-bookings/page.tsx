@@ -8,7 +8,8 @@ import {
   Loader2, CalendarClock, Search, Check, X, RefreshCw, Plus, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Student, ConsultationBooking } from '@/lib/types/student';
+import { buildConsultationDigest } from '@/lib/consultation-digest';
+import { Student, ConsultationBooking, BlackoutEntry } from '@/lib/types/student';
 import {
   CONSULTATION_SLOT_TIMES,
   WEEKDAY_LABEL,
@@ -19,6 +20,14 @@ import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 const ALL_CAMPUSES = ['wonju', 'chuncheon', 'chungju'] as const;
 type Campus = (typeof ALL_CAMPUSES)[number];
+
+function consultationStats(list: ConsultationBooking[]) {
+  const total = list.length;
+  const done = list.filter((b) => b.status === 'done').length;
+  const noshow = list.filter((b) => b.status === 'noshow').length;
+  const resolved = done + noshow;
+  return { total, done, noshow, noshowRate: resolved ? Math.round((noshow / resolved) * 100) : 0 };
+}
 
 function campusLabel(val: string) {
   switch (val) {
@@ -39,6 +48,7 @@ interface ApiResponse {
   success: boolean;
   bookings: ConsultationBooking[];
   grids: Record<string, DaySlotGrid[]>;
+  blackouts: Record<string, BlackoutEntry[]>;
   today: string;
 }
 
@@ -54,7 +64,14 @@ export default function AdminConsultationBookingsPage() {
 
   const [bookings, setBookings] = useState<ConsultationBooking[]>([]);
   const [grids, setGrids] = useState<Record<string, DaySlotGrid[]>>({});
+  const [blackoutsMap, setBlackoutsMap] = useState<Record<string, BlackoutEntry[]>>({});
   const [today, setToday] = useState('');
+
+  // 완료 처리 모달 상태
+  const [completeTarget, setCompleteTarget] = useState<ConsultationBooking | null>(null);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [completeBusy, setCompleteBusy] = useState(false);
+  const [pendingLogId, setPendingLogId] = useState<string | null>(null);
 
   // 관리자 직접 예약 폼
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -78,6 +95,7 @@ export default function AdminConsultationBookingsPage() {
         if (json.success) {
           setBookings(json.bookings || []);
           setGrids(json.grids || {});
+          setBlackoutsMap(json.blackouts || {});
           setToday(json.today || '');
         }
       } else {
@@ -190,6 +208,69 @@ export default function AdminConsultationBookingsPage() {
     if (ok) toast.success('처리완료로 표시했습니다.');
   };
 
+  const resolveBooking = async (bk: ConsultationBooking, status: 'done' | 'noshow') => {
+    const ok = await patchBooking(bk, { status }, `resolve_${bk.id}`);
+    if (ok) toast.success(status === 'done' ? '완료 처리했어요' : '노쇼로 기록했어요');
+  };
+
+  async function openCompleteModal(booking: ConsultationBooking) {
+    setCompleteTarget(booking);
+    setNoteDraft('[상담 메모]\n');
+    setPendingLogId(null);
+    try {
+      const res = await fetch(`/api/admin/students/${booking.studentId}`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        const digest = buildConsultationDigest(json.data, booking.date);
+        const prefilled = digest.length
+          ? `[그날 변경사항]\n${digest.map((d) => `- ${d.label}${d.detail ? ` (${d.detail})` : ''}`).join('\n')}\n\n[상담 메모]\n`
+          : '[상담 메모]\n';
+        setNoteDraft(prefilled);
+      }
+    } catch {
+      // 조회 실패해도 기본 폼으로 진행
+    }
+  }
+
+  async function submitComplete() {
+    if (!completeTarget) return;
+    const b = completeTarget;
+    setCompleteBusy(true);
+    try {
+      let logId = pendingLogId;
+      if (!logId) {
+        const noteRes = await fetch(`/api/admin/students/${b.studentId}/consultation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: b.date, content: noteDraft, type: 'learning' }),
+        });
+        const noteJson = await noteRes.json();
+        if (!noteJson.success) { toast.error(noteJson.message || '상담 기록 저장 실패'); return; }
+        logId = noteJson.data?.consultationLogs?.[0]?.id || null;
+        setPendingLogId(logId);
+      }
+
+      const patchRes = await fetch('/api/admin/consultation-bookings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campus: b.campus, id: b.id, status: 'done', ...(logId ? { logId } : {}) }),
+      });
+      const patchJson = await patchRes.json();
+      if (!patchJson.success) {
+        toast.error((patchJson.message || '완료 처리 실패') + ' (메모는 저장됨 — 다시 시도해 주세요)');
+        return; // pendingLogId 보존 → 재시도 시 노트 중복 생성 안 함
+      }
+
+      toast.success('상담 완료로 기록했어요');
+      setCompleteTarget(null);
+      setNoteDraft('');
+      setPendingLogId(null);
+      await loadData();
+    } finally {
+      setCompleteBusy(false);
+    }
+  }
+
   const assignExtraToSlot = async (booking: ConsultationBooking, date: string, slot: string, counselor: string) => {
     const ok = await patchBooking(
       booking,
@@ -226,6 +307,25 @@ export default function AdminConsultationBookingsPage() {
     } finally {
       setBusy((b) => ({ ...b, [key]: false }));
     }
+  };
+
+  const saveBlackouts = async (c: string, next: BlackoutEntry[]) => {
+    const res = await fetch('/api/admin/consultation-bookings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campus: c, blackouts: next }),
+    });
+    const json = await res.json();
+    if (!json.success) { alert(json.message || '차단 저장 실패'); return; }
+    await loadData();
+  };
+
+  const toggleFullday = (c: string, date: string, current: BlackoutEntry[]) => {
+    const existing = current.find((b) => b.date === date);
+    const next = existing && existing.scope === 'fullday'
+      ? current.filter((b) => b.date !== date)
+      : [...current.filter((b) => b.date !== date), { date, scope: 'fullday' as const, reason: '휴무' }];
+    return saveBlackouts(c, next);
   };
 
   if (checkingAuth) {
@@ -340,11 +440,21 @@ export default function AdminConsultationBookingsPage() {
 
         {/* 타임테이블 */}
         <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-            <h2 className="text-sm font-black text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
-            <span className="text-[11px] font-bold text-[#86868B]">앞 요일부터 채워집니다</span>
-          </div>
+          {(() => {
+            const campusBookings = bookings.filter((b) => b.campus === campus);
+            const s = consultationStats(campusBookings);
+            return (
+              <div className="flex items-center gap-2 px-1 flex-wrap">
+                <CalendarClock className="w-4 h-4 text-[#0071E3]" />
+                <h2 className="text-sm font-black text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
+                <span className="text-[11px] font-bold text-[#86868B]">앞 요일부터 채워집니다</span>
+                <span className="ml-auto text-[11px] font-bold text-[#86868B]">
+                  신청 {s.total} · 완료 {s.done} · 노쇼 {s.noshow} (노쇼율 {s.noshowRate}%)
+                </span>
+              </div>
+            );
+          })()}
+
 
           {loading ? (
             <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
@@ -364,44 +474,150 @@ export default function AdminConsultationBookingsPage() {
                     {grid.map((d) => {
                       const full = d.slots.every((s) => s.booking);
                       const isToday = d.date === today;
+                      const campusBlackouts = blackoutsMap[campus] || [];
+                      const bo = campusBlackouts.find((b) => b.date === d.date);
+                      const isFulldayBlocked = bo?.scope === 'fullday';
                       return (
                         <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-[#1D1D1F]'}`}>
                           <div>{dateLabel(d.date, d.weekday)}</div>
                           <div className="text-[10px] font-bold text-[#86868B]">{d.counselor}</div>
                           {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 px-1.5 text-[9px] font-black text-red-600">만석</span>}
+                          <button
+                            type="button"
+                            onClick={() => toggleFullday(campus, d.date, campusBlackouts)}
+                            title={isFulldayBlocked ? '휴무 해제' : '종일 휴무 설정'}
+                            className={`mt-1 inline-block rounded-full px-1.5 text-[9px] font-black transition-colors ${isFulldayBlocked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-[#F5F5F7] text-[#86868B] hover:bg-amber-50 hover:text-amber-600'}`}
+                          >
+                            {isFulldayBlocked ? '휴무중' : '휴무'}
+                          </button>
                         </th>
                       );
                     })}
                   </tr>
                 </thead>
                 <tbody>
-                  {CONSULTATION_SLOT_TIMES.map((slot) => (
-                    <tr key={slot} className="border-b border-black/[0.03] last:border-0">
-                      <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-[#86868B] border-r border-black/[0.04]">{slot}</td>
-                      {grid.map((d) => {
-                        const cell = d.slots.find((s) => s.slot === slot);
-                        const bk = cell?.booking || null;
-                        return (
-                          <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] align-middle">
-                            {bk ? (
-                              <button type="button" onClick={() => cancelBooking(bk)} title="클릭하여 예약 취소"
-                                className="w-full rounded-lg bg-[#0071E3]/10 px-1.5 py-1 text-[11px] font-bold text-[#0071E3] hover:bg-red-50 hover:text-red-600 transition-colors">
-                                {bk.studentName}
-                              </button>
-                            ) : (
-                              <span className="text-[#C7C7CC]">·</span>
-                            )}
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
+                  {(() => {
+                    const nowHHMM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
+                    return CONSULTATION_SLOT_TIMES.map((slot) => (
+                      <tr key={slot} className="border-b border-black/[0.03] last:border-0">
+                        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-[#86868B] border-r border-black/[0.04]">{slot}</td>
+                        {grid.map((d) => {
+                          const cell = d.slots.find((s) => s.slot === slot);
+                          const bk = cell?.booking || null;
+                          const isPast = bk ? (bk.date < today || (bk.date === today && bk.slot <= nowHHMM)) : false;
+                          return (
+                            <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] align-middle">
+                              {bk ? (
+                                <div className="space-y-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => openStudentSheet(bk.studentId)}
+                                    title="학생 정보 보기"
+                                    className={`w-full rounded-lg px-1.5 py-1 text-[11px] font-bold transition-colors ${
+                                      bk.status === 'done'
+                                        ? 'bg-emerald-50 text-emerald-700'
+                                        : bk.status === 'noshow'
+                                        ? 'bg-amber-50 text-amber-700'
+                                        : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-red-50 hover:text-red-600'
+                                    }`}
+                                  >
+                                    {bk.studentName}
+                                  </button>
+                                  {bk.status === 'done' && (
+                                    <span className="inline-block w-full rounded-full bg-emerald-100 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700">완료</span>
+                                  )}
+                                  {bk.status === 'noshow' && (
+                                    <span className="inline-block w-full rounded-full bg-amber-100 px-1.5 py-0.5 text-center text-[9px] font-black text-amber-700">노쇼</span>
+                                  )}
+                                  {isPast && bk.status === 'booked' && (
+                                    <div className="flex gap-0.5">
+                                      <button
+                                        type="button"
+                                        disabled={!!busy[`resolve_${bk.id}`]}
+                                        onClick={() => openCompleteModal(bk)}
+                                        className="flex-1 rounded-md bg-emerald-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                                      >
+                                        완료
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={!!busy[`resolve_${bk.id}`]}
+                                        onClick={() => resolveBooking(bk, 'noshow')}
+                                        className="flex-1 rounded-md bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-rose-600 transition-colors disabled:opacity-50"
+                                      >
+                                        {busy[`resolve_${bk.id}`] ? '…' : '노쇼'}
+                                      </button>
+                                    </div>
+                                  )}
+                                  {!isPast && bk.status === 'booked' && (
+                                    <button
+                                      type="button"
+                                      onClick={() => cancelBooking(bk)}
+                                      title="클릭하여 예약 취소"
+                                      className="w-full rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-red-50 hover:text-red-600 transition-colors"
+                                    >
+                                      취소
+                                    </button>
+                                  )}
+                                </div>
+                              ) : (
+                                <span className="text-[#C7C7CC]">·</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ));
+                  })()}
                 </tbody>
               </table>
             </div>
           )}
         </section>
       </main>
+
+      {/* 완료 처리 모달 */}
+      {completeTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div
+            className="w-full max-w-lg rounded-3xl border border-white/20 shadow-2xl p-6 space-y-4"
+            style={{
+              background: 'rgba(255,255,255,0.82)',
+              backdropFilter: 'blur(28px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+            }}
+          >
+            <h3 className="text-sm font-black text-[#1D1D1F] leading-snug">
+              {completeTarget.studentName} · {completeTarget.date} {completeTarget.slot} 상담 완료
+            </h3>
+            <textarea
+              value={noteDraft}
+              onChange={(e) => setNoteDraft(e.target.value)}
+              rows={6}
+              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-[#1D1D1F] leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+              placeholder="상담 내용을 작성하세요"
+            />
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => { setCompleteTarget(null); setNoteDraft(''); }}
+                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-[#1D1D1F] hover:bg-[#E5E5EA] transition-colors"
+              >
+                닫기
+              </button>
+              <button
+                type="button"
+                disabled={completeBusy}
+                onClick={submitComplete}
+                className="h-9 rounded-2xl bg-emerald-500 px-5 text-[12px] font-black text-white hover:bg-emerald-600 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {completeBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                완료 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
