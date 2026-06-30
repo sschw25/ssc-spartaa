@@ -57,6 +57,7 @@ function rowToStudent(r: any): Student {
     studentPhone: r.student_phone || undefined,
     smsTargets: normalizeSmsTargets(r.sms_targets),
     expectedArrival: normalizeArrival(r.expected_arrival),
+    enrollStartDate: r.student_state?.enrollStartDate || undefined,
     enrollmentEndDate: r.enrollment_end_date || undefined,
     weeklyGradeCheck: Boolean(r.weekly_grade_check),
     seatNumber: r.seat_number != null ? Number(r.seat_number) : undefined,
@@ -134,7 +135,8 @@ function studentToRow(student: Student, nowIso: string) {
     mock_exams: student.mockExams || [],
     ot_events: student.otEvents || [],
     event_participations: student.eventParticipations || [],
-    student_state: student.studentState || {},
+    // enrollStartDate(이용 시작일)는 별도 컬럼 없이 student_state(jsonb)에 함께 보관 — 마이그레이션 불필요
+    student_state: { ...(student.studentState || {}), enrollStartDate: student.enrollStartDate || null },
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
     phone_submissions: student.phoneSubmissions || [],

@@ -72,6 +72,7 @@ export async function POST(
       studentPhone: onlyDigits(body.studentPhone) || application.studentPhone || undefined,
       smsTargets: application.smsTargets && application.smsTargets.length ? application.smsTargets : ['parent'],
       seatNumber: normalizeSeat(body.seatNumber),
+      enrollStartDate: /^\d{4}-\d{2}-\d{2}$/.test(String(body.enrollStartDate ?? '')) ? String(body.enrollStartDate) : undefined,
       enrollmentEndDate: String(body.enrollmentEndDate ?? '').trim() || undefined,
       weeklyGradeCheck: Boolean(body.weeklyGradeCheck),
       createdAt: now,

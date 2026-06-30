@@ -395,6 +395,7 @@ export interface Student {
   studentPhone?: string;
   smsTargets?: Array<'parent' | 'student'>;
   expectedArrival?: string; // 지각 기준(등원 마감) HH:MM — 기본 08:20, 수동 커스텀 시각(예: 09:40) 지원
+  enrollStartDate?: string;   // 이용 시작일 (YYYY-MM-DD) — 이 날짜 전에는 학생 로그인 차단(활성화 게이트). student_state(jsonb)에 보관해 별도 컬럼/마이그레이션 불필요
   enrollmentEndDate?: string; // 등록(수강) 종료일 (YYYY-MM-DD) — 출결 시 D-3부터 학생에게 안내
   weeklyGradeCheck?: boolean; // 매주 성적 입력 대상 — 이번 주 미입력 시 관리자/학생에게 알림
   seatNumber?: number;          // 지정 좌석 번호 (좌석 현황판 연동)

@@ -27,6 +27,7 @@ type ApprovalDraft = {
   campus: string;
   manager: string;
   seatNumber: string;
+  enrollStartDate: string;
   enrollmentEndDate: string;
   weeklyGradeCheck: boolean;
 };
@@ -82,6 +83,7 @@ export default function AdminApplicationsPage() {
                   campus: app.campus && CAMPUS_LABELS[app.campus] ? app.campus : 'wonju',
                   manager: '',
                   seatNumber: '',
+                  enrollStartDate: '',
                   enrollmentEndDate: '',
                   weeklyGradeCheck: false,
                 };
@@ -143,6 +145,7 @@ export default function AdminApplicationsPage() {
           campus: draft.campus,
           manager: draft.manager.trim() || undefined,
           seatNumber: Number.isFinite(seatNum) ? seatNum : undefined,
+          enrollStartDate: draft.enrollStartDate || undefined,
           enrollmentEndDate: draft.enrollmentEndDate || undefined,
           weeklyGradeCheck: draft.weeklyGradeCheck,
           parentPhone: app.parentPhone || undefined,
@@ -291,6 +294,16 @@ export default function AdminApplicationsPage() {
                           onChange={(e) => updateDraft(app.id, { seatNumber: e.target.value })}
                           className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                         />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-[#1D1D1F]">이용 시작일</Label>
+                        <Input
+                          type="date"
+                          value={draft.enrollStartDate}
+                          onChange={(e) => updateDraft(app.id, { enrollStartDate: e.target.value })}
+                          className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                        />
+                        <p className="text-[10px] text-[#86868B]">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-semibold text-[#1D1D1F]">등록 종료일</Label>
