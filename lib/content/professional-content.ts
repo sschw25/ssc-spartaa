@@ -5,9 +5,9 @@ export const professionalContent: StreamContent = {
   id: 'professional',
   name: '전문자격사',
   hero: {
-    title: '{{region}} 자격증 준비 전문\n성인 수험생을 위한 최후의 요새',
+    title: '{{region}} 자격증 준비 전문\n성인 수험생을 위한 관리형 독학 환경',
     subtitle: '전기기사·공인중개사·세무사·노무사까지\n어떤 자격증이든, 성인 전용 프리미엄 관리반',
-    description: '기술·기능 자격부터 부동산·회계·노무까지\n나태해지기 쉬운 성인 수험생을 위한 강제 교시제 시스템.\n합격이라는 결과만을 위해 설계된\n철저한 전문가용 관리 시스템입니다.',
+    description: '기술·기능 자격부터 부동산·회계·노무까지\n혼자서는 흐트러지기 쉬운 성인 수험생을 위한 교시제 관리 시스템.\n오직 합격이라는 결과를 위해 설계된\n전문 수험생 전용 관리 환경입니다.',
   },
   examInfo: {
     title: '어떤 자격증이든,\n합격 시스템은 같다',
@@ -41,7 +41,7 @@ export const professionalContent: StreamContent = {
       {
         label: '응시 자격',
         value: '대부분 학력·전공 제한 없음',
-        note: '자격증 대부분은 응시 문턱이 낮음(일부 경력·학점 요건). 자격별 세부 요건은 시행처 공고 확인',
+        note: '자격증 대부분은 응시 문턱이 낮은 편(일부 경력·학점 요건 존재). 자격별 세부 요건은 시행처 공고로 안내드립니다',
       },
     ],
     timeline: [],
@@ -55,7 +55,7 @@ export const professionalContent: StreamContent = {
         worry: '직장·생활에 치여\n공부가 자꾸 뒤로 밀린다',
         worryDetail: '성인 수험생은 책임질 일이 많아 \'오늘은 피곤하니 내일\'이 반복됩니다. 강제성이 없으면 방대한 분량 앞에서 회독 자체를 시작하지 못합니다.',
         solution: '강제 교시제 + 스마트폰 통제로 책상에 묶는다',
-        solutionDetail: '학원에 오면 폰부터 제출하고 교시제에 던져져, 피곤한 날에도 어떻게든 책상에 앉게 됩니다. 2중 출결과 순공시간 집계로 \'앉은 시간\'이 아닌 진짜 공부량을 숫자로 관리해 수험 기간을 단축합니다.',
+        solutionDetail: '학원에 오면 휴대폰부터 제출하고 교시제 시간표에 따라 자습이 시작돼, 피곤한 날에도 책상에 앉게 됩니다. 2중 출결과 순공시간 집계로 \'앉은 시간\'이 아닌 진짜 공부량을 숫자로 관리해 수험 기간을 단축합니다.',
       },
       {
         icon: 'Calculator',
@@ -75,14 +75,14 @@ export const professionalContent: StreamContent = {
         icon: 'Heart',
         worry: '장기 수험 슬럼프에\n혼자 무너진다',
         worryDetail: '몇 년씩 준비하는 시험이라 슬럼프가 반복됩니다. 응원해 줄 사람도, 냉정하게 짚어줄 사람도 없이 혼자 버티면 중도 포기로 이어집니다.',
-        solution: '독설과 격려를 번갈아, 밀착 멘탈케어',
-        solutionDetail: '긴 레이스에 지치지 않도록 개인별 맞춤 상담을 제공합니다. 느슨해질 땐 냉정하게, 무너질 땐 격려로 페이스를 잡아줍니다. 성인 전용 존의 면학 분위기 자체가 나태함을 허용하지 않습니다.',
+        solution: '냉정함과 격려를 함께, 밀착 멘탈 케어',
+        solutionDetail: '긴 레이스에 지치지 않도록 개인별 맞춤 상담을 제공합니다. 느슨해질 땐 냉정하게 짚고, 무너질 땐 격려로 페이스를 잡아줍니다. 성인 전용 존의 면학 분위기 자체가 흐트러짐을 허용하지 않습니다.',
       },
     ],
   },
   management: {
     title: 'SSC스파르타\n전문자격 관리 시스템',
-    subtitle: '성인 수험생을 위해 설계된 통제 장치들.\n결과만을 위한 철저한 관리.',
+    subtitle: '성인 수험생을 위해 설계된 관리 장치들.\n오직 합격이라는 결과를 위한 시스템.',
     features: [
       {
         icon: 'CheckSquare',
@@ -117,7 +117,7 @@ export const professionalContent: StreamContent = {
       {
         icon: 'Heart',
         title: '장기 수험 멘탈케어',
-        desc: '슬럼프 신호를 데이터로 포착해 독설과 격려를 번갈아, 긴 레이스의 페이스를 잡아줍니다.',
+        desc: '슬럼프 신호를 데이터로 포착해 냉정한 점검과 격려를 병행하며 긴 레이스의 페이스를 잡아줍니다.',
         metric: '케어',
       },
     ],
@@ -127,7 +127,7 @@ export const professionalContent: StreamContent = {
     items: [
       {
         title: '정숙함 이상의\n성숙한 분위기',
-        desc: '자격증 취득이라는 목표를 가진\n성인 학습자들이 주축이 되어\n상부 시너지를 내는 최상위 환경입니다.',
+        desc: '자격증 취득이라는 목표를 가진\n성인 학습자들이 주축이 되어\n서로의 집중을 끌어올리는 면학 환경입니다.',
       },
       {
         title: '효율 극대화\n교시제',
@@ -160,19 +160,9 @@ export const professionalContent: StreamContent = {
     COMMON_SYSTEMS[2],
     { icon: 'Heart', title: '장기 수험 대비 멘탈 케어', description: '긴 레이스에 지치지 않도록\n개인별 맞춤형 슬럼프 방지 상담을 제공합니다.' },
     COMMON_SYSTEMS[4],
-    { icon: 'ClipboardList', title: 'CPA/CTA 모의고사 연계', description: '실전 모의고사 일정이 있을 경우,\n원내에서 동일한 긴장감으로 응시할 수 있도록 조율합니다.' }
+    { icon: 'ClipboardList', title: 'CPA/CTA 모의고사 연계', description: '실전 모의고사 일정에 맞춰\n원내에서 동일한 긴장감으로 응시할 수 있도록 지원합니다.' }
   ],
   testimonials: [
-    {
-      name: '문O연님',
-      result: '해양경찰 합격',
-      quote: '필기랑 체력을 같이\n준비해야 해서 막막했는데,\n교시제로 공부 시간을\n확보해주니까\n체력 준비까지\n균형 있게 끌고 갔습니다.',
-    },
-    {
-      name: '최O영님',
-      result: '국민건강보험공단 합격',
-      quote: '필기에 NCS까지\n범위가 넓어 막막했는데,\n매일 순공시간이\n숫자로 집계되니까\n분량을 꾸준히\n쳐낼 수 있었습니다.',
-    },
     {
       name: '박O남님',
       result: '소방시설관리사 합격',

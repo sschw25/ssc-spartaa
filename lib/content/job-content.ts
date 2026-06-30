@@ -5,9 +5,9 @@ export const jobContent: StreamContent = {
   id: 'job',
   name: '취업준비',
   hero: {
-    title: '{{region}} 취업준비 베이스캠프\n공백기 깨고 초단기 합격 완성',
+    title: '{{region}} 취업준비 베이스캠프\n공백기를 깨고 합격까지',
     subtitle: '가장 치열하게 준비하는\n취업준비생을 위한 맞춤형 베이스캠프',
-    description: '단기 자격증 취득부터 꾸준한 NCS 대비까지.\n독서실에서 버티는 외로운 싸움 대신\n스파르타의 체계적인 관리를 선택하세요.',
+    description: '단기 자격증 취득부터 꾸준한 NCS 대비까지.\n혼자 버티는 독서실 대신\n체계적으로 관리되는 베이스캠프에서 준비하세요.',
   },
   worries: {
     title: '길어지는 공백기,\n취업준비생의 진짜 걱정',
@@ -18,7 +18,7 @@ export const jobContent: StreamContent = {
         worry: '공백기가 길어지며\n생활리듬과 방향을 잃는다',
         worryDetail: '뚜렷한 일정이 없으면 기상·취침이 무너지고, NCS·인적성·자격증 사이에서 우선순위를 못 잡은 채 시간만 흘려보내기 쉽습니다.',
         solution: '교시제 베이스캠프 + 2중 출결',
-        solutionDetail: '교시제로 하루를 고정 편성하고 2중 출결로 등하원을 관리해, 공백기에도 직장인 같은 규칙적 리듬을 강제합니다. 순공시간 집계로 NCS·자격 준비의 실제 학습량을 숫자로 확인합니다.',
+        solutionDetail: '교시제로 하루를 고정 편성하고 2중 출결로 등하원을 관리해, 공백기에도 직장인 같은 규칙적 리듬을 잡아드립니다. 순공시간 집계로 NCS·자격 준비의 실제 학습량을 숫자로 확인합니다.',
       },
       {
         icon: 'PenTool',
@@ -38,12 +38,12 @@ export const jobContent: StreamContent = {
   },
   management: {
     title: 'SSC스파르타\n취업준비 관리 시스템',
-    subtitle: '독서실에 없는 강제력과 전용 공간을 더합니다.',
+    subtitle: '독서실에 없는 규칙적 관리와 전용 공간을 더합니다.',
     features: [
       {
         icon: 'CheckSquare',
         title: '카드+태블릿 2중 출결관리',
-        desc: '등하원 키오스크/QR과 교시별 체크로 공백기에도 규칙적인 등원 리듬을 강제합니다.',
+        desc: '등하원 키오스크/QR과 교시별 체크로 공백기에도 규칙적인 등원 리듬을 잡아드립니다.',
         metric: '2중',
       },
       {
@@ -79,11 +79,11 @@ export const jobContent: StreamContent = {
     ],
   },
   differentiation: {
-    title: '취업 준비생 전용\n최후의 몰입존',
+    title: '취업 준비생 전용\n몰입 환경',
     items: [
       {
-        title: '비실무 자격시험\n특화',
-        desc: '번거로운 준비보다는 단기 자격 취득과\nNCS / 인적성 등 필기 위주의\n빠른 스펙업에 몰입할 수 있습니다.',
+        title: '필기·자격시험\n특화',
+        desc: '단기 자격 취득과\nNCS·인적성 등 필기 위주의\n빠른 스펙업에 몰입할 수 있습니다.',
       },
       {
         title: '자기소개서 집중\n존',
@@ -107,13 +107,13 @@ export const jobContent: StreamContent = {
     ],
   },
   faqs: [
-    { q: '화상 면접이나 AI 면접을 볼 수 있는\n프라이빗한 공간이 있나요?', a: '네, 독립된 프라이빗 스터디룸을 예약하여\n타인의 방해 없이 화상 면접을 치를 수 있습니다.\n최상급 면접 환경을 보장합니다.' },
+    { q: '화상 면접이나 AI 면접을 볼 수 있는\n프라이빗한 공간이 있나요?', a: '네, 독립된 프라이빗 스터디룸을 예약하여\n타인의 방해 없이 화상·AI 면접을 치를 수 있습니다.\n조용하고 안정적인 면접 환경을 제공합니다.' },
   ],
   systems: [
     COMMON_SYSTEMS[0],
     COMMON_SYSTEMS[1],
     COMMON_SYSTEMS[2],
-    { icon: 'Target', title: '취업 지원 맞춤 스터디', description: '관련 인원 충족 시, 면접이나 NCS 정보 통과를 위한\n상부상조 스터디를 원내에서 매칭해 드립니다.' },
+    { icon: 'Target', title: '취업 지원 맞춤 스터디', description: '관련 인원 충족 시, 면접 준비와 NCS 정보 교류를 위한\n스터디를 원내에서 매칭해 드립니다.' },
     COMMON_SYSTEMS[3],
     COMMON_SYSTEMS[4]
   ],
@@ -121,7 +121,7 @@ export const jobContent: StreamContent = {
     {
       name: '신OO님',
       result: '국민건강보험공단 합격',
-      quote: 'NCS 책상 넓은 게\n정말 중요하거든요.\n여긴 책상이 넓어서\n문제집 여러 권 펴놓고도\n방해 하나도 안 받고\n점수 쫙 올릴 수 있었습니다.',
+      quote: 'NCS는 책상 넓은 게\n정말 중요하거든요.\n여긴 책상이 넓어서\n문제집 여러 권 펴놓고도\n방해 없이 집중해서\n점수를 끌어올릴 수 있었습니다.',
     },
     {
       name: '임O나님',
@@ -132,6 +132,11 @@ export const jobContent: StreamContent = {
       name: '강O우님',
       result: '코레일 필기 합격',
       quote: '취업 전용 스터디룸에서\n면접 연습하고 피드백\n주고받은 게 큰 도움 됐어요.\n혼자 할 때보다\n정보 교류도 훨씬 원활했습니다.',
+    },
+    {
+      name: '최O영님',
+      result: '국민건강보험공단 합격',
+      quote: '필기에 NCS까지\n범위가 넓어 막막했는데,\n매일 순공시간이\n숫자로 집계되니까\n분량을 꾸준히\n쳐낼 수 있었습니다.',
     }
   ]
 }
