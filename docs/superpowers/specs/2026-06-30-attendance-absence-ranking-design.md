@@ -11,14 +11,17 @@
 ## 핵심 결정
 
 ### 데이터 정의
-- **원천**: `seat_statuses` 중 수기 결석 마크 — status `absent`(교시 셀 amber X). 8교시 일괄(`A`/idx 0~6 일괄)도 결석 마크로 포함하되, 정확한 저장 status는 seat-board 쓰기 로직(`app/admin/seat-board/page.tsx`)과 대조해 구현 시 확정한다. **교시 키(`{studentId}:{0~7}`)만** 집계, 휴대폰 키(`{studentId}:phone_{D|E|N}`)는 제외(다른 신호).
-- **이탈 vs 결석 분류**(그날 `study_sessions` 등원 여부로):
-  - **이탈** = 그날 등원 세션 있음 + 수기 X → "왔는데 자리 비움"
-  - **결석** = 그날 등원 세션 없음 + 수기 X → "아예 안 옴"
+- **원천**: `seat_statuses` 중 수기 결석 마크 — status `absent`(교시 셀 amber X). 8교시 일괄(전 교시 X / `A`/idx 0~6 일괄)도 포함하되, 정확한 저장 status·키 형태는 seat-board 쓰기 로직(`app/admin/seat-board/page.tsx`)과 대조해 구현 시 확정한다. **교시 키(`{studentId}:{0~7}`)만** 집계, 휴대폰 키(`{studentId}:phone_{D|E|N}`)는 제외(다른 신호).
+- **이탈 vs 결석 분류**((학생, 날짜) 단위, 정당사유 제외 후 남은 수기 X 기준):
+  - **결석일** = ① 그날 등원 세션 없음 + 수기 X(아예 안 옴), **또는** ② 그날이 일괄 X(전 운영교시 X / 8교시 일괄)로 채워짐 — 등원 여부와 무관하게 하루종일 자리비움으로 본다.
+  - **이탈일** = 그날 등원 세션 있음 + **부분** 수기 X(일괄 아님) → "왔는데 일부 자리 비움".
+  - 한 (학생, 날짜)는 결석일 **또는** 이탈일 중 하나로만 카운트(결석 우선).
 - **정당 사유 제외(2겹)**:
   1. 승인 휴가의 파랑 X는 렌더 시 계산이라 `seat_statuses`에 저장되지 않음 → 기본적으로 순위에 미포함.
-  2. 안전장치: 수기 X라도 그 (학생, 날짜, 교시idx)가 승인 휴가(반차/휴식/개인사정/병가)가 덮는 교시면 **총계에서 제외**. 기존 seat-board의 `leaveBlockKind`/`leaveKindCoversPeriod`/`approvedLeavesOn` 로직을 공유 모듈로 추출해 재사용.
-- **집계 단위**: **일수**. 같은 날 여러 교시 X여도 이탈 1일(또는 결석 1일). 순위 = `이탈일수 + 결석일수` 내림차순. 부가 표시: 총 X 마크 수, 최근 발생일.
+  2. 안전장치: 수기 X라도 그 (학생, 날짜, 교시idx)가 승인 휴가(반차/휴식/개인사정/병가)가 덮는 교시면 **총계에서 제외**. 기존 seat-board의 `leaveBlockKind`/`leaveKindCoversPeriod`/`approvedLeavesOn` 로직을 공유 모듈로 추출해 재사용. (제외 후 남은 X가 없으면 그 날은 카운트 안 함.)
+- **집계 단위**: **일수**. 같은 날 여러 교시 X여도 1일. **정렬 = 결석일수 내림차순(1순위) → 이탈일수 내림차순(2순위)** → 동률 시 총 X 마크 수 → 이름. 부가 표시: 총 X 마크 수, 최근 발생일.
+
+> **일괄 X 판정**: 그날 (정당사유 제외 후) 수기 X가 그 (센터, 요일)의 운영 교시 전부를 덮으면 일괄로 본다. 운영 교시 수는 seat-board 교시 구성(또는 idx 0~6 전체)을 기준으로 구현 시 확정.
 
 ### 아키텍처
 서버 집계 + 기존 페이지 내 탭(접근 A). 센터 규모에선 온디맨드 서버 집계로 충분(전용 테이블/크론 불필요).
@@ -38,7 +41,7 @@
 **2. `lib/absence-stats.ts` (신규 — 순수 집계)**
 - 입력: seat_status 마크 행 배열(`{date, seatKey, status}`), 등원일 집합(`Set<"studentId|date">`), 학생 배열(id→{name, campus, leaveRequests}).
 - 처리: 교시 키만 파싱(`seatKey.split(':')` → studentId + idx, `phone_` 제외), status가 결석 마크인 행만, `isPeriodCoveredByApprovedLeave`로 정당사유 제외, (학생, 날짜)별로 이탈/결석 1일 분류·중복제거.
-- 출력: `AbsenceRankRow[] = { studentId, name, campus, leaveDays, absentDays, totalDays, totalMarks, lastDate }` — `totalDays` 내림차순 정렬.
+- 출력: `AbsenceRankRow[] = { studentId, name, campus, absentDays(결석), leftDays(이탈·자리비움), totalMarks, lastDate }` — **absentDays desc → leftDays desc → totalMarks desc → 이름** 순 정렬. (이탈=leftDays로 명명, `leaveDays`는 휴가와 혼동되어 사용 안 함.)
 - 순수함수 → `scripts/verify-*.mts`로 단위 검증.
 
 **3. 조회 (lib/store 또는 엔드포인트 내)**
@@ -52,7 +55,7 @@
 
 **5. UI — `/admin/attendance` 내 탭/섹션 "이탈·결석 순위"**
 - 기간 프리셋: 이번주 / 이번달(기본) / 지난 30일 (+ from/to 직접 선택 가능하면 추가, 선택).
-- 표: 순위 · 학생명(센터) · 이탈일수 · 결석일수 · 총 X · 최근발생일. 행 클릭 → 기존 학생 상세 시트.
+- 표(결석 1순위 정렬): 순위 · 학생명(센터) · **결석일수** · **이탈일수** · 총 X · 최근발생일. 행 클릭 → 기존 학생 상세 시트.
 - 상단 한 줄 요약: 기간/대상 인원/총 이탈일·결석일.
 - 색: 이탈=amber, 결석=rose 계열(의미색). 보라/인디고 금지. iOS26 글래스.
 
