@@ -940,3 +940,30 @@ export async function setAppSettingSupabase(key: string, value: any): Promise<vo
   }
 }
 
+// 기간 내 수기 결석 마크(status 'absent') — 이탈/결석 순위 집계용.
+export async function getSeatAbsenceMarksSupabase(from: string, to: string): Promise<{ date: string; seatKey: string }[]> {
+  const { data, error } = await getClient()
+    .from('seat_statuses')
+    .select('date, seat_key, status')
+    .gte('date', from)
+    .lte('date', to)
+    .eq('status', 'absent');
+  if (error) throw error;
+  return (data || []).map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
+}
+
+// 기간 내 등원일 집합 "studentId|date".
+export async function getAttendedDaysSupabase(from: string, to: string): Promise<Set<string>> {
+  const { data, error } = await getClient()
+    .from('study_sessions')
+    .select('student_id, date')
+    .gte('date', from)
+    .lte('date', to);
+  if (error) throw error;
+  const set = new Set<string>();
+  for (const r of (data || []) as any[]) {
+    if (r.student_id && r.date) set.add(`${r.student_id}|${r.date}`);
+  }
+  return set;
+}
+
