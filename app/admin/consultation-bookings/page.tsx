@@ -21,6 +21,14 @@ import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 const ALL_CAMPUSES = ['wonju', 'chuncheon', 'chungju'] as const;
 type Campus = (typeof ALL_CAMPUSES)[number];
 
+function consultationStats(list: ConsultationBooking[]) {
+  const total = list.length;
+  const done = list.filter((b) => b.status === 'done').length;
+  const noshow = list.filter((b) => b.status === 'noshow').length;
+  const resolved = done + noshow;
+  return { total, done, noshow, noshowRate: resolved ? Math.round((noshow / resolved) * 100) : 0 };
+}
+
 function campusLabel(val: string) {
   switch (val) {
     case 'wonju': return '원주';
@@ -422,11 +430,21 @@ export default function AdminConsultationBookingsPage() {
 
         {/* 타임테이블 */}
         <section className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-            <h2 className="text-sm font-black text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
-            <span className="text-[11px] font-bold text-[#86868B]">앞 요일부터 채워집니다</span>
-          </div>
+          {(() => {
+            const campusBookings = bookings.filter((b) => b.campus === campus);
+            const s = consultationStats(campusBookings);
+            return (
+              <div className="flex items-center gap-2 px-1 flex-wrap">
+                <CalendarClock className="w-4 h-4 text-[#0071E3]" />
+                <h2 className="text-sm font-black text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
+                <span className="text-[11px] font-bold text-[#86868B]">앞 요일부터 채워집니다</span>
+                <span className="ml-auto text-[11px] font-bold text-[#86868B]">
+                  신청 {s.total} · 완료 {s.done} · 노쇼 {s.noshow} (노쇼율 {s.noshowRate}%)
+                </span>
+              </div>
+            );
+          })()}
+
 
           {loading ? (
             <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">

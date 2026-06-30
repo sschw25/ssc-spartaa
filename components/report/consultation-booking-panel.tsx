@@ -208,8 +208,23 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
 
   const hasAnyOpen = calendar.some((d) => !d.full);
 
+  // D-1 배너: 내일(KST) 예약이 있으면 표시
+  const tomorrowKst = (() => {
+    const d = new Date(Date.now() + 9 * 3600 * 1000);
+    d.setUTCDate(d.getUTCDate() + 1);
+    return d.toISOString().slice(0, 10);
+  })();
+  const soonBooking =
+    myBooking?.status === 'booked' && myBooking.date === tomorrowKst ? myBooking : null;
+
   return (
     <div className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+      {/* D-1 리마인더 배너 */}
+      {soonBooking && (
+        <div className="rounded-2xl border border-sky-200 bg-sky-50/80 px-4 py-3 text-[12px] font-bold text-sky-800 shadow-sm">
+          내일 {soonBooking.slot} 상담이 있어요 ({soonBooking.counselor})
+        </div>
+      )}
       <div>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
           <CalendarClock className="h-3.5 w-3.5" /> 클리닉 상담 예약
