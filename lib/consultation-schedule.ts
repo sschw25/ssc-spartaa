@@ -4,7 +4,7 @@
 // - "앞 요일부터 채우고, 다 차면 다음 요일 개방"(순차 오픈) 가용성 계산
 // 별도 테이블/마이그레이션 없이 app_settings 예약 원장(lib/store)과 함께 동작한다.
 
-import type { ConsultationBooking } from './types/student';
+import type { ConsultationBooking, BlackoutEntry } from './types/student';
 
 export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
 
@@ -107,6 +107,27 @@ export function slotsForDay(campus: ConsultationCampus, weekday: Weekday): strin
   if (!cfg) return [];
   if (!cfg.lastSlot) return CONSULTATION_SLOT_TIMES;
   return CONSULTATION_SLOT_TIMES.filter((s) => s <= cfg.lastSlot!);
+}
+
+// 해당 날짜의 차단 항목 조회(없으면 undefined).
+export function findBlackout(blackouts: BlackoutEntry[], date: string): BlackoutEntry | undefined {
+  return blackouts.find((b) => b.date === date);
+}
+
+// (센터, 요일, 날짜)의 실제 예약 가능 슬롯 — 운영 슬롯에서 차단분을 제거.
+// fullday 차단이면 빈 배열, 슬롯 목록 차단이면 그 시각들만 제거.
+export function availableSlotsForDate(
+  campus: ConsultationCampus,
+  weekday: Weekday,
+  date: string,
+  blackouts: BlackoutEntry[],
+): string[] {
+  const base = slotsForDay(campus, weekday);
+  const bo = findBlackout(blackouts, date);
+  if (!bo) return base;
+  if (bo.scope === 'fullday') return [];
+  const blocked = new Set(bo.scope);
+  return base.filter((s) => !blocked.has(s));
 }
 
 export interface OperatingDate {
@@ -218,6 +239,7 @@ export function getBookableCalendar(
   todayDate: string,
   nowHHMM: string,
   bookings: ConsultationBooking[],
+  blackouts: BlackoutEntry[] = [],
 ): CalendarDay[] {
   const horizonEnd = addDaysStr(mondayOf(todayDate), 13); // 다음 주 일요일
   const out: CalendarDay[] = [];
@@ -226,7 +248,7 @@ export function getBookableCalendar(
     if (!weekday) continue;
     const counselor = counselorFor(campus, weekday);
     if (!counselor) continue;
-    const daySlots = slotsForDay(campus, weekday);
+    const daySlots = availableSlotsForDate(campus, weekday, date, blackouts);
     const taken = activeBookingsOn(bookings, date);
     const freeSlots = daySlots.filter(
       (s) => !taken.has(s) && slotIsFuture(date, s, todayDate, nowHHMM),
@@ -265,6 +287,7 @@ export function buildDaySlotGrid(
   campus: ConsultationCampus,
   fromDate: string,
   bookings: ConsultationBooking[],
+  blackouts: BlackoutEntry[] = [],
 ): DaySlotGrid[] {
   const dates = listUpcomingOperatingDates(campus, fromDate);
   return dates.map((od) => {
@@ -275,7 +298,7 @@ export function buildDaySlotGrid(
       date: od.date,
       weekday: od.weekday,
       counselor: od.counselor,
-      slots: slotsForDay(campus, od.weekday).map((slot) => ({
+      slots: availableSlotsForDate(campus, od.weekday, od.date, blackouts).map((slot) => ({
         slot,
         booking: dayBookings.find((b) => b.slot === slot) || null,
       })),
