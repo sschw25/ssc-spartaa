@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getMealPlans, getStudentById, saveStudent } from '@/lib/store';
+import { getMealPlans, updateStudentById } from '@/lib/store';
 import { MEAL_DAYS, isMealDay, isMealKind, isPastDeadline } from '@/lib/meal';
 import type { MealAddRequest, MealOrder } from '@/lib/types/student';
 
@@ -50,59 +50,79 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '신청 가능한 도시락 일정이 아닙니다.' }, { status: 404 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-  // 센터 불일치 차단
-  if (plan.campus && plan.campus !== 'all' && plan.campus !== student.campus) {
-    return NextResponse.json({ success: false, message: '신청 대상 센터가 아닙니다.' }, { status: 403 });
-  }
-
-  const orders = [...(student.mealOrders || [])];
-  const idx = orders.findIndex((o) => o.planId === planId);
   const now = new Date().toISOString();
   const past = isPastDeadline(plan);
 
-  // 마감 후 → 추가신청(승인 대기)
-  if (past) {
-    const ar = body?.addRequest as { day?: unknown; meal?: unknown; reason?: unknown } | undefined;
-    if (!ar || !isMealDay(ar.day) || !isMealKind(ar.meal)) {
-      return NextResponse.json({ success: false, message: '신청이 마감되었습니다. 추가 신청은 요일/끼니를 선택해주세요.' }, { status: 400 });
+  let errorResponse: NextResponse | null = null;
+  let savedOrder: MealOrder | null = null;
+  let pendingAddition = false;
+
+  const result = await updateStudentById(studentId, (student) => {
+    // 센터 불일치 차단
+    if (plan.campus && plan.campus !== 'all' && plan.campus !== student.campus) {
+      errorResponse = NextResponse.json({ success: false, message: '신청 대상 센터가 아닙니다.' }, { status: 403 });
+      return false;
     }
-    if (!plan.meals.includes(ar.meal)) {
-      return NextResponse.json({ success: false, message: '해당 끼니는 이 라운드에서 제공하지 않습니다.' }, { status: 400 });
+
+    const orders = [...(student.mealOrders || [])];
+    const idx = orders.findIndex((o) => o.planId === planId);
+
+    // 마감 후 → 추가신청(승인 대기)
+    if (past) {
+      const ar = body?.addRequest as { day?: unknown; meal?: unknown; reason?: unknown } | undefined;
+      if (!ar || !isMealDay(ar.day) || !isMealKind(ar.meal)) {
+        errorResponse = NextResponse.json({ success: false, message: '신청이 마감되었습니다. 추가 신청은 요일/끼니를 선택해주세요.' }, { status: 400 });
+        return false;
+      }
+      if (!plan.meals.includes(ar.meal)) {
+        errorResponse = NextResponse.json({ success: false, message: '해당 끼니는 이 라운드에서 제공하지 않습니다.' }, { status: 400 });
+        return false;
+      }
+      if ((plan.closedDays || []).includes(ar.day)) {
+        errorResponse = NextResponse.json({ success: false, message: '휴무일은 신청할 수 없습니다.' }, { status: 400 });
+        return false;
+      }
+      const request: MealAddRequest = {
+        id: `madd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        day: ar.day,
+        meal: ar.meal,
+        reason: String(ar.reason ?? '').trim().slice(0, 200) || undefined,
+        status: 'pending',
+        createdAt: now,
+      };
+      const base: MealOrder = idx >= 0 ? { ...orders[idx] } : { planId, selections: {}, updatedAt: now };
+      base.addRequests = [...(base.addRequests || []), request];
+      base.updatedAt = now;
+      if (idx >= 0) orders[idx] = base;
+      else orders.push(base);
+      student.mealOrders = orders;
+      savedOrder = base;
+      pendingAddition = true;
+      return;
     }
-    if ((plan.closedDays || []).includes(ar.day)) {
-      return NextResponse.json({ success: false, message: '휴무일은 신청할 수 없습니다.' }, { status: 400 });
-    }
-    const request: MealAddRequest = {
-      id: `madd_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      day: ar.day,
-      meal: ar.meal,
-      reason: String(ar.reason ?? '').trim().slice(0, 200) || undefined,
-      status: 'pending',
-      createdAt: now,
-    };
+
+    // 마감 전 → selections 저장
+    const selections = sanitizeSelections(body?.selections, plan.meals, plan.closedDays || []);
     const base: MealOrder = idx >= 0 ? { ...orders[idx] } : { planId, selections: {}, updatedAt: now };
-    base.addRequests = [...(base.addRequests || []), request];
+    base.selections = selections;
     base.updatedAt = now;
+    base.respondedBy = 'student';
     if (idx >= 0) orders[idx] = base;
     else orders.push(base);
     student.mealOrders = orders;
-    await saveStudent(student);
-    return NextResponse.json({ success: true, order: base, pendingAddition: true });
+    savedOrder = base;
+  });
+
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
 
-  // 마감 전 → selections 저장
-  const selections = sanitizeSelections(body?.selections, plan.meals, plan.closedDays || []);
-  const base: MealOrder = idx >= 0 ? { ...orders[idx] } : { planId, selections: {}, updatedAt: now };
-  base.selections = selections;
-  base.updatedAt = now;
-  base.respondedBy = 'student';
-  if (idx >= 0) orders[idx] = base;
-  else orders.push(base);
-  student.mealOrders = orders;
-  await saveStudent(student);
-  return NextResponse.json({ success: true, order: base });
+  if (pendingAddition) {
+    return NextResponse.json({ success: true, order: savedOrder, pendingAddition: true });
+  }
+  return NextResponse.json({ success: true, order: savedOrder });
 }

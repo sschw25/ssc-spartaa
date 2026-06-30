@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, updateStudentById } from '@/lib/store';
 import { sendCustomSms } from '@/lib/sms';
 import type { SmsLog } from '@/lib/types/student';
 
@@ -71,8 +71,9 @@ export async function POST(request: Request) {
         sentCount: sent,
         sentBy,
       };
-      student.smsLogs = [...(student.smsLogs || []), log];
-      await saveStudent(student);
+      await updateStudentById(student.id, (fresh) => {
+        fresh.smsLogs = [...(fresh.smsLogs || []), log];
+      });
     } catch {
       failed.push(studentId);
     }

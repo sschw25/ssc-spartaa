@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { ConsultationLog } from '@/lib/types/student';
 
 const REQUEST_TYPES = ['progress', 'subject', 'plan', 'halfDay', 'restPass', 'etc'] as const;
@@ -30,11 +30,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '신청 내용이 너무 깁니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const nowIso = new Date().toISOString();
   const request: ConsultationLog = {
     id: `req_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
@@ -47,8 +42,17 @@ export async function POST(req: NextRequest) {
     proposedGoal: body?.proposedGoal ? (body.proposedGoal as any) : undefined,
     createdAt: nowIso,
   };
-  student.consultationLogs = [...(student.consultationLogs || []), request];
-  await saveStudent(student);
+
+  const result = await updateStudentById(studentId, (student) => {
+    student.consultationLogs = [...(student.consultationLogs || []), request];
+  });
+
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
   return NextResponse.json({ success: true, request });
 }
@@ -64,21 +68,28 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, message: '취소할 신청이 없습니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    const target = (student.consultationLogs || []).find((l) => l.id === id);
+    if (!target || target.type !== 'request') {
+      errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+      return false;
+    }
+    if (target.status === 'resolved') {
+      errorResponse = NextResponse.json({ success: false, message: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 });
+      return false;
+    }
+
+    student.consultationLogs = (student.consultationLogs || []).filter((l) => l.id !== id);
+  });
+
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  const target = (student.consultationLogs || []).find((l) => l.id === id);
-  if (!target || target.type !== 'request') {
-    return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
-  if (target.status === 'resolved') {
-    return NextResponse.json({ success: false, message: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 });
-  }
-
-  student.consultationLogs = (student.consultationLogs || []).filter((l) => l.id !== id);
-  await saveStudent(student);
 
   return NextResponse.json({ success: true });
 }

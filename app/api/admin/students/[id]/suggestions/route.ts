@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import { appendThreadMessage } from '@/lib/thread';
 
 export async function PATCH(
@@ -30,28 +30,34 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: '처리 상태 또는 답변이 필요합니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(id);
-  if (!student) {
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(id, (student) => {
+    const target = (student.consultationLogs || []).find((log) => log.id === suggestionId && log.type === 'suggestion');
+    if (!target) {
+      errorResponse = NextResponse.json({ success: false, message: '건의사항을 찾을 수 없습니다.' }, { status: 404 });
+      return false;
+    }
+
+    const nowIso = new Date().toISOString();
+    if (reply) {
+      appendThreadMessage(target, { from: 'admin', text: reply, author: '코멘터' });
+      target.adminReply = reply;
+      target.repliedAt = nowIso;
+    }
+    if (status) {
+      target.status = status;
+      target.resolvedAt = status === 'resolved' ? nowIso : undefined;
+      target.acknowledgedAt = status === 'pending' ? nowIso : undefined;
+    }
+  });
+
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '해당 학생을 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  const target = (student.consultationLogs || []).find((log) => log.id === suggestionId && log.type === 'suggestion');
-  if (!target) {
-    return NextResponse.json({ success: false, message: '건의사항을 찾을 수 없습니다.' }, { status: 404 });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
-
-  const nowIso = new Date().toISOString();
-  if (reply) {
-    appendThreadMessage(target, { from: 'admin', text: reply, author: '코멘터' });
-    target.adminReply = reply;
-    target.repliedAt = nowIso;
-  }
-  if (status) {
-    target.status = status;
-    target.resolvedAt = status === 'resolved' ? nowIso : undefined;
-    target.acknowledgedAt = status === 'pending' ? nowIso : undefined;
-  }
-  await saveStudent(student);
 
   return NextResponse.json({ success: true });
 }

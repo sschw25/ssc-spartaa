@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { EventParticipation } from '@/lib/types/student';
 
 // 관리자: 학생 참여 미션 응답 수동 설정 (upsert). 쿠폰은 행사 후 일괄 지급(grant 라우트)에서 처리.
@@ -29,24 +29,27 @@ export async function POST(
   }
   const status = body.status as 'accepted' | 'declined';
 
-  const student = await getStudentById(id);
-  if (!student) {
+  let entry: EventParticipation | null = null;
+  const result = await updateStudentById(id, (student) => {
+    const prev = (student.eventParticipations || []).find((e) => e.eventId === eventId);
+    entry = {
+      eventId,
+      status,
+      respondedAt: new Date().toISOString(),
+      respondedBy: 'admin',
+      rewarded: prev?.rewarded,
+    };
+    student.eventParticipations = [
+      ...(student.eventParticipations || []).filter((e) => e.eventId !== eventId),
+      entry,
+    ];
+  });
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
   }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
-  const prev = (student.eventParticipations || []).find((e) => e.eventId === eventId);
-  const entry: EventParticipation = {
-    eventId,
-    status,
-    respondedAt: new Date().toISOString(),
-    respondedBy: 'admin',
-    rewarded: prev?.rewarded,
-  };
-  student.eventParticipations = [
-    ...(student.eventParticipations || []).filter((e) => e.eventId !== eventId),
-    entry,
-  ];
-
-  await saveStudent(student);
   return NextResponse.json({ success: true, entry });
 }

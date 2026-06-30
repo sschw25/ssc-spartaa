@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { PhoneSubmission } from '@/lib/types/student';
 
 function kstDateStr(): string {
@@ -29,20 +29,7 @@ export async function POST(req: NextRequest) {
   }
   const reason = String(body?.reason ?? '').trim().slice(0, 200);
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const today = kstDateStr();
-  const existing = student.phoneSubmissions || [];
-
-  // 오늘 이미 대기/승인 신청이 있으면 중복 방지
-  const dup = existing.find((s) => s.date === today && s.status !== 'rejected');
-  if (dup) {
-    return NextResponse.json({ success: false, message: '오늘 이미 신청한 내역이 있습니다.' }, { status: 409 });
-  }
-
   const submission: PhoneSubmission = {
     id: `phone_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
     date: today,
@@ -52,8 +39,24 @@ export async function POST(req: NextRequest) {
     createdAt: new Date().toISOString(),
   };
 
-  student.phoneSubmissions = [...existing, submission];
-  await saveStudent(student);
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    const existing = student.phoneSubmissions || [];
+    // 오늘 이미 대기/승인 신청이 있으면 중복 방지
+    const dup = existing.find((s) => s.date === today && s.status !== 'rejected');
+    if (dup) {
+      errorResponse = NextResponse.json({ success: false, message: '오늘 이미 신청한 내역이 있습니다.' }, { status: 409 });
+      return false;
+    }
+    student.phoneSubmissions = [...existing, submission];
+  });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
   return NextResponse.json({ success: true, submission });
 }
@@ -70,21 +73,26 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, message: '취소할 신청이 없습니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    const target = (student.phoneSubmissions || []).find((s) => s.id === id);
+    if (!target) {
+      errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+      return false;
+    }
+    if (target.status !== 'pending') {
+      errorResponse = NextResponse.json({ success: false, message: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 });
+      return false;
+    }
+    student.phoneSubmissions = (student.phoneSubmissions || []).filter((s) => s.id !== id);
+  });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  const target = (student.phoneSubmissions || []).find((s) => s.id === id);
-  if (!target) {
-    return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
-  if (target.status !== 'pending') {
-    return NextResponse.json({ success: false, message: '이미 처리된 신청은 취소할 수 없습니다.' }, { status: 403 });
-  }
-
-  student.phoneSubmissions = (student.phoneSubmissions || []).filter((s) => s.id !== id);
-  await saveStudent(student);
 
   return NextResponse.json({ success: true });
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import { appendThreadMessage } from '@/lib/thread';
 
 // 학생이 관리자 답변에 재답변(스레드 추가). kind=request|suggestion|leave + id 로 대상 식별.
@@ -28,26 +28,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '답변 내용을 입력해 주세요.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    if (kind === 'leave') {
+      const target = (student.leaveRequests || []).find((r) => r.id === id);
+      if (!target) {
+        errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+        return false;
+      }
+      appendThreadMessage(target, { from: 'student', text: message });
+    } else {
+      const targetType = kind === 'request' ? 'request' : 'suggestion';
+      const target = (student.consultationLogs || []).find((l) => l.id === id && l.type === targetType);
+      if (!target) {
+        errorResponse = NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
+        return false;
+      }
+      appendThreadMessage(target, { from: 'student', text: message });
+    }
+  });
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  if (kind === 'leave') {
-    const target = (student.leaveRequests || []).find((r) => r.id === id);
-    if (!target) {
-      return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
-    }
-    appendThreadMessage(target, { from: 'student', text: message });
-  } else {
-    const targetType = kind === 'request' ? 'request' : 'suggestion';
-    const target = (student.consultationLogs || []).find((l) => l.id === id && l.type === targetType);
-    if (!target) {
-      return NextResponse.json({ success: false, message: '신청을 찾을 수 없습니다.' }, { status: 404 });
-    }
-    appendThreadMessage(target, { from: 'student', text: message });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
 
-  await saveStudent(student);
   return NextResponse.json({ success: true });
 }

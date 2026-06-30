@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { GradeItem } from '@/lib/types/student';
 
 // 학생이 본인 성적을 직접 추가
@@ -32,11 +32,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '점수를 0~1000 사이로 입력해 주세요.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const grade: GradeItem = {
     id: `grade_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     testName,
@@ -45,8 +40,17 @@ export async function POST(req: NextRequest) {
     date,
     source: 'student',
   };
-  student.grades = [...(student.grades || []), grade];
-  await saveStudent(student);
+
+  const result = await updateStudentById(studentId, (student) => {
+    student.grades = [...(student.grades || []), grade];
+  });
+
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
   return NextResponse.json({ success: true, grade });
 }
@@ -63,21 +67,28 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: false, message: '삭제할 항목이 없습니다.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
+  let errorResponse: NextResponse | null = null;
+  const result = await updateStudentById(studentId, (student) => {
+    const target = (student.grades || []).find((g) => g.id === id);
+    if (!target) {
+      errorResponse = NextResponse.json({ success: false, message: '항목을 찾을 수 없습니다.' }, { status: 404 });
+      return false;
+    }
+    if (target.source !== 'student') {
+      errorResponse = NextResponse.json({ success: false, message: '관리자가 입력한 성적은 삭제할 수 없습니다.' }, { status: 403 });
+      return false;
+    }
+
+    student.grades = (student.grades || []).filter((g) => g.id !== id);
+  });
+
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  const target = (student.grades || []).find((g) => g.id === id);
-  if (!target) {
-    return NextResponse.json({ success: false, message: '항목을 찾을 수 없습니다.' }, { status: 404 });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
-  if (target.source !== 'student') {
-    return NextResponse.json({ success: false, message: '관리자가 입력한 성적은 삭제할 수 없습니다.' }, { status: 403 });
-  }
-
-  student.grades = (student.grades || []).filter((g) => g.id !== id);
-  await saveStudent(student);
 
   return NextResponse.json({ success: true });
 }

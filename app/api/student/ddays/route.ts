@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 
 export async function POST(req: NextRequest) {
   const studentId = await getStudentSessionId();
@@ -17,12 +17,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: '날짜 형식이 올바르지 않습니다. (YYYY-MM-DD)' }, { status: 400 });
     }
 
-    const student = await getStudentById(studentId);
-    if (!student) {
-      return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-    }
-
-    const currentDdays = student.ddays || [];
     const newDday = {
       id: `dday_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       title: title.trim(),
@@ -30,8 +24,17 @@ export async function POST(req: NextRequest) {
       createdAt: new Date().toISOString(),
     };
 
-    student.ddays = [...currentDdays, newDday];
-    await saveStudent(student);
+    const result = await updateStudentById(studentId, (student) => {
+      const currentDdays = student.ddays || [];
+      student.ddays = [...currentDdays, newDday];
+    });
+
+    if (result === 'not_found') {
+      return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (typeof result === 'string') {
+      return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+    }
 
     return NextResponse.json({ success: true, dday: newDday });
   } catch (error: any) {
@@ -52,13 +55,16 @@ export async function DELETE(req: NextRequest) {
   }
 
   try {
-    const student = await getStudentById(studentId);
-    if (!student) {
+    const result = await updateStudentById(studentId, (student) => {
+      student.ddays = (student.ddays || []).filter((d: any) => d.id !== id);
+    });
+
+    if (result === 'not_found') {
       return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     }
-
-    student.ddays = (student.ddays || []).filter((d: any) => d.id !== id);
-    await saveStudent(student);
+    if (typeof result === 'string') {
+      return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

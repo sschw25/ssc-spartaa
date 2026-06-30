@@ -22,9 +22,6 @@ function parseOptions(request: Request): SettleOptions {
 }
 
 async function handle(request: Request) {
-  if (!isCronRequest(request) && !(await isAdmin())) {
-    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
-  }
   try {
     const result = await settleMissions(parseOptions(request));
     return NextResponse.json({ success: true, ...result });
@@ -36,10 +33,18 @@ async function handle(request: Request) {
   }
 }
 
+// GET 은 외부 크론 전용(CRON_SECRET 필수). 상태 변경(쿠폰 지급)을 일반 관리자 세션의 단순 GET으로 트리거하지 못하게 막는다.
 export async function GET(request: Request) {
+  if (!isCronRequest(request)) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
+  }
   return handle(request);
 }
 
+// POST 는 관리자 '지금 정산' 버튼 또는 크론.
 export async function POST(request: Request) {
+  if (!isCronRequest(request) && !(await isAdmin())) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
+  }
   return handle(request);
 }

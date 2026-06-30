@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import { MEAL_DAYS, withSelection } from '@/lib/meal';
 import type { MealOrder } from '@/lib/types/student';
 
@@ -44,46 +44,61 @@ export async function POST(
   const planId = String(body?.planId ?? '').trim();
   if (!planId) return NextResponse.json({ success: false, message: 'planId가 필요합니다.' }, { status: 400 });
 
-  const student = await getStudentById(id);
-  if (!student) {
+  const now = new Date().toISOString();
+  const requestId = String(body?.requestId ?? '').trim();
+
+  let errorResponse: NextResponse | null = null;
+  let savedOrder: MealOrder | null = null;
+
+  const result = await updateStudentById(id, (student) => {
+    const orders = [...(student.mealOrders || [])];
+    const idx = orders.findIndex((o) => o.planId === planId);
+
+    // 1) 추가신청 승인/반려
+    if (requestId) {
+      if (idx < 0) {
+        errorResponse = NextResponse.json({ success: false, message: '해당 신청을 찾을 수 없습니다.' }, { status: 404 });
+        return false;
+      }
+      const order = { ...orders[idx] };
+      const reqs = [...(order.addRequests || [])];
+      const rIdx = reqs.findIndex((r) => r.id === requestId);
+      if (rIdx < 0) {
+        errorResponse = NextResponse.json({ success: false, message: '해당 추가신청을 찾을 수 없습니다.' }, { status: 404 });
+        return false;
+      }
+      const approve = Boolean(body?.approve) && !body?.reject;
+      const req = { ...reqs[rIdx], status: (approve ? 'approved' : 'rejected') as 'approved' | 'rejected', reviewedAt: now };
+      reqs[rIdx] = req;
+      order.addRequests = reqs;
+      if (approve) {
+        order.selections = withSelection(order.selections, req.day, req.meal, true);
+      }
+      order.updatedAt = now;
+      orders[idx] = order;
+      student.mealOrders = orders;
+      savedOrder = order;
+      return;
+    }
+
+    // 2) 대리입력 (selections 덮어쓰기)
+    const selections = sanitizeSelections(body?.selections);
+    const base: MealOrder = idx >= 0 ? { ...orders[idx] } : { planId, selections: {}, updatedAt: now };
+    base.selections = selections;
+    base.updatedAt = now;
+    base.respondedBy = 'admin';
+    if (idx >= 0) orders[idx] = base;
+    else orders.push(base);
+    student.mealOrders = orders;
+    savedOrder = base;
+  });
+
+  if (errorResponse) return errorResponse;
+  if (result === 'not_found') {
     return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
   }
-
-  const orders = [...(student.mealOrders || [])];
-  const idx = orders.findIndex((o) => o.planId === planId);
-  const now = new Date().toISOString();
-
-  // 1) 추가신청 승인/반려
-  const requestId = String(body?.requestId ?? '').trim();
-  if (requestId) {
-    if (idx < 0) return NextResponse.json({ success: false, message: '해당 신청을 찾을 수 없습니다.' }, { status: 404 });
-    const order = { ...orders[idx] };
-    const reqs = [...(order.addRequests || [])];
-    const rIdx = reqs.findIndex((r) => r.id === requestId);
-    if (rIdx < 0) return NextResponse.json({ success: false, message: '해당 추가신청을 찾을 수 없습니다.' }, { status: 404 });
-    const approve = Boolean(body?.approve) && !body?.reject;
-    const req = { ...reqs[rIdx], status: (approve ? 'approved' : 'rejected') as 'approved' | 'rejected', reviewedAt: now };
-    reqs[rIdx] = req;
-    order.addRequests = reqs;
-    if (approve) {
-      order.selections = withSelection(order.selections, req.day, req.meal, true);
-    }
-    order.updatedAt = now;
-    orders[idx] = order;
-    student.mealOrders = orders;
-    await saveStudent(student);
-    return NextResponse.json({ success: true, order });
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
   }
-
-  // 2) 대리입력 (selections 덮어쓰기)
-  const selections = sanitizeSelections(body?.selections);
-  const base: MealOrder = idx >= 0 ? { ...orders[idx] } : { planId, selections: {}, updatedAt: now };
-  base.selections = selections;
-  base.updatedAt = now;
-  base.respondedBy = 'admin';
-  if (idx >= 0) orders[idx] = base;
-  else orders.push(base);
-  student.mealOrders = orders;
-  await saveStudent(student);
-  return NextResponse.json({ success: true, order: base });
+  return NextResponse.json({ success: true, order: savedOrder });
 }

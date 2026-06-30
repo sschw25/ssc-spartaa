@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, patchStudentProgress } from '@/lib/store';
 import { getSeoulDateKey, readActivityEnvelope, writeActivityEnvelope, serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
-import type { PhoneSubmission } from '@/lib/types/student';
+import type { PhoneSubmission, Student } from '@/lib/types/student';
 
 export async function POST(req: NextRequest) {
   const studentId = await getStudentSessionId();
@@ -40,43 +40,58 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '휴대폰을 제출하지 않는 경우 사유를 입력해 주세요.' }, { status: 400 });
   }
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
-  const noteObj = readActivityEnvelope(student);
-  if (!noteObj.daily_checklist) noteObj.daily_checklist = {};
   const todayKey = getSeoulDateKey();
-  const nowIso = new Date().toISOString();
+  let checklistResult: Record<string, unknown> | undefined;
 
-  noteObj.daily_checklist[todayKey] = {
-    sleep_hours: sleepHoursNum,
-    phone_submitted: phoneSubmitted,
-    phone_status: phoneStatus,
-    submitted_at: nowIso,
-  };
-  writeActivityEnvelope(student, noteObj);
+  // 낙관적 잠금 재시도: fresh 재조회 → 수정 → updated_at 조건부 저장.
+  // 전체 row upsert 대신 버전 충돌을 감지·재시도하여 동시 저장(쿠폰/휴가/알림 등)이 서로를 덮지 않게 한다.
+  let saved: Student | 'conflict' = 'conflict';
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const student = await getStudentById(studentId);
+    if (!student) {
+      return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    const originalUpdatedAt = student.updatedAt ?? '';
 
-  // 휴대폰 미제출(임시보관함/소지) → 출결판 노출용 phone_submission 생성. 같은 날 대기중 학생 신청은 1건으로 갱신.
-  const existing = (student.phoneSubmissions || []).filter(
-    (p) => !(p.date === todayKey && p.status === 'pending'),
-  );
-  if (!phoneSubmitted) {
-    const sub: PhoneSubmission = {
-      id: `phone_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      date: todayKey,
-      type: phoneStatus === 'locker' ? 'locker' : 'keep',
-      reason: phoneReason || undefined,
-      status: 'pending',
-      createdAt: nowIso,
+    const noteObj = readActivityEnvelope(student);
+    if (!noteObj.daily_checklist) noteObj.daily_checklist = {};
+    const nowIso = new Date().toISOString();
+
+    noteObj.daily_checklist[todayKey] = {
+      sleep_hours: sleepHoursNum,
+      phone_submitted: phoneSubmitted,
+      phone_status: phoneStatus,
+      submitted_at: nowIso,
     };
-    student.phoneSubmissions = [...existing, sub];
-  } else {
-    student.phoneSubmissions = existing;
-  }
+    writeActivityEnvelope(student, noteObj);
 
-  await saveStudent(student);
+    // 휴대폰 미제출(임시보관함/소지) → 출결판 노출용 phone_submission 생성. 같은 날 대기중 학생 신청은 1건으로 갱신.
+    const existing = (student.phoneSubmissions || []).filter(
+      (p) => !(p.date === todayKey && p.status === 'pending'),
+    );
+    if (!phoneSubmitted) {
+      const sub: PhoneSubmission = {
+        id: `phone_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        date: todayKey,
+        type: phoneStatus === 'locker' ? 'locker' : 'keep',
+        reason: phoneReason || undefined,
+        status: 'pending',
+        createdAt: nowIso,
+      };
+      student.phoneSubmissions = [...existing, sub];
+    } else {
+      student.phoneSubmissions = existing;
+    }
+
+    saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved !== 'conflict') {
+      checklistResult = noteObj.daily_checklist;
+      break;
+    }
+  }
+  if (saved === 'conflict') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
   // 리워드 미션 체크
   const { checkAndGrantRewards } = await import('@/lib/rewards-service');
@@ -85,8 +100,8 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
-    checklist: noteObj.daily_checklist,
-    specialNote: serializeClientActivityNoteFromStudent(updatedStudent || student),
+    checklist: checklistResult,
+    specialNote: serializeClientActivityNoteFromStudent(updatedStudent || saved),
     leaveCoupons: updatedStudent?.leaveCoupons || 0,
     rewardGranted: rewardResult.granted,
     rewardReasons: rewardResult.reasons,

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { getStudentById, updateStudentById } from '@/lib/store';
 import { sendCustomSms } from '@/lib/sms';
 import type { SmsLog } from '@/lib/types/student';
 
@@ -60,8 +60,17 @@ export async function POST(
     sentCount: sent,
     sentBy,
   };
-  student.smsLogs = [...(student.smsLogs || []), log];
-  await saveStudent(student);
+
+  const result = await updateStudentById(id, (s) => {
+    s.smsLogs = [...(s.smsLogs || []), log];
+  });
+
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
 
   return NextResponse.json({ success: true, sent, skipped, log });
 }

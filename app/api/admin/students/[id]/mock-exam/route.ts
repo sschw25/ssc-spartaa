@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { MockExamParticipation } from '@/lib/types/student';
 
 // 관리자: 학생 모의고사 참여 상태 설정 (upsert)
@@ -30,21 +30,23 @@ export async function POST(
     ? (body.status as typeof validStatuses[number])
     : 'undecided';
 
-  const student = await getStudentById(id);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const nowIso = new Date().toISOString();
-  const existing = (student.mockExams || []).findIndex((e) => e.examId === examId);
   const entry: MockExamParticipation = { examId, status, updatedAt: nowIso };
 
-  if (existing >= 0) {
-    student.mockExams = student.mockExams!.map((e) => e.examId === examId ? entry : e);
-  } else {
-    student.mockExams = [...(student.mockExams || []), entry];
-  }
+  const result = await updateStudentById(id, (student) => {
+    const existing = (student.mockExams || []).findIndex((e) => e.examId === examId);
+    if (existing >= 0) {
+      student.mockExams = student.mockExams!.map((e) => e.examId === examId ? entry : e);
+    } else {
+      student.mockExams = [...(student.mockExams || []), entry];
+    }
+  });
 
-  await saveStudent(student);
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
   return NextResponse.json({ success: true, entry });
 }

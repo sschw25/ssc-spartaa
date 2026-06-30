@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 import type { EventParticipation } from '@/lib/types/student';
 
 // 학생: 참여 미션 수락/거절 응답 제출. 쿠폰은 행사 후 관리자가 일괄 지급(여기서는 미지급).
@@ -26,22 +26,25 @@ export async function POST(req: NextRequest) {
   }
   const status = body.status as 'accepted' | 'declined';
 
-  const student = await getStudentById(studentId);
-  if (!student) {
-    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
-  }
-
   const entry: EventParticipation = {
     eventId,
     status,
     respondedAt: new Date().toISOString(),
     respondedBy: 'student',
   };
-  student.eventParticipations = [
-    ...(student.eventParticipations || []).filter((e) => e.eventId !== eventId),
-    entry,
-  ];
 
-  await saveStudent(student);
+  const result = await updateStudentById(studentId, (student) => {
+    student.eventParticipations = [
+      ...(student.eventParticipations || []).filter((e) => e.eventId !== eventId),
+      entry,
+    ];
+  });
+  if (result === 'not_found') {
+    return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+  if (typeof result === 'string') {
+    return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
+
   return NextResponse.json({ success: true, entry });
 }

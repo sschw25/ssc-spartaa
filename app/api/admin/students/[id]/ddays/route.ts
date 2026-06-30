@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { getStudentById, saveStudent } from '@/lib/store';
+import { updateStudentById } from '@/lib/store';
 
 export async function POST(
   req: NextRequest,
@@ -21,11 +21,6 @@ export async function POST(
   }
 
   try {
-    const student = await getStudentById(id);
-    if (!student) {
-      return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });
-    }
-
     const newDday = {
       id: `dday_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       title: title.trim(),
@@ -33,8 +28,15 @@ export async function POST(
       createdAt: new Date().toISOString(),
     };
 
-    student.ddays = [...(student.ddays || []), newDday];
-    await saveStudent(student);
+    const result = await updateStudentById(id, (student) => {
+      student.ddays = [...(student.ddays || []), newDday];
+    });
+    if (result === 'not_found') {
+      return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (typeof result === 'string') {
+      return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+    }
 
     return NextResponse.json({ success: true, dday: newDday });
   } catch (error: any) {
@@ -59,13 +61,15 @@ export async function DELETE(
   }
 
   try {
-    const student = await getStudentById(id);
-    if (!student) {
+    const result = await updateStudentById(id, (student) => {
+      student.ddays = (student.ddays || []).filter((d: any) => d.id !== ddayId);
+    });
+    if (result === 'not_found') {
       return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });
     }
-
-    student.ddays = (student.ddays || []).filter((d: any) => d.id !== ddayId);
-    await saveStudent(student);
+    if (typeof result === 'string') {
+      return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStudentById, saveStudent, deleteStudent, patchStudentSubjects, patchStudentProfile } from '@/lib/store';
+import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfile, updateStudentById } from '@/lib/store';
 import { Student } from '@/lib/types/student';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 
@@ -62,8 +62,16 @@ export async function PUT(
       return NextResponse.json({ success: true, data: updated });
     }
 
-    const updated = await saveStudent(studentData);
-    return NextResponse.json({ success: true, data: updated });
+    const result = await updateStudentById(id, (student) => {
+      Object.assign(student, studentData);
+    });
+    if (result === 'not_found') {
+      return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (typeof result === 'string') {
+      return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+    }
+    return NextResponse.json({ success: true, data: result });
   } catch (error) {
     console.error(`API PUT /students/${id} error:`, error);
     return NextResponse.json({ success: false, message: '원생 정보 갱신에 실패했습니다.' }, { status: 500 });

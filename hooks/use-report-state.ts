@@ -430,8 +430,11 @@ export function useReportState() {
     setMounted(true);
     async function loadReport() {
       try {
-        const tokenQuery = shareTokenParam ? `&token=${encodeURIComponent(shareTokenParam)}&pw=${encodeURIComponent(sharePasswordInput)}` : '';
-        const res = await fetch(`/api/report/${studentId}?audience=${audience}${tokenQuery}`);
+        // 토큰은 공유 링크 식별자라 쿼리로 전달하되, 비밀번호는 URL에 남지 않도록 헤더로 보낸다.
+        const tokenQuery = shareTokenParam ? `&token=${encodeURIComponent(shareTokenParam)}` : '';
+        const res = await fetch(`/api/report/${studentId}?audience=${audience}${tokenQuery}`, {
+          headers: shareTokenParam ? { 'x-report-password': sharePasswordInput } : undefined,
+        });
         if (res.ok) {
           const json = await res.json();
           if (json.success) {
@@ -565,8 +568,10 @@ export function useReportState() {
     setSharePasswordChecking(true);
     setSharePasswordError('');
     try {
+      // 비밀번호는 URL이 아니라 헤더로 전달 (히스토리/로그/리퍼러 노출 방지)
       const res = await fetch(
-        `/api/report/${studentId}?audience=parent&token=${encodeURIComponent(shareTokenParam!)}&pw=${encodeURIComponent(sharePasswordInput)}`
+        `/api/report/${studentId}?audience=parent&token=${encodeURIComponent(shareTokenParam!)}`,
+        { headers: { 'x-report-password': sharePasswordInput } }
       );
       const json = await res.json();
       if (json.success) {
