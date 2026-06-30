@@ -7,6 +7,7 @@ import { CalendarDays, Loader2, RefreshCw, LayoutGrid } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import type { Student, LeaveRequest } from '@/lib/types/student';
+import { leaveBlockKind, leaveKindCoversPeriod, approvedLeavesOn, type LeaveBlockKind } from '@/lib/leave-blocks';
 import { CAMPUS_LAYOUTS, CAMPUS_LABELS, type CampusKey, type Cell } from '@/lib/seat-layouts';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
@@ -212,39 +213,6 @@ function effectiveMinForDate(todayStr: string, nowDateStr: string, nowMin: numbe
   return cmp === 0 ? nowMin : cmp < 0 ? 24 * 60 : 0;
 }
 
-// 휴가/반차 한 건이 가리는 시간대 종류.
-// 시간대(slot)가 지정된 신청(개인사정 반차·병가)은 slot을 우선 적용하고,
-// slot이 없으면 타입으로 판단한다. (휴식권/개인사정 휴가=하루 종일)
-type LeaveBlockKind = 'fullday' | 'morning' | 'afternoon' | 'night';
-function leaveBlockKind(leave: LeaveRequest): LeaveBlockKind | null {
-  if (leave.slot === 'fullday' || leave.slot === 'morning' || leave.slot === 'afternoon' || leave.slot === 'night') {
-    return leave.slot;
-  }
-  switch (leave.type) {
-    case 'fullday':
-    case 'sick':
-    case 'personal_fullday':
-      return 'fullday';
-    case 'morning':
-    case 'afternoon':
-    case 'night':
-      return leave.type;
-    default:
-      return null; // slot 없는 개인사정 반차 등 — 시간대 불명이면 미반영
-  }
-}
-
-// 교시 idx(0~6: 1~7교시)가 해당 시간대에 포함되는지
-function leaveKindCoversPeriod(kind: LeaveBlockKind | null, idx: number): boolean {
-  switch (kind) {
-    case 'fullday': return true;
-    case 'morning': return idx < 2;            // 1~2교시
-    case 'afternoon': return idx >= 2 && idx <= 4; // 3~5교시
-    case 'night': return idx >= 5 && idx <= 6; // 6~7교시
-    default: return false;
-  }
-}
-
 // 해당 시간대 휴가일 때, 이 하원 시각이 승인된(미승인 아님) 것인지
 function leaveKindAllowsCheckout(kind: LeaveBlockKind | null, checkOutMin: number): boolean {
   switch (kind) {
@@ -254,12 +222,6 @@ function leaveKindAllowsCheckout(kind: LeaveBlockKind | null, checkOutMin: numbe
     case 'night': return checkOutMin >= 17 * 60 + 40;
     default: return false;
   }
-}
-
-function approvedLeavesOn(student: Student | null, today: string): LeaveRequest[] {
-  return student
-    ? (student.leaveRequests || []).filter((r) => r.date === today && r.status === 'approved')
-    : [];
 }
 
 function isApprovedLeaveCheckout(student: Student | null, today: string, checkOutMin: number): boolean {
