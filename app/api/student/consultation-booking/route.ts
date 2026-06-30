@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, getConsultationBookings, addConsultationBooking, patchConsultationBooking } from '@/lib/store';
+import { getStudentById, getConsultationBookings, addConsultationBooking, patchConsultationBooking, getConsultationBlackouts } from '@/lib/store';
 import {
   CONSULTATION_SLOT_TIMES,
   getBookableCalendar,
@@ -49,7 +49,8 @@ export async function GET() {
   }
 
   const bookings = await getConsultationBookings(student.campus);
-  const calendar = getBookableCalendar(student.campus, kstToday(), kstNowHHMM(), bookings);
+  const blackouts = await getConsultationBlackouts(student.campus);
+  const calendar = getBookableCalendar(student.campus, kstToday(), kstNowHHMM(), bookings, blackouts);
   const myBooking = findMyActiveRegular(bookings, studentId);
 
   return NextResponse.json({

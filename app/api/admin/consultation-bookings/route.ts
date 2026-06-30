@@ -5,17 +5,20 @@ import {
   addConsultationBooking,
   patchConsultationBooking,
   getStudentById,
+  getConsultationBlackouts,
+  setConsultationBlackouts,
 } from '@/lib/store';
 import {
   buildDaySlotGrid,
   isConsultationCampus,
   getWeekdayKey,
   slotsForDay,
+  availableSlotsForDate,
   CAMPUS_CONSULTATION,
   type ConsultationCampus,
   type DaySlotGrid,
 } from '@/lib/consultation-schedule';
-import type { ConsultationBooking } from '@/lib/types/student';
+import type { ConsultationBooking, BlackoutEntry } from '@/lib/types/student';
 
 const ALL_CAMPUSES: ConsultationCampus[] = ['wonju', 'chuncheon', 'chungju'];
 
@@ -52,12 +55,15 @@ export async function GET(request: Request) {
   const bookings = await getConsultationBookingsForCampuses(campuses);
 
   const grids: Record<string, DaySlotGrid[]> = {};
+  const blackouts: Record<string, BlackoutEntry[]> = {};
   for (const campus of campuses) {
     const campusBookings = bookings.filter((b) => b.campus === campus);
-    grids[campus] = buildDaySlotGrid(campus, today, campusBookings);
+    const bo = await getConsultationBlackouts(campus);
+    blackouts[campus] = bo;
+    grids[campus] = buildDaySlotGrid(campus, today, campusBookings, bo);
   }
 
-  return NextResponse.json({ success: true, bookings, grids, today });
+  return NextResponse.json({ success: true, bookings, grids, blackouts, today });
 }
 
 // POST: 관리자가 학생 대신 정규 슬롯 예약. 순차오픈은 무시하되 슬롯 중복은 금지.
@@ -109,6 +115,12 @@ export async function POST(request: Request) {
   // 그날 실제 운영 슬롯(부원장 출장일 마감캡 포함)을 벗어난 시각은 거부 — 유령 예약 방지.
   if (!slotsForDay(student.campus, weekday).includes(slot)) {
     return NextResponse.json({ success: false, message: '해당 날짜에는 운영하지 않는 시간대예요. (담당자 출장일은 일찍 마감)' }, { status: 400 });
+  }
+
+  // 차단(휴무/출장)된 날짜·슬롯은 관리자 직접 배정도 거부.
+  const postBlackouts = await getConsultationBlackouts(student.campus);
+  if (!availableSlotsForDate(student.campus, weekday, date, postBlackouts).includes(slot)) {
+    return NextResponse.json({ success: false, message: '담당자 휴무/출장으로 막힌 시간대예요.' }, { status: 400 });
   }
 
   const booking: ConsultationBooking = {
@@ -228,4 +240,55 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ success: true, booking: updated });
+}
+
+// PUT: 센터 차단(휴무/출장) 목록 통째로 교체. 센터 접근권 확인.
+export async function PUT(request: Request) {
+  const session = await getAdminSession();
+  if (!session) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
+  }
+
+  let body: { campus?: unknown; blackouts?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ success: false, message: '잘못된 요청입니다.' }, { status: 400 });
+  }
+
+  const campus = String(body?.campus ?? '').trim();
+  if (!isConsultationCampus(campus)) {
+    return NextResponse.json({ success: false, message: '상담 운영 센터가 아닙니다.' }, { status: 400 });
+  }
+  if (session.campus !== 'all' && session.campus !== campus) {
+    return NextResponse.json({ success: false, message: '해당 센터에 접근할 권한이 없습니다.' }, { status: 403 });
+  }
+
+  const raw = Array.isArray(body?.blackouts) ? body.blackouts : null;
+  if (!raw) {
+    return NextResponse.json({ success: false, message: '차단 목록이 올바르지 않습니다.' }, { status: 400 });
+  }
+
+  // 정규화·검증: date 형식, scope 형식.
+  const entries: BlackoutEntry[] = [];
+  for (const item of raw) {
+    const date = String((item as any)?.date ?? '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return NextResponse.json({ success: false, message: '날짜 형식이 올바르지 않습니다.' }, { status: 400 });
+    }
+    const scopeRaw = (item as any)?.scope;
+    let scope: 'fullday' | string[];
+    if (scopeRaw === 'fullday') {
+      scope = 'fullday';
+    } else if (Array.isArray(scopeRaw) && scopeRaw.every((s) => /^\d{2}:\d{2}$/.test(String(s)))) {
+      scope = scopeRaw.map((s) => String(s));
+    } else {
+      return NextResponse.json({ success: false, message: '차단 범위가 올바르지 않습니다.' }, { status: 400 });
+    }
+    const reason = typeof (item as any)?.reason === 'string' ? (item as any).reason.trim().slice(0, 200) : undefined;
+    entries.push({ date, scope, ...(reason ? { reason } : {}) });
+  }
+
+  await setConsultationBlackouts(campus, entries);
+  return NextResponse.json({ success: true, blackouts: entries });
 }

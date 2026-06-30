@@ -8,7 +8,7 @@ import {
   Loader2, CalendarClock, Search, Check, X, RefreshCw, Plus, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Student, ConsultationBooking } from '@/lib/types/student';
+import { Student, ConsultationBooking, BlackoutEntry } from '@/lib/types/student';
 import {
   CONSULTATION_SLOT_TIMES,
   WEEKDAY_LABEL,
@@ -39,6 +39,7 @@ interface ApiResponse {
   success: boolean;
   bookings: ConsultationBooking[];
   grids: Record<string, DaySlotGrid[]>;
+  blackouts: Record<string, BlackoutEntry[]>;
   today: string;
 }
 
@@ -54,6 +55,7 @@ export default function AdminConsultationBookingsPage() {
 
   const [bookings, setBookings] = useState<ConsultationBooking[]>([]);
   const [grids, setGrids] = useState<Record<string, DaySlotGrid[]>>({});
+  const [blackoutsMap, setBlackoutsMap] = useState<Record<string, BlackoutEntry[]>>({});
   const [today, setToday] = useState('');
 
   // 관리자 직접 예약 폼
@@ -78,6 +80,7 @@ export default function AdminConsultationBookingsPage() {
         if (json.success) {
           setBookings(json.bookings || []);
           setGrids(json.grids || {});
+          setBlackoutsMap(json.blackouts || {});
           setToday(json.today || '');
         }
       } else {
@@ -228,6 +231,25 @@ export default function AdminConsultationBookingsPage() {
     }
   };
 
+  const saveBlackouts = async (c: string, next: BlackoutEntry[]) => {
+    const res = await fetch('/api/admin/consultation-bookings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ campus: c, blackouts: next }),
+    });
+    const json = await res.json();
+    if (!json.success) { alert(json.message || '차단 저장 실패'); return; }
+    await loadData();
+  };
+
+  const toggleFullday = (c: string, date: string, current: BlackoutEntry[]) => {
+    const existing = current.find((b) => b.date === date);
+    const next = existing && existing.scope === 'fullday'
+      ? current.filter((b) => b.date !== date)
+      : [...current.filter((b) => b.date !== date), { date, scope: 'fullday' as const, reason: '휴무' }];
+    return saveBlackouts(c, next);
+  };
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
@@ -364,11 +386,22 @@ export default function AdminConsultationBookingsPage() {
                     {grid.map((d) => {
                       const full = d.slots.every((s) => s.booking);
                       const isToday = d.date === today;
+                      const campusBlackouts = blackoutsMap[campus] || [];
+                      const bo = campusBlackouts.find((b) => b.date === d.date);
+                      const isFulldayBlocked = bo?.scope === 'fullday';
                       return (
                         <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-[#1D1D1F]'}`}>
                           <div>{dateLabel(d.date, d.weekday)}</div>
                           <div className="text-[10px] font-bold text-[#86868B]">{d.counselor}</div>
                           {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 px-1.5 text-[9px] font-black text-red-600">만석</span>}
+                          <button
+                            type="button"
+                            onClick={() => toggleFullday(campus, d.date, campusBlackouts)}
+                            title={isFulldayBlocked ? '휴무 해제' : '종일 휴무 설정'}
+                            className={`mt-1 inline-block rounded-full px-1.5 text-[9px] font-black transition-colors ${isFulldayBlocked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-[#F5F5F7] text-[#86868B] hover:bg-amber-50 hover:text-amber-600'}`}
+                          >
+                            {isFulldayBlocked ? '휴무중' : '휴무'}
+                          </button>
                         </th>
                       );
                     })}
