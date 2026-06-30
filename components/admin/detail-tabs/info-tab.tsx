@@ -59,6 +59,7 @@ interface InfoTabProps {
   setSpecialNote: (v: string) => void;
   seatNumber: string;
   setSeatNumber: (v: string) => void;
+  seatConflictNames?: string[];   // 같은 센터에 동일 좌석을 쓰는 다른 원생 이름
   uniqueExams: string[];
   loading: boolean;
   onUpdateInfo: () => void;
@@ -94,6 +95,7 @@ export function InfoTab({
   specialNote, setSpecialNote,
   seatNumber,
   setSeatNumber,
+  seatConflictNames = [],
   uniqueExams,
   loading,
   onUpdateInfo,
@@ -314,8 +316,15 @@ export function InfoTab({
             value={seatNumber}
             onChange={(e) => setSeatNumber(e.target.value)}
             placeholder="예: 104"
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className={`rounded-lg text-xs h-9 bg-white ${
+              seatConflictNames.length > 0 ? 'border-red-400' : 'border-black/[0.08]'
+            }`}
           />
+          {seatConflictNames.length > 0 && (
+            <p className="text-[10px] font-semibold text-red-500">
+              이 센터에 같은 좌석을 쓰는 원생이 있습니다: {seatConflictNames.join(', ')}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">

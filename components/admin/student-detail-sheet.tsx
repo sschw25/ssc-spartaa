@@ -1150,6 +1150,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 1. 학생 기본 정보 업데이트
   const handleUpdateInfo = async () => {
+    if (seatConflictNames.length > 0) {
+      const ok = confirm(
+        `이 센터에 ${seatNumber}번 좌석을 쓰는 원생이 있습니다.\n\n대상: ${seatConflictNames.join(', ')}\n\n그래도 같은 좌석으로 저장할까요?`
+      );
+      if (!ok) return;
+    }
     setLoading(true);
     const updatedStudent: Student = {
       ...student,
@@ -3747,6 +3753,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const gradeSubjects = getGradeSubjects(student.grades);
   const materialBenchmarks = buildMaterialBenchmarks(students);
 
+  // 좌석 충돌 — 같은 센터에 동일 좌석번호를 쓰는 다른 원생(본인·0번·미지정 제외)
+  const seatConflictNames = (() => {
+    const parsed = seatNumber !== '' ? Number(seatNumber) : NaN;
+    if (!Number.isFinite(parsed) || parsed <= 0) return [];
+    return students
+      .filter((s) => s.id !== student.id && s.campus === campus && s.seatNumber === parsed)
+      .map((s) => s.name);
+  })();
+
   const subjects = Array.from(new Set([
     '국어', '영어', '수학', '한국사', '기타',
     ...subjectsState.map(s => s.name)
@@ -4635,6 +4650,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setSpecialNote={setSpecialNote}
                 seatNumber={seatNumber}
                 setSeatNumber={setSeatNumber}
+                seatConflictNames={seatConflictNames}
                 uniqueExams={uniqueExams}
                 loading={loading}
                 onUpdateInfo={handleUpdateInfo}

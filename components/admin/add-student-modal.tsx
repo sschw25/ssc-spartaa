@@ -178,6 +178,13 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     )
   );
 
+  // 좌석 충돌 — 같은 센터에 동일 좌석번호를 쓰는 기존 원생(0번/미지정은 충돌 아님)
+  const parsedSeat = normalizeSeatNumber(seatNumber);
+  const seatConflicts =
+    parsedSeat !== undefined && parsedSeat > 0
+      ? students.filter((s) => s.campus === campus && s.seatNumber === parsedSeat)
+      : [];
+
   // 담당 상담자 목록 — 기존 학생들에 입력된 담당자에서 추출(선택형 자동완성)
   const uniqueManagers = Array.from(
     new Set(
@@ -292,6 +299,12 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     e.preventDefault();
     if (!name.trim()) { toast.error('원생 이름을 입력해 주세요.'); return; }
     if (password.trim() && password.trim().length < 4) { toast.error('비밀번호는 4자 이상이어야 합니다.'); return; }
+    if (seatConflicts.length > 0) {
+      const ok = confirm(
+        `이 센터에 이미 ${parsedSeat}번 좌석을 쓰는 원생이 있습니다.\n\n대상: ${seatConflicts.map((s) => s.name).join(', ')}\n\n그래도 같은 좌석으로 등록할까요?`
+      );
+      if (!ok) return;
+    }
     setLoading(true);
     try {
       const res = await fetch('/api/admin/students', {
@@ -368,6 +381,16 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   // ── 일괄 등록: 순차 제출 ────────────────────────────────────────
   const handleBulkSubmit = async () => {
     if (bulkRows.length === 0) { toast.error('등록할 원생이 없습니다.'); return; }
+    const seatConflictRows = bulkRows
+      .map((row, i) => ({ row, conflicts: bulkSeatConflict(i) }))
+      .filter((item) => item.conflicts.length > 0);
+    if (seatConflictRows.length > 0) {
+      const detail = seatConflictRows
+        .map((item) => `${item.row.seatNumber}번 ${item.row.name.trim()} ↔ ${item.conflicts.join(', ')}`)
+        .join('\n');
+      const ok = confirm(`같은 센터에 좌석번호가 겹치는 원생이 있습니다.\n\n${detail}\n\n그래도 등록할까요?`);
+      if (!ok) return;
+    }
     const duplicateAwayNames = bulkRows
       .filter((row) => row.awayDays.trim())
       .filter((row, index, rows) =>
@@ -452,6 +475,20 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
       toast.error('등록에 실패했습니다. 다시 시도해 주세요.');
     }
   };
+
+  // 일괄 등록 좌석 충돌 — 같은 센터의 기존 원생 + 붙여넣은 다른 행과 좌석번호가 겹치는지
+  const bulkSeatConflict = (idx: number): string[] => {
+    const seat = normalizeSeatNumber(bulkRows[idx]?.seatNumber ?? '');
+    if (seat === undefined || seat <= 0) return [];
+    const existing = students
+      .filter((s) => s.campus === bulkCampus && s.seatNumber === seat)
+      .map((s) => s.name.trim());
+    const otherRows = bulkRows
+      .filter((row, i) => i !== idx && normalizeSeatNumber(row.seatNumber) === seat)
+      .map((row) => `${row.name.trim()}(목록)`);
+    return [...existing, ...otherRows];
+  };
+  const bulkConflictCount = bulkRows.filter((_, i) => bulkSeatConflict(i).length > 0).length;
 
   const campusOptions = [
     { value: 'wonju', label: '원주 캠퍼스' },
@@ -561,8 +598,17 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     placeholder="예: 104"
                     value={seatNumber}
                     onChange={(e) => setSeatNumber(e.target.value)}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className={`rounded-xl text-xs h-9 bg-white ${
+                      seatConflicts.length > 0
+                        ? 'border-red-400 focus:border-red-400 focus:ring-red-400'
+                        : 'border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3]'
+                    }`}
                   />
+                  {seatConflicts.length > 0 && (
+                    <p className="text-[10px] font-semibold text-red-500">
+                      이 센터에 이미 {parsedSeat}번 좌석이 있습니다: {seatConflicts.map((s) => s.name).join(', ')}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="new-enrollment-end" className="flex items-center gap-1 text-xs font-semibold text-[#1D1D1F]">
@@ -919,6 +965,9 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 <div className="flex items-center justify-between">
                   <Label className="text-xs font-semibold text-[#1D1D1F]">
                     등록 예정 {bulkRows.length}명
+                    {bulkConflictCount > 0 && (
+                      <span className="ml-2 text-red-500">· 좌석 중복 {bulkConflictCount}건</span>
+                    )}
                   </Label>
                   {bulkLoading && (
                     <span className="text-[10px] text-[#0071E3] font-bold">
@@ -943,10 +992,17 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                       </tr>
                     </thead>
                     <tbody>
-                      {bulkRows.map((row, i) => (
-                        <tr key={`${row.seatNumber}-${row.name}-${i}`} className="border-t border-black/[0.04] hover:bg-[#F5F5F7]/60">
-                          <td className="px-3 py-2 text-[#86868B] font-mono">
-                            {row.seatNumber || <span className="text-slate-300">-</span>}
+                      {bulkRows.map((row, i) => {
+                        const conflicts = bulkSeatConflict(i);
+                        return (
+                        <tr key={`${row.seatNumber}-${row.name}-${i}`} className={`border-t border-black/[0.04] ${conflicts.length > 0 ? 'bg-red-50 hover:bg-red-100/60' : 'hover:bg-[#F5F5F7]/60'}`}>
+                          <td className="px-3 py-2 font-mono">
+                            {row.seatNumber
+                              ? <span className={conflicts.length > 0 ? 'font-bold text-red-500' : 'text-[#86868B]'}>{row.seatNumber}</span>
+                              : <span className="text-slate-300">-</span>}
+                            {conflicts.length > 0 && (
+                              <span className="block text-[10px] font-semibold text-red-500">중복: {conflicts.join(', ')}</span>
+                            )}
                           </td>
                           <td className="px-3 py-2 font-bold text-[#1D1D1F]">{row.name}</td>
                           <td className="px-3 py-2 text-[#86868B] font-mono">{row.studentPhone || '-'}</td>
@@ -966,7 +1022,8 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                             </button>
                           </td>
                         </tr>
-                      ))}
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

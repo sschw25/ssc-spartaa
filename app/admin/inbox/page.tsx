@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User, Search, Send
+  Target, BookOpen, Tv, User, Search, Send, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, LeaveType, ProposedGoal } from '@/lib/types/student';
@@ -27,7 +27,7 @@ interface InboxItem {
   studentId: string;
   studentName: string;
   campus: string;
-  type: 'leave' | 'request' | 'suggestion' | 'ot_absence' | 'mock_absence' | 'reward' | 'meal_add';
+  type: 'leave' | 'request' | 'suggestion' | 'ot_absence' | 'mock_absence' | 'reward' | 'meal_add' | 'signup';
   category: 'living' | 'counsel' | 'facility';
   title: string;
   content: string;
@@ -69,6 +69,8 @@ export default function AdminInboxPage() {
   const [eventNames, setEventNames] = useState<Record<string, { name: string; date: string }>>({});
   // 도시락 라운드 라벨 매핑 (추가신청 표시용)
   const [mealPlanLabels, setMealPlanLabels] = useState<Record<string, string>>({});
+  // 가입신청 (학생 셀프 신청 → 관리자 승인 대기). 승인은 별도 페이지에서 상세정보 입력 후 처리.
+  const [applications, setApplications] = useState<any[]>([]);
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -96,11 +98,12 @@ export default function AdminInboxPage() {
   const loadStudents = async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const [res, otRes, mockRes, mealRes] = await Promise.all([
+      const [res, otRes, mockRes, mealRes, appRes] = await Promise.all([
         fetch('/api/admin/students', { cache: 'no-store' }),
         fetch('/api/admin/ot-events', { cache: 'no-store' }).catch(() => null),
         fetch('/api/admin/mock-exams', { cache: 'no-store' }).catch(() => null),
         fetch('/api/admin/meal-plans', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/admin/applications', { cache: 'no-store' }).catch(() => null),
       ]);
       if (res.ok) {
         const json = await res.json();
@@ -125,6 +128,10 @@ export default function AdminInboxPage() {
         const labels: Record<string, string> = {};
         for (const p of (j.plans || [])) labels[p.id] = `${weekRangeLabel(p.weekStart)} 주`;
         setMealPlanLabels(labels);
+      }
+      if (appRes && appRes.ok) {
+        const j = await appRes.json();
+        if (j.success) setApplications(j.data || []);
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -408,9 +415,34 @@ export default function AdminInboxPage() {
       });
     });
 
+    // 8) 가입신청 (학생 셀프 신청 → 승인 대기). 상세 승인은 전용 페이지에서 처리.
+    applications.forEach((app) => {
+      const bits: string[] = [];
+      if (app.studentPhone) bits.push(`본인 ${app.studentPhone}`);
+      if (app.parentPhone) bits.push(`학부모 ${app.parentPhone}`);
+      if (app.contact) bits.push(`목표시험 ${app.contact}`);
+      items.push({
+        id: `signup:${app.id}`,
+        studentId: '',
+        studentName: app.name,
+        campus: app.campus || '',
+        type: 'signup',
+        category: 'living',
+        title: `신규 가입신청${app.loginId ? ` (ID ${app.loginId})` : ''}`,
+        content: bits.length ? bits.join('\n') : '(추가 정보 없음)',
+        date: (app.createdAt || '').slice(0, 10),
+        status: 'pending',
+        statusText: '접수중',
+        tone: 'amber',
+        adminReply: '',
+        createdAt: app.createdAt || '',
+        rawItem: app,
+      });
+    });
+
     // 최신 신청일자 순 정렬
     return items.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [students, eventNames, mealPlanLabels]);
+  }, [students, eventNames, mealPlanLabels, applications]);
 
   // 카테고리 + 검색 필터링 반영 (신청 원생 / 코멘터 답장 / 전달 텍스트)
   const filteredItems = React.useMemo(() => {
@@ -702,7 +734,7 @@ export default function AdminInboxPage() {
 
   // 다중 선택 일괄 승인 (완료되지 않은 건만 대상)
   const handleBulkApprove = async () => {
-    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료' && i.type !== 'reward');
+    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료' && i.type !== 'reward' && i.type !== 'signup');
     if (targets.length === 0) return;
     if (!confirm(`선택한 ${targets.length}건을 일괄 승인 처리할까요?`)) return;
     setBulkProcessing(true);
@@ -948,7 +980,7 @@ export default function AdminInboxPage() {
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="flex items-center gap-2 min-w-0">
-                        {item.statusText !== '완료' && item.type !== 'reward' && (
+                        {item.statusText !== '완료' && item.type !== 'reward' && item.type !== 'signup' && (
                           <input
                             type="checkbox"
                             checked={selectedIds.has(item.id)}
@@ -1061,6 +1093,8 @@ export default function AdminInboxPage() {
                   );
                 })()}
 
+                {selectedItem.type !== 'signup' && (
+                <>
                 <button
                   type="button"
                   onClick={() => {
@@ -1108,6 +1142,8 @@ export default function AdminInboxPage() {
                   </div>
                   <p className="text-[9px] font-bold text-slate-400">Enter 전송 · Shift+Enter 줄바꿈. 처리완료와 확인 처리는 아래 버튼으로 따로 기록합니다.</p>
                 </div>
+                </>
+                )}
 
                 {/* proposedGoal 제안 계획 표시 */}
                 {selectedItem.type === 'request' && selectedItem.rawItem?.proposedGoal && (() => {
@@ -1189,7 +1225,14 @@ export default function AdminInboxPage() {
                 })()}
 
                 <div className="space-y-2 border-t border-slate-100 pt-4">
-                  {selectedItem.type === 'reward' ? (
+                  {selectedItem.type === 'signup' ? (
+                    <Button
+                      onClick={() => router.push('/admin/applications')}
+                      className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                    >
+                      <UserPlus className="w-3.5 h-3.5 mr-1" /> 가입신청 승인 페이지에서 처리
+                    </Button>
+                  ) : selectedItem.type === 'reward' ? (
                     selectedItem.rawItem?.status === 'requested' ? (
                       <div className="grid grid-cols-2 gap-2">
                         <Button

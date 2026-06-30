@@ -962,7 +962,8 @@ export function useReportState() {
     }
   };
 
-  const submitLeave = async () => {
+  const submitLeave = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (leaveSubmitting) return;
     if (!leaveForm.date) {
       setLeaveError('사용 희망일을 선택해 주세요.');
