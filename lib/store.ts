@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking, BlackoutEntry } from './types/student';
 import { isSlotFree } from './consultation-schedule';
 import {
   isSupabaseConfigured,
@@ -195,6 +195,18 @@ export async function patchConsultationBooking(
   next[idx] = updated;
   await saveConsultationBookings(campus, next);
   return updated;
+}
+
+// ── 상담 차단(휴무/출장) 원장 (센터별 app_settings 키-값 JSON 배열) ──
+const CONSULTATION_BLACKOUTS_KEY_PREFIX = 'consultation_blackouts:';
+
+export async function getConsultationBlackouts(campus: string): Promise<BlackoutEntry[]> {
+  const value = await getAppSetting(`${CONSULTATION_BLACKOUTS_KEY_PREFIX}${campus}`);
+  return Array.isArray(value) ? (value as BlackoutEntry[]) : [];
+}
+
+export async function setConsultationBlackouts(campus: string, entries: BlackoutEntry[]): Promise<void> {
+  await setAppSetting(`${CONSULTATION_BLACKOUTS_KEY_PREFIX}${campus}`, entries);
 }
 
 

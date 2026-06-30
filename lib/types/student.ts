@@ -116,6 +116,14 @@ export interface ConsultationLog {
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
 }
 
+// 상담 담당자 휴무/출장으로 특정 날짜(또는 일부 슬롯)를 예약 불가로 막는 차단 항목.
+// 센터별 app_settings 키 consultation_blackouts:{campus} 에 JSON 배열로 보관(마이그레이션 불필요).
+export interface BlackoutEntry {
+  date: string;             // YYYY-MM-DD
+  scope: 'fullday' | string[]; // 'fullday'=그날 전체, string[]=막을 슬롯 시각('HH:MM') 목록
+  reason?: string;          // 사유(관리자 표시용)
+}
+
 // 상담 예약 — 센터별 상담 시간표 슬롯에 학생이 신청(자동 수락). 슬롯 점유는 센터 공유 자원이라
 // app_settings 예약 원장(consultation_bookings:{campus})에 보관하고, 리포트 API가 학생 본인 예약만 추려 전달한다.
 // kind='regular' 은 정규 슬롯 예약(슬롯 점유), kind='extra' 는 만석/긴급 시 추가신청(슬롯 미점유, 관리자 처리).
