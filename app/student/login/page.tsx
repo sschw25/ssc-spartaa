@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, ArrowRight, GraduationCap, Loader2, LockKeyhole, UserRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -145,6 +146,13 @@ function StudentLoginForm() {
                   </>
                 )}
               </Button>
+
+              <div className="text-center text-sm text-[#64748B]">
+                처음이신가요?{' '}
+                <Link href="/student/signup" className="font-semibold text-[#0071E3] hover:underline">
+                  가입신청하기
+                </Link>
+              </div>
             </form>
           </CardContent>
         </Card>
