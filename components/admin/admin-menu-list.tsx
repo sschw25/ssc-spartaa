@@ -20,6 +20,7 @@ import {
   Trophy,
   Inbox,
   Sparkles,
+  UserPlus,
   Utensils,
   PinOff,
   Pin,
@@ -93,6 +94,7 @@ export function AdminMenuList({
       title: '원생 관리',
       items: [
         { key: 'consultation', icon: BookOpen, label: '원생 종합 관리', href: '/admin/consultation' },
+        { key: 'applications', icon: UserPlus, label: '가입신청', href: '/admin/applications' },
         { key: 'search', icon: Search, label: '학생 검색', action: onSearchStudent },
         { key: 'add', icon: Plus, label: '학생 추가', action: onAddStudent },
       ],

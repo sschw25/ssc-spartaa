@@ -363,6 +363,21 @@ export interface SharedMaterial {
   createdAt: string;
 }
 
+// 학생 셀프 가입신청 (승인 대기). 정식 students 행이 아니라 app_settings 의 대기 목록에 보관하며,
+// 관리자가 승인하면 students 행을 생성하고 이 신청은 목록에서 제거한다.
+export interface StudentApplication {
+  id: string;
+  name: string;
+  loginId: string;          // 학생이 직접 정한 로그인 아이디 (소문자/영숫자)
+  passwordHash: string;     // bcrypt 해시 — 평문은 저장하지 않는다
+  studentPhone?: string;
+  parentPhone?: string;
+  smsTargets?: Array<'parent' | 'student'>;
+  contact?: string;         // 목표시험
+  campus?: string;          // 희망 캠퍼스 (승인 시 관리자가 확정)
+  createdAt: string;
+}
+
 export interface Student {
   id: string;
   name: string;

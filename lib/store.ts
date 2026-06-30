@@ -2,7 +2,7 @@
 // SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY 가 설정되어 있으면 Supabase 를 사용하고,
 // (주로 로컬 개발에서) 미설정이면 로컬 JSON(lib/db) 으로 폴백한다.
 // 구글 스프레드시트 경로는 제거됨.
-import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication } from './types/student';
 import {
   isSupabaseConfigured,
   getStudentsSupabase,
@@ -103,6 +103,29 @@ export async function getAppSetting(key: string): Promise<any | null> {
 export async function setAppSetting(key: string, value: any): Promise<void> {
   if (isSupabaseConfigured()) return setAppSettingSupabase(key, value);
   return setAppSettingLocal(key, value);
+}
+
+// ── 학생 셀프 가입신청 대기열 (app_settings 키-값에 JSON 배열로 보관) ──
+// 신규 테이블 없이 운영. 대기 건은 소량이므로 충분하며, 승인/반려 시 목록에서 제거된다.
+const STUDENT_APPLICATIONS_KEY = 'student_applications';
+
+export async function getStudentApplications(): Promise<StudentApplication[]> {
+  const value = await getAppSetting(STUDENT_APPLICATIONS_KEY);
+  return Array.isArray(value) ? (value as StudentApplication[]) : [];
+}
+
+export async function addStudentApplication(application: StudentApplication): Promise<void> {
+  const list = await getStudentApplications();
+  list.push(application);
+  await setAppSetting(STUDENT_APPLICATIONS_KEY, list);
+}
+
+// 신청 제거 후 제거된 신청을 반환(없으면 null). 승인/반려 공통 사용.
+export async function removeStudentApplication(id: string): Promise<StudentApplication | null> {
+  const list = await getStudentApplications();
+  const found = list.find((a) => a.id === id) || null;
+  if (found) await setAppSetting(STUDENT_APPLICATIONS_KEY, list.filter((a) => a.id !== id));
+  return found;
 }
 
 
