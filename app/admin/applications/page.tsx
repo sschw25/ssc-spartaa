@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, UserPlus, Check, X, Phone, Building2, Target, Clock } from 'lucide-react';
+import { Loader2, UserPlus, Check, X, Phone, Building2, Target, Clock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 
@@ -21,6 +21,14 @@ type Application = {
   contact?: string;
   campus?: string;
   createdAt: string;
+};
+
+type PasswordRequest = {
+  id: string;
+  name: string;
+  loginId: string;
+  campus: string;
+  requestedAt: string;
 };
 
 type ApprovalDraft = {
@@ -65,6 +73,9 @@ export default function AdminApplicationsPage() {
   const [loading, setLoading] = useState(true);
   const [drafts, setDrafts] = useState<Record<string, ApprovalDraft>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
+  const [pwRequests, setPwRequests] = useState<PasswordRequest[]>([]);
+  const [pwLoading, setPwLoading] = useState(true);
+  const [pwBusy, setPwBusy] = useState<Record<string, boolean>>({});
 
   const loadApplications = async () => {
     setLoading(true);
@@ -102,12 +113,68 @@ export default function AdminApplicationsPage() {
     }
   };
 
+  const loadPasswordRequests = async () => {
+    setPwLoading(true);
+    try {
+      const res = await fetch('/api/admin/password-requests', { cache: 'no-store', credentials: 'same-origin' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          setPwRequests(json.data || []);
+        }
+      } else {
+        toast.error('출결번호 변경 신청 목록을 가져오지 못했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 에러가 발생했습니다.');
+    } finally {
+      setPwLoading(false);
+    }
+  };
+
+  const approvePassword = async (req: PasswordRequest) => {
+    setPwBusy((b) => ({ ...b, [req.id]: true }));
+    try {
+      const res = await fetch(`/api/admin/password-requests/${req.id}`, { method: 'POST' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message || `${req.name} 님의 출결번호를 변경했습니다.`);
+        setPwRequests((prev) => prev.filter((r) => r.id !== req.id));
+      } else {
+        toast.error(json.message || '승인에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 에러가 발생했습니다.');
+    } finally {
+      setPwBusy((b) => ({ ...b, [req.id]: false }));
+    }
+  };
+
+  const rejectPassword = async (req: PasswordRequest) => {
+    if (!confirm(`${req.name} 님의 출결번호 변경 신청을 반려할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+    setPwBusy((b) => ({ ...b, [req.id]: true }));
+    try {
+      const res = await fetch(`/api/admin/password-requests/${req.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        toast.success(json.message || '출결번호 변경 신청을 반려했습니다.');
+        setPwRequests((prev) => prev.filter((r) => r.id !== req.id));
+      } else {
+        toast.error(json.message || '반려에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 에러가 발생했습니다.');
+    } finally {
+      setPwBusy((b) => ({ ...b, [req.id]: false }));
+    }
+  };
+
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/admin/auth/me');
         if (!res.ok) { router.replace('/admin'); return; }
-        await loadApplications();
+        await Promise.all([loadApplications(), loadPasswordRequests()]);
       } catch {
         router.replace('/admin');
       } finally {
@@ -206,6 +273,76 @@ export default function AdminApplicationsPage() {
         <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-4 text-[11px] font-semibold text-[#0071E3]">
           학생이 직접 신청한 가입 건을 검토하고, 승인 정보(캠퍼스·담당자·좌석 등)를 입력해 원생으로 전환합니다. 반려 시 신청 내역은 삭제됩니다.
         </div>
+
+        {/* 출결번호 변경 신청 */}
+        <section className="space-y-3">
+          <div>
+            <h2 className="flex items-center gap-1.5 text-sm font-black text-[#1D1D1F]">
+              <KeyRound className="w-4 h-4 text-[#0071E3]" /> 출결번호 변경 신청
+            </h2>
+            <p className="mt-1 text-[11px] font-semibold text-[#86868B]">
+              승인하면 학생이 신청한 새 출결번호로 즉시 변경됩니다.
+            </p>
+          </div>
+
+          {pwLoading ? (
+            <div className="text-center py-12 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
+              <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin mb-3" />
+              <p className="text-xs text-[#86868B]">불러오는 중...</p>
+            </div>
+          ) : pwRequests.length === 0 ? (
+            <div className="text-center py-12 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
+              대기 중인 출결번호 변경 신청이 없습니다.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {pwRequests.map((req) => {
+                const isBusy = !!pwBusy[req.id];
+                return (
+                  <div key={req.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <span className="font-black text-base text-[#1D1D1F]">{req.name}</span>
+                      <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
+                        ID {req.loginId}
+                      </Badge>
+                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-black">
+                        <Building2 className="w-3 h-3" /> {campusLabel(req.campus)}
+                      </span>
+                      <span className="flex items-center gap-1 text-[10px] font-semibold text-[#86868B]">
+                        <Clock className="w-3 h-3" /> {formatDateTime(req.requestedAt)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        disabled={isBusy}
+                        onClick={() => approvePassword(req)}
+                        className="h-9 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold px-4"
+                      >
+                        {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <Check className="w-3.5 h-3.5 mr-1.5" />}
+                        승인
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={isBusy}
+                        onClick={() => rejectPassword(req)}
+                        className="h-9 rounded-xl border-black/[0.08] text-xs font-bold px-4 text-red-600 bg-white"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1.5" /> 반려
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        {/* 가입신청 */}
+        <h2 className="flex items-center gap-1.5 text-sm font-black text-[#1D1D1F] pt-2">
+          <UserPlus className="w-4 h-4 text-[#0071E3]" /> 가입신청
+        </h2>
 
         {loading ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">

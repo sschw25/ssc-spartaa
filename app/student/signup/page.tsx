@@ -63,16 +63,25 @@ export default function StudentSignupPage() {
       setErrorMsg('로그인 아이디는 영문/숫자 4자 이상으로 입력해 주세요.');
       return;
     }
-    if (password.length < 4) {
-      setErrorMsg('비밀번호는 4자 이상으로 입력해 주세요.');
+    if (!/^\d{6}$/.test(password)) {
+      setErrorMsg('출결번호는 숫자 6자리로 입력해 주세요.');
       return;
     }
     if (password !== passwordConfirm) {
-      setErrorMsg('비밀번호가 일치하지 않습니다.');
+      setErrorMsg('출결번호가 일치하지 않습니다.');
       return;
     }
     if (!trimmedStudentPhone && !trimmedParentPhone) {
       setErrorMsg('본인 또는 학부모 휴대폰 중 하나는 반드시 입력해 주세요.');
+      return;
+    }
+    const studentPhoneDigits = trimmedStudentPhone.replace(/\D/g, '');
+    const parentPhoneDigits = trimmedParentPhone.replace(/\D/g, '');
+    if (
+      (studentPhoneDigits && studentPhoneDigits.includes(password)) ||
+      (parentPhoneDigits && parentPhoneDigits.includes(password))
+    ) {
+      setErrorMsg('출결번호는 휴대폰 번호와 겹치지 않는 숫자로 정해 주세요.');
       return;
     }
     if (!campus) {
@@ -214,35 +223,39 @@ export default function StudentSignupPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-password" className="text-sm font-semibold">
-                      비밀번호
+                      출결번호
                     </Label>
                     <div className="relative">
                       <LockKeyhole className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
                       <Input
                         id="signup-password"
                         type="password"
+                        inputMode="numeric"
+                        maxLength={6}
                         value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder="비밀번호 입력"
+                        onChange={(event) => setPassword(event.target.value.replace(/\D/g, ''))}
+                        placeholder="숫자 6자리 입력"
                         autoComplete="new-password"
                         className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                       />
                     </div>
-                    <p className="text-xs leading-5 text-[#64748B]">4자 이상</p>
+                    <p className="text-xs leading-5 text-[#64748B]">숫자 6자리 · 휴대폰 번호와 겹치지 않게</p>
                   </div>
 
                   <div className="space-y-2">
                     <Label htmlFor="signup-password-confirm" className="text-sm font-semibold">
-                      비밀번호 확인
+                      출결번호 확인
                     </Label>
                     <div className="relative">
                       <LockKeyhole className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#94A3B8]" />
                       <Input
                         id="signup-password-confirm"
                         type="password"
+                        inputMode="numeric"
+                        maxLength={6}
                         value={passwordConfirm}
-                        onChange={(event) => setPasswordConfirm(event.target.value)}
-                        placeholder="비밀번호 다시 입력"
+                        onChange={(event) => setPasswordConfirm(event.target.value.replace(/\D/g, ''))}
+                        placeholder="출결번호 다시 입력"
                         autoComplete="new-password"
                         className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                       />
