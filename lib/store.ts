@@ -367,6 +367,17 @@ export async function setStudentExpectedArrival(studentId: string, value: string
   return setStudentExpectedArrivalSupabase(studentId, value);
 }
 
+// 승인 후 첫진입 온보딩 완료 표시. student_state.onboardedAt 을 멱등 설정(기존 값 보존).
+// 다른 student_state 키(enrollStartDate 등)는 보존된다.
+export async function markStudentOnboarded(studentId: string): Promise<boolean> {
+  const result = await updateStudentById(studentId, (s) => {
+    const prev = (s.studentState || {}) as Record<string, unknown>;
+    if (prev.onboardedAt) return false; // 이미 완료 → 저장 스킵(멱등)
+    s.studentState = { ...prev, onboardedAt: new Date().toISOString() };
+  });
+  return result !== 'not_found' && result !== 'conflict' && result !== 'abort';
+}
+
 // ── 출결/순공 (Supabase 필요) ──
 function requireSupabase() {
   if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 출결 기능을 사용할 수 있습니다.');

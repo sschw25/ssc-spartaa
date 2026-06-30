@@ -560,6 +560,13 @@ function StudentReportInner() {
         />
       </div>
 
+      {/* 사용법 다시보기 (학생 전용) */}
+      {isStudentReport && (
+        <div className="no-print text-center pb-2">
+          <a href="/student/welcome?replay=1" className="text-xs text-[#86868B] underline">사용법 다시보기</a>
+        </div>
+      )}
+
       {/* 하단 카피라이트 */}
       <div className="no-print text-center text-[10px] text-slate-400 pb-8">
         이 결과 브리핑 리포트는 SSC 스파르타 관리형 학습센터의 공식 학원 관리 솔루션을 사용하여 실시간으로 보안 출력되었습니다.
