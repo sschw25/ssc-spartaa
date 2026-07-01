@@ -77,6 +77,9 @@ export async function GET(
   const { id } = await params;
   const { searchParams } = new URL(request.url);
   const audience = searchParams.get('audience') === 'student' ? 'student' : 'parent';
+  // scope=core: 학생 본문만(전학생 벤치마크·순공통계 생략) → 첫 페인트를 빠르게.
+  // scope=extras: 벤치마크+순공통계만. 파라미터 없으면 기존 전체 응답(공유토큰 경로 호환).
+  const scope = searchParams.get('scope');
   const shareToken = searchParams.get('token');
   // 공유 비밀번호는 헤더로 받는다 — URL 쿼리에 실으면 브라우저 히스토리/서버·프록시 로그/리퍼러에 남는다.
   const sharePasswordInput = request.headers.get('x-report-password') || '';
@@ -154,6 +157,24 @@ export async function GET(
   }
 
   try {
+    // extras: 본문 없이 무거운 집계만 — core 렌더 후 백그라운드에서 호출된다.
+    if (scope === 'extras') {
+      const { weekStart, monthStart } = getPeriodBounds();
+      const [students, sessions, weeklyMinutesByStudent] = await Promise.all([
+        getStudents(),
+        getStudySessions(id, monthStart).catch(() => null),
+        getStudyMinutesByStudent(weekStart).catch(() => null),
+      ]);
+      const materialBenchmarks = buildMaterialBenchmarks(students);
+      let studyStats = null;
+      if (sessions && weeklyMinutesByStudent) {
+        try {
+          studyStats = buildStudyStats({ sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length });
+        } catch { /* 통계 실패 시 무시 */ }
+      }
+      return NextResponse.json({ success: true, materialBenchmarks, studyStats });
+    }
+
     const [student, allExams] = await Promise.all([
       getStudentById(id),
       getMockExams().catch(() => []),
@@ -193,29 +214,37 @@ export async function GET(
         && (b.cancelledAt || '') >= cancelCutoff)
       .sort((a, b) => (b.cancelledAt || '').localeCompare(a.cancelledAt || ''));
     const maskedStudent = buildMaskedStudent(student, audience, myBookings, consultationHistory, consultationCancellations);
+    const mockExams = filterMockExamsForStudent(allExams, student);
 
-    const students = await getStudents();
+    // core: 무거운 집계(전학생 벤치마크·순공통계) 없이 즉시 반환 — extras 가 뒤따라온다.
+    if (scope === 'core') {
+      return NextResponse.json({ success: true, data: maskedStudent, mockExams });
+    }
+
+    // 전체 응답(레거시/공유토큰 없는 단일 요청) — 집계 소스는 병렬로 로드
+    const { weekStart, monthStart } = getPeriodBounds();
+    const [students, sessions, weeklyMinutesByStudent] = await Promise.all([
+      getStudents(),
+      getStudySessions(id, monthStart).catch(() => null),
+      getStudyMinutesByStudent(weekStart).catch(() => null),
+    ]);
     const materialBenchmarks = buildMaterialBenchmarks(students);
 
     // 순공/등하원 통계 (Supabase 필요 — 실패해도 리포트 본문은 정상 반환)
     let studyStats = null;
-    try {
-      const { weekStart, monthStart } = getPeriodBounds();
-      const [sessions, weeklyMinutesByStudent] = await Promise.all([
-        getStudySessions(id, monthStart),
-        getStudyMinutesByStudent(weekStart),
-      ]);
-      studyStats = buildStudyStats({
-        sessions,
-        weeklyMinutesByStudent,
-        myId: id,
-        totalStudents: students.length,
-      });
-    } catch (e) {
-      console.warn('studyStats 계산 생략:', (e as Error)?.message);
+    if (sessions && weeklyMinutesByStudent) {
+      try {
+        studyStats = buildStudyStats({
+          sessions,
+          weeklyMinutesByStudent,
+          myId: id,
+          totalStudents: students.length,
+        });
+      } catch (e) {
+        console.warn('studyStats 계산 생략:', (e as Error)?.message);
+      }
     }
 
-    const mockExams = filterMockExamsForStudent(allExams, student);
     return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams });
   } catch (error) {
     console.error(`API GET /report/${id} error:`, error);

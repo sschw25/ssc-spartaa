@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AlertCircle, ArrowRight, GraduationCap, Loader2, LockKeyhole, UserRound } from 'lucide-react';
@@ -18,6 +18,12 @@ function StudentLoginForm() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 아이디 입력하는 동안 리포트 라우트 청크를 미리 내려받아 로그인 직후 전환을 빠르게 한다.
+  // (청크는 라우트 단위라 id 값은 무엇이든 무방)
+  useEffect(() => {
+    router.prefetch('/report/prefetch?audience=student');
+  }, [router]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
