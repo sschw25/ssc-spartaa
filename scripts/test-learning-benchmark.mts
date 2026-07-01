@@ -1,7 +1,7 @@
 // 실행: npx tsx scripts/test-learning-benchmark.mts
 import assert from 'node:assert';
 import {
-  normalizeMaterialName, materialKey, collectEntries, filterSeriousCohort,
+  normalizeMaterialName, materialKey, collectEntries, filterSeriousCohort, buildAggregate,
 } from '../lib/learning-benchmark';
 import type { Student } from '../lib/types/student';
 
@@ -71,3 +71,23 @@ assert.equal(s2.completed, false);
 assert.equal(s2.finishDate, null);
 
 console.log('Task 1 OK');
+
+const cohort2 = filterSeriousCohort(collectEntries([
+  lectureStudent('1', { done: 30, speed: 1.5, completions: [['2026-07-05', 30]], updatedAt: '2026-07-05' }),
+  lectureStudent('2', { done: 30, speed: 1.5, completions: [['2026-08-10', 30]], updatedAt: '2026-08-10' }),
+  lectureStudent('3', { done: 30, speed: 2.0, completions: [['2026-08-12', 30]], updatedAt: '2026-08-12' }),
+  lectureStudent('4', { done: 12, speed: 1.5, completions: [['2026-09-18', 12]], updatedAt: '2026-09-18' }),
+], 'lecture', '행정법', '행정법 기본강의', TODAY), TODAY, 21);
+
+const agg = buildAggregate(cohort2, 'lecture', '행정법 기본강의', '행정법');
+assert.equal(agg.learnerCount, 4);
+assert.equal(agg.completerCount, 3);
+assert.equal(agg.speedMode, 1.5);          // 최빈 배속
+assert.ok(Math.abs(agg.speedAvg! - 1.625) < 1e-6);
+assert.ok(agg.avgDurationWeeks !== null);  // 완료자 3명 → 값 존재
+assert.ok(agg.monthDistribution.length >= 1);
+assert.ok(agg.topMonthsLabel.includes('월'));
+const sum = agg.statusDistribution.ahead + agg.statusDistribution.onTrack + agg.statusDistribution.behind;
+assert.ok(Math.abs(sum - 1) < 1e-6 || sum === 0);
+
+console.log('Task 2 OK');

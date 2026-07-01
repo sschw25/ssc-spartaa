@@ -152,3 +152,94 @@ export function filterSeriousCohort(
     return days <= abandonDays;
   });
 }
+
+export interface BenchmarkAggregate {
+  key: string;
+  type: MaterialType;
+  displayName: string;
+  subject: string;
+  learnerCount: number;
+  completerCount: number;
+  speedMode: number | null;       // 강의만
+  speedAvg: number | null;
+  avgDurationWeeks: number | null;  // 완료자
+  targetDeltaDaysAvg: number | null;// 완료자, 음수=목표보다 빨리
+  statusDistribution: { ahead: number; onTrack: number; behind: number };
+  monthDistribution: Array<{ month: number; count: number; ratio: number }>;
+  topMonthsLabel: string;
+}
+
+function mode(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const count = new Map<number, number>();
+  for (const v of values) count.set(v, (count.get(v) || 0) + 1);
+  let best = values[0]; let bestN = 0;
+  for (const [v, n] of count) if (n > bestN || (n === bestN && v < best)) { best = v; bestN = n; }
+  return best;
+}
+
+function avg(values: number[]): number | null {
+  if (values.length === 0) return null;
+  return values.reduce((a, b) => a + b, 0) / values.length;
+}
+
+function daysBetween(a: string, b: string): number {
+  return Math.round((new Date(b).getTime() - new Date(a).getTime()) / DAY_MS);
+}
+
+function monthsLabel(dist: Array<{ month: number; count: number; ratio: number }>): string {
+  if (dist.length === 0) return '';
+  const sorted = [...dist].sort((a, b) => b.count - a.count);
+  const picked: number[] = [];
+  let cum = 0;
+  for (const d of sorted) { picked.push(d.month); cum += d.ratio; if (cum >= 0.6) break; }
+  picked.sort((a, b) => a - b);
+  const consecutive = picked.length > 1 && picked[picked.length - 1] - picked[0] === picked.length - 1;
+  return consecutive ? `${picked[0]}~${picked[picked.length - 1]}월` : picked.map((m) => `${m}월`).join('·');
+}
+
+export function buildAggregate(
+  cohort: BenchmarkEntry[], type: MaterialType, displayName: string, subject: string,
+): BenchmarkAggregate {
+  const completers = cohort.filter((e) => e.completed && e.startDate && e.finishDate);
+  const speeds = cohort.map((e) => e.speedMultiplier).filter((v): v is number => typeof v === 'number' && v > 0);
+
+  const durationsWeeks = completers.map((e) => daysBetween(e.startDate!, e.finishDate!) / 7);
+  const targetDeltas = completers
+    .filter((e) => e.targetDate)
+    .map((e) => daysBetween(e.targetDate!, e.finishDate!)); // 완료일 - 목표일, 음수=빨리
+
+  const statusable = cohort.filter((e) => e.status !== 'no-plan');
+  const statusDistribution = statusable.length === 0
+    ? { ahead: 0, onTrack: 0, behind: 0 }
+    : {
+        ahead: statusable.filter((e) => e.status === 'ahead').length / statusable.length,
+        onTrack: statusable.filter((e) => e.status === 'on-track').length / statusable.length,
+        behind: statusable.filter((e) => e.status === 'behind').length / statusable.length,
+      };
+
+  const monthCount = new Map<number, number>();
+  for (const e of cohort) {
+    if (!e.startDate) continue;
+    const m = new Date(e.startDate).getMonth() + 1;
+    monthCount.set(m, (monthCount.get(m) || 0) + 1);
+  }
+  const totalMonths = [...monthCount.values()].reduce((a, b) => a + b, 0);
+  const monthDistribution = [...monthCount.entries()]
+    .map(([month, count]) => ({ month, count, ratio: totalMonths ? count / totalMonths : 0 }))
+    .sort((a, b) => a.month - b.month);
+
+  return {
+    key: materialKey(type, subject, displayName),
+    type, displayName, subject,
+    learnerCount: cohort.length,
+    completerCount: completers.length,
+    speedMode: type === 'lecture' ? mode(speeds) : null,
+    speedAvg: type === 'lecture' ? avg(speeds) : null,
+    avgDurationWeeks: durationsWeeks.length ? Math.round((avg(durationsWeeks) ?? 0) * 10) / 10 : null,
+    targetDeltaDaysAvg: targetDeltas.length ? Math.round(avg(targetDeltas) ?? 0) : null,
+    statusDistribution,
+    monthDistribution,
+    topMonthsLabel: monthsLabel(monthDistribution),
+  };
+}
