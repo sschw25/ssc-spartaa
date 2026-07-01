@@ -17,6 +17,7 @@ import {
   formatMaterialBenchmarkSummary,
   getMaterialBenchmark,
 } from '@/lib/material-benchmark';
+import { BenchmarkSection } from '@/components/learning/benchmark-section';
 import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
@@ -119,6 +120,7 @@ export function ProgressTab() {
     showGuideDetail,
     showIntegratedSuggestions,
     sortOrder,
+    studentId,
     subjectsState,
     updateBookGoalField,
     updateLectureGoalField,
@@ -1238,6 +1240,14 @@ export function ProgressTab() {
                                         )}
                                       </div>
                                     )}
+
+                                    <BenchmarkSection
+                                      type="book"
+                                      subject={sub.name}
+                                      name={book.title}
+                                      studentId={studentId}
+                                      audience="admin"
+                                    />
                                   </div>
                                 );
                               })}
@@ -1674,6 +1684,14 @@ export function ProgressTab() {
                                         )}
                                       </div>
                                     )}
+
+                                    <BenchmarkSection
+                                      type="lecture"
+                                      subject={sub.name}
+                                      name={lec.name}
+                                      studentId={studentId}
+                                      audience="admin"
+                                    />
                                   </div>
                                 );
                               })}
