@@ -64,6 +64,7 @@ import {
   getAppSettingWithVersionSupabase,
   setAppSettingIfUnchangedSupabase,
   getSeatAbsenceMarksSupabase,
+  getStudentSeatAbsenceMarksSupabase,
   getAttendedDaysSupabase,
 } from './supabase';
 
@@ -643,6 +644,17 @@ export async function getSeatAbsenceMarks(from: string, to: string): Promise<{ d
   } catch {
     return [];
   }
+}
+
+// 특정 학생의 기간 내 수기 결석 마크 — 스트릭 일괄결석일 판정용. 로컬 폴백은 전체 마크에서 학생 스코프 필터.
+export async function getStudentSeatAbsenceMarks(
+  studentId: string,
+  from: string,
+  to: string,
+): Promise<{ date: string; seatKey: string }[]> {
+  if (isSupabaseConfigured()) return getStudentSeatAbsenceMarksSupabase(studentId, from, to);
+  const all = await getSeatAbsenceMarks(from, to);
+  return all.filter((m) => m.seatKey.startsWith(`${studentId}:`));
 }
 
 // 기간 내 등원일 집합 "studentId|date". 운영은 Supabase study_sessions.

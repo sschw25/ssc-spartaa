@@ -1010,6 +1010,24 @@ export async function getSeatAbsenceMarksSupabase(from: string, to: string): Pro
   return (data || []).map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
 }
 
+// 특정 학생의 기간 내 수기 결석 마크(status 'absent') — 스트릭의 일괄결석일(7교시 전부 X) 판정용.
+// seat_key 는 "{studentId}:{periodIdx}" 형태라 prefix like 필터로 학생 스코프를 건다.
+export async function getStudentSeatAbsenceMarksSupabase(
+  studentId: string,
+  from: string,
+  to: string,
+): Promise<{ date: string; seatKey: string }[]> {
+  const { data, error } = await getClient()
+    .from('seat_statuses')
+    .select('date, seat_key, status')
+    .gte('date', from)
+    .lte('date', to)
+    .eq('status', 'absent')
+    .like('seat_key', `${studentId}:%`);
+  if (error) throw error;
+  return (data || []).map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
+}
+
 // 기간 내 등원일 집합 "studentId|date".
 export async function getAttendedDaysSupabase(from: string, to: string): Promise<Set<string>> {
   const { data, error } = await getClient()

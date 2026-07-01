@@ -49,6 +49,7 @@ type HubData = {
   todayPlanEntries: PlanEntry[];
   checklist: Checklist;
   streak: { current: number; best?: number };
+  streakRepair?: { date: string; restoredStreak: number; cost: number } | null;
   recommendations?: Recommendation[];
   leaveCoupons: number;
 };
@@ -72,6 +73,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
     phoneReason: string;
   }>({ sleepHours: 7, phoneStatus: 'submitted', phoneReason: '' });
   const [checklistSubmitting, setChecklistSubmitting] = useState(false);
+  const [repairing, setRepairing] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -158,6 +160,31 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
     }
   };
 
+  const repairStreak = async () => {
+    const repair = data?.streakRepair;
+    if (!repair || repairing) return;
+    if (typeof window !== 'undefined' && !window.confirm(`쿠폰 ${repair.cost}개로 끊긴 스트릭을 이을까요?\n(${repair.restoredStreak}일 연속으로 복구돼요)`)) return;
+    setRepairing(true);
+    try {
+      const res = await fetch('/api/student/streak-repair', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: repair.date }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        await load();
+      } else if (json?.message && typeof window !== 'undefined') {
+        window.alert(json.message);
+        await load();
+      }
+    } catch {
+      // noop
+    } finally {
+      setRepairing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="ios-app-bg min-h-screen flex items-center justify-center">
@@ -168,6 +195,8 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
 
   const streakCurrent = data?.streak.current ?? 0;
   const streakBest = data?.streak.best;
+  const streakRepair = data?.streakRepair ?? null;
+  const coupons = data?.leaveCoupons ?? 0;
   const checklist = data?.checklist;
   const entries = data?.todayPlanEntries ?? [];
   const completedCount = entries.filter((e) => e.isCompleted).length;
@@ -212,9 +241,28 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
                   <span className="text-orange-500">· 최고 기록 {streakBest}일</span>
                 )}
               </p>
-              <p className="mt-1 text-[10px] font-semibold text-slate-300">일요일은 센터 휴무일이라 스트릭에 포함하지 않아요</p>
+              <p className="mt-1 text-xs font-semibold text-slate-400">일요일은 센터 휴무일이라 스트릭에 포함하지 않아요</p>
             </div>
           </div>
+          {streakRepair && (
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-200/70 bg-orange-50/60 px-3.5 py-3">
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-semibold text-slate-900">아깝게 끊긴 스트릭이 있어요</span>
+                <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
+                  쿠폰 {streakRepair.cost}개로 이으면 {streakRepair.restoredStreak}일 연속으로 복구돼요 · 보유 쿠폰 {coupons}개
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={repairStreak}
+                disabled={repairing || coupons < streakRepair.cost}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-orange-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-orange-600 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {repairing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Flame className="h-3.5 w-3.5" />}
+                스트릭 잇기
+              </button>
+            </div>
+          )}
         </section>
 
         {/* 2. 오늘 계획(진도) */}

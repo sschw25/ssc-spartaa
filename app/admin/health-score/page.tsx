@@ -51,7 +51,7 @@ export default function HealthScorePage() {
   return (
     <div className="p-4 sm:p-6 space-y-4">
       <header className="flex items-center justify-between gap-3 flex-wrap">
-        <h1 className="text-xl font-semibold">학생 건강지수 · 위험 TOP</h1>
+        <h1 className="text-xl font-semibold">학생 케어 지수 · 위험 TOP</h1>
         {adminCampus === 'all' && (
           <select
             value={campusFilter}

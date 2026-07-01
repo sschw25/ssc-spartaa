@@ -11,6 +11,9 @@ export interface StreakResult {
 export interface StreakOptions {
   today?: Date;
   justifiedDateKeys?: Set<string>;
+  // 일요일처럼 "끊지도 않고 카운트하지도 않는" 날(예: 일괄결석 처리일 — 센터 사정으로
+  // 하루 전체가 X 처리된 날은 스캔이 없어도 스트릭이 이어져야 한다는 운영 정책).
+  skipDateKeys?: Set<string>;
 }
 
 function toDateKeySet(input: Set<string> | string[]): Set<string> {
@@ -52,10 +55,13 @@ export function computeAttendanceStreak(
 ): StreakResult {
   const attended = toDateKeySet(attendedDateKeys);
   const justified = opts.justifiedDateKeys ? toDateKeySet(opts.justifiedDateKeys) : new Set<string>();
+  const skip = opts.skipDateKeys ? toDateKeySet(opts.skipDateKeys) : new Set<string>();
   const today = opts.today ?? new Date();
   const todayKey = getSeoulDateKey(today);
 
   const isCounted = (dateKey: string) => attended.has(dateKey) || justified.has(dateKey);
+  // 출석했으면 스킵일이라도 카운트(스킵 판정보다 출석이 우선), 아니면 일요일과 동일하게 통과
+  const isSkipped = (dateKey: string) => weekdayOfDateKey(dateKey) === 0 || skip.has(dateKey);
 
   // ── current: 오늘부터 과거로 스캔 ──
   // 방어적 상한: 정상 입력에서는 결석 한 번이면 즉시 종료되므로 실질적으로 도달하지 않음.
@@ -66,9 +72,8 @@ export function computeAttendanceStreak(
   let firstDay = true;
 
   for (let guard = 0; guard < MAX_SCAN_DAYS; guard++) {
-    const dow = weekdayOfDateKey(cursor);
-    if (dow === 0) {
-      // 일요일: 스킵 — 끊지 않고 카운트도 안 함
+    if (!isCounted(cursor) && isSkipped(cursor)) {
+      // 일요일·스킵일(일괄결석 처리일): 스킵 — 끊지 않고 카운트도 안 함
       cursor = addDaysToDateKey(cursor, -1);
       continue;
     }
@@ -106,14 +111,11 @@ export function computeAttendanceStreak(
     let bestRun = 0;
     let scan = minKey;
     while (scan <= scanEnd) {
-      const dow = weekdayOfDateKey(scan);
-      if (dow !== 0) {
-        if (isCounted(scan)) {
-          run++;
-          if (run > bestRun) bestRun = run;
-        } else {
-          run = 0;
-        }
+      if (isCounted(scan)) {
+        run++;
+        if (run > bestRun) bestRun = run;
+      } else if (!isSkipped(scan)) {
+        run = 0;
       }
       scan = addDaysToDateKey(scan, 1);
     }
@@ -121,4 +123,70 @@ export function computeAttendanceStreak(
   }
 
   return best !== undefined ? { current, best } : { current };
+}
+
+export interface RepairableGap {
+  date: string;           // 쿠폰으로 잇기(정당사유 처리) 가능한 결석일
+  restoredStreak: number; // 그 날을 이으면 current가 이 값이 된다
+}
+
+// 쿠폰 "스트릭 잇기" 대상 탐지: 현재 스트릭을 끊은 가장 최근의 결석일 1개를 찾는다.
+// 조건 — 듀오링고식 단일 결손 복구:
+//   1) 결석일이 오늘로부터 repairWindowDays(달력일) 이내여야 한다(오래된 결손은 복구 불가).
+//   2) 그 결석일 하나만 이으면 이전 스트릭과 실제로 연결되어야 한다(그 전날도 결석이면 대상 아님).
+// 반환된 date를 justifiedDateKeys에 더해 재계산하면 current === restoredStreak가 된다.
+export function findRepairableGap(
+  attendedDateKeys: Set<string> | string[],
+  opts: StreakOptions & { repairWindowDays?: number } = {},
+): RepairableGap | null {
+  const attended = toDateKeySet(attendedDateKeys);
+  const justified = opts.justifiedDateKeys ? toDateKeySet(opts.justifiedDateKeys) : new Set<string>();
+  const skip = opts.skipDateKeys ? toDateKeySet(opts.skipDateKeys) : new Set<string>();
+  const today = opts.today ?? new Date();
+  const todayKey = getSeoulDateKey(today);
+  const repairWindowDays = opts.repairWindowDays ?? 7;
+  const windowStart = addDaysToDateKey(todayKey, -(repairWindowDays - 1));
+
+  const isCounted = (dateKey: string) => attended.has(dateKey) || justified.has(dateKey);
+  const isSkipped = (dateKey: string) => weekdayOfDateKey(dateKey) === 0 || skip.has(dateKey);
+
+  // computeAttendanceStreak의 current 스캔과 동일한 규칙으로 "끊은 날"을 찾는다.
+  let cursor = todayKey;
+  let firstDay = true;
+  let gapDate: string | null = null;
+  for (let guard = 0; guard < 2000; guard++) {
+    if (cursor < windowStart) return null; // 복구 가능 기간 밖에서 끊김(또는 끊긴 날 없음)
+    if (!isCounted(cursor) && isSkipped(cursor)) {
+      cursor = addDaysToDateKey(cursor, -1);
+      continue;
+    }
+    if (isCounted(cursor)) {
+      cursor = addDaysToDateKey(cursor, -1);
+      firstDay = false;
+      continue;
+    }
+    if (firstDay && cursor === todayKey) {
+      // 오늘 미출석은 아직 결손이 아님
+      cursor = addDaysToDateKey(cursor, -1);
+      firstDay = false;
+      continue;
+    }
+    gapDate = cursor;
+    break;
+  }
+  if (!gapDate) return null;
+
+  // 결손일 직전(일요일·스킵일 건너뛴) 판정일이 출석/정당사유여야 "이어짐"이 성립
+  let prev = addDaysToDateKey(gapDate, -1);
+  for (let guard = 0; guard < 60; guard++) {
+    if (!isCounted(prev) && isSkipped(prev)) { prev = addDaysToDateKey(prev, -1); continue; }
+    break;
+  }
+  if (!isCounted(prev)) return null;
+
+  const restored = computeAttendanceStreak(attended, {
+    ...opts,
+    justifiedDateKeys: new Set([...justified, gapDate]),
+  });
+  return { date: gapDate, restoredStreak: restored.current };
 }

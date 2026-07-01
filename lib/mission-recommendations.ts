@@ -20,6 +20,10 @@ export interface MissionRecommendation {
 
 export const MAX_RECOMMENDATIONS = 3;
 
+// 이 미만의 미세 기여(예: 수면 0.1시간 부족=0.3점)는 코칭거리가 아니므로 추천으로 변환하지 않는다.
+// 이 임계 덕에 사소한 요인만 있는 성실한 학생에게는 긍정 확언(celebrate)이 노출된다.
+export const MIN_FACTOR_CONTRIBUTION = 3;
+
 // 학생에게 코칭으로 노출할 요인 화이트리스트(health-score factor key 기준).
 // 결석('absent')·이탈('left')·벌점('penalty')·상담공백('consultation')은 제외 —
 // 관리자 개입 영역이고 학생 동기부여에 역효과.
@@ -98,6 +102,7 @@ export function buildMissionRecommendations(
   const recs: MissionRecommendation[] = [];
   for (const f of factors) {
     if (!COACHABLE_KEYS.has(f.key)) continue;
+    if (f.contribution < MIN_FACTOR_CONTRIBUTION) continue;
     const rec = buildForFactor(f.key, signals);
     if (rec) recs.push(rec);
     if (recs.length >= MAX_RECOMMENDATIONS) break;

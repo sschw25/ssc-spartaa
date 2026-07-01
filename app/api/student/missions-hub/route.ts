@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, getStudySessions, activeBackend } from '@/lib/store';
+import { getStudentById, getAppSetting } from '@/lib/store';
 import { getSeoulDateKey, getDailyChecklistFromStudent, getPlanDailyCompletion } from '@/lib/student-activity';
-import { computeAttendanceStreak } from '@/lib/streak';
+import { computeAttendanceStreak, findRepairableGap } from '@/lib/streak';
+import { loadStreakInputs, STREAK_REPAIR_COST, STREAK_REPAIR_WINDOW_DAYS } from '@/lib/streak-data';
 import { buildHealthSignals } from '@/lib/health-signals';
-import { computeHealthScore } from '@/lib/health-score';
+import { computeHealthScore, DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from '@/lib/health-score';
 import { buildMissionRecommendations } from '@/lib/mission-recommendations';
 import type { DetailedPlan } from '@/lib/types/student';
+
+const HEALTH_WEIGHTS_KEY = 'health_score_weights';
 
 const WEEK_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
@@ -101,29 +104,32 @@ export async function GET() {
   // 2) 오늘 체크리스트(휴대폰 제출/수면)
   const checklist = getDailyChecklistFromStudent(student, todayKey);
 
-  // 3) 출결 스트릭 — 최근 90일 study_sessions(등원일) + 같은 기간 승인휴가(정당사유)일.
-  // Supabase 미설정 로컬 환경에서는 study_sessions 조회가 불가하므로 방어적으로 빈 집합 처리.
-  const sinceDate = getSeoulDateKey(new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000));
-  let attendedDateKeys = new Set<string>();
-  if (activeBackend() === 'supabase') {
-    try {
-      const sessions = await getStudySessions(studentId, sinceDate);
-      attendedDateKeys = new Set(sessions.map((s) => s.date));
-    } catch {
-      // 조회 실패 시 스트릭은 정당사유 데이터만으로 방어적으로 계산
-    }
-  }
-  const justifiedDateKeys = new Set(
-    (student.leaveRequests || [])
-      .filter((r) => r.status === 'approved' && r.date >= sinceDate)
-      .map((r) => r.date),
-  );
-  const streak = computeAttendanceStreak(attendedDateKeys, { today: now, justifiedDateKeys });
+  // 3) 출결 스트릭 — 최근 STREAK_WINDOW_DAYS(1년+)의 등원일 + 승인휴가/쿠폰잇기(정당사유) + 일괄결석 스킵일.
+  const streakInputs = await loadStreakInputs(student, now);
+  const streakOpts = {
+    today: now,
+    justifiedDateKeys: streakInputs.justifiedDateKeys,
+    skipDateKeys: streakInputs.skipDateKeys,
+  };
+  const streak = computeAttendanceStreak(streakInputs.attendedDateKeys, streakOpts);
+  const leaveCoupons = student.leaveCoupons ?? 0;
+
+  // 3.5) 쿠폰 "스트릭 잇기" 가능 여부 — 최근 결손 1일을 이으면 이전 스트릭과 연결되는 경우만 제안.
+  const gap = findRepairableGap(streakInputs.attendedDateKeys, {
+    ...streakOpts,
+    repairWindowDays: STREAK_REPAIR_WINDOW_DAYS,
+  });
+  const streakRepair = gap
+    ? { date: gap.date, restoredStreak: gap.restoredStreak, cost: STREAK_REPAIR_COST }
+    : null;
 
   // 4) 약점 기반 개인화 추천 — 건강지수 factors를 학생 코칭 문구로 변환.
   // 출결(결석/이탈)은 학생 화면에 노출하지 않으므로 absence=null 로 계산(추천 큐레이션에서도 제외 대상).
+  // 가중치는 관리자 대시보드/일일 브리핑과 동일하게 app_settings(health_score_weights) 튜닝값을 반영.
+  const rawWeights = await getAppSetting(HEALTH_WEIGHTS_KEY).catch(() => null);
+  const weights: HealthWeights = { ...DEFAULT_HEALTH_WEIGHTS, ...(rawWeights || {}) };
   const signals = buildHealthSignals(student, null, { today: now });
-  const { factors } = computeHealthScore(signals);
+  const { factors } = computeHealthScore(signals, weights);
   const recommendations = buildMissionRecommendations(factors, signals);
 
   return NextResponse.json({
@@ -131,7 +137,8 @@ export async function GET() {
     todayPlanEntries,
     checklist,
     streak,
+    streakRepair,
     recommendations,
-    leaveCoupons: student.leaveCoupons ?? 0,
+    leaveCoupons,
   });
 }

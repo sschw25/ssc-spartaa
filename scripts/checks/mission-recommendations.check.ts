@@ -1,5 +1,5 @@
 import {
-  buildMissionRecommendations, MAX_RECOMMENDATIONS,
+  buildMissionRecommendations, MAX_RECOMMENDATIONS, MIN_FACTOR_CONTRIBUTION,
 } from '../../lib/mission-recommendations';
 import type { HealthFactor, HealthSignals } from '../../lib/health-score';
 
@@ -67,6 +67,22 @@ const nullRecs = buildMissionRecommendations(
   nullSignals,
 );
 assert(nullRecs.length === 2 && !nullRecs[0].detail.includes('null'), 'null 신호에도 안전한 문구');
+
+// 7) 미세 기여(임계 미만)는 코칭으로 변환하지 않음 → 성실한 학생에게 celebrate 노출
+const tiny: HealthFactor[] = [
+  { key: 'sleep', label: '수면부족', contribution: 0.3 },   // 5.9시간 수면 같은 미세 부족
+  { key: 'distraction', label: '집중이탈 급증', contribution: 0.2 },
+];
+const tinyRecs = buildMissionRecommendations(tiny, baseSignals);
+assert(tinyRecs.length === 1 && tinyRecs[0].tone === 'celebrate', `임계(${MIN_FACTOR_CONTRIBUTION}) 미만 미세 요인만 → celebrate`);
+
+// 8) 임계 이상/미만 혼합 → 임계 이상만 추천
+const mixedTiny: HealthFactor[] = [
+  { key: 'plan', label: '계획 미이행', contribution: 12 },
+  { key: 'sleep', label: '수면부족', contribution: 0.3 },
+];
+const mixedTinyRecs = buildMissionRecommendations(mixedTiny, baseSignals);
+assert(mixedTinyRecs.length === 1 && mixedTinyRecs[0].key === 'plan', '임계 미만 요인은 걸러지고 유의미 요인만 추천');
 
 if (failures > 0) { console.error(`\n${failures} FAILED`); process.exit(1); }
 console.log('\nAll mission-recommendations checks passed');
