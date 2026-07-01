@@ -46,6 +46,11 @@ export const SCHEDULED_JOBS: JobMeta[] = [
     description: '내일 상담 예약자에게 리마인더 알림 생성',
     defaults: { enabled: true, time: '19:00', weekday: 0, day: 1 },
   },
+  {
+    id: 'daily_digest', label: '일일 브리핑 생성', type: 'daily',
+    description: '어제 결석·이탈급증·연속결석·위험 학생 브리핑 생성(대시보드 "오늘의 브리핑" 카드)',
+    defaults: { enabled: true, time: '06:00', weekday: 0, day: 1 },
+  },
 ];
 
 export const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
