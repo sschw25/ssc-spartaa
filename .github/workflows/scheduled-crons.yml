@@ -17,7 +17,7 @@ name: scheduled-crons
 
 on:
   schedule:
-    - cron: '59 14 * * *'    # 출결 자동마감 (매일 14:59 UTC = 23:59 KST)
+    - cron: '30 14 * * *'    # 출결 자동마감 (매일 14:30 UTC = 23:30 KST)
     - cron: '0 4-6 * * 1'    # 도시락 반복 템플릿 (월요일 13·14·15시 KST = 04·05·06시 UTC). 보통 월 오후 2시 고정이라 매시 정각 몇 번이면 충분(idempotent).
     - cron: '59 14 * * 0'    # 주간 미션 정산 (일 14:59 UTC = 일 23:59 KST)
     - cron: '30 15 1 * *'    # 월간 미션 정산 (매월 1일 15:30 UTC = 1일 00:30 KST, 지난달분)
@@ -53,7 +53,7 @@ jobs:
           fi
           KEY="${SCHED:-manual:${MANUAL:-sweep}}"
           case "$KEY" in
-            '59 14 * * *'|manual:sweep)    Q='/api/admin/attendance/sweep' ;;
+            '30 14 * * *'|manual:sweep)    Q='/api/admin/attendance/sweep' ;;
             '0 4-6 * * 1'|manual:meal)     Q='/api/admin/meal-routines/run' ;;
             '59 14 * * 0'|manual:weekly)   Q='/api/admin/missions/settle?scope=weekly' ;;
             '30 15 1 * *'|manual:monthly)  Q='/api/admin/missions/settle?scope=monthly&prev=1' ;;
