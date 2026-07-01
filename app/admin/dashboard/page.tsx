@@ -18,6 +18,7 @@ import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widge
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { MissionSummaryWidget } from '@/components/admin/mission-summary-widget';
 import { MissingArrivalWidget } from '@/components/admin/missing-arrival-widget';
+import { DailyDigestWidget } from '@/components/admin/daily-digest-widget';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { AnimatedNumber } from '@/components/admin/animated-number';
@@ -857,6 +858,14 @@ export default function AdminDashboardPage() {
 
           </motion.div>
         </div>{/* /섹션1 알림현황 */}
+
+        {/* ── 섹션 2: 오늘의 브리핑 (스마트화 Wave1 #2+#3: 연속결석·이탈급증·위험밴드) ── */}
+        <div className="space-y-3.5">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">오늘의 브리핑</h2>
+          </div>
+          <DailyDigestWidget campusFilter={campusFilter} onSelectStudentId={handleOpenStudentById} />
+        </div>{/* /섹션2 */}
 
         {/* ── 섹션 3: 출결 현황 ── */}
         <div className="space-y-3.5">
