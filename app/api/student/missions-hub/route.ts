@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, getAppSetting } from '@/lib/store';
+import { getStudentById, getAppSetting, getOtEvents, getMockExams, getCampusEvents } from '@/lib/store';
 import { getSeoulDateKey, getDailyChecklistFromStudent, getPlanDailyCompletion } from '@/lib/student-activity';
 import { computeAttendanceStreak, findRepairableGap } from '@/lib/streak';
 import { loadStreakInputs, STREAK_REPAIR_COST, STREAK_REPAIR_WINDOW_DAYS } from '@/lib/streak-data';
 import { buildHealthSignals } from '@/lib/health-signals';
 import { computeHealthScore, DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from '@/lib/health-score';
 import { buildMissionRecommendations } from '@/lib/mission-recommendations';
+import { buildUpcomingSchedule } from '@/lib/upcoming-schedule';
 import type { DetailedPlan } from '@/lib/types/student';
 
 const HEALTH_WEIGHTS_KEY = 'health_score_weights';
@@ -132,6 +133,16 @@ export async function GET() {
   const { factors } = computeHealthScore(signals, weights);
   const recommendations = buildMissionRecommendations(factors, signals);
 
+  // 5) 학원 일정(OT/모의고사/참여미션) — 앞으로 30일, 임박순. 대상 판정은 기존 학생 노출
+  // 로직(ot-events D-3·mock-exam-scope·campus-events isTargeted)의 단일 소스를 재사용.
+  // 테이블 미생성(마이그레이션 미실행) 등은 빈 목록으로 graceful 처리 — 허브 화면 깨지지 않게.
+  const [otEvents, mockExams, campusEvents] = await Promise.all([
+    getOtEvents().catch(() => []),
+    getMockExams().catch(() => []),
+    getCampusEvents().catch(() => []),
+  ]);
+  const schedule = buildUpcomingSchedule({ student, otEvents, mockExams, campusEvents, todayKey });
+
   return NextResponse.json({
     success: true,
     todayPlanEntries,
@@ -139,6 +150,7 @@ export async function GET() {
     streak,
     streakRepair,
     recommendations,
+    schedule,
     leaveCoupons,
   });
 }

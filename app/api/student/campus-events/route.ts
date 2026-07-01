@@ -1,16 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getCampusEvents, getStudentById } from '@/lib/store';
-import type { CampusEvent, Student } from '@/lib/types/student';
-
-// 이 학생이 해당 참여 미션의 대상인지 판정
-function isTargeted(event: CampusEvent, student: Student): boolean {
-  if (event.targetMode === 'students') {
-    return (event.targetStudentIds || []).includes(student.id);
-  }
-  // 센터 대상 (기본)
-  return !event.campus || event.campus === 'all' || event.campus === student.campus;
-}
+import { isCampusEventTargetedToStudent } from '@/lib/upcoming-schedule';
+import type { CampusEvent } from '@/lib/types/student';
 
 // 학생: 응답 대기 중인 참여 미션 목록 (isMission + notifiedAt + 대상 + 미응답)
 export async function GET() {
@@ -33,7 +25,7 @@ export async function GET() {
   const pending = allEvents.filter((event) => {
     if (!event.isMission || !event.notifiedAt) return false;
     if (responded.has(event.id)) return false;
-    return isTargeted(event, student);
+    return isCampusEventTargetedToStudent(event, student);
   });
   return NextResponse.json({ success: true, events: pending });
 }
