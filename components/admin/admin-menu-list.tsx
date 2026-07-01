@@ -25,6 +25,7 @@ import {
   Utensils,
   PinOff,
   Pin,
+  HeartPulse,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -127,6 +128,7 @@ export function AdminMenuList({
       items: [
         { key: 'leaderboard', icon: Trophy, label: '순공 랭킹', href: '/admin/leaderboard' },
         { key: 'missions', icon: Sparkles, label: '쿠폰 미션 설정', href: '/admin/missions' },
+        { key: 'health-score', icon: HeartPulse, label: '건강지수', href: '/admin/health-score' },
       ],
     },
     ...(isSuper
