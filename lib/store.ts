@@ -149,6 +149,19 @@ async function mutateAppSetting<T>(
   throw new Error(`설정 동시 저장 충돌(app_settings): ${key}`);
 }
 
+// app_settings의 객체형 값을 부분 병합으로 저장 — 일부 필드만 편집하는 화면(예: 예약 스케줄
+// 임베드 패널)이 저장해도, 요청에 없는 키(다른 화면/관리자의 최신 변경)를 덮어쓰지 않는다.
+// 낙관적 잠금 read-modify-write(mutateAppSetting) 위에서 동작. 반환: 병합된 최종 객체.
+export async function mergeAppSettingObject(
+  key: string,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  return mutateAppSetting<Record<string, unknown>>(key, {}, (current) => ({
+    ...(current && typeof current === 'object' ? current : {}),
+    ...patch,
+  }));
+}
+
 // ── 학생 셀프 가입신청 대기열 (app_settings 키-값에 JSON 배열로 보관) ──
 // 신규 테이블 없이 운영. 대기 건은 소량이므로 충분하며, 승인/반려 시 목록에서 제거된다.
 const STUDENT_APPLICATIONS_KEY = 'student_applications';

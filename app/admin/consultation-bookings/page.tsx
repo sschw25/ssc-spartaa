@@ -17,6 +17,7 @@ import {
 } from '@/lib/consultation-schedule';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 
 const ALL_CAMPUSES = ['wonju', 'chuncheon', 'chungju'] as const;
 type Campus = (typeof ALL_CAMPUSES)[number];
@@ -737,6 +738,9 @@ export default function AdminConsultationBookingsPage() {
             </div>
           )}
         </section>
+
+        {/* 상담 D-1 리마인더(remind) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
+        <ScheduledJobsPanel jobIds={['remind']} compact />
       </main>
 
       {/* 완료 처리 모달 */}
