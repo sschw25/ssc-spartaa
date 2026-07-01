@@ -496,6 +496,15 @@ body:has(.admin-fluid-ui) {
   transform-origin: center bottom;
 }
 
+/* 라우트 전환 진입 — admin/report template.tsx 가 사용. 짧은 페이드+상승으로 페이지 전환을 부드럽게. */
+@keyframes routeEnter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.route-transition {
+  animation: routeEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 /* 접근성 가드 — prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
