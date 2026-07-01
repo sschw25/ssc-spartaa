@@ -4352,6 +4352,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             {/* TAB 1: 과목 설정 및 학습 진도 DB */}
             <TabsContent value="progress" className="space-y-6 outline-none">
               <DetailSheetProvider value={{
+                studentId: student.id,
                 categoryFilter,
                 collapsedSubjects,
                 commitProgressValue,
