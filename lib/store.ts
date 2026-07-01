@@ -64,6 +64,7 @@ import {
   getAppSettingWithVersionSupabase,
   setAppSettingIfUnchangedSupabase,
   getSeatAbsenceMarksSupabase,
+  getStudentSeatAbsenceMarksSupabase,
   getAttendedDaysSupabase,
 } from './supabase';
 
@@ -146,6 +147,19 @@ async function mutateAppSetting<T>(
     // conflict → 다른 요청이 먼저 저장 → 최신 값으로 재조회·재적용.
   }
   throw new Error(`설정 동시 저장 충돌(app_settings): ${key}`);
+}
+
+// app_settings의 객체형 값을 부분 병합으로 저장 — 일부 필드만 편집하는 화면(예: 예약 스케줄
+// 임베드 패널)이 저장해도, 요청에 없는 키(다른 화면/관리자의 최신 변경)를 덮어쓰지 않는다.
+// 낙관적 잠금 read-modify-write(mutateAppSetting) 위에서 동작. 반환: 병합된 최종 객체.
+export async function mergeAppSettingObject(
+  key: string,
+  patch: Record<string, unknown>,
+): Promise<Record<string, unknown>> {
+  return mutateAppSetting<Record<string, unknown>>(key, {}, (current) => ({
+    ...(current && typeof current === 'object' ? current : {}),
+    ...patch,
+  }));
 }
 
 // ── 학생 셀프 가입신청 대기열 (app_settings 키-값에 JSON 배열로 보관) ──
@@ -643,6 +657,17 @@ export async function getSeatAbsenceMarks(from: string, to: string): Promise<{ d
   } catch {
     return [];
   }
+}
+
+// 특정 학생의 기간 내 수기 결석 마크 — 스트릭 일괄결석일 판정용. 로컬 폴백은 전체 마크에서 학생 스코프 필터.
+export async function getStudentSeatAbsenceMarks(
+  studentId: string,
+  from: string,
+  to: string,
+): Promise<{ date: string; seatKey: string }[]> {
+  if (isSupabaseConfigured()) return getStudentSeatAbsenceMarksSupabase(studentId, from, to);
+  const all = await getSeatAbsenceMarks(from, to);
+  return all.filter((m) => m.seatKey.startsWith(`${studentId}:`));
 }
 
 // 기간 내 등원일 집합 "studentId|date". 운영은 Supabase study_sessions.

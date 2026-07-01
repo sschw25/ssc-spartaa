@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Student, MealPlan, MealKind, MealDay, MealOrder, MealAddRequest } from '@/lib/types/student';
 import type { MealPlanRoutineTemplate } from '@/lib/meal-routines';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 import {
   MEAL_DAYS, MEAL_DAY_LABELS, MEAL_KIND_LABELS, CAMPUSES, getCampusLabel,
   weekRangeLabel, formatDeadline, isPastDeadline, isClosedDay, eatsOn, orderHasMeal, mealCounts, withSelection, mondayOf,
@@ -1151,6 +1152,11 @@ export default function MealsPage() {
             <p className="text-sm font-bold text-slate-400">도시락 라운드를 먼저 등록해주세요.</p>
           </div>
         )}
+
+        {/* 도시락 반복 생성(meal) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리. 인쇄 제외 */}
+        <div className="no-print">
+          <ScheduledJobsPanel jobIds={['meal']} compact />
+        </div>
       </main>
     </div>
   );

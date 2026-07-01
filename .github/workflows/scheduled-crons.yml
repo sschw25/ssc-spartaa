@@ -25,7 +25,7 @@ on:
         required: false
         default: ''
         type: choice
-        options: ['', sweep, meal, weekly_settle, monthly_settle, remind]
+        options: ['', sweep, meal, weekly_settle, monthly_settle, remind, daily_digest]
 
 concurrency:
   group: scheduled-crons

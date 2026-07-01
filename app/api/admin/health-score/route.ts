@@ -71,6 +71,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, data });
   } catch (err) {
     console.error('[health-score GET]', err);
-    return NextResponse.json({ success: false, message: '건강지수 계산에 실패했습니다.', data: [] }, { status: 500 });
+    return NextResponse.json({ success: false, message: '케어 지수 계산에 실패했습니다.', data: [] }, { status: 500 });
   }
 }

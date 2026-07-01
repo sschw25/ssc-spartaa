@@ -219,8 +219,8 @@ export default function MissionsPage() {
           </Button>
         </div>
 
-        {/* 예약 스케줄 — 자동 작업 실행 요일/시각 설정 */}
-        <ScheduledJobsPanel />
+        {/* 자동 정산 예약 — 미션 관련 잡(주간/월간 정산)만. 전체 잡은 /admin/schedules 에서 관리 */}
+        <ScheduledJobsPanel jobIds={['weekly_settle', 'monthly_settle']} />
 
         {/* 미션 목록 */}
         {loading ? (

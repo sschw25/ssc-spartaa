@@ -13,6 +13,10 @@ export const DEFAULT_SPIKE_RECENT_DAYS = 3;
 export const DEFAULT_SPIKE_PRIOR_DAYS = 3;
 // 이탈급증으로 인정할 최소 증가폭(최근-이전)
 export const DEFAULT_SPIKE_MIN_INCREASE = 2;
+// 위험밴드(건강지수) 출결 집계 윈도우 — 관리자 대시보드(/api/admin/health-score 기본 14일)와
+// 같은 학생이 브리핑/대시보드에서 다르게 판정되지 않도록 동일한 14일로 맞춘다.
+// (rawMarks 자체는 연속결석 lookback용으로 더 넓게 들어오므로, 위험밴드 계산 전에 이 윈도우로 자른다.)
+export const HEALTH_ABSENCE_WINDOW_DAYS = 14;
 
 export interface DigestStudentEntry {
   studentId: string;
@@ -138,7 +142,11 @@ export function buildDailyDigest(
   const previousRisk = opts.previousRiskStudentIds ?? new Set<string>();
 
   const dailyMap = buildDailyAbsenceMap(rawMarks, attendedDays, students);
-  const absenceRows = buildAbsenceRanking(rawMarks, attendedDays, students);
+  // 위험밴드용 결석집계는 대시보드와 동일한 최근 14일(어제 기준)로 제한 —
+  // 60일치 rawMarks를 그대로 쓰면 대시보드(14일)와 결석일수가 최대 4배 벌어져 판정이 어긋난다.
+  const healthWindowStart = seoulDateKeyOf(addDays(yesterday, -(HEALTH_ABSENCE_WINDOW_DAYS - 1)));
+  const healthMarks = rawMarks.filter((m) => m.date >= healthWindowStart);
+  const absenceRows = buildAbsenceRanking(healthMarks, attendedDays, students);
   const absenceById = new Map<string, AbsenceRankRow>(absenceRows.map((r) => [r.studentId, r]));
   const consecutiveById = computeConsecutiveAbsences(dailyMap, yesterday);
 

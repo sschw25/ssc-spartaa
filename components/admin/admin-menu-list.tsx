@@ -2,6 +2,7 @@
 
 import React from 'react';
 import {
+  AlarmClock,
   BookOpen,
   Calendar,
   CalendarDays,
@@ -89,6 +90,7 @@ export function AdminMenuList({
         { key: 'dashboard', icon: Home, label: '홈 대시보드', href: '/admin/dashboard' },
         { key: 'inbox', icon: Inbox, label: '통합 인박스', href: '/admin/inbox' },
         { key: 'calendar', icon: CalendarDays, label: '캘린더', href: '/admin/calendar' },
+        { key: 'schedules', icon: AlarmClock, label: '예약 스케줄', href: '/admin/schedules' },
       ],
     },
     {
@@ -128,7 +130,7 @@ export function AdminMenuList({
       items: [
         { key: 'leaderboard', icon: Trophy, label: '순공 랭킹', href: '/admin/leaderboard' },
         { key: 'missions', icon: Sparkles, label: '쿠폰 미션 설정', href: '/admin/missions' },
-        { key: 'health-score', icon: HeartPulse, label: '건강지수', href: '/admin/health-score' },
+        { key: 'health-score', icon: HeartPulse, label: '케어 지수', href: '/admin/health-score' },
       ],
     },
     ...(isSuper
