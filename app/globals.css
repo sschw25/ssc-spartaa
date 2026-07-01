@@ -484,6 +484,18 @@ body:has(.admin-fluid-ui) {
   animation: floatY 2.4s ease-in-out infinite;
 }
 
+/* 연속출석 스트릭 불꽃 애니메이션 (미션 허브 상단) — 은은한 크기/밝기 흔들림으로 "타오르는" 느낌 */
+@keyframes streakFlameFlicker {
+  0%, 100% { transform: scale(1) rotate(-1deg); opacity: 1; }
+  25%      { transform: scale(1.06) rotate(1deg); opacity: 0.94; }
+  50%      { transform: scale(0.97) rotate(-0.5deg); opacity: 1; }
+  75%      { transform: scale(1.04) rotate(0.5deg); opacity: 0.96; }
+}
+.animate-streak-flame {
+  animation: streakFlameFlicker 2.2s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
 /* 접근성 가드 — prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
