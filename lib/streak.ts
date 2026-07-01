@@ -58,11 +58,14 @@ export function computeAttendanceStreak(
   const isCounted = (dateKey: string) => attended.has(dateKey) || justified.has(dateKey);
 
   // ── current: 오늘부터 과거로 스캔 ──
+  // 방어적 상한: 정상 입력에서는 결석 한 번이면 즉시 종료되므로 실질적으로 도달하지 않음.
+  // 데이터 이상(예: attended가 비정상적으로 광범위)으로 인한 무한/장기 루프만 차단하는 안전장치.
+  const MAX_SCAN_DAYS = 2000;
   let current = 0;
   let cursor = todayKey;
   let firstDay = true;
 
-  while (true) {
+  for (let guard = 0; guard < MAX_SCAN_DAYS; guard++) {
     const dow = weekdayOfDateKey(cursor);
     if (dow === 0) {
       // 일요일: 스킵 — 끊지 않고 카운트도 안 함
