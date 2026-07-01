@@ -25,13 +25,18 @@ export function parseSeatPeriodKey(seatKey: string): { studentId: string; period
   return { studentId, periodIdx: Number(tail) };
 }
 
-export function buildAbsenceRanking(
+// studentId -> date -> 그 날의 판정("absent"|"left")과 정당사유 제외 후 마크 수(effectiveCount)
+export type DailyMarkKind = 'absent' | 'left';
+export interface DailyMark { kind: DailyMarkKind; effectiveCount: number }
+export type DailyMarkMap = Map<string, Map<string, DailyMark>>;
+
+// rawMarks를 (학생,날짜)별 결석/이탈 판정으로 그룹핑. buildAbsenceRanking과 연속결석/
+// 이탈급증(daily-digest) 계산이 동일한 원시 로직을 공유하도록 분리한 내부 빌더.
+function buildDailyMarkMap(
   rawMarks: { date: string; seatKey: string }[],
   attendedDays: Set<string>,
-  students: Pick<Student, 'id' | 'name' | 'campus' | 'leaveRequests'>[],
-): AbsenceRankRow[] {
-  const studentMap = new Map(students.map((s) => [s.id, s]));
-
+  studentMap: Map<string, Pick<Student, 'id' | 'name' | 'campus' | 'leaveRequests'>>,
+): DailyMarkMap {
   // studentId -> date -> Set<periodIdx>(0~6)
   const grouped = new Map<string, Map<string, Set<number>>>();
   for (const m of rawMarks) {
@@ -46,18 +51,39 @@ export function buildAbsenceRanking(
     idxs.add(p.periodIdx);
   }
 
-  const rows: AbsenceRankRow[] = [];
+  const result: DailyMarkMap = new Map();
   for (const [studentId, byDate] of grouped) {
     const student = studentMap.get(studentId)!;
-    let absentDays = 0, leftDays = 0, totalMarks = 0, lastDate = '';
+    let byDateResult: Map<string, DailyMark> | null = null;
     for (const [date, idxs] of byDate) {
       // 정당사유(승인휴가) 덮인 교시 제외
       const effective = [...idxs].filter((idx) => !isPeriodCoveredByApprovedLeave(student, date, idx));
       if (effective.length === 0) continue; // 전부 정당사유 → 그 날 카운트 안 함
-      totalMarks += effective.length;
       const isBulk = idxs.size === OPERATING_PERIODS; // 7교시 전부 마크 = 일괄(하루종일)
       const hasSession = attendedDays.has(`${studentId}|${date}`);
-      if (isBulk || !hasSession) absentDays++; else leftDays++;
+      const kind: DailyMarkKind = (isBulk || !hasSession) ? 'absent' : 'left';
+      if (!byDateResult) { byDateResult = new Map(); result.set(studentId, byDateResult); }
+      byDateResult.set(date, { kind, effectiveCount: effective.length });
+    }
+  }
+  return result;
+}
+
+export function buildAbsenceRanking(
+  rawMarks: { date: string; seatKey: string }[],
+  attendedDays: Set<string>,
+  students: Pick<Student, 'id' | 'name' | 'campus' | 'leaveRequests'>[],
+): AbsenceRankRow[] {
+  const studentMap = new Map(students.map((s) => [s.id, s]));
+  const dailyMap = buildDailyMarkMap(rawMarks, attendedDays, studentMap);
+
+  const rows: AbsenceRankRow[] = [];
+  for (const [studentId, byDate] of dailyMap) {
+    const student = studentMap.get(studentId)!;
+    let absentDays = 0, leftDays = 0, totalMarks = 0, lastDate = '';
+    for (const [date, mark] of byDate) {
+      totalMarks += mark.effectiveCount;
+      if (mark.kind === 'absent') absentDays++; else leftDays++;
       if (date > lastDate) lastDate = date;
     }
     if (absentDays + leftDays > 0) {
@@ -72,4 +98,14 @@ export function buildAbsenceRanking(
     a.name.localeCompare(b.name, 'ko'),
   );
   return rows;
+}
+
+// 일별 결석/이탈 판정 맵을 외부(daily-digest 등)에 노출 — 연속결석·기간별 이탈 추세 계산용.
+export function buildDailyAbsenceMap(
+  rawMarks: { date: string; seatKey: string }[],
+  attendedDays: Set<string>,
+  students: Pick<Student, 'id' | 'name' | 'campus' | 'leaveRequests'>[],
+): DailyMarkMap {
+  const studentMap = new Map(students.map((s) => [s.id, s]));
+  return buildDailyMarkMap(rawMarks, attendedDays, studentMap);
 }
