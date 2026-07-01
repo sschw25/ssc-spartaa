@@ -60,7 +60,8 @@ const PHONE_LABEL: Record<string, string> = {
   off_hold: '전원끄고 소지',
 };
 
-export function MissionsHub({ studentId, studentName }: { studentId: string; studentName: string }) {
+// embedded: 리포트 탭 안에서 렌더될 때 — 풀스크린 배경/뒤로가기 없이 섹션만 출력한다.
+export function MissionsHub({ studentId, studentName, embedded = false }: { studentId: string; studentName: string; embedded?: boolean }) {
   const [data, setData] = useState<HubData | null>(null);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -186,6 +187,13 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
   };
 
   if (loading) {
+    if (embedded) {
+      return (
+        <div className="flex items-center justify-center rounded-[28px] border border-slate-100 bg-white/70 py-16">
+          <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin" />
+        </div>
+      );
+    }
     return (
       <div className="ios-app-bg min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" />
@@ -203,17 +211,18 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
   const recommendations = data?.recommendations ?? [];
   const isCelebrate = recommendations.length === 1 && recommendations[0].tone === 'celebrate';
 
-  return (
-    <div className="ios-app-bg min-h-screen px-4 py-6 sm:px-6">
-      <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5">
+  const inner = (
+      <>
         <header className="flex flex-col gap-1">
-          <a
-            href={`/report/${studentId}?audience=student`}
-            className="inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-            리포트로 돌아가기
-          </a>
+          {!embedded && (
+            <a
+              href={`/report/${studentId}?audience=student`}
+              className="inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              리포트로 돌아가기
+            </a>
+          )}
           <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">오늘 할 일</p>
           <h1 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
             {studentName}님, 오늘도 화이팅이에요
@@ -425,7 +434,16 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
 
         {/* 4. 쿠폰 미션 */}
         <MissionsCard />
-      </div>
+      </>
+  );
+
+  if (embedded) {
+    return <div className="flex w-full flex-col gap-5">{inner}</div>;
+  }
+
+  return (
+    <div className="ios-app-bg min-h-screen px-4 py-6 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5">{inner}</div>
     </div>
   );
 }

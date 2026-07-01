@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, CalendarClock, BookOpen, FileText, Shield, Ticket } from 'lucide-react';
+import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, CalendarClock, BookOpen, FileText, Shield, Flame } from 'lucide-react';
 import { isConsultationCampus, WEEKDAY_LABEL } from '@/lib/consultation-schedule';
 import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest } from '@/lib/types/student';
 import {
@@ -261,6 +261,23 @@ function parseDateOnly(value?: string) {
 
 type ProgressMaterialType = 'book' | 'lecture';
 
+// `?tab=` 쿼리로 진입 가능한 학생 탭 id 화이트리스트 (구 /student/missions 리다이렉트 등)
+const STUDENT_TAB_IDS = [
+  'report-overview',
+  'student-notifications',
+  'attendance-status',
+  'study-stats',
+  'timetable',
+  'execution-plan',
+  'coach-feedback',
+  'student-requests',
+  'clinic-booking',
+  'student-missions',
+  'subject-progress',
+  'grade-analysis',
+  'student-penalties',
+];
+
 export function useReportState() {
   const params = useParams();
   const searchParams = useSearchParams();
@@ -284,7 +301,10 @@ export function useReportState() {
   const [error, setError] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
-  const [activeTab, setActiveTab] = useState('report-overview');
+  const initialTabParam = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(() =>
+    initialTabParam && STUDENT_TAB_IDS.includes(initialTabParam) ? initialTabParam : 'report-overview'
+  );
 
   const paperRef = useRef<HTMLDivElement>(null);
   const slideDirRef = useRef(1);
@@ -432,19 +452,48 @@ export function useReportState() {
     setMounted(true);
     async function loadReport() {
       try {
-        // 토큰은 공유 링크 식별자라 쿼리로 전달하되, 비밀번호는 URL에 남지 않도록 헤더로 보낸다.
-        const tokenQuery = shareTokenParam ? `&token=${encodeURIComponent(shareTokenParam)}` : '';
-        const res = await fetch(`/api/report/${studentId}?audience=${audience}${tokenQuery}`, {
-          headers: shareTokenParam ? { 'x-report-password': sharePasswordInput } : undefined,
-        });
+        if (shareTokenParam) {
+          // 공유 링크(학부모): 토큰은 쿼리, 비밀번호는 URL에 남지 않도록 헤더 — 단일 전체 요청 유지.
+          const res = await fetch(`/api/report/${studentId}?audience=${audience}&token=${encodeURIComponent(shareTokenParam)}`, {
+            headers: { 'x-report-password': sharePasswordInput },
+          });
+          if (res.ok) {
+            const json = await res.json();
+            if (json.success) {
+              setStudent(json.data);
+              setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
+              setMaterialBenchmarks(json.materialBenchmarks || {});
+              setStudyStats(json.studyStats || null);
+              setMockExams(json.mockExams || []);
+            } else {
+              setError(true);
+            }
+          } else {
+            setError(true);
+          }
+          return;
+        }
+
+        // 세션 접근(학생/관리자): 본문(core)을 먼저 받아 즉시 렌더하고,
+        // 무거운 집계(벤치마크·순공통계)는 백그라운드(extras)로 뒤에 채운다 → 첫 로딩 체감 단축.
+        const res = await fetch(`/api/report/${studentId}?audience=${audience}&scope=core`);
         if (res.ok) {
           const json = await res.json();
           if (json.success) {
             setStudent(json.data);
             setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
-            setMaterialBenchmarks(json.materialBenchmarks || {});
-            setStudyStats(json.studyStats || null);
             setMockExams(json.mockExams || []);
+            fetch(`/api/report/${studentId}?audience=${audience}&scope=extras`)
+              .then((extrasRes) => (extrasRes.ok ? extrasRes.json() : null))
+              .then((extras) => {
+                if (extras?.success) {
+                  setMaterialBenchmarks(extras.materialBenchmarks || {});
+                  setStudyStats(extras.studyStats || null);
+                }
+              })
+              .catch(() => {
+                // 집계 실패는 본문 표시에 영향 없음(기존에도 null 허용)
+              });
           } else {
             setError(true);
           }
@@ -1713,7 +1762,7 @@ export function useReportState() {
         ...(isConsultationCampus(student.campus)
           ? [{ href: '#clinic-booking', label: '클리닉 상담', meta: '날짜·시간 예약', icon: CalendarClock }]
           : []),
-        { href: '#student-missions', label: '쿠폰 미션', meta: `쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Ticket },
+        { href: '#student-missions', label: '미션', meta: `오늘 할 일 · 쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Flame },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${(student.grades || []).length}건`, icon: FileText },
         { href: '#student-penalties', label: '벌점', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },

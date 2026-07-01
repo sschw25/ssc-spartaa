@@ -17,7 +17,7 @@ import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
-import { MissionsCard } from '@/components/report/missions-card';
+import { MissionsHub } from '@/components/student/missions-hub';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
 import type { MockExam, OtEvent, CampusEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
@@ -27,6 +27,8 @@ function StudentReportInner() {
   const [pendingOtEvents, setPendingOtEvents] = useState<OtEvent[]>([]);
   const [pendingCampusEvents, setPendingCampusEvents] = useState<CampusEvent[]>([]);
   const [mealPlans, setMealPlans] = useState<MealPlanWithOrder[]>([]);
+  // 미션 탭은 첫 활성화 때 마운트(그때 미션 API 호출) — 초기 로딩을 가볍게 유지한다.
+  const [missionsTabActivated, setMissionsTabActivated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,6 +200,10 @@ function StudentReportInner() {
     consultationBookings,
     consultationHistory,
   } = useReportState();
+
+  useEffect(() => {
+    if (activeTab === 'student-missions') setMissionsTabActivated(true);
+  }, [activeTab]);
 
   if (!mounted) return null;
 
@@ -396,13 +402,13 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 쿠폰 미션 탭 (학생 전용, 독립 탭) */}
-        {isStudentReport && (
+        {/* 미션 탭 (학생 전용, 독립 탭) — 오늘 할 일 허브 + 쿠폰 미션 통합 */}
+        {isStudentReport && missionsTabActivated && (
           <div
             id="student-missions"
-            className={`scroll-mt-24 mx-auto w-full max-w-[680px] px-4 sm:px-5 ${activeTab === 'student-missions' ? 'block' : 'hidden print:block'}`}
+            className={`no-print scroll-mt-24 mx-auto w-full max-w-[680px] px-4 sm:px-5 ${activeTab === 'student-missions' ? 'block' : 'hidden'}`}
           >
-            <MissionsCard />
+            <MissionsHub studentId={student.id} studentName={student.name} embedded />
           </div>
         )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar, Flame } from 'lucide-react';
+import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { Student } from '@/lib/types/student';
 import { StudentNotification, StudentNotificationTone } from './notifications-section';
 import { ParentSidebar } from './parent-sidebar';
@@ -181,19 +181,7 @@ export function StudentLayout({
                     </div>
 
                     <div className="grid grid-cols-1 gap-1.5">
-                      {/* 오늘 할 일 허브(/student/missions) — 실제 라우트 이동이라 다른 항목(탭 전환)과 분리해 최상단 배치 */}
-                      <a
-                        href="/student/missions"
-                        className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-orange-200/70 bg-orange-50/60 px-3 py-2 text-left shadow-sm transition-colors active:bg-orange-100"
-                      >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-orange-500 ring-1 ring-orange-100">
-                          <Flame className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-black text-slate-800">미션</span>
-                          <span className="block truncate text-[10px] font-bold text-slate-400">오늘 할 일 허브 · 연속출석</span>
-                        </span>
-                      </a>
+                      {/* 미션은 이제 리포트 탭(#student-missions)으로 통합 — reportNavItems에 포함된다 */}
                       {reportNavItems.map((item) => {
                         const Icon = item.icon;
                         return (
