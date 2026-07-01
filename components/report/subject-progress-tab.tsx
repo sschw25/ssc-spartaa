@@ -10,6 +10,7 @@ import {
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
 import { getExpectedFromPlans } from '@/lib/progress-plan';
+import { BenchmarkSection } from '@/components/learning/benchmark-section';
 
 interface SubjectProgressTabProps {
   student: Student;
@@ -663,6 +664,10 @@ export function SubjectProgressTab({
                                </div>
                             </div>
                           )}
+
+                          {isStudentReport && (
+                            <BenchmarkSection type="book" subject={sub.name} name={b.title} studentId={student.id} audience="student" />
+                          )}
                         </div>
                       );
                     })}
@@ -870,6 +875,10 @@ export function SubjectProgressTab({
                                  })}
                                </div>
                             </div>
+                          )}
+
+                          {isStudentReport && (
+                            <BenchmarkSection type="lecture" subject={sub.name} name={l.name} studentId={student.id} audience="student" />
                           )}
                         </div>
                       );
