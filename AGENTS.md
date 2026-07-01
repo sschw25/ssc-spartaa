@@ -151,7 +151,42 @@ iOS 26은 **동심(concentric) 라운딩**을 쓴다: 중첩 요소들이 공통
 
 ---
 
-## 9. 변경 후 확인
+## 9. 개발 서버 — 충돌 방지 (필수 · 실제 사고)
+
+> **한 폴더에 `next dev`는 절대 1개만.** 여러 챗/세션이 각자 서버를 띄우면 디렉터리 락 충돌 + 좀비 프로세스가 쌓여 프리뷰가 안 뜨고, stale `.next` 캐시까지 겹치면 "코드가 안 먹는" 가짜 버그가 난다. 아래는 권장이 아니라 **규칙**이다.
+
+**9-1. 시작 전 — 이미 떠 있는지부터 확인.**
+- 새 서버를 띄우기 전에 **항상** 기존 서버/프로세스를 먼저 확인하고, 있으면 **재사용**한다. 새로 띄우지 말 것.
+  ```powershell
+  # 3000 포트 점유 확인 (PID 나오면 이미 서버 떠 있음 → 재사용)
+  Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue | Select-Object OwningProcess
+  ```
+- 프리뷰 검증은 raw `npm run dev`를 여러 셸에서 띄우지 말고 **`preview_start`(단일 관리 서버) 경로를 우선** 사용한다. (preview 툴이 이미 떠 있으면 그걸 재사용.)
+
+**9-2. 포트 고정 — 자동 증가 금지.**
+- `next dev`는 3000이 점유돼 있으면 **에러 없이 3001·3002로 자동 증가**해 **서버가 조용히 중첩**된다(충돌의 주범). 항상 **포트를 명시**해 같은 포트만 쓴다.
+  ```powershell
+  npx next dev -p 3000   # 점유면 자동 증가시키지 말고, 9-1로 기존 서버 재사용
+  ```
+- 포트가 점유됐는데 내 서버가 아니면 → **새 포트로 도망가지 말고** 9-4로 정리 후 3000을 회수한다.
+
+**9-3. 끝나면 내린다.**
+- 검증이 끝나면 자기가 띄운 서버는 **반드시 종료**(`preview_stop` 또는 해당 PID kill). 좀비를 남기지 말 것. 다음 세션의 충돌 원인이 된다.
+
+**9-4. 막혔을 때 — 전체 정리 후 클린 재기동(순서 고정).**
+증상: `.glass` 등 새 CSS가 "컴파일 안 된 듯" 안 먹힘 / 중첩 동적 라우트가 405 아닌 **404 HTML** 반환 / 프리뷰 서버가 안 뜸. → 거의 항상 **stale `.next` + 좀비 프로세스**다. 기능 버그로 오해 말고 아래를 순서대로.
+  ```powershell
+  Get-Process node -ErrorAction SilentlyContinue | Stop-Process -Force   # 모든 node kill
+  Remove-Item -Recurse -Force .next                                       # 빌드 캐시 삭제
+  npx next dev -p 3000                                                     # 클린 재기동
+  ```
+- CSS 유틸이 진짜 컴파일되는지 빠르게 가리려면 Tailwind CLI 직접 컴파일이 결정적: `npx @tailwindcss/cli -i app/globals.css -o out.css`. 거기서 나오면 CSS 문제 아님 → 캐시/좀비 의심.
+
+근거·상세: 메모리 [[preview-testing-2026-06-30]], [[ios26-glass-migration]].
+
+---
+
+## 10. 변경 후 확인
 
 - [ ] 유리는 떠 있는 크롬에만? 본문/표는 solid? (유리 위 유리 없음?)
 - [ ] 색이 §3 역할에 매핑되는가? 동일 역할에 다색 없는가?
@@ -159,3 +194,4 @@ iOS 26은 **동심(concentric) 라운딩**을 쓴다: 중첩 요소들이 공통
 - [ ] `prefers-reduced-transparency / contrast / motion` 폴백 있는가? 유리 위 텍스트 대비 4.5:1?
 - [ ] `grep -rE "\-(450|650|750|850)\b"` — 무효 셰이드 없는가?
 - [ ] 공용 유틸을 `app/globals.css`에 넣었는가? dev 프리뷰 콘솔 에러 0?
+- [ ] dev 서버는 **한 폴더에 1개**(§9)? 새로 띄우기 전 기존 서버 재사용했고, 끝나면 내렸는가? (좀비 미잔류)

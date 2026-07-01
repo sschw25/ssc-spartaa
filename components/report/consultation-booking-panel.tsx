@@ -66,6 +66,13 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // 시간 변경 요청(reschedule)
+  const [rsOpen, setRsOpen] = useState(false);
+  const [rsDate, setRsDate] = useState('');
+  const [rsSlot, setRsSlot] = useState('');
+  const [rsBusy, setRsBusy] = useState(false);
+  const [rsError, setRsError] = useState('');
+
   // 추가·긴급 신청
   const [extraOpen, setExtraOpen] = useState(false);
   const [extraReason, setExtraReason] = useState('');
@@ -105,6 +112,11 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
   useEffect(() => {
     setSelectedSlot('');
   }, [selectedDate]);
+
+  // 변경요청 날짜가 바뀌면 슬롯 선택 초기화
+  useEffect(() => {
+    setRsSlot('');
+  }, [rsDate]);
 
   // 이번 주 / 다음 주로 그룹핑
   const weekGroups = useMemo(() => {
@@ -176,6 +188,56 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
     }
   };
 
+  // 변경요청 공통 PATCH 호출
+  const sendReschedule = async (payload: Record<string, unknown>) => {
+    if (!myBooking) return false;
+    setRsBusy(true);
+    setRsError('');
+    setError('');
+    setSuccessMsg('');
+    try {
+      const res = await fetch('/api/student/consultation-booking', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: myBooking.id, ...payload }),
+      });
+      const data = await res.json();
+      if (data?.success) {
+        await refresh();
+        return true;
+      }
+      setRsError(data?.message || '처리에 실패했어요. 다시 시도해 주세요.');
+      return false;
+    } catch {
+      setRsError('처리에 실패했어요. 다시 시도해 주세요.');
+      return false;
+    } finally {
+      setRsBusy(false);
+    }
+  };
+
+  const openReschedule = () => {
+    setRsError('');
+    setRsSlot('');
+    setRsDate((prev) => (prev && calendar.some((d) => d.date === prev && !d.full) ? prev : calendar.find((d) => !d.full)?.date ?? ''));
+    setRsOpen(true);
+  };
+
+  const submitReschedule = async () => {
+    if (!rsDate || !rsSlot) return;
+    const ok = await sendReschedule({ action: 'request', date: rsDate, slot: rsSlot });
+    if (ok) { setRsOpen(false); setSuccessMsg('시간 변경을 요청했어요. 관리자 승인 후 확정돼요.'); }
+  };
+
+  const cancelReschedule = async () => {
+    await sendReschedule({ action: 'cancel' });
+  };
+
+  const respondAdminReschedule = async (accept: boolean) => {
+    const ok = await sendReschedule({ action: accept ? 'approve' : 'reject' });
+    if (ok && accept) setSuccessMsg('변경된 시간으로 예약이 확정됐어요.');
+  };
+
   const submitExtra = async () => {
     const reason = extraReason.trim();
     if (!reason) {
@@ -226,10 +288,10 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
         </div>
       )}
       <div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#0071E3]">
           <CalendarClock className="h-3.5 w-3.5" /> 클리닉 상담 예약
         </div>
-        <h4 className="mt-2 flex items-center gap-2 text-sm font-black text-[#0071E3]">
+        <h4 className="mt-2 flex items-center gap-2 text-sm font-semibold text-[#0071E3]">
           원하는 날짜·시간을 직접 예약해요
         </h4>
         <p className="mt-1 text-[10px] font-semibold leading-5 text-slate-400">
@@ -241,10 +303,10 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
       {/* 왜 상담 예정인지 */}
       {whyConsultation && (
         <div className="rounded-2xl border border-[#0071E3]/15 bg-white px-3.5 py-3 text-[11px] font-semibold leading-5 text-slate-600">
-          <span className="font-black text-[#0071E3]">{whyConsultation.subjectName}</span> 과목의{' '}
-          <span className="font-black text-slate-800">『{whyConsultation.materialTitle}』</span>{' '}
+          <span className="font-semibold text-[#0071E3]">{whyConsultation.subjectName}</span> 과목의{' '}
+          <span className="font-semibold text-slate-800">『{whyConsultation.materialTitle}』</span>{' '}
           {whyConsultation.type === 'book' ? '교재' : '강의'} 학습 계획이{' '}
-          <span className="font-black text-slate-800">{whyConsultation.planEndDate}</span>에 끝날 예정이라,
+          <span className="font-semibold text-slate-800">{whyConsultation.planEndDate}</span>에 끝날 예정이라,
           그 즈음 클리닉 상담이 필요해요.
         </div>
       )}
@@ -254,13 +316,13 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
           상담 예약 정보를 불러오는 중...
         </div>
       ) : myBooking ? (
-        /* 예약 완료 카드 */
+        /* 예약 완료 카드 + 시간 변경 흐름 */
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="flex items-start gap-2">
               <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               <div>
-                <p className="text-[12px] font-black text-emerald-800">
+                <p className="text-[12px] font-semibold text-emerald-800">
                   {myBooking.date}({weekdayLabel(myBooking.weekday)}) {myBooking.slot} 예약 완료
                 </p>
                 <p className="mt-0.5 text-[10px] font-bold text-emerald-700">담당: {myBooking.counselor}</p>
@@ -269,23 +331,162 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
             <button
               type="button"
               onClick={cancelBooking}
-              disabled={submitting}
+              disabled={submitting || rsBusy}
               className="shrink-0 text-emerald-400 transition-colors hover:text-red-500 disabled:opacity-50"
               aria-label="예약 취소"
             >
               <Trash2 className="h-4 w-4" />
             </button>
           </div>
-          <p className="mt-2 text-[10px] font-semibold text-emerald-700/80">
-            시간 변경이 필요하면 예약을 취소한 뒤 다시 예약해 주세요.
-          </p>
+
+          {/* 관리자가 변경을 제안한 경우 → 학생이 승인/거절 */}
+          {myBooking.reschedule?.by === 'admin' ? (
+            <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-3">
+              <p className="text-[11px] font-bold text-sky-800">
+                관리자가 시간 변경을 제안했어요
+              </p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-600">
+                {myBooking.date}({weekdayLabel(myBooking.weekday)}) {myBooking.slot}
+                {' → '}
+                <span className="font-bold text-sky-700">
+                  {mdLabel(myBooking.reschedule.date)}({weekdayLabel(myBooking.reschedule.weekday)}) {myBooking.reschedule.slot}
+                </span>
+              </p>
+              {myBooking.reschedule.reason && (
+                <p className="mt-1 text-[10px] font-semibold text-slate-500">사유: {myBooking.reschedule.reason}</p>
+              )}
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => respondAdminReschedule(true)}
+                  disabled={rsBusy}
+                  className="flex-1 rounded-lg bg-[#0071E3] py-2 text-[11px] font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+                >
+                  {rsBusy ? '처리 중...' : '이 시간으로 변경 수락'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => respondAdminReschedule(false)}
+                  disabled={rsBusy}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                >
+                  거절
+                </button>
+              </div>
+            </div>
+          ) : myBooking.reschedule?.by === 'student' ? (
+            /* 학생이 변경을 요청한 상태 → 관리자 승인 대기 */
+            <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3">
+              <p className="text-[11px] font-bold text-amber-800">시간 변경 요청 — 관리자 승인 대기중</p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-600">
+                {myBooking.slot}
+                {' → '}
+                <span className="font-bold text-amber-700">
+                  {mdLabel(myBooking.reschedule.date)}({weekdayLabel(myBooking.reschedule.weekday)}) {myBooking.reschedule.slot}
+                </span>
+              </p>
+              <button
+                type="button"
+                onClick={cancelReschedule}
+                disabled={rsBusy}
+                className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                {rsBusy ? '처리 중...' : '요청 취소'}
+              </button>
+            </div>
+          ) : !rsOpen ? (
+            /* 변경 진행 없음 → 변경 요청 시작 */
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-[10px] font-semibold text-emerald-700/80">시간이 안 맞으면 변경을 요청할 수 있어요.</p>
+              <button
+                type="button"
+                onClick={openReschedule}
+                disabled={!hasAnyOpen}
+                className="shrink-0 rounded-lg border border-[#0071E3]/30 bg-white px-3 py-1.5 text-[11px] font-bold text-[#0071E3] transition hover:bg-[#0071E3]/[0.04] disabled:opacity-40"
+              >
+                시간 변경 요청
+              </button>
+            </div>
+          ) : (
+            /* 변경 요청 날짜·시간 선택 */
+            <div className="mt-3 rounded-xl border border-[#0071E3]/15 bg-white px-3 py-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-slate-700">변경할 시간 선택</p>
+                <button type="button" onClick={() => setRsOpen(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600">닫기</button>
+              </div>
+              {weekGroups.map((group) => (
+                <div key={group.label}>
+                  <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{group.label}</p>
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {group.days.map((day) => {
+                      const active = rsDate === day.date;
+                      return (
+                        <button
+                          key={day.date}
+                          type="button"
+                          disabled={day.full}
+                          onClick={() => setRsDate(day.date)}
+                          className={`flex flex-col items-center rounded-xl border px-1.5 py-2 transition active:scale-[0.97] ${
+                            day.full
+                              ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300'
+                              : active
+                              ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'
+                          }`}
+                        >
+                          <span className="text-[12px] font-semibold">{mdLabel(day.date)}({weekdayLabel(day.weekday)})</span>
+                          <span className={`mt-0.5 text-[9px] font-bold ${day.full ? 'text-slate-300' : 'text-emerald-600'}`}>
+                            {day.full ? '마감' : `${day.freeSlots.length}자리`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+              {(() => {
+                const rsDay = calendar.find((d) => d.date === rsDate);
+                if (!rsDay || rsDay.full) return null;
+                return (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">시간 선택</p>
+                    <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+                      {rsDay.freeSlots.map((slot) => {
+                        const active = rsSlot === slot;
+                        return (
+                          <button
+                            key={slot}
+                            type="button"
+                            onClick={() => setRsSlot(slot)}
+                            className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'}`}
+                          >
+                            {slot}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
+              <button
+                type="button"
+                onClick={submitReschedule}
+                disabled={rsBusy || !rsDate || !rsSlot}
+                className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+              >
+                {rsBusy ? '요청 중...' : rsSlot ? `${mdLabel(rsDate)} ${rsSlot}로 변경 요청` : '시간을 선택해 주세요'}
+              </button>
+            </div>
+          )}
+          {rsError && <p className="mt-2 text-[10px] font-bold text-red-500">{rsError}</p>}
+          {successMsg && <p className="mt-2 text-[10px] font-bold text-emerald-600">{successMsg}</p>}
         </div>
       ) : hasAnyOpen ? (
         /* 캘린더: 날짜 선택 → 시간 선택 */
         <div className="space-y-4">
           {weekGroups.map((group) => (
             <div key={group.label}>
-              <p className="mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">{group.label}</p>
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{group.label}</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {group.days.map((day) => {
                   const active = selectedDate === day.date;
@@ -307,7 +508,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                       {deputy && !day.full && (
                         <Star className="absolute right-1 top-1 h-2.5 w-2.5 fill-current text-[#0071E3]" />
                       )}
-                      <span className="text-[12px] font-black">
+                      <span className="text-[12px] font-semibold">
                         {mdLabel(day.date)}({weekdayLabel(day.weekday)})
                       </span>
                       <span className="text-[9px] font-bold">{day.counselor}</span>
@@ -323,11 +524,11 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
 
           {selectedDay && !selectedDay.full && (
             <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-3">
-              <p className="text-[11px] font-black text-slate-700">
+              <p className="text-[11px] font-semibold text-slate-700">
                 {mdLabel(selectedDay.date)}({weekdayLabel(selectedDay.weekday)}) · 담당 {selectedDay.counselor}
                 {isDeputy(selectedDay.counselor) ? ' (부원장 상담)' : ''}
               </p>
-              <p className="mt-2 mb-1.5 text-[10px] font-black uppercase tracking-wider text-slate-400">시간 선택</p>
+              <p className="mt-2 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">시간 선택</p>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {selectedDay.freeSlots.map((slot) => {
                   const active = selectedSlot === slot;
@@ -370,7 +571,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
       {/* 지난 상담 타임라인 */}
       {history.length > 0 && (
         <div className="border-t border-[#0071E3]/10 pt-4 space-y-3">
-          <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">지난 상담</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">지난 상담</p>
           {history.map((h) => (
             <div
               key={h.id}
@@ -381,7 +582,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
               }`}
             >
               <div className="flex items-center gap-2 flex-wrap">
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-black ${
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-semibold ${
                   h.status === 'noshow'
                     ? 'bg-rose-100 text-rose-700'
                     : 'bg-emerald-100 text-emerald-700'

@@ -80,6 +80,12 @@ export default function AdminConsultationBookingsPage() {
   const [assignDate, setAssignDate] = useState('');
   const [assignSlot, setAssignSlot] = useState('');
 
+  // 시간 변경 제안 모달
+  const [rsTarget, setRsTarget] = useState<ConsultationBooking | null>(null);
+  const [rsDate, setRsDate] = useState('');
+  const [rsSlot, setRsSlot] = useState('');
+  const [rsReason, setRsReason] = useState('');
+
   // 접근 가능한 센터 목록
   const allowedCampuses: Campus[] = useMemo(() => {
     if (sessionCampus === 'all') return [...ALL_CAMPUSES];
@@ -145,6 +151,12 @@ export default function AdminConsultationBookingsPage() {
   // 선택 센터의 추가/긴급 신청 (대기)
   const extraRequests = useMemo(
     () => bookings.filter((b) => b.campus === campus && b.kind === 'extra' && b.status === 'booked'),
+    [bookings, campus],
+  );
+
+  // 선택 센터의 시간 변경 대기 건 (학생 요청 → 관리자 승인 / 관리자 제안 → 학생 승인 대기)
+  const rescheduleRequests = useMemo(
+    () => bookings.filter((b) => b.campus === campus && b.kind === 'regular' && b.status === 'booked' && b.reschedule),
     [bookings, campus],
   );
 
@@ -280,6 +292,41 @@ export default function AdminConsultationBookingsPage() {
     if (ok) toast.success('슬롯에 배정했습니다.');
   };
 
+  // 학생 변경 요청 승인/거절
+  const approveReschedule = async (b: ConsultationBooking) => {
+    const ok = await patchBooking(b, { action: 'approve' }, `rs_${b.id}`);
+    if (ok) toast.success('변경 요청을 승인했어요.');
+  };
+  const rejectReschedule = async (b: ConsultationBooking) => {
+    if (!window.confirm('이 변경 요청을 거절할까요?')) return;
+    const ok = await patchBooking(b, { action: 'reject' }, `rs_${b.id}`);
+    if (ok) toast.success('변경 요청을 거절했어요.');
+  };
+  // 관리자 제안 철회
+  const cancelRescheduleProposal = async (b: ConsultationBooking) => {
+    const ok = await patchBooking(b, { action: 'cancel' }, `rs_${b.id}`);
+    if (ok) toast.success('변경 제안을 철회했어요.');
+  };
+
+  // 변경 제안 모달 열기/제출
+  const openReschedule = (b: ConsultationBooking) => {
+    setRsTarget(b);
+    setRsDate('');
+    setRsSlot('');
+    setRsReason('');
+  };
+  const rsFreeSlots = useMemo(() => {
+    const day = grid.find((d) => d.date === rsDate);
+    if (!day) return [];
+    // 자기 자신 슬롯은 비어있지 않게 잡히므로, 현재 예약 슬롯도 후보에서 제외(같은 시간 제안 방지).
+    return day.slots.filter((s) => !s.booking).map((s) => s.slot);
+  }, [grid, rsDate]);
+  const submitReschedule = async () => {
+    if (!rsTarget || !rsDate || !rsSlot) { toast.error('날짜와 시간을 선택해 주세요.'); return; }
+    const ok = await patchBooking(rsTarget, { action: 'request', date: rsDate, slot: rsSlot, reason: rsReason.trim() || undefined }, `rs_${rsTarget.id}`);
+    if (ok) { toast.success('학생에게 시간 변경을 제안했어요. 학생 승인 후 확정돼요.'); setRsTarget(null); }
+  };
+
   const directAssign = async () => {
     if (!assignStudentId || !assignDate || !assignSlot) {
       toast.error('학생·날짜·시간을 모두 선택해 주세요.');
@@ -375,7 +422,7 @@ export default function AdminConsultationBookingsPage() {
                     </button>
                     <span className="text-[10px] font-bold text-[#86868B]">{new Date(b.createdAt).toLocaleDateString('ko-KR')}</span>
                   </div>
-                  {b.reason && <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-all">{b.reason}</p>}
+                  {b.reason && <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-words">{b.reason}</p>}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Button size="sm" disabled={busy[`done_${b.id}`]} onClick={() => markDone(b)} className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3">
                       {busy[`done_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}처리완료
@@ -391,6 +438,57 @@ export default function AdminConsultationBookingsPage() {
             </div>
           )}
         </section>
+
+        {/* 상담 시간 변경 (양방향 승인) */}
+        {rescheduleRequests.length > 0 && (
+          <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <CalendarClock className="w-4 h-4 text-[#0071E3]" />
+              <h2 className="text-sm font-black text-[#1D1D1F]">상담 시간 변경</h2>
+              <span className="text-[11px] font-bold text-[#86868B]">{rescheduleRequests.length}건</span>
+            </div>
+            <div className="space-y-2">
+              {rescheduleRequests.map((b) => {
+                const rs = b.reschedule!;
+                const fromAdmin = rs.by === 'admin';
+                return (
+                  <div key={b.id} className={`rounded-xl border px-3 py-2.5 space-y-2 ${fromAdmin ? 'border-sky-200/70 bg-sky-50/60' : 'border-amber-200/70 bg-amber-50/60'}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <button type="button" onClick={() => openStudentSheet(b.studentId)} className="text-[13px] font-extrabold text-[#0071E3] hover:underline">
+                        {b.studentName}
+                      </button>
+                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                        {fromAdmin ? '학생 승인 대기' : '학생 변경 요청'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-semibold text-[#1D1D1F]">
+                      {dateLabel(b.date, b.weekday)} {b.slot}
+                      <span className="mx-1 text-[#86868B]">→</span>
+                      <span className="font-black text-[#0071E3]">{dateLabel(rs.date, rs.weekday)} {rs.slot}</span>
+                    </p>
+                    {rs.reason && <p className="text-[11px] font-semibold text-[#86868B] break-words">사유: {rs.reason}</p>}
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      {fromAdmin ? (
+                        <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => cancelRescheduleProposal(b)} className="h-8 rounded-lg border-black/[0.08] text-[11px] font-bold px-3">
+                          {busy[`rs_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5 mr-1" />}제안 철회
+                        </Button>
+                      ) : (
+                        <>
+                          <Button size="sm" disabled={busy[`rs_${b.id}`]} onClick={() => approveReschedule(b)} className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3">
+                            {busy[`rs_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}승인
+                          </Button>
+                          <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => rejectReschedule(b)} className="h-8 rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-[11px] font-bold px-3">
+                            <X className="w-3.5 h-3.5 mr-1" />거절
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* 관리자 직접 예약 */}
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
@@ -549,15 +647,30 @@ export default function AdminConsultationBookingsPage() {
                                       </button>
                                     </div>
                                   )}
-                                  {!isPast && bk.status === 'booked' && (
-                                    <button
-                                      type="button"
-                                      onClick={() => cancelBooking(bk)}
-                                      title="클릭하여 예약 취소"
-                                      className="w-full rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-red-50 hover:text-red-600 transition-colors"
-                                    >
-                                      취소
-                                    </button>
+                                  {bk.reschedule && (
+                                    <span className={`inline-block w-full rounded-full px-1.5 py-0.5 text-center text-[9px] font-black ${bk.reschedule.by === 'admin' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                                      {bk.reschedule.by === 'admin' ? '학생승인대기' : '변경요청'}
+                                    </span>
+                                  )}
+                                  {!isPast && bk.status === 'booked' && !bk.reschedule && (
+                                    <div className="flex gap-0.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => openReschedule(bk)}
+                                        title="시간 변경 제안"
+                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-[#0071E3]/10 hover:text-[#0071E3] transition-colors"
+                                      >
+                                        변경
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => cancelBooking(bk)}
+                                        title="클릭하여 예약 취소"
+                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-red-50 hover:text-red-600 transition-colors"
+                                      >
+                                        취소
+                                      </button>
+                                    </div>
                                   )}
                                 </div>
                               ) : (
@@ -613,6 +726,60 @@ export default function AdminConsultationBookingsPage() {
               >
                 {completeBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
                 완료 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 시간 변경 제안 모달 */}
+      {rsTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div
+            className="w-full max-w-md rounded-3xl border border-white/20 shadow-2xl p-6 space-y-4"
+            style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)' }}
+          >
+            <h3 className="text-sm font-black text-[#1D1D1F] leading-snug">
+              {rsTarget.studentName} · 시간 변경 제안
+            </h3>
+            <p className="text-[12px] font-bold text-[#86868B]">
+              현재 {dateLabel(rsTarget.date, rsTarget.weekday)} {rsTarget.slot} → 새 시간을 제안하면 학생 승인 후 확정됩니다.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <span className="text-[11px] font-extrabold text-[#86868B]">날짜</span>
+                <select value={rsDate} onChange={(e) => { setRsDate(e.target.value); setRsSlot(''); }}
+                  className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold">
+                  <option value="">운영일 선택</option>
+                  {grid.map((d) => <option key={d.date} value={d.date}>{dateLabel(d.date, d.weekday)} · {d.counselor}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-extrabold text-[#86868B]">시간</span>
+                <select value={rsSlot} onChange={(e) => setRsSlot(e.target.value)} disabled={!rsDate}
+                  className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold disabled:opacity-50">
+                  <option value="">빈 슬롯 선택</option>
+                  {rsFreeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+            </div>
+            <textarea
+              value={rsReason}
+              onChange={(e) => setRsReason(e.target.value)}
+              rows={2}
+              maxLength={300}
+              placeholder="변경 사유(선택) — 예) 담당자 일정 조정"
+              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-[#1D1D1F] leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+            />
+            <div className="flex gap-2 justify-end">
+              <button type="button" onClick={() => setRsTarget(null)}
+                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-[#1D1D1F] hover:bg-[#E5E5EA] transition-colors">
+                닫기
+              </button>
+              <button type="button" disabled={busy[`rs_${rsTarget.id}`] || !rsDate || !rsSlot} onClick={submitReschedule}
+                className="h-9 rounded-2xl bg-[#0071E3] px-5 text-[12px] font-black text-white hover:bg-[#0071E3]/90 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+                {busy[`rs_${rsTarget.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                변경 제안 보내기
               </button>
             </div>
           </div>

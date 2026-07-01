@@ -63,8 +63,39 @@ export async function PUT(
       return NextResponse.json({ success: true, data: updated });
     }
 
+    // scope 미지정(detail-sheet 전체 저장): 화이트리스트 필드만 fresh 행에 덮어쓴다.
+    // 클라이언트 페이로드는 시트 로드 시점 스냅샷이라, 시트가 열린 채 다른 경로(쿠폰 적립/
+    // 벌점 부여/리워드 교환/참여미션/좌석알림/뽀모도로 등)로 막 갱신된 누적성 컬럼을
+    // stale 값으로 들고 있다. Object.assign 으로 통째 덮으면 그 최신값이 유실되므로,
+    // detail-sheet 가 실제 편집하는 프로필/진도/기본정보 필드만 골라 적용하고 나머지
+    // (leaveCoupons/penalties/rewardRedemptions/eventParticipations/seatAlerts/studentState 등
+    // 서버가 자체 관리하는 적립성 데이터)는 fresh 재조회 값을 그대로 보존한다.
     const result = await updateStudentById(id, (student) => {
-      Object.assign(student, studentData);
+      const assign = <K extends keyof Student>(key: K) => {
+        if (key in studentData) student[key] = studentData[key];
+      };
+      // 기본 정보 / 프로필
+      assign('name');
+      assign('loginId');
+      assign('campus');
+      assign('manager');
+      assign('contact');
+      assign('seatNumber');
+      assign('parentPhone');
+      assign('studentPhone');
+      assign('smsTargets');
+      // 상담/생활 코멘트 및 일정
+      assign('lifeComment');
+      assign('studentLifeComment');
+      assign('specialNote');
+      assign('nextConsultationDate');
+      assign('enrollmentEndDate');
+      assign('weeklyGradeCheck');
+      // 진도·성적·면담 로그·외출 일정 (detail-sheet 편집 대상)
+      assign('subjects');
+      assign('grades');
+      assign('consultationLogs');
+      assign('awaySchedules');
     });
     if (result === 'not_found') {
       return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });

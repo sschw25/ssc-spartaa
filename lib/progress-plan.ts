@@ -66,14 +66,22 @@ function countStudyDaysInRange(start: Date, end: Date, studyDays?: string[]) {
   return count;
 }
 
-function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[]) {
+function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string) {
   const start = parseDate(plan.startDate);
   const end = parseDate(plan.endDate);
   if (!start || !end) return parsePlanEndAmount(plan);
 
   const { start: startAmount, end: endAmount } = parsePlanBounds(plan);
   const beforePlanAmount = Math.max(0, startAmount - 1);
-  const elapsedStudyDays = countStudyDaysInRange(start, today, studyDays);
+
+  // "오늘 기준 권장"은 오늘 시작 시점에 이미 끝냈어야 할 분량이다.
+  // 경과 학습일은 (1) 학생 등록일 이후(등록 전 요일은 아직 학원생도 아니었으므로 제외),
+  // (2) 오늘 이전(오늘치 분량은 아직 학습 중이라 제외)인 학습일만 센다.
+  const enrolledStart = parseDate(createdAt);
+  const effectiveStart = enrolledStart && enrolledStart > start ? enrolledStart : start;
+  const beforeToday = new Date(today);
+  beforeToday.setDate(today.getDate() - 1);
+  const elapsedStudyDays = countStudyDaysInRange(effectiveStart, beforeToday, studyDays);
   if (elapsedStudyDays <= 0) return beforePlanAmount;
 
   const totalStudyDays = Math.max(1, countStudyDaysInRange(start, end, studyDays));
@@ -85,7 +93,7 @@ function isSameDay(a: Date | null, b: Date) {
   return Boolean(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
 }
 
-function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[]) {
+function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string) {
   if (!plans || plans.length === 0) return null;
 
   const sortedPlans = [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -101,7 +109,7 @@ function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, st
     }
 
     if (today <= end) {
-      return getExpectedWithinCurrentPlan(plan, today, studyDays);
+      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt);
     }
 
     latestPastPlan = plan;
@@ -139,7 +147,7 @@ function buildItem(
     ? (material as BookProgress).title
     : (material as LectureProgress).name;
 
-  const expectedFromPlans = getExpectedFromPlans(material.detailedPlans, today, studyDays);
+  const expectedFromPlans = getExpectedFromPlans(material.detailedPlans, today, studyDays, student.createdAt);
   const expectedToday = expectedFromPlans ?? getExpectedLinear(total, student.createdAt, material.targetDate, today);
   const isCreatedToday = isSameDay(parseDate(student.createdAt), today);
   const shortage = expectedToday === null || isCreatedToday ? null : Math.max(0, expectedToday - current);

@@ -125,6 +125,20 @@ export interface BlackoutEntry {
 }
 
 // 상담 예약 — 센터별 상담 시간표 슬롯에 학생이 신청(자동 수락). 슬롯 점유는 센터 공유 자원이라
+// 상담 시간 변경 제안(reschedule). 한쪽이 새 날짜·시각을 제안하면 상대가 승인/거절한다.
+// 예약 본체의 date/slot 은 승인 전까지 그대로 유지(원래 슬롯 점유) → 제안은 비점유.
+// 승인 시 본체 date/slot/counselor 를 제안값으로 적용하고 이 필드를 비운다. 거절·취소 시 그냥 비운다.
+export interface ConsultationReschedule {
+  by: 'student' | 'admin';   // 제안 주체 — 상대가 승인 권한을 가진다.
+  date: string;              // 제안 날짜 (YYYY-MM-DD)
+  slot: string;              // 제안 시각 'HH:MM'
+  weekday?: 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
+  counselor?: string;        // 제안 날짜의 담당자(요일 기준 산출)
+  reason?: string;           // 제안 메시지(옵션)
+  requestedAt: string;       // 제안 시각 (ISO)
+  requestedBy?: string;      // 관리자 제안 시 username(감사용)
+}
+
 // app_settings 예약 원장(consultation_bookings:{campus})에 보관하고, 리포트 API가 학생 본인 예약만 추려 전달한다.
 // kind='regular' 은 정규 슬롯 예약(슬롯 점유), kind='extra' 는 만석/긴급 시 추가신청(슬롯 미점유, 관리자 처리).
 export interface ConsultationBooking {
@@ -146,6 +160,7 @@ export interface ConsultationBooking {
   resolvedBy?: string;     // 완료/노쇼 처리한 관리자(username)
   logId?: string;          // 완료 시 생성된 ConsultationLog id(결과 노트 하드 연결)
   adminReply?: string;    // 관리자 코멘트(추가신청 처리 회신 등)
+  reschedule?: ConsultationReschedule; // 대기 중인 시간 변경 제안(없으면 변경 진행 중 아님)
 }
 
 // 휴가/반차/휴식권/병가 신청 (상담 변경신청과 별개의 전용 구조 — 월 한도/쿠폰 차원 존재)

@@ -692,8 +692,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       autoSaveInFlightRef.current = true;
       setIsAutoSaving(true);
       try {
+        // 누적성 컬럼(쿠폰/벌점/리워드/참여미션/좌석알림/studentState 등)은 의도적으로
+        // 보내지 않는다 — 서버 화이트리스트가 fresh 값을 보존한다(stale 덮어쓰기 방지).
         const updated: Student = {
-          ...student,
+          id: student.id,
           name,
           campus,
           manager,
@@ -708,7 +710,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           studentPhone,
           smsTargets,
           updatedAt: new Date().toISOString(),
-        };
+        } as Student;
         const res = await fetch(`/api/admin/students/${student.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -956,6 +958,43 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     }
   };
 
+  // detail-sheet 가 실제로 편집하는 필드만 추려 PUT 페이로드를 만든다.
+  // (서버 scope 미지정 PUT 화이트리스트와 짝이 맞음.) base 로 student 전체를 스프레드하면
+  // 시트 로드 시점의 stale 누적성 컬럼(leaveCoupons/penalties/rewardRedemptions/
+  // eventParticipations/seatAlerts/studentState 등)을 함께 보내, 그 사이 다른 경로로 적립된
+  // 최신값을 덮어쓸 위험이 있다. 여기서는 편집 대상만 전송해 서버가 fresh 값을 보존하게 한다.
+  //
+  // grades / consultationLogs 도 같은 이유로 base 에서 제외한다. 이 둘은 다른 경로
+  // (학생 성적 등록 /api/student/grades, 상담로그 /api/admin/students/[id]/consultation)로도
+  // 갱신되므로, 시트가 열린 채 무관한 저장(프로필·외출 등)을 하면 stale 스냅샷이 최신값을
+  // 덮어쓴다(서버가 fresh 를 재조회해도 화이트리스트가 payload 값으로 덮어씀 → optimistic
+  // lock 도 못 잡음). 성적/상담로그를 실제로 편집하는 호출부만 overrides 로 넘겨(예:
+  // buildSavePayload({ grades }), { consultationLogs }) 그때만 서버에 반영되게 한다.
+  // 저장 후 로컬 상태는 onUpdate(data.data) 즉 서버 응답으로 갱신되므로, payload 에서 빠져도
+  // 화면 값은 서버 fresh 로 정확히 유지된다.
+  const buildSavePayload = (overrides: Partial<Student>): Student => ({
+    id: student.id,
+    name,
+    loginId,
+    campus,
+    manager,
+    contact,
+    seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
+    parentPhone,
+    studentPhone,
+    smsTargets,
+    lifeComment,
+    studentLifeComment,
+    specialNote: mergeAdminNote(student.specialNote, specialNote),
+    nextConsultationDate: nextConsultationDate || undefined,
+    enrollmentEndDate: enrollmentEndDate || undefined,
+    weeklyGradeCheck,
+    subjects: subjectsState,
+    awaySchedules,
+    updatedAt: new Date().toISOString(),
+    ...overrides,
+  } as Student);
+
   // 0. 학생 데이터 서버 저장 공통 헬퍼
   const saveStudentData = async (updatedStudent: Student): Promise<boolean> => {
     try {
@@ -1041,26 +1080,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       updatedLogs = [newLog, ...updatedLogs];
     }
 
-    const updatedStudent: Student = {
-      ...student,
-      name,
-      campus,
-      manager,
-      contact,
-      lifeComment,
-      studentLifeComment,
-      specialNote: mergeAdminNote(student.specialNote, specialNote),
+    const updatedStudent: Student = buildSavePayload({
       nextConsultationDate: cslNextDate || nextConsultationDate || undefined,
-      enrollmentEndDate: enrollmentEndDate || undefined,
-      weeklyGradeCheck,
       subjects: latestSubjects,
       consultationLogs: updatedLogs,
-      awaySchedules,
-      parentPhone,
-      studentPhone,
-      smsTargets,
-      updatedAt: nowStr
-    };
+      updatedAt: nowStr,
+    });
 
     const success = await saveStudentData(updatedStudent);
     if (success) {
@@ -1127,13 +1152,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       updatedLogs = [newLog, ...updatedLogs];
     }
 
-    const updatedStudent: Student = {
-      ...student,
-      lifeComment,
-      studentLifeComment,
+    const updatedStudent: Student = buildSavePayload({
       consultationLogs: updatedLogs,
-      updatedAt: new Date().toISOString()
-    };
+    });
 
     const success = await saveStudentData(updatedStudent);
     if (success) {
@@ -1157,27 +1178,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (!ok) return;
     }
     setLoading(true);
-    const updatedStudent: Student = {
-      ...student,
-      name,
-      loginId,
-      campus,
-      manager,
-      contact,
-      lifeComment,
-      studentLifeComment,
-      specialNote: mergeAdminNote(student.specialNote, specialNote),
-      nextConsultationDate: nextConsultationDate || undefined,
-      enrollmentEndDate: enrollmentEndDate || undefined,
-      weeklyGradeCheck,
-      seatNumber: seatNumber !== '' ? Number(seatNumber) : undefined,
-      subjects: subjectsState,
-      awaySchedules,
-      parentPhone,
-      studentPhone,
-      smsTargets,
-      updatedAt: new Date().toISOString()
-    };
+    const updatedStudent: Student = buildSavePayload({});
 
     const success = await saveStudentData(updatedStudent);
     if (success) {
@@ -1282,8 +1283,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (addedCount === 0) continue;
 
       const nowIso = new Date().toISOString();
+      // 본인은 화이트리스트 페이로드로, 다른 원생(target)은 외출 일정만 갱신해 보낸다.
+      // 어느 쪽이든 서버 화이트리스트가 누적성 컬럼을 stale 값으로 덮지 않도록 보존한다.
       const updatedStudent: Student = target.id === student.id
-        ? { ...currentStudentSnapshot, awaySchedules: nextSchedules, updatedAt: nowIso }
+        ? buildSavePayload({ awaySchedules: nextSchedules, updatedAt: nowIso })
         : { ...target, awaySchedules: nextSchedules, updatedAt: nowIso };
 
       try {
@@ -3028,11 +3031,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       };
     });
 
-    const updatedStudent: Student = {
-      ...student,
+    const updatedStudent: Student = buildSavePayload({
       subjects: updatedSubjects,
       updatedAt: nowStr,
-    };
+    });
 
     const success = await saveStudentData(updatedStudent);
     if (success) {
@@ -3557,11 +3559,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       return;
     }
 
-    const updatedStudent: Student = {
-      ...student,
+    const updatedStudent: Student = buildSavePayload({
       subjects: updatedSubjects,
       updatedAt: now,
-    };
+    });
 
     setIsApplyingQuickPlan(true);
     try {
@@ -3630,11 +3631,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       date: gradeDate
     };
 
-    const updatedStudent: Student = {
-      ...student,
+    const updatedStudent: Student = buildSavePayload({
       grades: [...student.grades, newGrade],
-      updatedAt: new Date().toISOString()
-    };
+    });
 
     try {
       const res = await fetch(`/api/admin/students/${student.id}`, {
@@ -3659,11 +3658,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   // 성적 삭제
   const handleDeleteGrade = async (gradeId: string) => {
     if (typeof window !== 'undefined' && !window.confirm('이 성적 기록을 삭제할까요? 추세 그래프에서도 함께 제거됩니다.')) return;
-    const updatedStudent: Student = {
-      ...student,
+    const updatedStudent: Student = buildSavePayload({
       grades: student.grades.filter(g => g.id !== gradeId),
-      updatedAt: new Date().toISOString()
-    };
+    });
 
     try {
       const res = await fetch(`/api/admin/students/${student.id}`, {

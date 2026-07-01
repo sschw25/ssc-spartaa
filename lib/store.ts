@@ -61,6 +61,8 @@ import {
   deleteAdminAccountSupabase,
   getAppSettingSupabase,
   setAppSettingSupabase,
+  getAppSettingWithVersionSupabase,
+  setAppSettingIfUnchangedSupabase,
   getSeatAbsenceMarksSupabase,
   getAttendedDaysSupabase,
 } from './supabase';
@@ -112,6 +114,40 @@ export async function setAppSetting(key: string, value: any): Promise<void> {
   return setAppSettingLocal(key, value);
 }
 
+/**
+ * app_settings 키-값을 낙관적 잠금으로 안전하게 read-modify-write 한다.
+ * fresh 재조회(value+version) → mutate 적용 → updated_at 조건부 저장. 버전 충돌 시 최대 attempts회 재시도하여
+ * 통째 덮어쓰기(upsert)가 동시 저장을 덮어쓰는 유실(TOCTOU)을 방지한다.
+ * - mutate(current)가 명시적으로 false 를 반환하면 변경 없음으로 보고 저장하지 않고 종료한다.
+ * - 로컬(Supabase 미설정)에서는 동시성 이슈가 없으므로 단순 read-modify-write 로 처리한다.
+ * - 반환: 최종 저장된(또는 mutate 결과) value.
+ */
+async function mutateAppSetting<T>(
+  key: string,
+  initial: T,
+  mutate: (current: T) => T | false,
+  attempts = 4,
+): Promise<T> {
+  if (!isSupabaseConfigured()) {
+    const raw = await getAppSettingLocal(key);
+    const current = (raw ?? initial) as T;
+    const nextVal = mutate(current);
+    if (nextVal === false) return current;
+    await setAppSettingLocal(key, nextVal);
+    return nextVal;
+  }
+  for (let i = 0; i < attempts; i++) {
+    const { value, version } = await getAppSettingWithVersionSupabase(key);
+    const current = (value ?? initial) as T;
+    const nextVal = mutate(current);
+    if (nextVal === false) return current;
+    const result = await setAppSettingIfUnchangedSupabase(key, nextVal, version);
+    if (result === 'ok') return nextVal;
+    // conflict → 다른 요청이 먼저 저장 → 최신 값으로 재조회·재적용.
+  }
+  throw new Error(`설정 동시 저장 충돌(app_settings): ${key}`);
+}
+
 // ── 학생 셀프 가입신청 대기열 (app_settings 키-값에 JSON 배열로 보관) ──
 // 신규 테이블 없이 운영. 대기 건은 소량이므로 충분하며, 승인/반려 시 목록에서 제거된다.
 const STUDENT_APPLICATIONS_KEY = 'student_applications';
@@ -153,23 +189,28 @@ export async function getConsultationBookingsForCampuses(campuses: string[]): Pr
   return lists.flat();
 }
 
-async function saveConsultationBookings(campus: string, list: ConsultationBooking[]): Promise<void> {
-  await setAppSetting(`${CONSULTATION_BOOKINGS_KEY_PREFIX}${campus}`, list);
+function bookingsKey(campus: string): string {
+  return `${CONSULTATION_BOOKINGS_KEY_PREFIX}${campus}`;
 }
 
 // 정규 예약 생성(자동 수락). 슬롯 점유 재검증 후 추가. 이미 점유 시 'taken' 반환.
 // (관리자 직접 배정은 forceAssign=true 로 점유 검증을 건너뛸 수 있다.)
+// 낙관적 잠금 read-modify-write — 동시 예약 시 한 건 유실 없이 점유 재검증을 재시도한다.
 export async function addConsultationBooking(
   booking: ConsultationBooking,
   forceAssign = false,
 ): Promise<ConsultationBooking | 'taken'> {
-  const list = await getConsultationBookings(booking.campus);
-  if (booking.kind === 'regular' && booking.slot && !forceAssign) {
-    if (!isSlotFree(booking.date, booking.slot, list)) return 'taken';
-  }
-  const next = [...list, booking];
-  await saveConsultationBookings(booking.campus, next);
-  return booking;
+  let taken = false;
+  await mutateAppSetting<ConsultationBooking[]>(bookingsKey(booking.campus), [], (list) => {
+    if (booking.kind === 'regular' && booking.slot && !forceAssign) {
+      if (!isSlotFree(booking.date, booking.slot, list)) {
+        taken = true;
+        return false; // 저장 스킵.
+      }
+    }
+    return [...list, booking];
+  });
+  return taken ? 'taken' : booking;
 }
 
 // 학생 삭제 시, 그 학생의 상담 예약을 센터 원장에서 제거(고아 레코드 방지).
@@ -178,27 +219,91 @@ export async function removeConsultationBookingsForStudent(
   campus: string,
   studentId: string,
 ): Promise<number> {
-  const list = await getConsultationBookings(campus);
-  const next = list.filter((b) => b.studentId !== studentId);
-  const removed = list.length - next.length;
-  if (removed > 0) await saveConsultationBookings(campus, next);
+  let removed = 0;
+  await mutateAppSetting<ConsultationBooking[]>(bookingsKey(campus), [], (list) => {
+    const next = list.filter((b) => b.studentId !== studentId);
+    removed = list.length - next.length;
+    if (removed === 0) return false; // 변경 없음 → 저장 스킵.
+    return next;
+  });
   return removed;
 }
 
 // 예약 부분 수정(취소/완료/담당자 회신/슬롯 배정 등). 없으면 null.
+// slot/date 를 바꿀 때 동일 날짜·슬롯에 이미 활성(booked) 정규 예약이 있으면 'taken'(자기 자신 제외).
+// 낙관적 잠금 read-modify-write — 점유 재검증을 최신 원장 위에서 수행한다.
 export async function patchConsultationBooking(
   campus: string,
   id: string,
   patch: Partial<ConsultationBooking>,
-): Promise<ConsultationBooking | null> {
-  const list = await getConsultationBookings(campus);
-  const idx = list.findIndex((b) => b.id === id);
-  if (idx < 0) return null;
-  const updated = { ...list[idx], ...patch };
-  const next = list.slice();
-  next[idx] = updated;
-  await saveConsultationBookings(campus, next);
-  return updated;
+): Promise<ConsultationBooking | null | 'taken'> {
+  let outcome: ConsultationBooking | null | 'taken' = null;
+  await mutateAppSetting<ConsultationBooking[]>(bookingsKey(campus), [], (list) => {
+    const idx = list.findIndex((b) => b.id === id);
+    if (idx < 0) {
+      outcome = null;
+      return false;
+    }
+    const updated = { ...list[idx], ...patch };
+    // 최종 (날짜·슬롯)이 정규 슬롯을 점유하게 되는 경우, 다른 활성 정규 예약과 충돌하는지 검사.
+    // 자기 자신(같은 id)은 제외. extra 가 슬롯에 배정되며 status 가 done 으로 가더라도,
+    // 그 슬롯에 이미 booked 정규 예약이 매달려 있으면 더블부킹이므로 막는다.
+    if ((patch.slot !== undefined || patch.date !== undefined) && updated.slot && updated.date) {
+      const others = list.filter((b) => b.id !== id);
+      if (!isSlotFree(updated.date, updated.slot, others)) {
+        outcome = 'taken';
+        return false;
+      }
+    }
+    const next = list.slice();
+    next[idx] = updated;
+    outcome = updated;
+    return next;
+  });
+  return outcome;
+}
+
+// 차단되는 날짜·슬롯과 충돌하는 활성(booked) 예약을 일괄 취소(cancelled 전이)한다.
+// 차단 적용을 조용히 무시하지 않기 위함 — 막힌 슬롯 위 유령 예약을 정리한다.
+// 취소된 예약 목록을 반환(없으면 빈 배열). 차단 자체 저장은 setConsultationBlackouts 가 담당.
+export async function cancelBookingsConflictingWithBlackouts(
+  campus: string,
+  blackouts: BlackoutEntry[],
+): Promise<ConsultationBooking[]> {
+  // 날짜 → 차단 스코프(fullday | 슬롯 Set) 맵.
+  const fullday = new Set<string>();
+  const bySlot = new Map<string, Set<string>>();
+  for (const b of blackouts) {
+    if (b.scope === 'fullday') fullday.add(b.date);
+    else {
+      const set = bySlot.get(b.date) ?? new Set<string>();
+      for (const s of b.scope) set.add(s);
+      bySlot.set(b.date, set);
+    }
+  }
+  const conflicts = (b: ConsultationBooking): boolean => {
+    if (b.status !== 'booked') return false;
+    if (!b.date || !b.slot) return false;
+    if (fullday.has(b.date)) return true;
+    return bySlot.get(b.date)?.has(b.slot) ?? false;
+  };
+  const cancelled: ConsultationBooking[] = [];
+  const nowIso = new Date().toISOString();
+  await mutateAppSetting<ConsultationBooking[]>(bookingsKey(campus), [], (list) => {
+    const hits = list.filter(conflicts);
+    if (hits.length === 0) return false; // 충돌 없음 → 저장 스킵.
+    const next = list.map((b) =>
+      conflicts(b)
+        ? { ...b, status: 'cancelled' as const, cancelledAt: nowIso, adminReply: '담당자 휴무/출장으로 상담이 취소되었습니다.' }
+        : b,
+    );
+    // 낙관적 잠금 충돌 시 이 콜백이 재실행된다. push 로 누적하면 재시도마다 hits 가 중복
+    // 쌓여 반환/카운트가 부풀므로, 매 시도 시작 시 리셋해 마지막(=커밋된) 시도의 hits 만 남긴다.
+    cancelled.length = 0;
+    cancelled.push(...hits);
+    return next;
+  });
+  return cancelled;
 }
 
 // ── 상담 차단(휴무/출장) 원장 (센터별 app_settings 키-값 JSON 배열) ──
@@ -209,8 +314,13 @@ export async function getConsultationBlackouts(campus: string): Promise<Blackout
   return Array.isArray(value) ? (value as BlackoutEntry[]) : [];
 }
 
+// 차단 목록 통째 교체. 낙관적 잠금으로 동시 쓰기 유실 방지.
 export async function setConsultationBlackouts(campus: string, entries: BlackoutEntry[]): Promise<void> {
-  await setAppSetting(`${CONSULTATION_BLACKOUTS_KEY_PREFIX}${campus}`, entries);
+  await mutateAppSetting<BlackoutEntry[]>(
+    `${CONSULTATION_BLACKOUTS_KEY_PREFIX}${campus}`,
+    [],
+    () => entries,
+  );
 }
 
 
@@ -535,10 +645,56 @@ export async function getSeatAbsenceMarks(from: string, to: string): Promise<{ d
   }
 }
 
-// 기간 내 등원일 집합. 세션은 Supabase 전용 → 미설정 시 빈 집합(전부 결석 분류됨).
+// 기간 내 등원일 집합 "studentId|date". 운영은 Supabase study_sessions.
+// 로컬(프리뷰)은 getSeatAbsenceMarks 와 대칭으로 폴백한다 — 폴백이 빈 Set 이면
+// 부분 결석(이탈)이 전부 '결석'으로 오분류돼 순위가 왜곡되기 때문.
+//   1순위: data/study_sessions.json (운영과 동일 형태: {student_id, date}). 있으면 사용.
+//   2순위: data/seat_statuses.json 의 'present' 마크를 등원 신호로 사용(좌석 착석=등원 프록시).
+// 운영(Supabase 설정)에서는 위 폴백을 타지 않으므로 영향 없음.
 export async function getAttendedDays(from: string, to: string): Promise<Set<string>> {
-  if (!isSupabaseConfigured()) return new Set();
-  return getAttendedDaysSupabase(from, to);
+  if (isSupabaseConfigured()) return getAttendedDaysSupabase(from, to);
+
+  const set = new Set<string>();
+
+  // 1순위: 로컬 study_sessions.json (운영 study_sessions 와 동일 컬럼).
+  const sessPath = path.join(process.cwd(), 'data', 'study_sessions.json');
+  if (fs.existsSync(sessPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(sessPath, 'utf-8'));
+      if (Array.isArray(parsed)) {
+        for (const r of parsed as any[]) {
+          if (r && typeof r.student_id === 'string' && typeof r.date === 'string' && r.date >= from && r.date <= to) {
+            set.add(`${r.student_id}|${r.date}`);
+          }
+        }
+        return set;
+      }
+    } catch {
+      // 손상 시 아래 2순위 폴백으로.
+    }
+  }
+
+  // 2순위: seat_statuses.json 의 present 마크 → (studentId, date) 등원 신호.
+  // seat_key 는 "{studentId}:{periodIdx}" 형태 → 콜론 앞부분이 studentId.
+  const seatPath = path.join(process.cwd(), 'data', 'seat_statuses.json');
+  if (fs.existsSync(seatPath)) {
+    try {
+      const parsed = JSON.parse(fs.readFileSync(seatPath, 'utf-8'));
+      if (Array.isArray(parsed)) {
+        for (const r of parsed as any[]) {
+          if (!r || r.status !== 'present') continue;
+          if (typeof r.date !== 'string' || r.date < from || r.date > to) continue;
+          if (typeof r.seat_key !== 'string') continue;
+          const i = r.seat_key.indexOf(':');
+          const studentId = i < 0 ? r.seat_key : r.seat_key.slice(0, i);
+          if (studentId) set.add(`${studentId}|${r.date}`);
+        }
+      }
+    } catch {
+      // 손상 시 빈 Set 유지.
+    }
+  }
+  return set;
 }
 
 export type { MockExam, OtEvent, MealPlan, CampusEvent };

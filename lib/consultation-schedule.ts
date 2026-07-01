@@ -97,7 +97,7 @@ function dayConfigFor(campus: ConsultationCampus, weekday: Weekday): CampusDayCo
   return CAMPUS_CONSULTATION[campus].days.find((d) => d.weekday === weekday) || null;
 }
 
-function counselorFor(campus: ConsultationCampus, weekday: Weekday): string | null {
+export function counselorFor(campus: ConsultationCampus, weekday: Weekday): string | null {
   return dayConfigFor(campus, weekday)?.counselor ?? null;
 }
 

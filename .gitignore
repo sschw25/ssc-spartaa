@@ -29,6 +29,7 @@ dashboard_card_view.png
 dashboard_db_view.png
 login_page.png
 .claude/
+.superpowers/
 
 # 샘플 env 템플릿도 원격에 올리지 않음
 .env.example

@@ -930,6 +930,23 @@ export async function getAppSettingSupabase(key: string): Promise<any | null> {
   return data?.value ?? null;
 }
 
+// value + 현재 updated_at 을 함께 읽어 낙관적 잠금 비교에 쓴다.
+// 행이 없으면 version=null(미존재)로 보고, 호출부가 insert 분기를 탄다.
+export async function getAppSettingWithVersionSupabase(
+  key: string,
+): Promise<{ value: any | null; version: string | null }> {
+  const { data, error } = await getClient()
+    .from('app_settings')
+    .select('value, updated_at')
+    .eq('key', key)
+    .maybeSingle();
+  if (error) {
+    console.warn('[getAppSettingWithVersionSupabase] 조회 실패(테이블 미생성 가능):', error.message);
+    return { value: null, version: null };
+  }
+  return { value: data?.value ?? null, version: (data?.updated_at as string) ?? null };
+}
+
 export async function setAppSettingSupabase(key: string, value: any): Promise<void> {
   const { error } = await getClient()
     .from('app_settings')
@@ -938,6 +955,45 @@ export async function setAppSettingSupabase(key: string, value: any): Promise<vo
     console.error('[setAppSettingSupabase] 저장 실패:', error.message, error.details || '', error.hint || '');
     throw new Error(`설정 저장 실패(app_settings): ${error.message}${error.hint ? ` [${error.hint}]` : ''}`);
   }
+}
+
+// 낙관적 잠금 저장: expectedVersion(읽은 시점 updated_at)이 현재 행과 같을 때만 덮어쓴다.
+// patchStudentProgressSupabase 의 .eq('updated_at', original) 패턴과 동일.
+// - expectedVersion === null  → 행 미존재로 보고 insert(키 충돌 시 'conflict').
+// - expectedVersion === 문자열 → updated_at 일치 update(0행이면 'conflict').
+// 상담 원장 등 read-modify-write JSON 동시쓰기 유실(TOCTOU)을 막는 데 사용한다.
+export async function setAppSettingIfUnchangedSupabase(
+  key: string,
+  value: any,
+  expectedVersion: string | null,
+): Promise<'ok' | 'conflict'> {
+  const nowIso = new Date().toISOString();
+  if (expectedVersion === null) {
+    // 처음 쓰는 키 — insert. 같은 키가 동시에 먼저 들어오면 unique 충돌 → 재시도 신호.
+    const { error } = await getClient()
+      .from('app_settings')
+      .insert({ key, value, updated_at: nowIso });
+    if (error) {
+      // 23505 = unique_violation (다른 요청이 먼저 행 생성) → conflict 로 재시도 유도.
+      if ((error as any).code === '23505') return 'conflict';
+      console.error('[setAppSettingIfUnchangedSupabase] insert 실패:', error.message, error.details || '', error.hint || '');
+      throw new Error(`설정 저장 실패(app_settings): ${error.message}${error.hint ? ` [${error.hint}]` : ''}`);
+    }
+    return 'ok';
+  }
+  const { data, error } = await getClient()
+    .from('app_settings')
+    .update({ value, updated_at: nowIso })
+    .eq('key', key)
+    .eq('updated_at', expectedVersion)
+    .select('key')
+    .maybeSingle();
+  if (error) {
+    console.error('[setAppSettingIfUnchangedSupabase] update 실패:', error.message, error.details || '', error.hint || '');
+    throw new Error(`설정 저장 실패(app_settings): ${error.message}${error.hint ? ` [${error.hint}]` : ''}`);
+  }
+  if (!data) return 'conflict'; // updated_at 불일치(다른 요청이 먼저 저장) → 재시도.
+  return 'ok';
 }
 
 // 기간 내 수기 결석 마크(status 'absent') — 이탈/결석 순위 집계용.
