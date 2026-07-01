@@ -243,3 +243,96 @@ export function buildAggregate(
     topMonthsLabel: monthsLabel(monthDistribution),
   };
 }
+
+function toDateStr(d: Date): string {
+  return d.toISOString().split('T')[0];
+}
+
+export interface PersonalComparison {
+  startMonthLabel: string;           // "9월"
+  weeksSinceStart: number;           // 1-base
+  myPercent: number;
+  cohortPercentAtSameWeek: number | null;
+  percentileTopLabel: string | null; // "상위 40%"
+  etaWeeks: number | null;
+  summary: string;
+  sparse: boolean;                   // 같은 주차 표본 부족 여부
+}
+
+// entry가 "시작 후 w주"까지 도달했던 진도% (dailyProgress 누적 기준, 없으면 최종 진도로 선형 근사)
+export function percentAtWeek(entry: BenchmarkEntry, w: number): number {
+  if (entry.total <= 0 || !entry.startDate) return 0;
+  const cutoff = new Date(entry.startDate);
+  cutoff.setDate(cutoff.getDate() + w * 7);
+  const cutoffStr = toDateStr(cutoff);
+
+  if (entry.dailyProgress.length > 0) {
+    let cum = 0;
+    // cutoff은 "시작 후 w주"의 경계(시작일 + w*7). 그 경계일 당일은 다음 주차에 속하므로 strict(<)로 제외
+    for (const p of entry.dailyProgress) { if (p.date < cutoffStr) cum = p.cumAmount; else break; }
+    return Math.min(100, Math.round((cum / entry.total) * 100));
+  }
+  // 폴백: 마지막 활동까지 걸린 주수로 선형 근사
+  const spanWeeks = entry.lastActivity
+    ? Math.max(1, daysBetween(entry.startDate, entry.lastActivity) / 7)
+    : 1;
+  const frac = Math.min(1, w / spanWeeks);
+  return Math.min(100, Math.round(entry.percent * frac));
+}
+
+export function buildPersonalComparison(
+  cohort: BenchmarkEntry[], me: BenchmarkEntry, agg: BenchmarkAggregate, today = new Date(),
+): PersonalComparison | null {
+  if (!me.startDate) return null;
+  const t = new Date(today); t.setHours(0, 0, 0, 0);
+  const start = new Date(me.startDate); start.setHours(0, 0, 0, 0);
+  // 경과일 기준 1-base 주차. 시작 당일=1주차, 8~14일차=2주차 … (7의 배수 경계일은 그 주차에 포함)
+  const daysSinceStart = Math.floor((t.getTime() - start.getTime()) / DAY_MS);
+  const weeksSinceStart = Math.max(1, Math.floor((daysSinceStart - 1) / 7) + 1);
+  const startMonthLabel = `${start.getMonth() + 1}월`;
+
+  // 같은 "시작 후 주차"에 그 주차만큼 데이터가 있는 동료들
+  const others = cohort.filter((e) => e.studentId !== me.studentId && e.startDate);
+  const reached = others.filter((e) => {
+    const span = e.lastActivity ? daysBetween(e.startDate!, e.lastActivity) / 7 : 0;
+    return e.completed || span >= weeksSinceStart;
+  });
+  const sparse = reached.length < 4;
+  const peers = reached.length > 0 ? reached : others;
+
+  const peerPercents = peers.map((e) => percentAtWeek(e, weeksSinceStart));
+  const cohortPercentAtSameWeek = peerPercents.length
+    ? Math.round(peerPercents.reduce((a, b) => a + b, 0) / peerPercents.length)
+    : null;
+
+  let percentileTopLabel: string | null = null;
+  if (peerPercents.length >= 1) {
+    const atOrBelow = peerPercents.filter((p) => p <= me.percent).length;
+    const topFrac = 1 - atOrBelow / peerPercents.length; // 나보다 높은 비율
+    percentileTopLabel = `상위 ${Math.max(1, Math.round(topFrac * 100))}%`;
+  }
+
+  const etaWeeks = agg.avgDurationWeeks !== null
+    ? Math.max(0, Math.round((agg.avgDurationWeeks - weeksSinceStart) * 10) / 10)
+    : null;
+
+  // 존댓말 요약 — 시즌·상대속도 상황별 분기
+  const seasonLate = agg.topMonthsLabel && !agg.topMonthsLabel.includes(startMonthLabel);
+  const ahead = cohortPercentAtSameWeek !== null && me.percent >= cohortPercentAtSameWeek;
+  let summary: string;
+  if (seasonLate && ahead) {
+    summary = `${startMonthLabel}에 시작해 달력상 다소 늦지만, 시작 후 같은 시점(${weeksSinceStart}주차) 기준으로는 평균보다 앞서 있습니다.`;
+  } else if (ahead) {
+    summary = `시작 후 ${weeksSinceStart}주차 기준으로 평균보다 앞서 있습니다.`;
+  } else if (cohortPercentAtSameWeek !== null) {
+    summary = `시작 후 ${weeksSinceStart}주차 기준 평균은 ${cohortPercentAtSameWeek}%입니다. 조금만 더 속도를 내면 따라잡을 수 있습니다.`;
+  } else {
+    summary = `아직 같은 시점의 비교 표본이 충분하지 않습니다.`;
+  }
+  if (sparse && cohortPercentAtSameWeek !== null) summary += ' (같은 주차 표본이 적어 참고용입니다.)';
+
+  return {
+    startMonthLabel, weeksSinceStart, myPercent: me.percent,
+    cohortPercentAtSameWeek, percentileTopLabel, etaWeeks, summary, sparse,
+  };
+}

@@ -2,6 +2,7 @@
 import assert from 'node:assert';
 import {
   normalizeMaterialName, materialKey, collectEntries, filterSeriousCohort, buildAggregate,
+  buildPersonalComparison, percentAtWeek,
 } from '../lib/learning-benchmark';
 import type { Student } from '../lib/types/student';
 
@@ -91,3 +92,40 @@ const sum = agg.statusDistribution.ahead + agg.statusDistribution.onTrack + agg.
 assert.ok(Math.abs(sum - 1) < 1e-6 || sum === 0);
 
 console.log('Task 2 OK');
+
+// me: 9월 8일 시작, 오늘(9/22) 2주차, 진도 45%
+const meStudent = lectureStudent('me', {
+  total: 20, done: 9, speed: 1.5,
+  completions: [['2026-09-08', 5], ['2026-09-15', 4]],
+  planStart: '2026-09-08', planEnd: '2026-10-20', updatedAt: '2026-09-22',
+});
+const cohortStudents = [
+  lectureStudent('a', { total: 20, done: 20, speed: 1.5, planStart: '2026-07-07', planEnd: '2026-08-31',
+    completions: [['2026-07-14', 10], ['2026-07-21', 10]], updatedAt: '2026-07-21' }),
+  lectureStudent('b', { total: 20, done: 20, speed: 1.5, planStart: '2026-07-07', planEnd: '2026-08-31',
+    completions: [['2026-07-14', 6], ['2026-07-28', 14]], updatedAt: '2026-07-28' }),
+  lectureStudent('c', { total: 20, done: 20, speed: 2.0, planStart: '2026-08-04', planEnd: '2026-09-15',
+    completions: [['2026-08-11', 8], ['2026-08-25', 12]], updatedAt: '2026-08-25' }),
+  lectureStudent('d', { total: 20, done: 20, speed: 1.5, planStart: '2026-08-04', planEnd: '2026-09-15',
+    completions: [['2026-08-11', 5], ['2026-09-01', 15]], updatedAt: '2026-09-01' }),
+];
+const all = [meStudent, ...cohortStudents];
+const cohort3 = filterSeriousCohort(collectEntries(all, 'lecture', '행정법', '행정법 기본강의', TODAY), TODAY, 21);
+const me = cohort3.find((e) => e.studentId === 'me')!;
+const agg3 = buildAggregate(cohort3, 'lecture', '행정법 기본강의', '행정법');
+
+// percentAtWeek: a는 2주차(첫 2주)에 20개 중 10개 → 50%
+const aEntry = cohort3.find((e) => e.studentId === 'a')!;
+assert.equal(percentAtWeek(aEntry, 2), 50);
+
+const cmp = buildPersonalComparison(cohort3, me, agg3, TODAY)!;
+assert.ok(cmp !== null);
+assert.equal(cmp.weeksSinceStart, 2);
+assert.equal(cmp.myPercent, 45);
+assert.equal(cmp.startMonthLabel, '9월');
+assert.ok(cmp.cohortPercentAtSameWeek !== null);
+assert.ok(cmp.summary.length > 0);
+assert.ok(!cmp.summary.includes('너')); // 존댓말/반말 금지 스모크
+
+console.log('Task 3 OK');
+console.log('ALL OK');
