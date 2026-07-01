@@ -66,7 +66,7 @@ function countStudyDaysInRange(start: Date, end: Date, studyDays?: string[]) {
   return count;
 }
 
-function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string) {
+function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false) {
   const start = parseDate(plan.startDate);
   const end = parseDate(plan.endDate);
   if (!start || !end) return parsePlanEndAmount(plan);
@@ -77,11 +77,12 @@ function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays
   // "오늘 기준 권장"은 오늘 시작 시점에 이미 끝냈어야 할 분량이다.
   // 경과 학습일은 (1) 학생 등록일 이후(등록 전 요일은 아직 학원생도 아니었으므로 제외),
   // (2) 오늘 이전(오늘치 분량은 아직 학습 중이라 제외)인 학습일만 센다.
+  // inclusiveToday=true면 오늘까지 포함(오늘 종료 시점 누적 기대치)을 계산한다.
   const enrolledStart = parseDate(createdAt);
   const effectiveStart = enrolledStart && enrolledStart > start ? enrolledStart : start;
-  const beforeToday = new Date(today);
-  beforeToday.setDate(today.getDate() - 1);
-  const elapsedStudyDays = countStudyDaysInRange(effectiveStart, beforeToday, studyDays);
+  const upperBound = new Date(today);
+  if (!inclusiveToday) upperBound.setDate(today.getDate() - 1);
+  const elapsedStudyDays = countStudyDaysInRange(effectiveStart, upperBound, studyDays);
   if (elapsedStudyDays <= 0) return beforePlanAmount;
 
   const totalStudyDays = Math.max(1, countStudyDaysInRange(start, end, studyDays));
@@ -93,7 +94,7 @@ function isSameDay(a: Date | null, b: Date) {
   return Boolean(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
 }
 
-function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string) {
+export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false) {
   if (!plans || plans.length === 0) return null;
 
   const sortedPlans = [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate));
@@ -109,7 +110,7 @@ function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, st
     }
 
     if (today <= end) {
-      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt);
+      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt, inclusiveToday);
     }
 
     latestPastPlan = plan;

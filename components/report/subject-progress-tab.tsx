@@ -9,6 +9,7 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
+import { getExpectedFromPlans } from '@/lib/progress-plan';
 
 interface SubjectProgressTabProps {
   student: Student;
@@ -113,20 +114,20 @@ export function SubjectProgressTab({
       : true;
   };
 
-  const getExpectedAmountFromPlans = (plans?: DetailedPlan[]) => {
+  // 관리자 대시보드(lib/progress-plan.ts)와 동일한 엔진으로 두 기준을 구한다.
+  //  - expectedByStart: 오늘 시작 시점까지(전날까지) 끝냈어야 할 누적량
+  //  - expectedByEnd:   오늘 종료 시점까지(오늘치 포함) 끝냈어야 할 누적량
+  // 오늘 할당량 범위 안에서 학습 중이면 '계획대로 진행중', 그보다 많으면 '빠름',
+  // 전날까지 목표(expectedByStart)에도 못 미치면 진짜 뒤처진 것 → '느림'.
+  const getPlanStatus = (current: number, plans?: DetailedPlan[], studyDays?: string[]) => {
     if (!plans || plans.length === 0) return null;
-    const today = new Date().toISOString().split('T')[0];
-    const currentPlan = plans.find((plan) => plan.startDate <= today && today <= plan.endDate);
-    const plan = currentPlan || plans.find((item) => item.endDate >= today) || plans[plans.length - 1];
-    if (!plan?.rangeText) return null;
-    const values = plan.rangeText.match(/\d+/g)?.map(Number) || [];
-    return values.length > 0 ? values[values.length - 1] : null;
-  };
-
-  const getPlanStatus = (current: number, expected: number | null) => {
-    if (expected === null) return null;
-    if (current === expected) return '계획대로 진행';
-    if (current > expected) return '계획보다 빠름';
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const expectedByStart = getExpectedFromPlans(plans, today, studyDays, student.createdAt);
+    const expectedByEnd = getExpectedFromPlans(plans, today, studyDays, student.createdAt, true);
+    if (expectedByStart === null || expectedByEnd === null) return null;
+    if (current > expectedByEnd) return '계획보다 빠름';
+    if (current >= expectedByStart) return '계획대로 진행중';
     return current === 0 ? '진도 정체' : '계획보다 느림';
   };
 
@@ -134,6 +135,7 @@ export function SubjectProgressTab({
     switch (status) {
       case '계획보다 빠름':
         return 'bg-blue-50 text-blue-700 border-blue-200';
+      case '계획대로 진행중':
       case '계획대로 진행':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
       case '계획보다 느림':
@@ -324,7 +326,7 @@ export function SubjectProgressTab({
               <div className="space-y-5">
                 {student.books.map(b => {
                   const percent = b.totalPages > 0 ? Math.round((b.currentPage / b.totalPages) * 100) : 0;
-                  const status = getPlanStatus(b.currentPage, getExpectedAmountFromPlans(b.detailedPlans));
+                  const status = getPlanStatus(b.currentPage, b.detailedPlans);
                   return (
                     <div key={b.id} className="space-y-2">
                       <div className="flex justify-between text-[11px] font-bold items-center">
@@ -361,7 +363,7 @@ export function SubjectProgressTab({
               <div className="space-y-5">
                 {student.lectures.map(l => {
                   const percent = l.totalLectures > 0 ? Math.round((l.completedLectures / l.totalLectures) * 100) : 0;
-                  const status = getPlanStatus(l.completedLectures, getExpectedAmountFromPlans(l.detailedPlans));
+                  const status = getPlanStatus(l.completedLectures, l.detailedPlans);
                   return (
                     <div key={l.id} className="space-y-2">
                       <div className="flex justify-between text-[11px] font-bold items-center">
@@ -420,7 +422,7 @@ export function SubjectProgressTab({
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = getPlanStatus(b.currentPage, getExpectedAmountFromPlans(b.detailedPlans));
+                      const status = getPlanStatus(b.currentPage, b.detailedPlans, sub.studyDays);
                       const paceComparison = formatPaceComparison(
                         getMaterialDailyPace(b.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'book', b.title)
@@ -682,7 +684,7 @@ export function SubjectProgressTab({
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = getPlanStatus(l.completedLectures, getExpectedAmountFromPlans(l.detailedPlans));
+                      const status = getPlanStatus(l.completedLectures, l.detailedPlans, sub.studyDays);
                       const paceComparison = formatPaceComparison(
                         getMaterialDailyPace(l.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'lecture', l.name)
