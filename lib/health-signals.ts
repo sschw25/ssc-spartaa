@@ -25,8 +25,11 @@ function collectDetailedPlans(student: Student): DetailedPlan[] {
     (books ?? []).forEach((b) => (b.detailedPlans ?? []).forEach((p) => plans.push(p)));
     (lectures ?? []).forEach((l) => (l.detailedPlans ?? []).forEach((p) => plans.push(p)));
   };
-  (student.subjects ?? []).forEach((s) => pushFrom(s.books, s.lectures));
-  pushFrom(student.books, student.lectures);
+  if (student.subjects && student.subjects.length > 0) {
+    student.subjects.forEach((s) => pushFrom(s.books, s.lectures));
+  } else {
+    pushFrom(student.books, student.lectures);
+  }
   return plans;
 }
 
