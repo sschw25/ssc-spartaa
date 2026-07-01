@@ -294,7 +294,7 @@ export async function cancelBookingsConflictingWithBlackouts(
     if (hits.length === 0) return false; // 충돌 없음 → 저장 스킵.
     const next = list.map((b) =>
       conflicts(b)
-        ? { ...b, status: 'cancelled' as const, cancelledAt: nowIso, adminReply: '담당자 휴무/출장으로 상담이 취소되었습니다.' }
+        ? { ...b, status: 'cancelled' as const, cancelledAt: nowIso, cancelledBy: 'system' as const, adminReply: '담당자 휴무/출장으로 상담이 취소되었습니다.' }
         : b,
     );
     // 낙관적 잠금 충돌 시 이 콜백이 재실행된다. push 로 누적하면 재시도마다 hits 가 중복

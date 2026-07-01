@@ -8,6 +8,7 @@ import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
 import { serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
 import { buildConsultationDigest } from '@/lib/consultation-digest';
+import { filterMockExamsForStudent } from '@/lib/mock-exam-scope';
 
 interface ConsultationHistoryEntry {
   id: string;
@@ -24,6 +25,7 @@ function buildMaskedStudent(
   audience: 'parent' | 'student',
   consultationBookings: ConsultationBooking[] = [],
   consultationHistory: ConsultationHistoryEntry[] = [],
+  consultationCancellations: ConsultationBooking[] = [],
 ) {
   return {
     id: student.id,
@@ -61,6 +63,7 @@ function buildMaskedStudent(
           seatAlerts: student.seatAlerts || [],
           consultationBookings,
           consultationHistory,
+          consultationCancellations,
         }
       : {}),
   };
@@ -129,7 +132,8 @@ export async function GET(
         ]);
         studyStats = buildStudyStats({ sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length });
       } catch { /* 통계 실패 시 무시 */ }
-      return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams: allExams });
+      const mockExams = filterMockExamsForStudent(allExams, student);
+      return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams });
     } catch (error) {
       console.error(`API GET /report/${id} (token) error:`, error);
       return NextResponse.json({ success: false, message: '리포트 로드 중 에러가 발생했습니다.' }, { status: 500 });
@@ -181,7 +185,14 @@ export async function GET(
         note: b.logId ? ((student.consultationLogs || []).find((l) => l.id === b.logId)?.content || undefined) : undefined,
         digest: buildConsultationDigest(student, b.date),
       }));
-    const maskedStudent = buildMaskedStudent(student, audience, myBookings, consultationHistory);
+    // 최근(14일) 관리자/시스템 취소 건 — 학생 본인 취소는 제외(알림 대상 아님).
+    const cancelCutoff = new Date(Date.now() - 14 * 24 * 3600 * 1000).toISOString();
+    const consultationCancellations = myAllBookings
+      .filter((b) => b.status === 'cancelled'
+        && (b.cancelledBy === 'admin' || b.cancelledBy === 'system')
+        && (b.cancelledAt || '') >= cancelCutoff)
+      .sort((a, b) => (b.cancelledAt || '').localeCompare(a.cancelledAt || ''));
+    const maskedStudent = buildMaskedStudent(student, audience, myBookings, consultationHistory, consultationCancellations);
 
     const students = await getStudents();
     const materialBenchmarks = buildMaterialBenchmarks(students);
@@ -204,7 +215,8 @@ export async function GET(
       console.warn('studyStats 계산 생략:', (e as Error)?.message);
     }
 
-    return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams: allExams });
+    const mockExams = filterMockExamsForStudent(allExams, student);
+    return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams });
   } catch (error) {
     console.error(`API GET /report/${id} error:`, error);
     return NextResponse.json(

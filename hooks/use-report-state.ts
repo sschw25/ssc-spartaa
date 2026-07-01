@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, Calendar, CalendarClock, BookOpen, FileText, Shield, Ticket } from 'lucide-react';
-import { isConsultationCampus } from '@/lib/consultation-schedule';
+import { isConsultationCampus, WEEKDAY_LABEL } from '@/lib/consultation-schedule';
 import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
@@ -1556,6 +1556,12 @@ export function useReportState() {
       };
     });
 
+  // 상담 결과/취소 알림은 최근 14일 이내만 노출(오래된 히스토리 홍수 방지).
+  const recentConsultationCutoffKey = formatDateKey(new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000));
+  const consultationHistoryEntries = ((student as any).consultationHistory as Array<{
+    id: string; date: string; slot: string; status: 'done' | 'noshow'; counselor: string; note?: string;
+  }> | undefined) || [];
+
   const systemNotifications = [
     // 출결판 미착석 알림(관리자 발송) — 확인(dismiss) 전까지 누적 노출
     ...((student.seatAlerts || []).map((alert) => ({
@@ -1567,6 +1573,65 @@ export function useReportState() {
       date: alert.createdAt || alert.date,
       priority: 1,
     }))),
+    // 관리자가 대신 잡아준 상담 예약(source==='admin') — 학생이 상담 탭을 열지 않아도 알림으로 즉시 인지.
+    // 본인이 직접 예약한 건(source==='student')은 이미 알고 있으므로 제외. 지난 날짜는 알리지 않는다.
+    ...((student.consultationBookings || [])
+      .filter((b) => b.status === 'booked' && b.source === 'admin' && b.kind === 'regular' && b.date >= todayDateKey)
+      .map((b) => ({
+        id: `consultation-admin-${b.id}`,
+        tone: 'blue' as const,
+        label: '상담 예약',
+        title: '담당 선생님이 상담을 예약했어요',
+        body: `${b.date}${b.weekday ? `(${WEEKDAY_LABEL[b.weekday]})` : ''} ${b.slot} · 담당 ${b.counselor}\n상담 예약 탭에서 확인할 수 있어요. 시간이 안 맞으면 변경을 요청할 수 있어요.`,
+        date: b.createdAt || b.date,
+        priority: 2,
+      }))),
+    // 관리자가 시간 변경을 제안한 상담 — 학생이 수락/거절해야 하므로 알림으로 노출.
+    // id 에 requestedAt 을 포함해 새 제안은 별개 알림으로 뜨게 한다(이전 제안을 확인처리해도 새 제안은 재노출).
+    ...((student.consultationBookings || [])
+      .filter((b) => b.status === 'booked' && b.reschedule?.by === 'admin' && (b.reschedule?.date || '') >= todayDateKey)
+      .map((b) => ({
+        id: `consultation-reschedule-${b.id}-${b.reschedule!.requestedAt || ''}`,
+        tone: 'amber' as const,
+        label: '시간 변경 제안',
+        title: '담당 선생님이 상담 시간 변경을 제안했어요',
+        body: `${b.date}${b.weekday ? `(${WEEKDAY_LABEL[b.weekday]})` : ''} ${b.slot} → ${b.reschedule!.date}${b.reschedule!.weekday ? `(${WEEKDAY_LABEL[b.reschedule!.weekday]})` : ''} ${b.reschedule!.slot}${b.reschedule!.reason ? `\n사유: ${b.reschedule!.reason}` : ''}\n상담 예약 탭에서 수락하거나 거절할 수 있어요.`,
+        date: b.reschedule!.requestedAt || b.createdAt || b.date,
+        priority: 2,
+      }))),
+    // 관리자/시스템(담당자 휴무·출장)에 의해 취소된 상담 — 본인 취소는 리포트 API에서 이미 제외됨.
+    ...((student.consultationCancellations || [])
+      .map((b) => ({
+        id: `consultation-cancelled-${b.id}`,
+        tone: 'red' as const,
+        label: '상담 취소',
+        title: '예약된 상담이 취소되었어요',
+        body: `${b.date}${b.weekday ? `(${WEEKDAY_LABEL[b.weekday]})` : ''} ${b.slot} 상담이 취소되었어요.${b.adminReply ? `\n사유: ${b.adminReply}` : ''}\n필요하면 상담 예약 탭에서 다시 예약해 주세요.`,
+        date: b.cancelledAt || b.date,
+        priority: 1,
+      }))),
+    // 상담 결과 기록(완료: 결과 노트가 있을 때 / 노쇼: 항상) — 최근 14일 이내만.
+    ...(consultationHistoryEntries
+      .filter((h) => h.date >= recentConsultationCutoffKey && (h.status === 'noshow' || !!h.note))
+      .map((h) => h.status === 'noshow'
+        ? {
+            id: `consultation-noshow-${h.id}`,
+            tone: 'amber' as const,
+            label: '상담 불참',
+            title: '상담에 참석하지 못했어요',
+            body: `${h.date} ${h.slot} 상담이 미참석으로 처리됐어요. 다시 예약이 필요하면 상담 예약 탭에서 신청해 주세요.`,
+            date: h.date,
+            priority: 3,
+          }
+        : {
+            id: `consultation-result-${h.id}`,
+            tone: 'emerald' as const,
+            label: '상담 결과',
+            title: '상담 결과가 기록됐어요',
+            body: `${h.date} ${h.slot} 상담 결과가 정리됐어요.${h.note ? `\n${truncateNotificationText(h.note, 160)}` : ''}\n상담 예약 탭의 지난 상담에서 확인할 수 있어요.`,
+            date: h.date,
+            priority: 4,
+          })),
     ...(student.weeklyGradeCheck && !hasGradeThisWeek
       ? [{
           id: 'weekly-grade-check',

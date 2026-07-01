@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isAdmin, getAdminSession } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
+import { canMutateCampusScopedResource, filterCampusScopedResources } from '@/lib/campus-scope';
 import { getMealPlans, saveMealPlan, deleteMealPlan, notifyMealPlan } from '@/lib/store';
 import { CAMPUSES, mondayOf, MEAL_DAYS } from '@/lib/meal';
 import type { MealDay, MealKind, MealPlan } from '@/lib/types/student';
@@ -17,9 +18,7 @@ export async function GET() {
   }
   try {
     const all = await getMealPlans();
-    const plans = session.campus === 'all'
-      ? all
-      : all.filter((p) => !p.campus || p.campus === 'all' || p.campus === session.campus);
+    const plans = filterCampusScopedResources(all, session.campus);
     return NextResponse.json({ success: true, plans });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '조회 실패' }, { status: 500 });
@@ -93,7 +92,8 @@ export async function POST(request: Request) {
 //  - { planId }            → 학생 알림 발송
 //  - { planId, action:'cancel' } → 학생 알림 취소
 export async function PATCH(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   let body: { planId?: unknown; closedDays?: unknown; action?: unknown };
@@ -105,17 +105,20 @@ export async function PATCH(request: Request) {
   const planId = String(body?.planId ?? '').trim();
   if (!planId) return NextResponse.json({ success: false, message: 'planId가 필요합니다.' }, { status: 400 });
   try {
+    const plan = (await getMealPlans()).find((p) => p.id === planId);
+    if (!plan) return NextResponse.json({ success: false, message: '해당 라운드를 찾을 수 없습니다.' }, { status: 404 });
+    if (!canMutateCampusScopedResource(session.campus, plan.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 도시락 라운드를 변경할 권한이 없습니다.' }, { status: 403 });
+    }
     // 휴무 요일 수정
     if ('closedDays' in (body || {})) {
-      const plan = (await getMealPlans()).find((p) => p.id === planId);
-      if (!plan) return NextResponse.json({ success: false, message: '해당 라운드를 찾을 수 없습니다.' }, { status: 404 });
       const saved = await saveMealPlan({ ...plan, closedDays: sanitizeClosedDays(body.closedDays) });
       return NextResponse.json({ success: true, plan: saved });
     }
     // 학생 알림 발송/취소
     const cancel = body?.action === 'cancel';
-    const plan = await notifyMealPlan(planId, cancel ? null : new Date().toISOString());
-    return NextResponse.json({ success: true, plan });
+    const updatedPlan = await notifyMealPlan(planId, cancel ? null : new Date().toISOString());
+    return NextResponse.json({ success: true, plan: updatedPlan });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '처리 실패' }, { status: 500 });
   }
@@ -123,12 +126,18 @@ export async function PATCH(request: Request) {
 
 // 관리자: 도시락 라운드 삭제
 export async function DELETE(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   const planId = new URL(request.url).searchParams.get('planId');
   if (!planId) return NextResponse.json({ success: false, message: 'planId가 필요합니다.' }, { status: 400 });
   try {
+    const plan = (await getMealPlans()).find((p) => p.id === planId);
+    if (!plan) return NextResponse.json({ success: false, message: '해당 라운드를 찾을 수 없습니다.' }, { status: 404 });
+    if (!canMutateCampusScopedResource(session.campus, plan.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 도시락 라운드를 삭제할 권한이 없습니다.' }, { status: 403 });
+    }
     await deleteMealPlan(planId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

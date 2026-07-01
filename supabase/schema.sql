@@ -122,6 +122,7 @@ create table if not exists mock_exams (
   id           text primary key,
   name         text not null,
   date         date not null,
+  target_exam_types jsonb not null default '[]'::jsonb,
   created_at   timestamptz not null default now(),
   notified_at  timestamptz
 );
@@ -131,6 +132,8 @@ create index if not exists idx_mock_exams_date on mock_exams (date desc);
 alter table mock_exams add column if not exists notified_at timestamptz;
 -- 센터별 모의고사 구분 (없으면 전체 센터)
 alter table mock_exams add column if not exists campus text;
+-- 대상 목표시험 유형 (없으면 전체 대상)
+alter table mock_exams add column if not exists target_exam_types jsonb not null default '[]'::jsonb;
 
 -- OT 일정 마스터
 create table if not exists ot_events (

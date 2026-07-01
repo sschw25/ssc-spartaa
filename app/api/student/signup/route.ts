@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
 import { getStudentAuthRecords, getStudentApplications, addStudentApplication } from '@/lib/store';
 import { normalizeAttendanceCode, validateAttendanceCode } from '@/lib/attendance-code';
 import type { StudentApplication } from '@/lib/types/student';
@@ -14,7 +14,7 @@ const ALLOWED_CAMPUS = ['wonju', 'chuncheon', 'chungju'];
 // 정식 원생은 관리자가 승인할 때 생성되므로, 이 단계에서는 로그인 불가.
 export async function POST(request: Request) {
   // 무차별/스팸 방지: IP당 10분에 5회
-  const rl = rateLimit(`student-signup:${clientIp(request)}`, 5, 10 * 60 * 1000);
+  const rl = await sharedRateLimit(`student-signup:${clientIp(request)}`, 5, 10 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, message: `신청이 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },

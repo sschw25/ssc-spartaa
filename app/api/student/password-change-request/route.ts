@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
 import { getStudentAuthRecords, getStudentById, updateStudentById } from '@/lib/store';
 import { compareAttendanceCode, normalizeAttendanceCode, validateAttendanceCode } from '@/lib/attendance-code';
 
@@ -9,7 +9,7 @@ const normalizeName = (value: unknown) => String(value || '').trim().replace(/\s
 // 공개: 학생 출결번호 변경 '신청'. 본인 확인(현재 출결번호) 후 새 출결번호를 대기열에 적재한다.
 // 실제 적용은 관리자가 승인할 때 이뤄진다(student_state.passwordChange 에 해시 보관).
 export async function POST(request: Request) {
-  const rl = rateLimit(`pw-change:${clientIp(request)}`, 5, 10 * 60 * 1000);
+  const rl = await sharedRateLimit(`pw-change:${clientIp(request)}`, 5, 10 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, message: `요청이 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isAdmin, getAdminSession } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
+import { canMutateCampusScopedResource, filterCampusScopedResources } from '@/lib/campus-scope';
 import { getMockExams, saveMockExam, deleteMockExam, notifyMockExam } from '@/lib/store';
 import type { MockExam } from '@/lib/types/student';
 
@@ -13,9 +14,7 @@ export async function GET() {
   }
   try {
     const all = await getMockExams();
-    const exams = session.campus === 'all'
-      ? all
-      : all.filter((e) => !e.campus || e.campus === 'all' || e.campus === session.campus);
+    const exams = filterCampusScopedResources(all, session.campus);
     return NextResponse.json({ success: true, exams });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '조회 실패';
@@ -79,7 +78,8 @@ export async function POST(request: Request) {
 
 // 관리자: 학생에게 모의고사 알림 발송/취소 (notifiedAt 설정/해제)
 export async function PATCH(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -96,6 +96,13 @@ export async function PATCH(request: Request) {
   }
 
   try {
+    const existing = (await getMockExams()).find((e) => e.id === examId);
+    if (!existing) {
+      return NextResponse.json({ success: false, message: '해당 모의고사를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (!canMutateCampusScopedResource(session.campus, existing.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 모의고사를 변경할 권한이 없습니다.' }, { status: 403 });
+    }
     const cancel = body?.action === 'cancel';
     const exam = await notifyMockExam(examId, cancel ? null : new Date().toISOString());
     return NextResponse.json({ success: true, exam });
@@ -106,7 +113,8 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
@@ -117,6 +125,13 @@ export async function DELETE(request: Request) {
   }
 
   try {
+    const existing = (await getMockExams()).find((e) => e.id === examId);
+    if (!existing) {
+      return NextResponse.json({ success: false, message: '해당 모의고사를 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (!canMutateCampusScopedResource(session.campus, existing.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 모의고사를 삭제할 권한이 없습니다.' }, { status: 403 });
+    }
     await deleteMockExam(examId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

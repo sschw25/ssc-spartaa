@@ -56,8 +56,12 @@ export async function POST(request: Request) {
       if (targets.includes('parent') && student.parentPhone) recipients.push(student.parentPhone);
       if (targets.includes('student') && student.studentPhone) recipients.push(student.studentPhone);
 
-      const { sent, failed: sendFailed } = await sendCustomSms(recipients, message);
+      const { sent, skipped, failed: sendFailed } = await sendCustomSms(recipients, message);
       if (sendFailed) {
+        failed.push(studentId);
+        continue;
+      }
+      if (skipped && sent === 0) {
         failed.push(studentId);
         continue;
       }

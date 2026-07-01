@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getStudentsSummary, getStudentAuthRecords, getStudentById } from '@/lib/store';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
 import { signStudentSession, STUDENT_SESSION_COOKIE } from '@/lib/auth';
 import { compareAttendanceCode } from '@/lib/attendance-code';
 
@@ -39,7 +39,7 @@ const normalizeCode = (value: unknown) =>
 
 export async function POST(request: Request) {
   // 무차별 대입 방지: IP당 5분에 10회 시도 제한
-  const rl = rateLimit(`student-login:${clientIp(request)}`, 10, 5 * 60 * 1000);
+  const rl = await sharedRateLimit(`student-login:${clientIp(request)}`, 10, 5 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, message: `로그인 시도가 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },

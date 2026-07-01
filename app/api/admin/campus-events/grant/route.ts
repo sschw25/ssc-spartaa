@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
+import { canMutateCampusScopedResource } from '@/lib/campus-scope';
 import { getStudents, getStudentById, patchStudentProgress, getCampusEvents, markCampusEventRewarded } from '@/lib/store';
 import { grantCampusEventReward } from '@/lib/mission-engine';
 
@@ -24,6 +25,9 @@ export async function POST(request: Request) {
     const event = events.find((e) => e.id === eventId);
     if (!event) return NextResponse.json({ success: false, message: '일정을 찾을 수 없습니다.' }, { status: 404 });
     if (!event.isMission) return NextResponse.json({ success: false, message: '참여 미션이 아닙니다.' }, { status: 400 });
+    if (!canMutateCampusScopedResource(session.campus, event.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 미션을 지급 처리할 권한이 없습니다.' }, { status: 403 });
+    }
 
     const coupons = event.couponReward || 0;
     const allStudents = await getStudents();

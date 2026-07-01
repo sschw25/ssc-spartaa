@@ -50,6 +50,15 @@ export async function POST(
       { status: 502 }
     );
   }
+  if (skipped && sent === 0) {
+    const messageText = skipped === 'no-recipient'
+      ? '발송 가능한 수신번호가 없습니다.'
+      : '문자 발송 환경이 설정되지 않아 발송이 생략되었습니다.';
+    return NextResponse.json(
+      { success: false, message: messageText, detail: skipped },
+      { status: skipped === 'no-recipient' ? 400 : 503 }
+    );
+  }
 
   const nowIso = new Date().toISOString();
   const log: SmsLog = {

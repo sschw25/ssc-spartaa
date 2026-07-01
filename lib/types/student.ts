@@ -156,6 +156,7 @@ export interface ConsultationBooking {
   source: 'student' | 'admin'; // 신청 주체
   createdAt: string;      // 신청 시각 (ISO)
   cancelledAt?: string;   // 취소 시각 (ISO)
+  cancelledBy?: 'student' | 'admin' | 'system'; // 취소 주체 — 학생 본인 취소는 알림 제외, 관리자/시스템(휴무·출장) 취소만 학생 알림
   resolvedAt?: string;    // extra 처리/상담 완료 시각 (ISO)
   resolvedBy?: string;     // 완료/노쇼 처리한 관리자(username)
   logId?: string;          // 완료 시 생성된 ConsultationLog id(결과 노트 하드 연결)
@@ -498,6 +499,8 @@ export interface Student {
   seatAlerts?: SeatAlert[];
   // 상담 예약 내역 (리포트 API가 app_settings 예약 원장에서 본인 건만 추려 전달 — 학생 컬럼 미저장)
   consultationBookings?: ConsultationBooking[];
+  // 최근 관리자/시스템 취소 상담 (리포트 API가 추려 전달 — 학생 알림용, 본인 취소 제외)
+  consultationCancellations?: ConsultationBooking[];
 }
 
 // 출결판에서 관리자가 "자리에 없음"으로 확인해 학생에게 보낸 알림

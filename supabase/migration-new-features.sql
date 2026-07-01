@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS mock_exams (
   id           text PRIMARY KEY,
   name         text NOT NULL,
   date         date NOT NULL,
+  target_exam_types jsonb NOT NULL DEFAULT '[]'::jsonb,
   created_at   timestamptz NOT NULL DEFAULT now(),
   notified_at  timestamptz
 );
@@ -26,5 +27,7 @@ CREATE TABLE IF NOT EXISTS mock_exams (
 -- 기존 테이블이 이미 있는 경우 notified_at 컬럼 추가
 ALTER TABLE mock_exams
   ADD COLUMN IF NOT EXISTS notified_at timestamptz;
+ALTER TABLE mock_exams
+  ADD COLUMN IF NOT EXISTS target_exam_types jsonb NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_mock_exams_date ON mock_exams (date DESC);

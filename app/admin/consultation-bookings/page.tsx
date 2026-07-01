@@ -21,6 +21,29 @@ import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 const ALL_CAMPUSES = ['wonju', 'chuncheon', 'chungju'] as const;
 type Campus = (typeof ALL_CAMPUSES)[number];
 
+// 예약 출처(source) 시각 규약 — 이중부호화(색+텍스트/아이콘).
+// 대리(관리자) 계열은 sky 톤, 셀프(학생) 계열은 중립 회색. 색 단독 금지.
+// 상태색(완료=emerald, 노쇼=amber/rose, 변경요청=amber, 관리자제안=sky)과 겹치지 않게
+// 출처 표시는 항상 짧은 텍스트/도트를 동반한다.
+const SOURCE_META: Record<'admin' | 'student', { label: string; short: string; dot: string; chip: string }> = {
+  admin: {
+    label: '대리 예약',
+    short: '대리',
+    dot: 'bg-sky-500',
+    chip: 'bg-sky-100 text-sky-700',
+  },
+  student: {
+    label: '셀프 예약',
+    short: '셀프',
+    dot: 'bg-slate-400',
+    chip: 'bg-slate-100 text-slate-600',
+  },
+};
+
+function sourceMeta(src: ConsultationBooking['source']) {
+  return SOURCE_META[src === 'admin' ? 'admin' : 'student'];
+}
+
 function consultationStats(list: ConsultationBooking[]) {
   const total = list.length;
   const done = list.filter((b) => b.status === 'done').length;
@@ -202,7 +225,8 @@ export default function AdminConsultationBookingsPage() {
       toast.error(json.message || '처리에 실패했습니다.');
       return false;
     } catch {
-      toast.error('네트워크 에러가 발생했습니다.');
+      // 실패를 false로 반환 → 호출부(모달·폼)는 성공 시에만 리셋하므로 입력값이 보존됨.
+      toast.error('네트워크 오류가 발생했어요. 입력값은 유지했으니 다시 시도해 주세요.');
       return false;
     } finally {
       setBusy((b) => ({ ...b, [key]: false }));
@@ -273,11 +297,15 @@ export default function AdminConsultationBookingsPage() {
         return; // pendingLogId 보존 → 재시도 시 노트 중복 생성 안 함
       }
 
+      // 성공 시에만 모달·초안 리셋.
       toast.success('상담 완료로 기록했어요');
       setCompleteTarget(null);
       setNoteDraft('');
       setPendingLogId(null);
       await loadData();
+    } catch {
+      // 네트워크 오류 — 메모/모달 유지(pendingLogId 보존 → 재시도 시 노트 중복 방지).
+      toast.error('네트워크 오류가 발생했어요. 작성한 메모는 유지했으니 다시 시도해 주세요.');
     } finally {
       setCompleteBusy(false);
     }
@@ -342,15 +370,18 @@ export default function AdminConsultationBookingsPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
+        // 성공 시에만 폼 리셋(선택 학생·시간). 날짜는 연속 예약을 위해 유지.
         toast.success('예약을 등록했습니다.');
         setAssignStudentId('');
         setAssignSlot('');
         await loadData();
       } else {
-        toast.error(json.message || '예약 등록에 실패했습니다.');
+        // 실패 시 선택값 보존 — 사용자가 다시 고르지 않아도 됨.
+        toast.error((json.message || '예약 등록에 실패했습니다.') + ' 선택값은 유지했어요.');
       }
     } catch {
-      toast.error('네트워크 에러가 발생했습니다.');
+      // 네트워크 오류 — 폼 리셋하지 않음.
+      toast.error('네트워크 오류로 예약 등록에 실패했어요. 선택값은 유지했어요.');
     } finally {
       setBusy((b) => ({ ...b, [key]: false }));
     }
@@ -454,10 +485,17 @@ export default function AdminConsultationBookingsPage() {
                 return (
                   <div key={b.id} className={`rounded-xl border px-3 py-2.5 space-y-2 ${fromAdmin ? 'border-sky-200/70 bg-sky-50/60' : 'border-amber-200/70 bg-amber-50/60'}`}>
                     <div className="flex items-center justify-between gap-2">
-                      <button type="button" onClick={() => openStudentSheet(b.studentId)} className="text-[13px] font-extrabold text-[#0071E3] hover:underline">
-                        {b.studentName}
-                      </button>
-                      <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <button type="button" onClick={() => openStudentSheet(b.studentId)} className="text-[13px] font-extrabold text-[#0071E3] hover:underline">
+                          {b.studentName}
+                        </button>
+                        {(() => { const sm = sourceMeta(b.source); return (
+                          <span className={`shrink-0 inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-black ${sm.chip}`} title={`예약 출처 · ${sm.label}`}>
+                            <span className={`w-1 h-1 rounded-full ${sm.dot}`} />{sm.short}
+                          </span>
+                        ); })()}
+                      </div>
+                      <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
                         {fromAdmin ? '학생 승인 대기' : '학생 변경 요청'}
                       </span>
                     </div>
@@ -607,11 +645,12 @@ export default function AdminConsultationBookingsPage() {
                             <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] align-middle">
                               {bk ? (
                                 <div className="space-y-1">
+                                  {(() => { const sm = sourceMeta(bk.source); return (
                                   <button
                                     type="button"
                                     onClick={() => openStudentSheet(bk.studentId)}
-                                    title="학생 정보 보기"
-                                    className={`w-full rounded-lg px-1.5 py-1 text-[11px] font-bold transition-colors ${
+                                    title={`학생 정보 보기 · ${sm.label}`}
+                                    className={`relative w-full rounded-lg px-1.5 py-1 text-[11px] font-bold transition-colors ${
                                       bk.status === 'done'
                                         ? 'bg-emerald-50 text-emerald-700'
                                         : bk.status === 'noshow'
@@ -619,8 +658,19 @@ export default function AdminConsultationBookingsPage() {
                                         : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-red-50 hover:text-red-600'
                                     }`}
                                   >
+                                    <span
+                                      className={`absolute right-1 top-1 w-1.5 h-1.5 rounded-full ${sm.dot}`}
+                                      title={sm.label}
+                                      aria-label={sm.label}
+                                    />
                                     {bk.studentName}
                                   </button>
+                                  ); })()}
+                                  {(() => { const sm = sourceMeta(bk.source); return (
+                                    <span className={`inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-black ${sm.chip}`} title={sm.label}>
+                                      <span className={`w-1 h-1 rounded-full ${sm.dot}`} />{sm.short}
+                                    </span>
+                                  ); })()}
                                   {bk.status === 'done' && (
                                     <span className="inline-block w-full rounded-full bg-emerald-100 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700">완료</span>
                                   )}

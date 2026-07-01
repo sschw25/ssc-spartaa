@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAttendToken } from '@/lib/attendance-token';
 import { getStudentsSummary } from '@/lib/store';
 import { toggleAttendance, processAttendance, type AttendanceAction } from '@/lib/attendance-service';
-import { clientIp, rateLimit } from '@/lib/rate-limit';
+import { clientIp, sharedRateLimit } from '@/lib/rate-limit';
 import type { Student } from '@/lib/types/student';
 
 type Match = {
@@ -33,7 +33,7 @@ function findMatches(students: Student[], phoneInput: string): Match[] {
 }
 
 export async function POST(request: Request) {
-  const limited = rateLimit(`attend-phone:${clientIp(request)}`, 30, 60 * 1000);
+  const limited = await sharedRateLimit(`attend-phone:${clientIp(request)}`, 30, 60 * 1000);
   if (!limited.allowed) {
     return NextResponse.json(
       { success: false, message: `${limited.retryAfterSec}초 후 다시 시도해 주세요.` },

@@ -8,7 +8,7 @@ const FULL_DAY = 9;
 
 function nextWeekday(target: number): string {
   // 2026-07-06(월)부터 검색 — 미래 고정일로 충분.
-  let d = new Date('2026-07-06T00:00:00Z');
+  const d = new Date('2026-07-06T00:00:00Z');
   while (d.getUTCDay() !== target) d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
 }

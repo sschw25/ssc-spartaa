@@ -319,7 +319,10 @@ export async function PATCH(request: Request) {
       patch.resolvedAt = nowIso;
       patch.resolvedBy = session.username;
     }
-    if (status === 'cancelled') patch.cancelledAt = nowIso;
+    if (status === 'cancelled') {
+      patch.cancelledAt = nowIso;
+      patch.cancelledBy = 'admin';
+    }
   }
 
   if (typeof body?.adminReply === 'string') {

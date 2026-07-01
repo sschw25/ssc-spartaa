@@ -293,6 +293,7 @@ export async function DELETE(req: NextRequest) {
   const updated = await patchConsultationBooking(student.campus, id, {
     status: 'cancelled',
     cancelledAt: new Date().toISOString(),
+    cancelledBy: 'student',
   });
   if (!updated) {
     return NextResponse.json({ success: false, message: '예약을 찾을 수 없습니다.' }, { status: 404 });

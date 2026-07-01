@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
+import { isMockExamVisibleToStudent } from '@/lib/mock-exam-scope';
 import { getMockExams, getStudentById } from '@/lib/store';
 
 // 학생: 응답 대기 중인 모의고사 목록 (notifiedAt 설정 + 아직 미응답)
@@ -24,7 +25,7 @@ export async function GET() {
 
   // 알림이 발송됐고 아직 undecided(미응답)인 시험만
   const pending = allExams.filter((exam) => {
-    if (!exam.notifiedAt) return false;
+    if (!isMockExamVisibleToStudent(exam, student, { requireNotified: true })) return false;
     const response = myResponses.get(exam.id);
     return !response || response.status === 'undecided';
   });

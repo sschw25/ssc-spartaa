@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { isAdmin, getAdminSession } from '@/lib/auth';
+import { getAdminSession } from '@/lib/auth';
+import { canMutateCampusScopedResource, filterCampusScopedResources } from '@/lib/campus-scope';
 import { getOtEvents, saveOtEvent, deleteOtEvent, notifyOtEvent } from '@/lib/store';
 import type { OtEvent } from '@/lib/types/student';
 
@@ -13,9 +14,7 @@ export async function GET() {
   }
   try {
     const all = await getOtEvents();
-    const events = session.campus === 'all'
-      ? all
-      : all.filter((e) => !e.campus || e.campus === 'all' || e.campus === session.campus);
+    const events = filterCampusScopedResources(all, session.campus);
     return NextResponse.json({ success: true, events });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '조회 실패' }, { status: 500 });
@@ -73,7 +72,8 @@ export async function POST(request: Request) {
 
 // 관리자: 학생에게 OT 참여 확인 알림 발송/취소 (notifiedAt 설정/해제)
 export async function PATCH(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   let body: { eventId?: unknown; action?: unknown };
@@ -85,6 +85,13 @@ export async function PATCH(request: Request) {
   const eventId = String(body?.eventId ?? '').trim();
   if (!eventId) return NextResponse.json({ success: false, message: 'eventId가 필요합니다.' }, { status: 400 });
   try {
+    const existing = (await getOtEvents()).find((e) => e.id === eventId);
+    if (!existing) {
+      return NextResponse.json({ success: false, message: '해당 OT 일정을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (!canMutateCampusScopedResource(session.campus, existing.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 OT 일정을 변경할 권한이 없습니다.' }, { status: 403 });
+    }
     const cancel = body?.action === 'cancel';
     const event = await notifyOtEvent(eventId, cancel ? null : new Date().toISOString());
     return NextResponse.json({ success: true, event });
@@ -95,12 +102,20 @@ export async function PATCH(request: Request) {
 
 // 관리자: OT 일정 삭제
 export async function DELETE(request: Request) {
-  if (!(await isAdmin())) {
+  const session = await getAdminSession();
+  if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
   const eventId = new URL(request.url).searchParams.get('eventId');
   if (!eventId) return NextResponse.json({ success: false, message: 'eventId가 필요합니다.' }, { status: 400 });
   try {
+    const existing = (await getOtEvents()).find((e) => e.id === eventId);
+    if (!existing) {
+      return NextResponse.json({ success: false, message: '해당 OT 일정을 찾을 수 없습니다.' }, { status: 404 });
+    }
+    if (!canMutateCampusScopedResource(session.campus, existing.campus)) {
+      return NextResponse.json({ success: false, message: '해당 캠퍼스 OT 일정을 삭제할 권한이 없습니다.' }, { status: 403 });
+    }
     await deleteOtEvent(eventId);
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import bcrypt from 'bcryptjs';
 import { timingSafeEqual } from 'crypto';
-import { rateLimit, clientIp } from '@/lib/rate-limit';
+import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
 import { getAdminAccountByUsername } from '@/lib/store';
 import { signAdminSession } from '@/lib/auth';
 
@@ -23,7 +23,7 @@ const SESSION_COOKIE_OPTS = {
 };
 
 export async function POST(request: Request) {
-  const rl = rateLimit(`admin-login:${clientIp(request)}`, 10, 5 * 60 * 1000);
+  const rl = await sharedRateLimit(`admin-login:${clientIp(request)}`, 10, 5 * 60 * 1000);
   if (!rl.allowed) {
     return NextResponse.json(
       { success: false, message: `로그인 시도가 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },
