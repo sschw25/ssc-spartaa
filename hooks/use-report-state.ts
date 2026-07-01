@@ -1715,7 +1715,7 @@ export function useReportState() {
           : []),
         { href: '#student-missions', label: '쿠폰 미션', meta: `쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Ticket },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
-        { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
+        { href: '#grade-analysis', label: '성적 분석', meta: `${(student.grades || []).length}건`, icon: FileText },
         { href: '#student-penalties', label: '벌점', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },
       ]
     : [
@@ -1723,7 +1723,7 @@ export function useReportState() {
         { href: '#study-stats', label: '학습 통계', meta: '학습 시간 비교', icon: Award },
         { href: '#coach-feedback', label: '코멘팅 소견', meta: '학부모 브리핑', icon: MessageSquare },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
-        { href: '#grade-analysis', label: '성적 분석', meta: `${student.grades.length}건`, icon: FileText },
+        { href: '#grade-analysis', label: '성적 분석', meta: `${(student.grades || []).length}건`, icon: FileText },
         { href: '#student-penalties', label: '벌점 내역', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },
       ];
 

@@ -3,6 +3,9 @@ import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, getStudySessions, activeBackend } from '@/lib/store';
 import { getSeoulDateKey, getDailyChecklistFromStudent, getPlanDailyCompletion } from '@/lib/student-activity';
 import { computeAttendanceStreak } from '@/lib/streak';
+import { buildHealthSignals } from '@/lib/health-signals';
+import { computeHealthScore } from '@/lib/health-score';
+import { buildMissionRecommendations } from '@/lib/mission-recommendations';
 import type { DetailedPlan } from '@/lib/types/student';
 
 const WEEK_DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -117,11 +120,18 @@ export async function GET() {
   );
   const streak = computeAttendanceStreak(attendedDateKeys, { today: now, justifiedDateKeys });
 
+  // 4) 약점 기반 개인화 추천 — 건강지수 factors를 학생 코칭 문구로 변환.
+  // 출결(결석/이탈)은 학생 화면에 노출하지 않으므로 absence=null 로 계산(추천 큐레이션에서도 제외 대상).
+  const signals = buildHealthSignals(student, null, { today: now });
+  const { factors } = computeHealthScore(signals);
+  const recommendations = buildMissionRecommendations(factors, signals);
+
   return NextResponse.json({
     success: true,
     todayPlanEntries,
     checklist,
     streak,
+    recommendations,
     leaveCoupons: student.leaveCoupons ?? 0,
   });
 }

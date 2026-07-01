@@ -1,8 +1,26 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft } from 'lucide-react';
+import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { MissionsCard } from '@/components/report/missions-card';
+
+type Recommendation = {
+  key: string;
+  icon: 'plan' | 'sleep' | 'phone' | 'distraction' | 'mock' | 'onfire';
+  title: string;
+  detail: string;
+  tone: 'suggest' | 'celebrate';
+};
+
+const REC_ICON: Record<Recommendation['icon'], LucideIcon> = {
+  plan: ListChecks,
+  sleep: Moon,
+  phone: Smartphone,
+  distraction: Timer,
+  mock: BookOpen,
+  onfire: Sparkles,
+};
 
 type PlanEntry = {
   id: string;
@@ -31,6 +49,7 @@ type HubData = {
   todayPlanEntries: PlanEntry[];
   checklist: Checklist;
   streak: { current: number; best?: number };
+  recommendations?: Recommendation[];
   leaveCoupons: number;
 };
 
@@ -152,6 +171,8 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
   const checklist = data?.checklist;
   const entries = data?.todayPlanEntries ?? [];
   const completedCount = entries.filter((e) => e.isCompleted).length;
+  const recommendations = data?.recommendations ?? [];
+  const isCelebrate = recommendations.length === 1 && recommendations[0].tone === 'celebrate';
 
   return (
     <div className="ios-app-bg min-h-screen px-4 py-6 sm:px-6">
@@ -244,6 +265,47 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
             </div>
           )}
         </section>
+
+        {/* 2.5 이번 주 집중 포인트 — 약점 기반 개인화 코칭(건강지수 factors → 학생 코칭 문구) */}
+        {recommendations.length > 0 && (
+          <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+            <div className="flex items-center gap-2">
+              <Sparkles className={`h-4 w-4 ${isCelebrate ? 'text-emerald-500' : 'text-amber-500'}`} />
+              <h2 className="text-sm font-semibold text-slate-800">
+                {isCelebrate ? '지금 아주 잘하고 있어요' : '이번 주 집중 포인트'}
+              </h2>
+            </div>
+            {!isCelebrate && (
+              <p className="mt-1 text-[11px] font-semibold text-slate-400">최근 학습 데이터를 보고 골라봤어요</p>
+            )}
+            <div className="mt-3 flex flex-col gap-2">
+              {recommendations.map((rec) => {
+                const Icon = REC_ICON[rec.icon];
+                const celebrate = rec.tone === 'celebrate';
+                return (
+                  <div
+                    key={rec.key}
+                    className={`flex items-start gap-3 rounded-2xl border px-3.5 py-3 ${
+                      celebrate ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200/70 bg-amber-50/40'
+                    }`}
+                  >
+                    <span
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                        celebrate ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-xs font-semibold text-slate-900">{rec.title}</span>
+                      <span className="mt-0.5 block text-[11px] font-semibold leading-relaxed text-slate-500">{rec.detail}</span>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* 3. 체크리스트 (휴대폰 제출 · 수면) */}
         <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
