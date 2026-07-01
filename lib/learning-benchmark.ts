@@ -268,8 +268,8 @@ export function percentAtWeek(entry: BenchmarkEntry, w: number): number {
 
   if (entry.dailyProgress.length > 0) {
     let cum = 0;
-    // cutoff은 "시작 후 w주"의 경계(시작일 + w*7). 그 경계일 당일은 다음 주차에 속하므로 strict(<)로 제외
-    for (const p of entry.dailyProgress) { if (p.date < cutoffStr) cum = p.cumAmount; else break; }
+    // cutoff은 "시작 후 w주"의 경계(시작일 + w*7). weeksSinceStart와 동일하게 그 경계일(w주차의 끝)은 w주차에 포함되므로 <=
+    for (const p of entry.dailyProgress) { if (p.date <= cutoffStr) cum = p.cumAmount; else break; }
     return Math.min(100, Math.round((cum / entry.total) * 100));
   }
   // 폴백: 마지막 활동까지 걸린 주수로 선형 근사

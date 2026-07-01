@@ -114,9 +114,12 @@ const cohort3 = filterSeriousCohort(collectEntries(all, 'lecture', '행정법', 
 const me = cohort3.find((e) => e.studentId === 'me')!;
 const agg3 = buildAggregate(cohort3, 'lecture', '행정법 기본강의', '행정법');
 
-// percentAtWeek: a는 2주차(첫 2주)에 20개 중 10개 → 50%
+// percentAtWeek: 경계일(시작+2*7=07-21) 포함 → a는 2주차 끝까지 20/20 완료 → 100%
 const aEntry = cohort3.find((e) => e.studentId === 'a')!;
-assert.equal(percentAtWeek(aEntry, 2), 50);
+assert.equal(percentAtWeek(aEntry, 2), 100);
+
+// 경계일 포함 회귀 잠금: a의 1주차 경계일(시작+7=07-14, cum10)이 1주차에 포함되어야 함 → 50% (strict '<'였다면 0%)
+assert.equal(percentAtWeek(aEntry, 1), 50);
 
 const cmp = buildPersonalComparison(cohort3, me, agg3, TODAY)!;
 assert.ok(cmp !== null);
