@@ -1,0 +1,321 @@
+'use client';
+
+import React, { useCallback, useEffect, useState } from 'react';
+import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft } from 'lucide-react';
+import { MissionsCard } from '@/components/report/missions-card';
+
+type PlanEntry = {
+  id: string;
+  subject: string;
+  title: string;
+  type: '강의' | '교재';
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  planId: string;
+  dateKey: string;
+  isCompleted: boolean;
+  actualAmount?: number;
+  dailyAmount: number;
+  dailyLabel: string;
+  rangeText: string;
+};
+
+type Checklist = {
+  sleep_hours?: number;
+  phone_submitted?: boolean;
+  phone_status?: 'submitted' | 'locker' | 'off_hold';
+  submitted_at?: string;
+} | null;
+
+type HubData = {
+  todayPlanEntries: PlanEntry[];
+  checklist: Checklist;
+  streak: { current: number; best?: number };
+  leaveCoupons: number;
+};
+
+const PHONE_LABEL: Record<string, string> = {
+  submitted: '제출 완료',
+  locker: '임시보관함',
+  off_hold: '전원끄고 소지',
+};
+
+export function MissionsHub({ studentId, studentName }: { studentId: string; studentName: string }) {
+  const [data, setData] = useState<HubData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [justCompletedId, setJustCompletedId] = useState<string | null>(null);
+
+  // 체크리스트 폼(휴대폰 3택 + 수면시간) — /api/student/checklist 와 동일 계약(app/report 홈 탭과 동일).
+  const [checklistForm, setChecklistForm] = useState<{
+    sleepHours: number;
+    phoneStatus: 'submitted' | 'locker' | 'off_hold';
+    phoneReason: string;
+  }>({ sleepHours: 7, phoneStatus: 'submitted', phoneReason: '' });
+  const [checklistSubmitting, setChecklistSubmitting] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch('/api/student/missions-hub', { credentials: 'same-origin', cache: 'no-store' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) setData(json);
+      }
+    } catch {
+      // noop
+    }
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await load();
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [load]);
+
+  const togglePlanEntry = async (entry: PlanEntry) => {
+    if (togglingId) return;
+    setTogglingId(entry.id);
+    const nextCompleted = !entry.isCompleted;
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          materialType: entry.materialType,
+          materialId: entry.materialId,
+          planId: entry.planId,
+          isCompleted: nextCompleted,
+          dateKey: entry.dateKey,
+          ...(nextCompleted ? { actualAmount: entry.dailyAmount } : {}),
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setData((prev) => prev ? {
+          ...prev,
+          todayPlanEntries: prev.todayPlanEntries.map((e) =>
+            e.id === entry.id ? { ...e, isCompleted: nextCompleted, actualAmount: json.actualAmount ?? e.actualAmount } : e,
+          ),
+        } : prev);
+        if (nextCompleted) {
+          setJustCompletedId(entry.id);
+          setTimeout(() => setJustCompletedId((cur) => (cur === entry.id ? null : cur)), 900);
+        }
+      }
+    } catch {
+      // noop
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
+  const submitChecklist = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setChecklistSubmitting(true);
+    try {
+      const res = await fetch('/api/student/checklist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sleepHours: checklistForm.sleepHours,
+          phoneStatus: checklistForm.phoneStatus,
+          phoneSubmitted: checklistForm.phoneStatus === 'submitted',
+          phoneReason: checklistForm.phoneReason,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        await load();
+      } else if (json?.message && typeof window !== 'undefined') {
+        window.alert(json.message);
+      }
+    } catch {
+      // noop
+    } finally {
+      setChecklistSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="ios-app-bg min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" />
+      </div>
+    );
+  }
+
+  const streakCurrent = data?.streak.current ?? 0;
+  const streakBest = data?.streak.best;
+  const checklist = data?.checklist;
+  const entries = data?.todayPlanEntries ?? [];
+  const completedCount = entries.filter((e) => e.isCompleted).length;
+
+  return (
+    <div className="ios-app-bg min-h-screen px-4 py-6 sm:px-6">
+      <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5">
+        <header className="flex flex-col gap-1">
+          <a
+            href={`/report/${studentId}?audience=student`}
+            className="inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            리포트로 돌아가기
+          </a>
+          <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">오늘 할 일</p>
+          <h1 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
+            {studentName}님, 오늘도 화이팅이에요
+          </h1>
+        </header>
+
+        {/* 1. 연속출석 스트릭 */}
+        <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+          <div className="flex items-center gap-4">
+            <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
+              <Flame
+                className={`h-14 w-14 drop-shadow-[0_2px_6px_rgba(249,115,22,0.35)] ${streakCurrent > 0 ? 'text-orange-500 animate-streak-flame' : 'text-slate-300'}`}
+                fill={streakCurrent > 0 ? 'currentColor' : 'none'}
+                strokeWidth={streakCurrent > 0 ? 1.5 : 1.8}
+              />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-baseline gap-1.5">
+                <span className="text-3xl font-semibold tabular-nums text-slate-900">{streakCurrent}</span>
+                <span className="text-sm font-semibold text-slate-500">일 연속 출석</span>
+              </p>
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold text-slate-400">
+                {streakCurrent > 0 ? '오늘도 이어가는 중이에요' : '오늘 등원하면 스트릭이 시작돼요'}
+                {typeof streakBest === 'number' && streakBest > streakCurrent && (
+                  <span className="text-orange-500">· 최고 기록 {streakBest}일</span>
+                )}
+              </p>
+              <p className="mt-1 text-[10px] font-semibold text-slate-300">일요일은 센터 휴무일이라 스트릭에 포함하지 않아요</p>
+            </div>
+          </div>
+        </section>
+
+        {/* 2. 오늘 계획(진도) */}
+        <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold text-slate-800">오늘 계획</h2>
+            {entries.length > 0 && (
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
+                {completedCount}/{entries.length} 완료
+              </span>
+            )}
+          </div>
+          {entries.length === 0 ? (
+            <p className="mt-3 text-xs font-semibold text-slate-400">오늘 배정된 진도 항목이 없어요.</p>
+          ) : (
+            <div className="mt-3 flex flex-col gap-2">
+              {entries.map((entry) => (
+                <button
+                  key={entry.id}
+                  type="button"
+                  onClick={() => togglePlanEntry(entry)}
+                  disabled={togglingId === entry.id}
+                  className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition active:scale-[0.99] ${
+                    entry.isCompleted ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200/80 bg-white/70'
+                  } ${justCompletedId === entry.id ? 'animate-scale-in-up' : ''}`}
+                >
+                  <span className="shrink-0">
+                    {togglingId === entry.id ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+                    ) : entry.isCompleted ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    ) : (
+                      <Circle className="h-5 w-5 text-slate-300" />
+                    )}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <span className="truncate text-xs font-semibold text-slate-900">{entry.subject} · {entry.title}</span>
+                    </span>
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
+                      <span>{entry.type}</span>
+                      <span>·</span>
+                      <span>{entry.dailyLabel}</span>
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* 3. 체크리스트 (휴대폰 제출 · 수면) */}
+        <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+          <h2 className="text-sm font-semibold text-slate-800">아침 자가 점검표</h2>
+          {checklist ? (
+            <div className="mt-3 flex flex-wrap gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600">
+                <Moon className="h-3.5 w-3.5 text-slate-400" />
+                수면 {checklist.sleep_hours}시간
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600">
+                <Smartphone className="h-3.5 w-3.5 text-slate-400" />
+                휴대폰 {PHONE_LABEL[checklist.phone_status || (checklist.phone_submitted ? 'submitted' : 'locker')] || '미제출'}
+              </span>
+            </div>
+          ) : (
+            <form onSubmit={submitChecklist} className="mt-3 flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="hub-sleep-hours" className="text-xs font-semibold text-slate-600">어젯밤 수면 시간</label>
+                <select
+                  id="hub-sleep-hours"
+                  value={checklistForm.sleepHours}
+                  onChange={(e) => setChecklistForm((f) => ({ ...f, sleepHours: Number(e.target.value) }))}
+                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-[#0071E3] focus:outline-none"
+                >
+                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map((h) => (
+                    <option key={h} value={h}>{h}시간</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-slate-600">등원 시 휴대폰</span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['submitted', 'locker', 'off_hold'] as const).map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setChecklistForm((f) => ({ ...f, phoneStatus: val }))}
+                      className={`rounded-xl px-1.5 py-2 text-[11px] font-semibold border transition active:scale-95 leading-tight ${
+                        checklistForm.phoneStatus === val
+                          ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3]'
+                          : 'border-slate-200 bg-white text-slate-500'
+                      }`}
+                    >
+                      {PHONE_LABEL[val]}
+                    </button>
+                  ))}
+                </div>
+                {checklistForm.phoneStatus !== 'submitted' && (
+                  <textarea
+                    value={checklistForm.phoneReason}
+                    onChange={(e) => setChecklistForm((f) => ({ ...f, phoneReason: e.target.value }))}
+                    rows={2}
+                    placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요"
+                    className="w-full resize-none rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none"
+                  />
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
+                className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
+              >
+                {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
+              </button>
+            </form>
+          )}
+        </section>
+
+        {/* 4. 쿠폰 미션 */}
+        <MissionsCard />
+      </div>
+    </div>
+  );
+}
