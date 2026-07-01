@@ -10,6 +10,7 @@ import {
   MissionId, MissionConfig, MISSION_ORDER, MISSION_META, DEFAULT_MISSION_CONFIG, normalizeMissionConfig,
 } from '@/lib/missions';
 import { COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
+import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 
 type ConfigMap = Record<MissionId, MissionConfig>;
 
@@ -217,6 +218,9 @@ export default function MissionsPage() {
             지금 정산하기
           </Button>
         </div>
+
+        {/* 예약 스케줄 — 자동 작업 실행 요일/시각 설정 */}
+        <ScheduledJobsPanel />
 
         {/* 미션 목록 */}
         {loading ? (

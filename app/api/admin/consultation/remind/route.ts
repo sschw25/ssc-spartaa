@@ -1,22 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import { getConsultationBookingsForCampuses, createConsultationReminderAlert } from '@/lib/store';
+import { runConsultationReminders } from '@/lib/consultation-reminders';
 
+// 상담 D-1 리마인더. 실행 로직은 lib/consultation-reminders(runConsultationReminders)에 있고,
+// 예약 스케줄러 디스패처(/api/admin/cron/tick)와 이 라우트가 공유한다.
 function isCronRequest(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
   const headerSecret = request.headers.get('x-cron-secret');
   const bearer = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   return !!cronSecret && (headerSecret === cronSecret || bearer === cronSecret);
 }
-
-// 내일(KST) 날짜 YYYY-MM-DD
-function tomorrowKst(): string {
-  const kstNow = new Date(Date.now() + 9 * 3600 * 1000);
-  kstNow.setUTCDate(kstNow.getUTCDate() + 1);
-  return kstNow.toISOString().slice(0, 10);
-}
-
-const ALL_CAMPUSES = ['wonju', 'chuncheon', 'chungju'];
 
 export async function GET(request: Request) {
   // 크론 시크릿 또는 관리자 세션 허용
@@ -26,14 +19,6 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, message: 'unauthorized' }, { status: 401 });
     }
   }
-
-  const target = tomorrowKst();
-  const all = await getConsultationBookingsForCampuses(ALL_CAMPUSES);
-  const due = all.filter((b) => b.status === 'booked' && b.kind === 'regular' && b.date === target);
-
-  let created = 0;
-  for (const b of due) {
-    if (await createConsultationReminderAlert(b)) created++;
-  }
-  return NextResponse.json({ success: true, created, target });
+  const result = await runConsultationReminders();
+  return NextResponse.json({ success: true, ...result });
 }
