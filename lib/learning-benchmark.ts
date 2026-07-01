@@ -69,6 +69,8 @@ function computeStatus(
 ): BenchmarkEntry['status'] {
   const expected = getExpectedFromPlans(plans, today, studyDays, createdAt);
   if (expected === null) return 'no-plan';
+  const createdToday = !!createdAt && (createdAt.split('T')[0] === toDateStr(today));
+  if (createdToday) return current >= expected ? 'ahead' : 'on-track';
   if (current + 1 < expected) return 'behind';
   if (current >= expected) return 'ahead';
   return 'on-track';
@@ -204,7 +206,7 @@ export function buildAggregate(
   const completers = cohort.filter((e) => e.completed && e.startDate && e.finishDate);
   const speeds = cohort.map((e) => e.speedMultiplier).filter((v): v is number => typeof v === 'number' && v > 0);
 
-  const durationsWeeks = completers.map((e) => daysBetween(e.startDate!, e.finishDate!) / 7);
+  const durationsWeeks = completers.map((e) => Math.max(0, daysBetween(e.startDate!, e.finishDate!)) / 7);
   const targetDeltas = completers
     .filter((e) => e.targetDate)
     .map((e) => daysBetween(e.targetDate!, e.finishDate!)); // 완료일 - 목표일, 음수=빨리
@@ -306,7 +308,7 @@ export function buildPersonalComparison(
     : null;
 
   let percentileTopLabel: string | null = null;
-  if (peerPercents.length >= 1) {
+  if (!sparse && peerPercents.length >= 1) {
     const atOrBelow = peerPercents.filter((p) => p <= me.percent).length;
     const topFrac = 1 - atOrBelow / peerPercents.length; // 나보다 높은 비율
     percentileTopLabel = `상위 ${Math.max(1, Math.round(topFrac * 100))}%`;

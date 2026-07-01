@@ -129,6 +129,7 @@ assert.equal(cmp.startMonthLabel, '9월');
 assert.ok(cmp.cohortPercentAtSameWeek !== null);
 assert.ok(cmp.summary.length > 0);
 assert.ok(!cmp.summary.includes('너')); // 존댓말/반말 금지 스모크
+assert.ok(cmp.percentileTopLabel !== null); // 4명 도달(비-sparse) → 백분위 표시
 
 console.log('Task 3 OK');
 console.log('ALL OK');
