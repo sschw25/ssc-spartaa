@@ -298,7 +298,7 @@ export default function AdminLeaveRequestsPage() {
         </div>
 
         {/* 목록 */}
-        {loading ? (
+        {loading && students.length === 0 ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
             <p className="text-xs text-[#86868B]">불러오는 중...</p>

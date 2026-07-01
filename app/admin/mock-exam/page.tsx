@@ -514,7 +514,7 @@ export default function MockExamPage() {
 
             {/* 학생 체크리스트 */}
             <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-              {loading ? (
+              {loading && students.length === 0 ? (
                 <div className="py-20 text-center flex flex-col items-center gap-3">
                   <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
                 </div>
@@ -631,7 +631,7 @@ export default function MockExamPage() {
           </>
         )}
 
-        {!selectedExam && !loading && (
+        {!selectedExam && !(loading && students.length === 0) && (
           <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center">
             <ClipboardCheck className="w-10 h-10 text-slate-200 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-400">모의고사 일정을 먼저 등록해주세요.</p>

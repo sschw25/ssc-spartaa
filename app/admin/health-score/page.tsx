@@ -66,7 +66,7 @@ export default function HealthScorePage() {
         )}
       </header>
 
-      {loading ? (
+      {loading && rows.length === 0 ? (
         <p className="text-sm text-gray-500">불러오는 중…</p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-gray-500">주의·위험 학생이 없습니다.</p>

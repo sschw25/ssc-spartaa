@@ -181,7 +181,7 @@ export default function EnrollmentExpiredPage() {
 
         {/* 목록 테이블 */}
         <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-          {loading ? (
+          {loading && students.length === 0 ? (
             <div className="py-20 text-center text-xs font-bold text-slate-400 flex flex-col items-center gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
               데이터를 불러오는 중...

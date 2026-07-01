@@ -520,7 +520,7 @@ export default function AdminCalendarPage() {
             </div>
 
             <div className="grid grid-cols-7 gap-1">
-              {loading ? (
+              {loading && students.length === 0 ? (
                 <div className="col-span-7 py-32 flex flex-col items-center justify-center">
                   <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
                   <p className="text-xs text-[#86868B]">불러오는 중...</p>

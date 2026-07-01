@@ -955,7 +955,7 @@ export default function AdminInboxPage() {
           })()}
 
           <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
-            {loading ? (
+            {loading && students.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 flex flex-col items-center justify-center gap-2">
                 <RefreshCw className="w-6 h-6 animate-spin text-[#0071E3]" />
                 <p className="text-xs text-slate-400 font-bold">요청 목록을 동기화하는 중...</p>

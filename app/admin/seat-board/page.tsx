@@ -1466,7 +1466,7 @@ export default function SeatBoardPage() {
           )}
         </div>
 
-        {loading ? (
+        {loading && students.length === 0 ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" />
           </div>

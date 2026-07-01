@@ -20,6 +20,7 @@ export default function MissionsPage() {
   const [config, setConfig] = useState<ConfigMap>(normalizeMissionConfig(DEFAULT_MISSION_CONFIG));
   const [enabled, setEnabled] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadedOnce, setLoadedOnce] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -39,6 +40,7 @@ export default function MissionsPage() {
       toast.error('미션 설정을 불러오지 못했습니다.');
     } finally {
       setLoading(false);
+      setLoadedOnce(true);
     }
   }, []);
 
@@ -222,8 +224,8 @@ export default function MissionsPage() {
         {/* 예약 스케줄 — 자동 작업 실행 요일/시각 설정 */}
         <ScheduledJobsPanel />
 
-        {/* 미션 목록 */}
-        {loading ? (
+        {/* 미션 목록 — 첫 로딩만 스피너, 재조회 중에는 콘텐츠 유지 */}
+        {loading && !loadedOnce ? (
           <div className="py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-[#0071E3] mx-auto" /></div>
         ) : (
           <div className={`space-y-3 transition ${enabled ? '' : 'opacity-60'}`}>

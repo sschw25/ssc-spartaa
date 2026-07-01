@@ -87,15 +87,16 @@ export default function AdminDashboardPage() {
           }
         }
         setCampusFilterStorageKey(storageKey);
-        // 인증 성공 시 데이터 로드
-        loadStudents();
       } catch (err) {
         router.replace('/admin');
       } finally {
         setCheckingAuth(false);
       }
     }
+    // 인증 확인과 학생 로드를 병렬 시작 — 첫 화면까지의 대기를 한 단계 줄인다.
+    // (미인증이면 학생 API가 401로 조용히 끝나고 verifyAuth가 로그인으로 보낸다)
     verifyAuth();
+    loadStudents();
   }, [router]);
 
   useEffect(() => {
@@ -138,7 +139,8 @@ export default function AdminDashboardPage() {
         if (json.success) {
           setStudents(json.data || []);
         }
-      } else {
+      } else if (res.status !== 401) {
+        // 401은 인증 확인(verifyAuth)이 로그인 화면으로 보내는 중 — 토스트 소음 없이 넘어간다.
         toast.error('학생 데이터를 가져오는 데 실패했습니다.');
       }
     } catch (err) {

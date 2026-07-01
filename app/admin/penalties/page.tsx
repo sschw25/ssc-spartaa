@@ -176,7 +176,7 @@ export default function PenaltiesPage() {
 
         {/* 원생 목록 */}
         <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-          {loading ? (
+          {loading && students.length === 0 ? (
             <div className="py-20 text-center flex flex-col items-center gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
             </div>

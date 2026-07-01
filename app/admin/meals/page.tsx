@@ -1145,7 +1145,7 @@ export default function MealsPage() {
           </>
         )}
 
-        {!selectedPlan && !loading && (
+        {!selectedPlan && !(loading && students.length === 0) && (
           <div className="no-print rounded-2xl bg-white border border-slate-100 p-12 text-center">
             <Utensils className="w-10 h-10 text-slate-200 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-400">도시락 라운드를 먼저 등록해주세요.</p>

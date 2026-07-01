@@ -818,8 +818,8 @@ function ConsultationContent() {
           </div>
         </div>
 
-        {/* 메인 대시보드 탭 분기 */}
-        {loading ? (
+        {/* 메인 대시보드 탭 분기 — 스피너는 첫 로딩(데이터 없음)일 때만, 재조회 중엔 기존 콘텐츠 유지 */}
+        {loading && students.length === 0 ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center justify-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
             <p className="text-xs text-[#86868B]">스마트 시트 정보 불러오는 중...</p>

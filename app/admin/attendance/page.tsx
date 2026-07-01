@@ -874,7 +874,7 @@ function AdminAttendanceContent() {
             )}
 
             <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-x-auto">
-              {loading ? (
+              {loading && !data ? (
                 <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" /><span className="text-xs text-[#86868B]">불러오는 중...</span></div>
               ) : error ? (
                 <div className="py-16 text-center text-sm text-red-600 font-semibold">{error}</div>
