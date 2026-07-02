@@ -9,7 +9,7 @@ import { TimetableTab } from '@/components/report/timetable-tab';
 import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
-import { ConsultationTab } from '@/components/report/consultation-tab';
+import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
@@ -18,7 +18,6 @@ import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MissionsHub } from '@/components/student/missions-hub';
-import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
 import type { MockExam, OtEvent, CampusEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
@@ -28,9 +27,9 @@ function StudentReportInner() {
   const [pendingOtEvents, setPendingOtEvents] = useState<OtEvent[]>([]);
   const [pendingCampusEvents, setPendingCampusEvents] = useState<CampusEvent[]>([]);
   const [mealPlans, setMealPlans] = useState<MealPlanWithOrder[]>([]);
-  // 미션/교환소 탭은 첫 활성화 때 마운트(그때 API 호출) — 초기 로딩을 가볍게 유지한다.
+  // 미션 탭은 첫 활성화 때 마운트(그때 API 호출) — 초기 로딩을 가볍게 유지한다.
   const [missionsTabActivated, setMissionsTabActivated] = useState(false);
-  const [couponTabActivated, setCouponTabActivated] = useState(false);
+  const [requestSubTab, setRequestSubTab] = useState<ApplicationSubTab>('leave');
 
   useEffect(() => {
     let cancelled = false;
@@ -205,8 +204,15 @@ function StudentReportInner() {
 
   useEffect(() => {
     if (activeTab === 'student-missions') setMissionsTabActivated(true);
-    if (activeTab === 'coupon-exchange') setCouponTabActivated(true);
-  }, [activeTab]);
+    if (activeTab === 'coupon-exchange') {
+      setRequestSubTab('coupon');
+      setActiveTab('student-requests');
+    }
+    if (activeTab === 'student-suggestions') {
+      setRequestSubTab('suggestion');
+      setActiveTab('student-requests');
+    }
+  }, [activeTab, setActiveTab]);
 
   if (!mounted) return null;
 
@@ -419,20 +425,11 @@ function StudentReportInner() {
               embedded
               onGoToExchange={() => {
                 slideDirRef.current = 1;
-                setActiveTab('coupon-exchange');
+                setRequestSubTab('coupon');
+                setActiveTab('student-requests');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
             />
-          </div>
-        )}
-
-        {/* 쿠폰 교환소 탭 (학생 전용, 독립 탭) — 미션에서 모은 쿠폰 교환 */}
-        {isStudentReport && couponTabActivated && (
-          <div
-            id="coupon-exchange"
-            className={`no-print scroll-mt-24 ${activeTab === 'coupon-exchange' ? 'block' : 'hidden'}`}
-          >
-            <CouponExchangeCard />
           </div>
         )}
 
@@ -561,6 +558,8 @@ function StudentReportInner() {
           showSuggestionHistory={showSuggestionHistory}
           setShowSuggestionHistory={setShowSuggestionHistory}
           activeTab={activeTab}
+          requestSubTab={requestSubTab}
+          setRequestSubTab={setRequestSubTab}
           homeHalfLeft={homeHalfLeft}
           homeFullLeft={homeFullLeft}
           homeLeaveCoupons={homeLeaveCoupons}

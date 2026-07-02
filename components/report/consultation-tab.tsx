@@ -4,7 +4,8 @@ import React from 'react';
 import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
-import { Calendar, Trash2, MessageSquare } from 'lucide-react';
+import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
+import { Armchair, Calendar, ClipboardList, MessageSquare, Ticket, Trash2 } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
@@ -26,6 +27,7 @@ import {
 } from '@/lib/leave';
 
 type LeaveSlotValue = 'morning' | 'afternoon' | 'night' | 'fullday';
+export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion';
 
 interface ConsultationTabProps {
   student: Student;
@@ -53,6 +55,8 @@ interface ConsultationTabProps {
   showSuggestionHistory: boolean;
   setShowSuggestionHistory: (show: boolean) => void;
   activeTab: string;
+  requestSubTab: ApplicationSubTab;
+  setRequestSubTab: (tab: ApplicationSubTab) => void;
   homeHalfLeft: number;
   homeFullLeft: number;
   homeLeaveCoupons: number;
@@ -79,6 +83,8 @@ export function ConsultationTab({
   showSuggestionHistory,
   setShowSuggestionHistory,
   activeTab,
+  requestSubTab,
+  setRequestSubTab,
   homeHalfLeft,
   homeFullLeft,
   homeLeaveCoupons,
@@ -127,6 +133,13 @@ export function ConsultationTab({
     );
   };
 
+  const applicationTabs = [
+    { id: 'leave', label: '휴식/반차', meta: `반차 ${homeHalfLeft}회`, icon: Calendar },
+    { id: 'seat', label: '자리이동', meta: '좌석 변경', icon: Armchair },
+    { id: 'coupon', label: '쿠폰교환', meta: `쿠폰 ${homeLeaveCoupons}장`, icon: Ticket },
+    { id: 'suggestion', label: '건의사항', meta: '의견 남기기', icon: MessageSquare },
+  ] as const;
+
   return (
     <>
     <section id="student-requests" className={`scroll-mt-24 space-y-5 print-card ${activeTab === 'student-requests' ? '' : 'hidden print:block'}`}>
@@ -134,20 +147,46 @@ export function ConsultationTab({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
-              <Calendar className="h-3.5 w-3.5" /> 휴식신청
+              <ClipboardList className="h-3.5 w-3.5" /> 신청
             </div>
             <h3 className="mt-2 text-xl font-black text-slate-900">
-              휴식 · 반차 · 병가 신청
+              신청
             </h3>
             <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
-              이번달 반차 <span className="font-black text-[#0071E3]">{homeHalfLeft}회</span> · 휴식권 <span className="font-black text-[#0071E3]">{homeFullLeft}회</span> 남음 · 쿠폰 {homeLeaveCoupons}개
+              휴식/반차, 자리이동, 쿠폰교환, 건의사항을 한곳에서 처리해요.
             </p>
           </div>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="신청 종류">
+          {applicationTabs.map((tab) => {
+            const Icon = tab.icon;
+            const selected = requestSubTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                onClick={() => setRequestSubTab(tab.id)}
+                className={`flex min-h-12 items-center gap-2 rounded-2xl border px-3 py-2 text-left transition active:scale-[0.98] ${
+                  selected
+                    ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_6px_16px_rgba(0,113,227,0.22)]'
+                    : 'border-slate-200 bg-white text-slate-600 shadow-sm hover:border-[#0071E3]/40 hover:text-slate-900'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block truncate text-[12px] font-black">{tab.label}</span>
+                  <span className={`block truncate text-[10px] font-bold ${selected ? 'text-white/75' : 'text-slate-400'}`}>{tab.meta}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
-      {(() => {
+      {requestSubTab === 'leave' && (() => {
         const leaveRequests = student.leaveRequests || [];
         const leaveCoupons = student.leaveCoupons ?? 0;
         const selMonth = yearMonthOf(leaveForm.date) || kstYearMonth();
@@ -385,11 +424,19 @@ export function ConsultationTab({
       })()}
 
       {/* 자리이동 신청 — 익명 배치도에서 빈자리 선택, 관리자 승인 시 좌석 이동 */}
-      <SeatMoveCard campus={student.campus} active={activeTab === 'student-requests'} />
-    </section>
+      {requestSubTab === 'seat' && (
+        <SeatMoveCard campus={student.campus} active={activeTab === 'student-requests' && requestSubTab === 'seat'} />
+      )}
 
-    {/* 건의사항 — 독립 탭(student-suggestions) */}
-    <section id="student-suggestions" className={`scroll-mt-24 space-y-5 print-card ${activeTab === 'student-suggestions' ? '' : 'hidden print:block'}`}>
+      {requestSubTab === 'coupon' && (
+        <div id="coupon-exchange" className="no-print scroll-mt-24">
+          <CouponExchangeCard />
+        </div>
+      )}
+
+      {/* 건의사항 (관리자에게) */}
+      {requestSubTab === 'suggestion' && (
+      <div id="student-suggestions" className="space-y-5">
       <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 shadow-sm md:p-6">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
           <MessageSquare className="h-3.5 w-3.5" /> 건의사항
@@ -400,7 +447,6 @@ export function ConsultationTab({
         </p>
       </div>
 
-      {/* 건의사항 (관리자에게) */}
       <div id="student-suggestion-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
         <div>
           <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
@@ -500,6 +546,8 @@ export function ConsultationTab({
           );
         })()}
       </div>
+      </div>
+      )}
     </section>
     </>
   );

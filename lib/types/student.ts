@@ -17,7 +17,7 @@ export interface DetailedPlan {
   dailyAmount?: number;    // 과목 학습 요일 기준 일일 학습량
   rangeText: string;       // 범위 설명 (예: "1p ~ 40p" 또는 "1강 ~ 8강")
   periodType?: 'deadline'; // 기간 목표 창(모드 B). undefined = 매일 시간표(daily). 하위호환.
-  periodWeeks?: number;    // 기간 목표 총 주수(1~12). periodType==='deadline'일 때.
+  periodWeeks?: number;    // 해당 기간 목표 plan 이 덮는 주수. 주차별 분할 후에는 보통 1.
   isCompleted: boolean;    // 완료 여부
   actualAmount?: number;   // 실제 학습량 (완료 시 입력 / 버킷 모드는 기간 누적 진행량)
   dailyCompletions?: Record<string, {

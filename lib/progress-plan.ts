@@ -492,10 +492,10 @@ export function generateDetailedPlans(
     return Math.max(1, studyDayCount);
   };
 
-  // ── 모드 B: 기간 목표 창 ──────────────────────────────────────────────
-  // deadlineWeeks = N주 창(1~12), weeklyAmount = 1주 창으로 통일.
-  // 자료당 단일 plan 이 전체 기간(startOfWeek ~ startOfWeek + N*7 - 1일)을 덮는다.
-  // 미션은 periodType==='deadline' 을 버킷으로 인식해 요일 무관·분 정규화 집계로 판정한다.
+  // ── 모드 B: 기간 목표 주차 계획 ─────────────────────────────────────
+  // deadlineWeeks = N주 안에 완주. 표/완료 입력은 주차 단위로 이뤄지므로
+  // N주짜리 단일 창이 아니라 1주짜리 plan N개로 나눠 저장한다.
+  // 미션은 periodType==='deadline' 을 버킷으로 인식해 현재 활성 주차를 판정한다.
   if (goalType === 'deadlineWeeks' || goalType === 'weeklyAmount') {
     const unit = customUnit || (type === 'book' ? 'p' : '강');
     // 기간 목표는 "지금부터 N주 안에 끝내기" — 생성/수정 시점(오늘)을 기간 시작으로 잡는다.
@@ -506,38 +506,58 @@ export function generateDetailedPlans(
     // 기간 목표 날짜는 서울(KST) 기준으로 직렬화한다. toISOString()은 UTC라 KST 자정이 전날로
     // 밀려(당일이 어제로 저장) 당일등록 학생이 하루 뒤처진 것으로 계산되던 문제를 막는다.
     const seoulDateStr = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d);
-    const appendDeadlineWindow = (passNumber: number, windowStart: Date, weeks: number, amount: number, baseAmount: number) => {
+    const appendDeadlineWeeks = (
+      passNumber: number,
+      windowStart: Date,
+      weeks: number,
+      amount: number,
+      baseAmount: number,
+      weeklyLimit?: number,
+    ) => {
       const safeWeeks = Math.max(1, Math.min(12, Math.round(weeks)));
-      const start = new Date(windowStart);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(start);
-      end.setDate(start.getDate() + safeWeeks * 7 - 1);
+      let remainingAmount = Math.max(0, Math.round(amount));
+      let currentStart = new Date(windowStart);
+      currentStart.setHours(0, 0, 0, 0);
 
-      const startStr = seoulDateStr(start);
-      const endStr = seoulDateStr(end);
-      const studyDaysInWindow = Math.max(1, countStudyDaysInRange(start, end, studyDays));
-      const dailyAmount = Math.max(1, Math.ceil(amount / studyDaysInWindow));
-      const fromNum = baseAmount + 1;
-      const toNum = baseAmount + amount;
+      for (let i = 0; i < safeWeeks; i++) {
+        if (remainingAmount <= 0) break;
 
-      plans.push({
-        id: `plan_${Date.now()}_${plans.length}_${Math.random().toString(36).substr(2, 5)}`,
-        materialId,
-        weekNumber: 1,
-        passNumber,
-        startDate: startStr,
-        endDate: endStr,
-        targetAmount: amount,
-        dailyAmount,
-        rangeText: `${passNumber}회독 ${fromNum}${unit} ~ ${toNum}${unit}`,
-        periodType: 'deadline',
-        periodWeeks: safeWeeks,
-        isCompleted: false,
-      });
+        const weeksLeft = safeWeeks - i;
+        const thisWeekAmount = weeklyLimit
+          ? Math.min(remainingAmount, Math.max(1, Math.round(weeklyLimit)))
+          : Math.ceil(remainingAmount / weeksLeft);
+        const currentEnd = new Date(currentStart);
+        currentEnd.setDate(currentStart.getDate() + 6);
 
-      const next = new Date(end);
-      next.setDate(end.getDate() + 1);
-      return next;
+        const startStr = seoulDateStr(currentStart);
+        const endStr = seoulDateStr(currentEnd);
+        const studyDaysInWeek = Math.max(1, countStudyDaysInRange(currentStart, currentEnd, studyDays));
+        const dailyAmount = Math.max(1, Math.ceil(thisWeekAmount / studyDaysInWeek));
+        const completedBeforeWeek = amount - remainingAmount;
+        const fromNum = baseAmount + completedBeforeWeek + 1;
+        const toNum = fromNum + thisWeekAmount - 1;
+
+        plans.push({
+          id: `plan_${Date.now()}_${plans.length}_${Math.random().toString(36).substr(2, 5)}`,
+          materialId,
+          weekNumber: plans.length + 1,
+          passNumber,
+          startDate: startStr,
+          endDate: endStr,
+          targetAmount: thisWeekAmount,
+          dailyAmount,
+          rangeText: `${passNumber}회독 ${fromNum}${unit} ~ ${toNum}${unit}`,
+          periodType: 'deadline',
+          periodWeeks: 1,
+          isCompleted: false,
+        });
+
+        remainingAmount -= thisWeekAmount;
+        currentStart = new Date(currentEnd);
+        currentStart.setDate(currentEnd.getDate() + 1);
+      }
+
+      return currentStart;
     };
 
     // deadlineWeeks → N주. weeklyAmount(레거시 데이터 폴백) → 주당량을 주수로 환산:
@@ -547,7 +567,14 @@ export function generateDetailedPlans(
       : Math.max(1, Math.min(12, Math.round(goalValue || 1)));
 
     if (planAmount > 0) {
-      phaseStart = appendDeadlineWindow(1, phaseStart, firstWeeks, planAmount, safeCurrentAmount);
+      phaseStart = appendDeadlineWeeks(
+        1,
+        phaseStart,
+        firstWeeks,
+        planAmount,
+        safeCurrentAmount,
+        goalType === 'weeklyAmount' ? Math.max(1, Math.round(goalValue || 1)) : undefined,
+      );
     }
 
     // 회독 창 이어붙이기(v1 단순 처리): 각 회독은 전체 분량을 pass.days → 주수 근사한 창으로.
@@ -556,7 +583,7 @@ export function generateDetailedPlans(
       .sort((a, b) => a.passNumber - b.passNumber);
     enabledPasses.forEach((pass) => {
       const phaseWeeks = Math.max(1, Math.min(12, Math.ceil(pass.days / 7)));
-      phaseStart = appendDeadlineWindow(pass.passNumber, phaseStart, phaseWeeks, totalAmount, 0);
+      phaseStart = appendDeadlineWeeks(pass.passNumber, phaseStart, phaseWeeks, totalAmount, 0);
     });
 
     const lastDeadlinePlan = plans[plans.length - 1];

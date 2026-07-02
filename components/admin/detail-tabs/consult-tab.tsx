@@ -75,12 +75,16 @@ export function ConsultTab({
   const attendanceLabel = (() => {
     if (!todayAttendanceStatus) return { title: '조회 중', detail: '실시간 출결을 불러오는 중입니다.', tone: 'text-slate-500' };
     if (!todayAttendanceStatus.configured || todayAttendanceStatus.status === 'unconfigured') {
-      return { title: '출결 연동 없음', detail: 'Supabase 출결 연동이 설정되지 않았습니다.', tone: 'text-slate-500' };
+      return {
+        title: '미등원',
+        detail: '오늘 등원 기록이 없습니다.',
+        tone: 'text-red-600',
+      };
     }
     if (todayAttendanceStatus.status === 'present') {
       return {
         title: `등원 중 · ${fmtMin(todayAttendanceStatus.minutes)}`,
-        detail: `${todayAttendanceStatus.checkInAt || '-'} 등원 · 현재 세션 ${fmtMin(todayAttendanceStatus.minutesSoFar)}`,
+        detail: `등원 ${todayAttendanceStatus.checkInAt || '-'} · 현재 세션 ${fmtMin(todayAttendanceStatus.minutesSoFar)}`,
         tone: 'text-emerald-700',
       };
     }
@@ -88,13 +92,13 @@ export function ConsultTab({
       if (todayAttendanceStatus.autoClosed) {
         return {
           title: '자동 하원 · 수동입력 필요',
-          detail: `${todayAttendanceStatus.checkInAt || '-'}~미입력 · 순공 미반영`,
+          detail: `등원 ${todayAttendanceStatus.checkInAt || '-'} · 하원 미입력 · 순공 미반영`,
           tone: 'text-amber-700',
         };
       }
       return {
         title: `하원 완료 · ${fmtMin(todayAttendanceStatus.minutes)}`,
-        detail: `${todayAttendanceStatus.checkInAt || '-'}~${todayAttendanceStatus.checkOutAt || '-'} 순공`,
+        detail: `등원 ${todayAttendanceStatus.checkInAt || '-'} · 하원 ${todayAttendanceStatus.checkOutAt || '-'} · 순공`,
         tone: 'text-[#0071E3]',
       };
     }
@@ -115,16 +119,16 @@ export function ConsultTab({
         <div className="flex items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-1.5">
             <Clock className="w-4 h-4 text-[#0071E3]" />
-            오늘 실시간 공부·자가점검 현황
+            오늘 등원정보·생활 루틴
           </h3>
-          <span className="text-[10px] font-bold text-slate-400">{todayActivityKey || '오늘'}</span>
+          <span className="text-[10px] font-bold text-slate-400">{todayAttendanceStatus?.today || todayActivityKey || '오늘'}</span>
         </div>
 
         <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
           <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">
             <p className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
               <Clock className="w-3.5 h-3.5" />
-              실시간 공부타이머
+              오늘 등원정보
             </p>
             <p className={`mt-1 text-sm font-semibold ${attendanceLabel.tone}`}>{attendanceLabel.title}</p>
             <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{attendanceLabel.detail}</p>

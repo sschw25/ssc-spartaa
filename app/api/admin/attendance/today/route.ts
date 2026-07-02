@@ -26,13 +26,14 @@ export async function GET() {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
-  // Supabase 미설정(로컬 개발)에선 출결 데이터가 없으므로 비활성 응답 — 위젯이 안내 상태를 띄움
+  const { todayStr, weekStart } = getPeriodBounds();
+
+  // Supabase 미설정(로컬 개발)에선 실시간 QR 출결 데이터가 없으므로 비활성 응답 — 위젯이 안내 상태를 띄움
   if (activeBackend() !== 'supabase') {
-    return NextResponse.json({ success: true, configured: false });
+    return NextResponse.json({ success: true, configured: false, today: todayStr });
   }
 
   try {
-    const { todayStr, weekStart } = getPeriodBounds();
     const [students, openSessions, todaySessions, weekMinutesByStudent] = await Promise.all([
       getStudentsSummary(),
       getOpenSessions(),
