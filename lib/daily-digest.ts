@@ -207,7 +207,7 @@ export function buildDailyDigest(
     const signals = buildHealthSignals(
       student,
       absence ? { absentDays: absence.absentDays, leftDays: absence.leftDays } : null,
-      { today: yesterday },
+      { today: yesterday, includeTodayInPlan: true },
     );
     const result = computeHealthScore(signals, weights);
     if (result.band === 'risk') {

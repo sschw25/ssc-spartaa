@@ -1016,7 +1016,7 @@ function AdminAttendanceContent() {
         )}
 
         {/* 출결 자동마감(sweep) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
-        <ScheduledJobsPanel jobIds={['sweep']} compact />
+        <ScheduledJobsPanel jobIds={['sweep']} compact collapsible />
 
         {/* 벌점 부여 모달 */}
         {demeritModal && (

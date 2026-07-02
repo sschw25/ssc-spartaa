@@ -740,7 +740,7 @@ export default function AdminConsultationBookingsPage() {
         </section>
 
         {/* 상담 D-1 리마인더(remind) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
-        <ScheduledJobsPanel jobIds={['remind']} compact />
+        <ScheduledJobsPanel jobIds={['remind']} compact collapsible />
       </main>
 
       {/* 완료 처리 모달 */}

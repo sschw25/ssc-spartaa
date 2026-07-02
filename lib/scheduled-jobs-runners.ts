@@ -6,11 +6,25 @@ import { runDueMealRoutineTemplates } from '@/lib/meal-routines';
 import { settleMissions } from '@/lib/mission-engine';
 import { runDailyDigest } from '@/lib/daily-digest-run';
 
-export const JOB_RUNNERS: Record<string, () => Promise<unknown>> = {
+export interface JobRunContext {
+  occurrence: string | null;
+  forced: boolean;
+  now: Date;
+}
+
+function dateFromKstDateKey(dateKey: string): Date {
+  return new Date(`${dateKey}T12:00:00+09:00`);
+}
+
+export const JOB_RUNNERS: Record<string, (ctx: JobRunContext) => Promise<unknown>> = {
   sweep: () => runAttendanceSweep(),
   meal: () => runDueMealRoutineTemplates(),
-  // 주간 미션만 평가(이번 주 기준).
-  weekly_settle: () => settleMissions({ scope: 'weekly' }),
+  // 주간 미션은 예약 발생일 기준으로 평가. 일요일 23:59 작업이 월요일 틱에 지연 실행돼도 전주를 정산한다.
+  weekly_settle: ({ occurrence, forced, now }) =>
+    settleMissions({
+      scope: 'weekly',
+      now: !forced && occurrence ? dateFromKstDateKey(occurrence) : now,
+    }),
   // 월간 미션은 항상 '지난달' 전체(이미 종료)를 평가 — 실행일 무관하게 정합적.
   monthly_settle: () => settleMissions({ scope: 'monthly', monthOffset: -1 }),
   remind: () => runConsultationReminders(),

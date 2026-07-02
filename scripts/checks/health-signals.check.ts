@@ -42,6 +42,20 @@ const pr = buildHealthSignals(withPlan, { absentDays: 2, leftDays: 1 }, { today 
 assert(pr.absentDays === 2 && pr.leftDays === 1, '결석/이탈 전달');
 assert(pr.planCompletionRate === 0, `활성계획 미완료 → 0 (got ${pr.planCompletionRate})`);
 
+// 계획 이행률 날짜창: 기본은 진행 중인 오늘 제외, 브리핑 옵션은 기준일 포함
+const todayOnlyPlan = {
+  ...base,
+  subjects: [{
+    books: [{ detailedPlans: [{
+      id: 'today-only', materialId: 'm1', weekNumber: 1, startDate: dk(0), endDate: dk(0),
+      targetAmount: 10, rangeText: '', isCompleted: false, dailyCompletions: {},
+    }] }],
+    lectures: [],
+  }],
+} as unknown as Student;
+assert(buildHealthSignals(todayOnlyPlan, null, { today }).planCompletionRate === null, '기본 계획 이행률은 오늘 제외');
+assert(buildHealthSignals(todayOnlyPlan, null, { today, includeTodayInPlan: true }).planCompletionRate === 0, '브리핑 옵션은 기준일 포함');
+
 // 상담 경과일: 10일 전 상담 → 10
 const withConsult = { ...base, consultationLogs: [{ id: 'c', date: dk(10), manager: 'm', content: '' }] } as unknown as Student;
 assert(buildHealthSignals(withConsult, null, { today }).daysSinceConsultation === 10, '상담 경과일 10');

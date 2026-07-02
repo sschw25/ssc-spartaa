@@ -129,10 +129,10 @@ export function ConsultationTab({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
-              <Calendar className="h-3.5 w-3.5" /> 반차 신청
+              <Calendar className="h-3.5 w-3.5" /> 휴식신청
             </div>
             <h3 className="mt-2 text-xl font-black text-slate-900">
-              반차 · 휴가 · 건의사항
+              휴식신청 · 건의사항
             </h3>
             <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
               이번달 반차 <span className="font-black text-[#0071E3]">{homeHalfLeft}회</span> · 휴식권 <span className="font-black text-[#0071E3]">{homeFullLeft}회</span> 남음 · 쿠폰 {homeLeaveCoupons}개
@@ -161,7 +161,7 @@ export function ConsultationTab({
           <div id="student-leave-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
             <div>
               <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
-                <Calendar className="w-4 h-4" /> 휴가 · 반차 · 휴식권 신청
+                <Calendar className="w-4 h-4" /> 휴식 · 반차 · 병가 신청
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-400">
                 반차는 잔여 한도 내에서 <span className="font-black text-emerald-600">신청 즉시 자동 승인</span>돼요(아래 내역에서 확인). 휴식권·개인사정·병가는 코멘터 검토 후 승인되며, 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.

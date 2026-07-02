@@ -15,18 +15,27 @@ type ScheduledJobsPanelProps = {
   jobIds?: string[];
   /** 컴팩트 표시 — 기능 페이지 하단 임베드용(안내문·여백 축소). */
   compact?: boolean;
+  /** 기능 페이지 임베드에서 기본은 버튼만 보이고, 클릭 시 설정 패널을 연다. */
+  collapsible?: boolean;
+  triggerLabel?: string;
 };
 
 // 관리자: 예약 스케줄(자동 작업 실행 요일·시각·on/off) 설정 패널. 자기완결(fetch/save 자체 처리).
 // 전체 화면(/admin/schedules)과 각 기능 페이지 임베드(jobIds 필터)가 공유한다.
 // 저장은 표시 중인 잡만 PUT하고 서버가 부분 병합 — 오래 열어둔 임베드 화면이 저장해도
 // 그 사이 다른 화면/관리자가 바꾼 나머지 잡 설정을 stale 스냅샷으로 되돌리지 않는다.
-export function ScheduledJobsPanel({ jobIds, compact = false }: ScheduledJobsPanelProps) {
+export function ScheduledJobsPanel({
+  jobIds,
+  compact = false,
+  collapsible = false,
+  triggerLabel = '예약 확인',
+}: ScheduledJobsPanelProps) {
   const [config, setConfig] = useState<JobConfigMap>(() => normalizeJobConfig(null));
   const [runs, setRuns] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [open, setOpen] = useState(!collapsible);
 
   const visibleJobs = useMemo(
     () => (jobIds ? SCHEDULED_JOBS.filter((j) => jobIds.includes(j.id)) : SCHEDULED_JOBS),
@@ -53,7 +62,10 @@ export function ScheduledJobsPanel({ jobIds, compact = false }: ScheduledJobsPan
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!open) return;
+    load();
+  }, [load, open]);
 
   const update = (id: string, patch: Partial<JobSchedule>) => {
     setConfig((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
@@ -85,6 +97,21 @@ export function ScheduledJobsPanel({ jobIds, compact = false }: ScheduledJobsPan
     }
   };
 
+  if (collapsible && !open) {
+    return (
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-[#0071E3] transition-colors hover:bg-[#0071E3]/10"
+        >
+          <CalendarClock className="h-3.5 w-3.5" />
+          {triggerLabel}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <section className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${compact ? 'p-3.5 sm:p-4' : 'p-4 sm:p-5'}`}>
       <div className="flex items-center justify-between gap-3">
@@ -101,15 +128,28 @@ export function ScheduledJobsPanel({ jobIds, compact = false }: ScheduledJobsPan
             </p>
           </div>
         </div>
-        <Button
-          size="sm"
-          disabled={!dirty || saving}
-          onClick={save}
-          className="rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs h-9 px-3.5 font-bold disabled:opacity-40 shrink-0"
-        >
-          {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
-          {dirty ? '저장' : '저장됨'}
-        </Button>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {collapsible && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              className="h-9 rounded-xl border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              예약 닫기
+            </Button>
+          )}
+          <Button
+            size="sm"
+            disabled={!dirty || saving}
+            onClick={save}
+            className="h-9 rounded-xl bg-[#0071E3] px-3.5 text-xs font-bold text-white hover:bg-[#0077ED] disabled:opacity-40"
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+            {dirty ? '저장' : '저장됨'}
+          </Button>
+        </div>
       </div>
 
       {loading ? (
