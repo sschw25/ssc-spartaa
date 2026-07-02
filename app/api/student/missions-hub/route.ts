@@ -8,6 +8,7 @@ import { buildHealthSignals } from '@/lib/health-signals';
 import { computeHealthScore, DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from '@/lib/health-score';
 import { buildMissionRecommendations } from '@/lib/mission-recommendations';
 import { buildUpcomingSchedule } from '@/lib/upcoming-schedule';
+import { deriveDeadlineGoals } from '@/lib/deadline-goals';
 import type { DetailedPlan } from '@/lib/types/student';
 
 const HEALTH_WEIGHTS_KEY = 'health_score_weights';
@@ -57,7 +58,7 @@ export async function GET() {
     .flatMap((subject) => {
       const lectures = (subject.lectures || []).flatMap((lecture) =>
         (lecture.detailedPlans || [])
-          .filter((plan) => isPlanActiveOnDate(plan, todayKey))
+          .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, todayKey))
           .map((plan) => {
             const completion = getPlanDailyCompletion(plan, todayKey);
             return {
@@ -79,7 +80,7 @@ export async function GET() {
       );
       const books = (subject.books || []).flatMap((book) =>
         (book.detailedPlans || [])
-          .filter((plan) => isPlanActiveOnDate(plan, todayKey))
+          .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, todayKey))
           .map((plan) => {
             const completion = getPlanDailyCompletion(plan, todayKey);
             return {
@@ -143,6 +144,9 @@ export async function GET() {
   ]);
   const schedule = buildUpcomingSchedule({ student, otEvents, mockExams, campusEvents, todayKey });
 
+  // 6) 기간 목표(모드 B) — deadline plan 을 분 정규화로 집계(자료별 위험 경보 + 오늘 요약).
+  const { deadlineGoals, deadlineSummary } = deriveDeadlineGoals(student, now, todayKey);
+
   return NextResponse.json({
     success: true,
     todayPlanEntries,
@@ -152,5 +156,7 @@ export async function GET() {
     recommendations,
     schedule,
     leaveCoupons,
+    deadlineGoals,
+    deadlineSummary,
   });
 }

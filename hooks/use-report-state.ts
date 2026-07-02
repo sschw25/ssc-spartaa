@@ -17,6 +17,7 @@ import { MaterialBenchmarkMap } from '@/lib/material-benchmark';
 import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
+import { deriveDeadlineGoals } from '@/lib/deadline-goals';
 import { buildDisplayThread } from '@/lib/thread';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
@@ -897,6 +898,48 @@ export function useReportState() {
     });
   };
 
+  // 기간 목표(deadline) plan 의 actualAmount/isCompleted + 자료 current 를 루트/subjects 양쪽에 반영.
+  const applyDeadlineProgressPatch = (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    planId: string,
+    actualAmount: number,
+    isCompleted: boolean,
+    currentValue?: number,
+  ) => {
+    setStudent((prev) => {
+      if (!prev) return prev;
+      const patchPlan = (p: DetailedPlan) =>
+        p.id === planId ? { ...p, actualAmount, isCompleted } : p;
+      const patchBook = (b: typeof prev.books[number]) =>
+        materialType === 'book' && b.id === materialId
+          ? {
+              ...b,
+              ...(currentValue !== undefined ? { currentPage: currentValue } : {}),
+              detailedPlans: (b.detailedPlans || []).map(patchPlan),
+            }
+          : b;
+      const patchLecture = (l: typeof prev.lectures[number]) =>
+        materialType === 'lecture' && l.id === materialId
+          ? {
+              ...l,
+              ...(currentValue !== undefined ? { completedLectures: currentValue } : {}),
+              detailedPlans: (l.detailedPlans || []).map(patchPlan),
+            }
+          : l;
+      return {
+        ...prev,
+        books: (prev.books || []).map(patchBook),
+        lectures: (prev.lectures || []).map(patchLecture),
+        subjects: (prev.subjects || []).map((s) => ({
+          ...s,
+          books: (s.books || []).map(patchBook),
+          lectures: (s.lectures || []).map(patchLecture),
+        })),
+      };
+    });
+  };
+
   const saveProgressPatch = async (
     materialType: ProgressMaterialType,
     materialId: string,
@@ -942,6 +985,38 @@ export function useReportState() {
     actualAmount?: number,
     dateKey?: string,
   ) => saveProgressPatch(materialType, materialId, { planId, isCompleted, ...(actualAmount !== undefined ? { actualAmount } : {}), ...(dateKey ? { dateKey } : {}) });
+
+  // 기간 목표(모드 B) 누적 진행량 입력 — deadline plan 의 actualAmount 를 갱신하고
+  // 자료 current(currentPage/completedLectures)를 parsePlanBounds 기준으로 best-effort 동기화.
+  // 저장은 전용 progress API(deadlineAmount)를 재사용. 낙관적 갱신은 서버 응답값으로 확정.
+  const updateDeadlineProgress = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    planId: string,
+    amount: number,
+  ) => {
+    const safeAmount = Math.max(0, Math.round(Number(amount) || 0));
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, planId, deadlineAmount: safeAmount }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        applyDeadlineProgressPatch(
+          materialType,
+          materialId,
+          planId,
+          typeof json.actualAmount === 'number' ? json.actualAmount : safeAmount,
+          Boolean(json.isCompleted),
+          typeof json.value === 'number' ? json.value : undefined,
+        );
+      }
+    } catch {
+      // noop
+    }
+  };
 
   const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => {
     const nextTags = { ...(currentTags || {}) };
@@ -1254,7 +1329,7 @@ export function useReportState() {
           .flatMap((subject) => {
             const lectures = (subject.lectures || []).flatMap((lecture) =>
               (lecture.detailedPlans || [])
-                .filter((plan) => isPlanActiveOnDate(plan, dateKey))
+                .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey))
                 .map((plan) => {
                   const dailyCompletion = getPlanDailyCompletion(plan, dateKey);
                   return {
@@ -1277,7 +1352,7 @@ export function useReportState() {
             );
             const books = (subject.books || []).flatMap((book) =>
               (book.detailedPlans || [])
-                .filter((plan) => isPlanActiveOnDate(plan, dateKey))
+                .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey))
                 .map((plan) => {
                   const dailyCompletion = getPlanDailyCompletion(plan, dateKey);
                   return {
@@ -1312,6 +1387,15 @@ export function useReportState() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.subjects, visiblePlanWeeks]);
+
+  // 기간 목표(모드 B) — deadline plan 을 서버(missions-hub)와 동일 소스로 파생.
+  const deadlineDerivation = useMemo(() => {
+    if (!student) return { deadlineGoals: [], deadlineSummary: null };
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return deriveDeadlineGoals(student, now, formatDateKey(now));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.subjects]);
 
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -1953,6 +2037,9 @@ export function useReportState() {
     updateProgress,
     updateBookSolvedQuestions,
     updatePlanCompletion,
+    updateDeadlineProgress,
+    deadlineGoals: deadlineDerivation.deadlineGoals,
+    deadlineSummary: deadlineDerivation.deadlineSummary,
     incrementBookIncorrectTag,
     submitChecklist,
     studyTimeLabels: STUDY_TIME_LABELS,

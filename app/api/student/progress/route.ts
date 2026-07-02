@@ -29,6 +29,16 @@ const getPlanEndAmount = (plan: DetailedPlan) => {
   return Number(plan.targetAmount || 0);
 };
 
+// rangeText 에서 시작량(누적 기준 이전량+1)을 추출. 기간 목표 current 동기화에 사용.
+const getPlanStartAmount = (plan: DetailedPlan) => {
+  const values = (plan.rangeText || '').match(/\d+/g)?.map(Number).filter(Number.isFinite) || [];
+  const end = values.length > 0 ? values[values.length - 1] : Number(plan.targetAmount || 0);
+  const start = values.length > 1
+    ? values[values.length - 2]
+    : Math.max(1, end - Number(plan.targetAmount || 0) + 1);
+  return start;
+};
+
 const getPlanDailyAmount = (plan: DetailedPlan) =>
   Math.max(0, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6)));
 
@@ -38,6 +48,71 @@ const getActualAmountFromBody = (body: Record<string, unknown>, plan: DetailedPl
     ? Math.round(actualAmount)
     : getPlanDailyAmount(plan);
 };
+
+// 기간 목표(deadline) 누적 진행량 입력 — plan.actualAmount(0~target 캡)·isCompleted 갱신 +
+// 자료 current(currentPage/completedLectures)를 rangeText 시작량 기준으로 best-effort 동기화.
+function applyDeadlineMutation(
+  student: Student,
+  materialType: 'book' | 'lecture',
+  materialId: string,
+  planId: string,
+  rawAmount: number,
+): MutationResult {
+  const nowIso = new Date().toISOString();
+  if (materialType === 'book') {
+    const matchingBooks: BookProgress[] = [
+      ...((student.books || []).filter((book) => book.id === materialId)),
+      ...((student.subjects || []).flatMap((subject) => (subject.books || []).filter((book) => book.id === materialId))),
+    ];
+    if (matchingBooks.length === 0) return { ok: false, reason: 'material-not-found' };
+    const total = matchingBooks[0].totalPages || 0;
+    let matchedPlan = false;
+    let actual = 0;
+    let completed = false;
+    let nextCurrent = matchingBooks[0].currentPage || 0;
+    matchingBooks.forEach((book) => {
+      const plan = (book.detailedPlans || []).find((item) => item.id === planId);
+      if (!plan) return;
+      matchedPlan = true;
+      const target = Math.max(0, Number(plan.targetAmount || 0));
+      actual = Math.min(target, Math.max(0, Math.round(rawAmount)));
+      completed = target > 0 && actual >= target;
+      plan.actualAmount = actual;
+      plan.isCompleted = completed;
+      const startAmount = getPlanStartAmount(plan);
+      nextCurrent = clampProgressValue(startAmount - 1 + actual, total);
+    });
+    if (!matchedPlan) return { ok: false, reason: 'plan-not-found' };
+    matchingBooks.forEach((book) => { book.currentPage = nextCurrent; book.updatedAt = nowIso; });
+    return { ok: true, updated: { value: nextCurrent, total, planId, isCompleted: completed, actualAmount: actual } };
+  } else {
+    const matchingLectures: LectureProgress[] = [
+      ...((student.lectures || []).filter((lecture) => lecture.id === materialId)),
+      ...((student.subjects || []).flatMap((subject) => (subject.lectures || []).filter((lecture) => lecture.id === materialId))),
+    ];
+    if (matchingLectures.length === 0) return { ok: false, reason: 'material-not-found' };
+    const total = matchingLectures[0].totalLectures || 0;
+    let matchedPlan = false;
+    let actual = 0;
+    let completed = false;
+    let nextCurrent = matchingLectures[0].completedLectures || 0;
+    matchingLectures.forEach((lecture) => {
+      const plan = (lecture.detailedPlans || []).find((item) => item.id === planId);
+      if (!plan) return;
+      matchedPlan = true;
+      const target = Math.max(0, Number(plan.targetAmount || 0));
+      actual = Math.min(target, Math.max(0, Math.round(rawAmount)));
+      completed = target > 0 && actual >= target;
+      plan.actualAmount = actual;
+      plan.isCompleted = completed;
+      const startAmount = getPlanStartAmount(plan);
+      nextCurrent = clampProgressValue(startAmount - 1 + actual, total);
+    });
+    if (!matchedPlan) return { ok: false, reason: 'plan-not-found' };
+    matchingLectures.forEach((lecture) => { lecture.completedLectures = nextCurrent; lecture.updatedAt = nowIso; });
+    return { ok: true, updated: { value: nextCurrent, total, planId, isCompleted: completed, actualAmount: actual } };
+  }
+}
 
 function applyProgressMutation(
   student: Student,
@@ -270,6 +345,7 @@ export async function PATCH(req: NextRequest) {
     actualAmount?: unknown;
     solvedQuestions?: unknown;
     incorrectTags?: unknown;
+    deadlineAmount?: unknown;
   };
   try {
     body = await req.json();
@@ -286,10 +362,45 @@ export async function PATCH(req: NextRequest) {
   const hasPlanCompletion = planId.length > 0 && typeof body?.isCompleted === 'boolean';
   const hasSolvedQuestions = body?.solvedQuestions !== undefined;
   const hasIncorrectTags = body?.incorrectTags !== undefined;
+  // 기간 목표(deadline) 누적 진행량 입력 — planId + deadlineAmount(숫자). isCompleted 미동반.
+  const hasDeadlineAmount = planId.length > 0 && body?.deadlineAmount !== undefined;
+  const deadlineAmount = hasDeadlineAmount ? Number(body.deadlineAmount) : 0;
 
   if (!materialType || !materialId) {
     return NextResponse.json({ success: false, message: '대상 자료 정보가 올바르지 않습니다.' }, { status: 400 });
   }
+
+  // 기간 목표 진행 입력은 전용 경로로 처리(일반 진도/완료 검증과 분리).
+  if (hasDeadlineAmount) {
+    if (!Number.isFinite(deadlineAmount) || deadlineAmount < 0) {
+      return NextResponse.json({ success: false, message: '진행량이 올바르지 않습니다.' }, { status: 400 });
+    }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const student = await getStudentById(studentId);
+      if (!student) {
+        return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const originalUpdatedAt = student.updatedAt ?? '';
+      const result = applyDeadlineMutation(student, materialType as 'book' | 'lecture', materialId, planId, deadlineAmount);
+      if (!result.ok) {
+        const msg = result.reason === 'plan-not-found' ? '해당 기간 목표를 찾을 수 없습니다.' : '해당 학습 자료를 찾을 수 없습니다.';
+        return NextResponse.json({ success: false, message: msg }, { status: 404 });
+      }
+      const saved = await patchStudentProgress(student, originalUpdatedAt);
+      if (saved === 'conflict') continue;
+      const { updated } = result;
+      return NextResponse.json({
+        success: true,
+        value: updated.value,
+        total: updated.total,
+        planId: updated.planId,
+        isCompleted: updated.isCompleted,
+        actualAmount: updated.actualAmount,
+      });
+    }
+    return NextResponse.json({ success: false, message: '진도 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
+  }
+
   if (!hasProgressValue && !hasPlanCompletion && !hasSolvedQuestions && !hasIncorrectTags) {
     return NextResponse.json({ success: false, message: '진도 값 또는 완료 계획 정보, 혹은 해결 문항수 등이 필요합니다.' }, { status: 400 });
   }
