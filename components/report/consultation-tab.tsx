@@ -3,6 +3,7 @@
 import React from 'react';
 import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
+import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { Calendar, Trash2, MessageSquare } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
 import {
@@ -382,6 +383,9 @@ export function ConsultationTab({
           </div>
         );
       })()}
+
+      {/* 자리이동 신청 — 익명 배치도에서 빈자리 선택, 관리자 승인 시 좌석 이동 */}
+      <SeatMoveCard campus={student.campus} active={activeTab === 'student-requests'} />
     </section>
 
     {/* 건의사항 — 독립 탭(student-suggestions) */}

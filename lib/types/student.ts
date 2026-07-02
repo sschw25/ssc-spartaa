@@ -166,6 +166,22 @@ export interface ConsultationBooking {
   reschedule?: ConsultationReschedule; // 대기 중인 시간 변경 제안(없으면 변경 진행 중 아님)
 }
 
+// 자리이동 신청 — 학생이 배치도에서 빈자리를 골라 신청, 관리자 승인 시 좌석번호 이동.
+// 센터별 app_settings 원장(seat_move_requests:{campus})에 보관. studentName 은 관리자
+// 화면 표시용이며 학생용 API 응답에는 절대 포함하지 않는다(익명 배치도 원칙).
+export interface SeatMoveRequest {
+  id: string;               // smv_${ts}_${rand}
+  studentId: string;
+  studentName: string;
+  campus: string;           // wonju | chuncheon | chungju
+  fromSeat: number | null;  // 신청 시점 좌석 (표시용 스냅샷)
+  toSeat: number;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;        // ISO
+  processedAt?: string;     // 승인/거절 시각 (ISO)
+  rejectReason?: string;
+}
+
 // 휴가/반차/휴식권/병가 신청 (상담 변경신청과 별개의 전용 구조 — 월 한도/쿠폰 차원 존재)
 export type LeaveType = 'morning' | 'afternoon' | 'night' | 'fullday' | 'personal_halfday' | 'personal_fullday' | 'sick';
 

@@ -4,7 +4,7 @@
 // 구글 스프레드시트 경로는 제거됨.
 import fs from 'fs';
 import path from 'path';
-import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking, BlackoutEntry, SeatAlert } from './types/student';
+import { Student, SharedMaterial, MockExam, OtEvent, MealPlan, AdminAccount, CampusEvent, StudentApplication, ConsultationBooking, BlackoutEntry, SeatAlert, SeatMoveRequest } from './types/student';
 import { isSlotFree } from './consultation-schedule';
 import {
   isSupabaseConfigured,
@@ -335,6 +335,92 @@ export async function setConsultationBlackouts(campus: string, entries: Blackout
     [],
     () => entries,
   );
+}
+
+
+// ── 자리이동 신청 원장 (센터별 app_settings 키-값 JSON 배열) ──
+// 좌석은 센터가 공유하는 자원이라 학생 컬럼이 아닌 중앙 원장에 보관한다.
+// 신규 테이블/마이그레이션 없이 운영. 신청은 소량이라 read-modify-write 로 충분하며,
+// 추가 직전 중복(내 pending·같은 좌석 pending)을 재검증해 동시 신청을 방지한다.
+const SEAT_MOVE_REQUESTS_KEY_PREFIX = 'seat_move_requests:';
+
+// 처리된 지 14일 지난 건은 원장에서 정리한다(학생 카드 결과 표시 유예 기간).
+const SEAT_MOVE_RETENTION_MS = 14 * 24 * 60 * 60 * 1000;
+
+function seatMovesKey(campus: string): string {
+  return `${SEAT_MOVE_REQUESTS_KEY_PREFIX}${campus}`;
+}
+
+function pruneSeatMoveRequests(list: SeatMoveRequest[], nowMs: number): SeatMoveRequest[] {
+  return list.filter((r) => {
+    if (r.status === 'pending') return true;
+    const processed = Date.parse(r.processedAt || r.createdAt);
+    return !Number.isFinite(processed) || nowMs - processed < SEAT_MOVE_RETENTION_MS;
+  });
+}
+
+export async function getSeatMoveRequests(campus: string): Promise<SeatMoveRequest[]> {
+  const value = await getAppSetting(seatMovesKey(campus));
+  return Array.isArray(value) ? (value as SeatMoveRequest[]) : [];
+}
+
+// 여러 센터의 신청을 한 번에 조회(마스터 계정 전체 보기용).
+export async function getSeatMoveRequestsForCampuses(campuses: string[]): Promise<SeatMoveRequest[]> {
+  const lists = await Promise.all(campuses.map((c) => getSeatMoveRequests(c)));
+  return lists.flat();
+}
+
+// 신청 추가. 추가 직전 재검증: 같은 학생의 pending 이 있으면 'duplicate',
+// 같은 좌석을 노리는 pending 이 있으면 'taken'. 낙관적 잠금으로 동시 신청 유실/중복 방지.
+export async function addSeatMoveRequest(
+  request: SeatMoveRequest,
+): Promise<SeatMoveRequest | 'duplicate' | 'taken'> {
+  let result: 'ok' | 'duplicate' | 'taken' = 'ok';
+  await mutateAppSetting<SeatMoveRequest[]>(seatMovesKey(request.campus), [], (list) => {
+    const pending = list.filter((r) => r.status === 'pending');
+    if (pending.some((r) => r.studentId === request.studentId)) {
+      result = 'duplicate';
+      return false; // 저장 스킵.
+    }
+    if (pending.some((r) => r.toSeat === request.toSeat)) {
+      result = 'taken';
+      return false;
+    }
+    result = 'ok';
+    return [...pruneSeatMoveRequests(list, Date.now()), request];
+  });
+  return result === 'ok' ? request : result;
+}
+
+// 단건 상태 변경(승인/거절 표기 등). mutate 가 false 를 반환하면 저장하지 않는다.
+// 반환: 변경 적용된 신청 | null(해당 id 없음 또는 mutate 취소).
+export async function updateSeatMoveRequest(
+  campus: string,
+  id: string,
+  mutate: (request: SeatMoveRequest) => SeatMoveRequest | false,
+): Promise<SeatMoveRequest | null> {
+  let updated: SeatMoveRequest | null = null;
+  await mutateAppSetting<SeatMoveRequest[]>(seatMovesKey(campus), [], (list) => {
+    updated = null; // 재시도 시 이전 시도 결과가 남지 않게 리셋.
+    const target = list.find((r) => r.id === id);
+    if (!target) return false;
+    const next = mutate({ ...target });
+    if (next === false) return false;
+    updated = next;
+    return pruneSeatMoveRequests(list, Date.now()).map((r) => (r.id === id ? next : r));
+  });
+  return updated;
+}
+
+// 신청 제거(학생 본인 취소/결과 확인 처리). 제거된 신청을 반환(없으면 null).
+export async function removeSeatMoveRequest(campus: string, id: string): Promise<SeatMoveRequest | null> {
+  let removed: SeatMoveRequest | null = null;
+  await mutateAppSetting<SeatMoveRequest[]>(seatMovesKey(campus), [], (list) => {
+    removed = list.find((r) => r.id === id) || null;
+    if (!removed) return false;
+    return pruneSeatMoveRequests(list, Date.now()).filter((r) => r.id !== id);
+  });
+  return removed;
 }
 
 

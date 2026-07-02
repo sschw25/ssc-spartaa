@@ -19,6 +19,23 @@ export const CAMPUS_LABELS: Record<CampusKey, string> = {
   chuncheon: '춘천',
 };
 
+export function isCampusKey(value: unknown): value is CampusKey {
+  return value === 'chungju' || value === 'wonju' || value === 'chuncheon';
+}
+
+// 캠퍼스 배치도에 실제 존재하는 좌석번호 집합 — 신청 좌석 검증용.
+export function getCampusSeatNumbers(campus: CampusKey): Set<number> {
+  const seats = new Set<number>();
+  for (const page of CAMPUS_LAYOUTS[campus]) {
+    for (const row of page.rows) {
+      for (const cell of row) {
+        if (typeof cell === 'number') seats.add(cell);
+      }
+    }
+  }
+  return seats;
+}
+
 export const CAMPUS_LAYOUTS: Record<CampusKey, LayoutPage[]> = {
 
   // ── 충주 ─────────────────────────────────────────────────────────────────

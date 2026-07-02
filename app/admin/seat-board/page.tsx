@@ -11,6 +11,7 @@ import { leaveBlockKind, leaveKindCoversPeriod, approvedLeavesOn, type LeaveBloc
 import { CAMPUS_LAYOUTS, CAMPUS_LABELS, type CampusKey, type Cell } from '@/lib/seat-layouts';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { SeatMoveRequestsPanel } from '@/components/admin/seat-move-requests-panel';
 
 import { Input } from '@/components/ui/input';
 
@@ -1414,6 +1415,9 @@ export default function SeatBoardPage() {
             ))}
           </div>
         </div>
+
+        {/* ── 자리이동 신청 (대기 건 있을 때만 표시) ── */}
+        <SeatMoveRequestsPanel campus={campus} disabled={isDemoMode} onApproved={() => loadData()} />
 
         {/* ── 교시별 미착석 알림 ── */}
         <div className="flex items-center gap-2 mb-4 flex-wrap rounded-2xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
