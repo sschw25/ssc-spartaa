@@ -135,7 +135,7 @@ function AttendInner() {
     }
   };
 
-  // 등원/복귀 완료 시 2초 후 자동으로 학생 결과지 대시보드로 이동
+  // 등원/복귀 완료 시 2초 후 자동으로 학생 홈으로 이동
   useEffect(() => {
     if (phase === 'checked-in' || phase === 'return') {
       const timer = setTimeout(() => {
@@ -268,12 +268,12 @@ function AttendInner() {
               <>
                 <p className="mt-3 text-xs text-[#86868B]">지금부터 오늘의 순공 시간이 측정돼요.</p>
                 <div className="mt-6 space-y-2 border-t border-slate-100 pt-4">
-                  <p className="text-xs text-slate-400 animate-pulse">잠시 후 결과지 페이지로 이동합니다...</p>
+                  <p className="text-xs text-slate-400 animate-pulse">잠시 후 학생 홈으로 이동합니다...</p>
                   <button
                     onClick={() => router.replace('/student')}
                     className="inline-flex w-full items-center justify-center rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98]"
                   >
-                    지금 결과지 확인하기 &rarr;
+                    지금 학생 홈 가기 &rarr;
                   </button>
                 </div>
               </>
@@ -291,7 +291,7 @@ function AttendInner() {
                     onClick={() => router.replace('/student')}
                     className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-bold text-[#1D1D1F] transition hover:bg-slate-50 active:scale-[0.98]"
                   >
-                    내 결과지 확인하기 &rarr;
+                    내 학생 홈 가기 &rarr;
                   </button>
                 </div>
               </>

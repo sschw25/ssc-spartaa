@@ -127,6 +127,7 @@ export function ConsultationTab({
   };
 
   return (
+    <>
     <section id="student-requests" className={`scroll-mt-24 space-y-5 print-card ${activeTab === 'student-requests' ? '' : 'hidden print:block'}`}>
       <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 shadow-sm md:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -135,7 +136,7 @@ export function ConsultationTab({
               <Calendar className="h-3.5 w-3.5" /> 휴식신청
             </div>
             <h3 className="mt-2 text-xl font-black text-slate-900">
-              휴식신청 · 건의사항
+              휴식 · 반차 · 병가 신청
             </h3>
             <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
               이번달 반차 <span className="font-black text-[#0071E3]">{homeHalfLeft}회</span> · 휴식권 <span className="font-black text-[#0071E3]">{homeFullLeft}회</span> 남음 · 쿠폰 {homeLeaveCoupons}개
@@ -381,12 +382,25 @@ export function ConsultationTab({
           </div>
         );
       })()}
+    </section>
+
+    {/* 건의사항 — 독립 탭(student-suggestions) */}
+    <section id="student-suggestions" className={`scroll-mt-24 space-y-5 print-card ${activeTab === 'student-suggestions' ? '' : 'hidden print:block'}`}>
+      <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 shadow-sm md:p-6">
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
+          <MessageSquare className="h-3.5 w-3.5" /> 건의사항
+        </div>
+        <h3 className="mt-2 text-xl font-black text-slate-900">건의사항</h3>
+        <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
+          시설·운영·학습 환경에 대한 의견을 남기면 담당 코멘터가 확인해요.
+        </p>
+      </div>
 
       {/* 건의사항 (관리자에게) */}
       <div id="student-suggestion-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
         <div>
           <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
-            <MessageSquare className="w-4 h-4" /> 건의사항
+            <MessageSquare className="w-4 h-4" /> 건의 남기기
           </h4>
           <p className="mt-1 text-[10px] font-semibold text-slate-400">
             시설, 운영, 학습 환경에 대한 의견을 남기면 담당 코멘터가 확인해요.
@@ -483,5 +497,6 @@ export function ConsultationTab({
         })()}
       </div>
     </section>
+    </>
   );
 }

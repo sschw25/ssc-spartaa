@@ -120,7 +120,7 @@ export async function GET() {
   const redemptions = (student.rewardRedemptions || [])
     .slice()
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
-    .map((r) => ({ id: r.id, type: r.type, cost: r.cost, status: r.status, createdAt: r.createdAt }));
+    .map((r) => ({ id: r.id, type: r.type, cost: r.cost, status: r.status, createdAt: r.createdAt, voucherCode: r.voucherCode, note: r.note, fulfilledAt: r.fulfilledAt }));
   const committed = (student.rewardRedemptions || [])
     .filter((r) => r.status === 'requested' || r.status === 'pending')
     .reduce((sum, r) => sum + (r.cost || 0), 0);

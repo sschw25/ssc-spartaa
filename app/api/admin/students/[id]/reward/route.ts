@@ -155,9 +155,19 @@ export async function PATCH(
     return NextResponse.json({ success: true, leaveCoupons: student.leaveCoupons });
   }
 
-  // 지급완료 처리
+  // 지급완료 처리 — 아직 승인 전(requested)이면 이 시점에 쿠폰을 차감(승인+지급을 한 번에).
+  // 관리자가 "쿠폰번호 입력 = 지급완료" 한 액션으로 끝내도록 하기 위함.
+  const fulfillNowIso = new Date().toISOString();
+  if (target.status === 'requested') {
+    const balance = student.leaveCoupons ?? 0;
+    if (balance < target.cost) {
+      return NextResponse.json({ success: false, message: `쿠폰이 부족합니다. (보유 ${balance} / 필요 ${target.cost})` }, { status: 400 });
+    }
+    student.leaveCoupons = balance - target.cost;
+    target.approvedAt = fulfillNowIso;
+  }
   target.status = 'fulfilled';
-  target.fulfilledAt = new Date().toISOString();
+  target.fulfilledAt = fulfillNowIso;
   target.handledBy = session.username;
   if (typeof body?.voucherCode === 'string') target.voucherCode = body.voucherCode.trim() || undefined;
   if (typeof body?.note === 'string') target.note = body.note.trim() || undefined;
@@ -166,7 +176,7 @@ export async function PATCH(
   const saved = await patchStudentProgress(student, originalUpdatedAt);
   if (saved === 'conflict') continue;
 
-  return NextResponse.json({ success: true, redemption: target });
+  return NextResponse.json({ success: true, redemption: target, leaveCoupons: student.leaveCoupons });
   }
 
   return NextResponse.json(

@@ -94,7 +94,8 @@ const PHONE_LABEL: Record<string, string> = {
 const SECTION_SURFACE = 'rounded-xl border border-black/5 bg-white p-5 shadow-sm sm:p-6';
 
 // embedded: 리포트 탭 안에서 렌더될 때 — 풀스크린 배경/뒤로가기 없이 섹션만 출력한다.
-export function MissionsHub({ studentId, studentName, embedded = false }: { studentId: string; studentName: string; embedded?: boolean }) {
+// onGoToExchange: '쿠폰 교환소' 탭으로 이동(리포트 임베드 시 setActiveTab 연결).
+export function MissionsHub({ studentId, studentName, embedded = false, onGoToExchange }: { studentId: string; studentName: string; embedded?: boolean; onGoToExchange?: () => void }) {
   const confirm = useConfirm();
   const [data, setData] = useState<HubData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -544,7 +545,7 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
         )}
 
         {/* 5. 쿠폰 미션 */}
-        <MissionsCard />
+        <MissionsCard onGoToExchange={onGoToExchange} />
       </>
   );
 

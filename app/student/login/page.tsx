@@ -71,19 +71,19 @@ function StudentLoginForm() {
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Home</p>
             <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#111827] md:text-5xl">
-              학생 결과지 로그인
+              학생 홈 로그인
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
-              오늘의 학습 계획, 교재별 진도, 평균 페이스 비교를 학생용 화면에서 확인합니다.
+              오늘의 학습 계획, 교재별 진도, 평균 페이스 비교를 학생 홈에서 확인합니다.
             </p>
           </div>
         </div>
 
         <Card className="rounded-2xl border-black/[0.06] bg-white shadow-xl">
           <CardHeader className="space-y-2 pb-5">
-            <CardTitle className="text-xl font-semibold tracking-tight">내 결과지 보기</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight">학생 홈 로그인</CardTitle>
             <CardDescription className="text-sm text-[#64748B]">
               설정된 로그인 ID와 출결번호를 입력해 주세요.
             </CardDescription>

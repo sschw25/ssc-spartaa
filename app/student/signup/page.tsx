@@ -140,7 +140,7 @@ export default function StudentSignupPage() {
               학생 가입신청
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
-              가입신청 후 담당 선생님의 승인을 거치면 학생용 결과지 화면을 이용하실 수 있습니다.
+              가입신청 후 담당 선생님의 승인을 거치면 학생 홈 화면을 이용하실 수 있습니다.
             </p>
           </div>
         </div>

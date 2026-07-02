@@ -185,9 +185,14 @@ export default function AdminLeavePage() {
       const json = await res.json();
       if (res.ok && json.success) {
         setStudents((prev) => prev.map((s) => s.id === studentId
-          ? { ...s, rewardRedemptions: (s.rewardRedemptions || []).map((r) => r.id === redemption.id ? json.redemption : r) }
+          ? {
+              ...s,
+              rewardRedemptions: (s.rewardRedemptions || []).map((r) => r.id === redemption.id ? json.redemption : r),
+              // requested→지급 한 번에 처리 시 쿠폰이 지금 차감되므로 잔액 동기화
+              ...(typeof json.leaveCoupons === 'number' ? { leaveCoupons: json.leaveCoupons } : {}),
+            }
           : s));
-        toast.success('지급 완료로 기록했습니다.');
+        toast.success('지급 완료로 기록했어요. 학생 화면에 번호가 표시됩니다.');
       } else {
         toast.error(json.message || '지급 처리에 실패했습니다.');
       }
@@ -409,8 +414,8 @@ export default function AdminLeavePage() {
                       )}
                     </div>
 
-                    {/* 학생 신청(requested) — 승인(쿠폰 차감)/반려 */}
-                    {isRequested && (
+                    {/* 실물 없는 보상(반차/휴식권) 신청 — 승인 즉시 지급 / 반려 */}
+                    {isRequested && !meta?.physical && (
                       <div className="flex items-center gap-2">
                         <Button
                           size="sm"
@@ -419,7 +424,7 @@ export default function AdminLeavePage() {
                           className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3"
                         >
                           {busy[`rev_${r.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
-                          승인 (쿠폰 {r.cost}장 차감)
+                          승인·즉시 지급 (쿠폰 {r.cost}장 차감)
                         </Button>
                         <Button
                           size="sm"
@@ -433,16 +438,16 @@ export default function AdminLeavePage() {
                       </div>
                     )}
 
-                    {/* 실물(상품권/플래너) 지급 처리 */}
-                    {meta?.physical && !isRequested && (
-                      isPending ? (
+                    {/* 실물(상품권/플래너) — 쿠폰번호 입력 = 지급완료(한 번에). requested/pending 모두 여기서 처리 */}
+                    {meta?.physical && (isRequested || isPending) && (
+                      <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
                           {r.type === 'voucher' && (
                             <Input
-                              placeholder="상품권 번호"
+                              placeholder="쿠폰(상품권) 번호"
                               value={draft.voucherCode}
                               onChange={(e) => setFulfillDrafts((d) => ({ ...d, [r.id]: { ...draft, voucherCode: e.target.value } }))}
-                              className="h-8 max-w-[180px] rounded-lg border-black/[0.08] text-xs bg-white"
+                              className="h-8 max-w-[200px] rounded-lg border-black/[0.08] text-xs bg-white"
                             />
                           )}
                           <Input
@@ -453,22 +458,35 @@ export default function AdminLeavePage() {
                           />
                           <Button
                             size="sm"
-                            disabled={busy[`ful_${r.id}`]}
+                            disabled={busy[`ful_${r.id}`] || (r.type === 'voucher' && !draft.voucherCode.trim())}
                             onClick={() => fulfillReward(student.id, r)}
                             className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3"
                           >
                             {busy[`ful_${r.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
-                            지급 완료
+                            지급 완료{isRequested ? ` (쿠폰 ${r.cost}장 차감)` : ''}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy[`rev_${r.id}`]}
+                            onClick={async () => { if (await confirm({ title: '이 교환 신청을 반려할까요?', description: '쿠폰은 차감되지 않습니다.', tone: 'danger', confirmText: '반려' })) reviewReward(student.id, r, 'reject'); }}
+                            className="h-8 rounded-lg border-black/[0.08] text-[11px] font-bold px-3 text-red-600"
+                          >
+                            <X className="w-3.5 h-3.5 mr-1" /> 반려
                           </Button>
                         </div>
-                      ) : (
-                        <div className="text-[11px] font-semibold text-[#86868B] flex flex-wrap gap-x-4 gap-y-1">
-                          {r.voucherCode && <span>상품권 번호: <b className="text-[#1D1D1F]">{r.voucherCode}</b></span>}
-                          {r.note && <span>메모: <b className="text-[#1D1D1F]">{r.note}</b></span>}
-                          {r.fulfilledAt && <span>지급: {(r.fulfilledAt || '').slice(0, 10)}</span>}
-                          {r.handledBy && <span>처리: {r.handledBy}</span>}
-                        </div>
-                      )
+                        <p className="text-[10px] font-semibold text-[#86868B]">쿠폰 번호를 입력하고 지급 완료를 누르면 학생 화면에 번호가 표시됩니다.</p>
+                      </div>
+                    )}
+
+                    {/* 지급 완료/반려된 실물 — 번호·메모 표시 */}
+                    {meta?.physical && !isRequested && !isPending && (
+                      <div className="text-[11px] font-semibold text-[#86868B] flex flex-wrap gap-x-4 gap-y-1">
+                        {r.voucherCode && <span>상품권 번호: <b className="text-[#1D1D1F]">{r.voucherCode}</b></span>}
+                        {r.note && <span>메모: <b className="text-[#1D1D1F]">{r.note}</b></span>}
+                        {r.fulfilledAt && <span>지급: {(r.fulfilledAt || '').slice(0, 10)}</span>}
+                        {r.handledBy && <span>처리: {r.handledBy}</span>}
+                      </div>
                     )}
                   </div>
                 );

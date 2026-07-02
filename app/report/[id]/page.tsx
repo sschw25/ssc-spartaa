@@ -18,6 +18,7 @@ import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MissionsHub } from '@/components/student/missions-hub';
+import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
 import type { MockExam, OtEvent, CampusEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
@@ -27,8 +28,9 @@ function StudentReportInner() {
   const [pendingOtEvents, setPendingOtEvents] = useState<OtEvent[]>([]);
   const [pendingCampusEvents, setPendingCampusEvents] = useState<CampusEvent[]>([]);
   const [mealPlans, setMealPlans] = useState<MealPlanWithOrder[]>([]);
-  // 미션 탭은 첫 활성화 때 마운트(그때 미션 API 호출) — 초기 로딩을 가볍게 유지한다.
+  // 미션/교환소 탭은 첫 활성화 때 마운트(그때 API 호출) — 초기 로딩을 가볍게 유지한다.
   const [missionsTabActivated, setMissionsTabActivated] = useState(false);
+  const [couponTabActivated, setCouponTabActivated] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -202,6 +204,7 @@ function StudentReportInner() {
 
   useEffect(() => {
     if (activeTab === 'student-missions') setMissionsTabActivated(true);
+    if (activeTab === 'coupon-exchange') setCouponTabActivated(true);
   }, [activeTab]);
 
   if (!mounted) return null;
@@ -380,8 +383,8 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 0-1c. 도시락 신청 카드 (학생 전용 · 알림 탭에서만 노출) */}
-        {isStudentReport && activeTab === 'student-notifications' && mealPlans.length > 0 && (
+        {/* 0-1c. 도시락 신청 카드 (학생 전용 · 홈 + 알림 탭에 노출 — 놓치지 않게 홈에서도 보이게) */}
+        {isStudentReport && (activeTab === 'student-notifications' || activeTab === 'report-overview') && mealPlans.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
             <MealPlanNotice
               plans={mealPlans}
@@ -409,7 +412,26 @@ function StudentReportInner() {
             id="student-missions"
             className={`no-print scroll-mt-24 mx-auto w-full max-w-[680px] px-4 sm:px-5 ${activeTab === 'student-missions' ? 'block' : 'hidden'}`}
           >
-            <MissionsHub studentId={student.id} studentName={student.name} embedded />
+            <MissionsHub
+              studentId={student.id}
+              studentName={student.name}
+              embedded
+              onGoToExchange={() => {
+                slideDirRef.current = 1;
+                setActiveTab('coupon-exchange');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            />
+          </div>
+        )}
+
+        {/* 쿠폰 교환소 탭 (학생 전용, 독립 탭) — 미션에서 모은 쿠폰 교환 */}
+        {isStudentReport && couponTabActivated && (
+          <div
+            id="coupon-exchange"
+            className={`no-print scroll-mt-24 ${activeTab === 'coupon-exchange' ? 'block' : 'hidden'}`}
+          >
+            <CouponExchangeCard />
           </div>
         )}
 
