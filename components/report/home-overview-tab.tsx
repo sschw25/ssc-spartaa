@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
@@ -92,6 +94,7 @@ export function HomeOverviewTab({
   completedQuests,
   setCompletedQuests,
 }: HomeOverviewTabProps) {
+  const confirm = useConfirm();
   // D-Day FAB state
   const [ddayOpen, setDdayOpen] = useState(false);
   const [ddayTitle, setDdayTitle] = useState('');
@@ -138,23 +141,26 @@ export function HomeOverviewTab({
         setDdayTitle('');
         setDdayDate('');
         setDdayOpen(false);
+        toast.success('D-Day를 추가했어요.');
       } else {
-        alert(json.message || 'D-Day 추가에 실패했습니다. 다시 시도해 주세요.');
+        toast.error(json.message || 'D-Day 추가에 실패했어요. 다시 시도해 주세요.');
       }
     } catch {
-      alert('네트워크 오류로 D-Day를 추가하지 못했습니다.');
+      toast.error('네트워크 오류로 D-Day를 추가하지 못했어요.');
     } finally {
       setDdayAdding(false);
     }
   };
 
   const handleDeleteDday = async (id: string) => {
+    if (!(await confirm({ title: 'D-Day를 삭제할까요?', tone: 'danger', confirmText: '삭제' }))) return;
     setDdayDeleting(id);
     try {
       const res = await fetch(`/api/student/ddays?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (json.success) {
         setStudent((s) => s ? { ...s, ddays: (s.ddays || []).filter((d) => d.id !== id) } : s);
+        toast.success('D-Day를 삭제했어요.');
       }
     } finally {
       setDdayDeleting(null);

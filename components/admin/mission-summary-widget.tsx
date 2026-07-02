@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trophy, Ticket, Loader2, PlayCircle, ChevronRight, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface Bucket { key: string; coupons: number; students: number }
 interface Summary {
@@ -15,6 +16,7 @@ interface Summary {
 
 export function MissionSummaryWidget() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [data, setData] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [settling, setSettling] = useState(false);
@@ -36,7 +38,13 @@ export function MissionSummaryWidget() {
 
   const settleNow = async () => {
     if (settling) return;
-    if (!confirm('지금 미션을 정산할까요? (이번 달/주 조건 충족자에게 쿠폰 즉시 지급 — 멱등)')) return;
+    const ok = await confirm({
+      title: '지금 미션을 정산할까요?',
+      description: '이번 달/주 조건 충족자에게 쿠폰이 즉시 지급됩니다. (멱등 — 중복 지급되지 않습니다)',
+      tone: 'danger',
+      confirmText: '정산',
+    });
+    if (!ok) return;
     setSettling(true);
     try {
       const res = await fetch('/api/admin/missions/settle', { method: 'POST', credentials: 'same-origin' });

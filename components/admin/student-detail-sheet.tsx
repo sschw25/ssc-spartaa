@@ -22,6 +22,7 @@ import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } 
 import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
 import { getDailyChecklist, getPomodoroStats, getPomodoroStatsFromStudent, getSeoulDateKey } from '@/lib/student-activity';
 import { toast } from 'sonner';
+import { useConfirm, usePrompt } from '@/components/ui/confirm-dialog';
 import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
@@ -297,6 +298,8 @@ function isSameAwaySchedule(a: AwaySchedule, b: AwaySchedule): boolean {
 }
 
 export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelete, students = [], defaultTab }: StudentDetailSheetProps) {
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isAutoSaving, setIsAutoSaving] = useState(false);
@@ -1172,9 +1175,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   // 1. 학생 기본 정보 업데이트
   const handleUpdateInfo = async () => {
     if (seatConflictNames.length > 0) {
-      const ok = confirm(
-        `이 센터에 ${seatNumber}번 좌석을 쓰는 원생이 있습니다.\n\n대상: ${seatConflictNames.join(', ')}\n\n그래도 같은 좌석으로 저장할까요?`
-      );
+      const ok = await confirm({
+        title: `${seatNumber}번 좌석이 이미 사용 중이에요`,
+        description: `대상: ${seatConflictNames.join(', ')} · 그래도 같은 좌석으로 저장할까요?`,
+        confirmText: '저장',
+      });
       if (!ok) return;
     }
     setLoading(true);
@@ -1397,8 +1402,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   };
 
   // 3. 과목 삭제
-  const handleDeleteSubject = (subId: string, subName: string) => {
-    if (!confirm(`'${subName}' 과목과 소속된 모든 학습 진도 및 주간 계획 데이터를 삭제하시겠습니까?`)) {
+  const handleDeleteSubject = async (subId: string, subName: string) => {
+    if (!(await confirm({
+      title: `'${subName}' 과목을 삭제할까요?`,
+      description: '소속된 모든 학습 진도·주간 계획 데이터가 함께 삭제됩니다.',
+      tone: 'danger',
+      confirmText: '삭제',
+    }))) {
       return;
     }
 
@@ -1692,7 +1702,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   };
 
   // 학습 목표를 세이브하고 계획을 자동 생성하는 공통 핸들러
-  const generateAndSavePlans = (subId: string, materialId: string, type: 'book' | 'lecture') => {
+  const generateAndSavePlans = async (subId: string, materialId: string, type: 'book' | 'lecture') => {
     // 디바운스 타이머 취소하여 경합 차단
     if (debounceTimersRef.current[student?.id || '']) {
       clearTimeout(debounceTimersRef.current[student?.id || '']);
@@ -1754,9 +1764,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const isDailyGoalOverload = (type === 'book' && estimatedDailyAmount > 30) || (type === 'lecture' && estimatedDailyAmount > 3);
 
     if (isDailyGoalOverload) {
-      const confirmed = window.confirm(
-        `⚠️ 완료를 위해 시간이 더 필요합니다!\n\n현재 목표 조건으로 일정을 맞추려면 하루에 평균 ${Math.round(estimatedDailyAmount)}${type === 'book' ? 'p' : '강'} 이상 학습해야 합니다.\n(권장 한계치: 하루 30p 이하 / 3강 이하)\n\n이대로 무리한 계획을 생성하시겠습니까?\n[확인]을 누르면 계획이 생성되며, [취소]를 누르면 일정을 더 늦출 수 있도록 중단합니다.`
-      );
+      const confirmed = await confirm({
+        title: '무리한 계획을 생성할까요?',
+        description: `현재 목표 조건이면 하루 평균 ${Math.round(estimatedDailyAmount)}${type === 'book' ? 'p' : '강'} 이상 학습해야 해요. (권장 한계: 하루 30p / 3강 이하) 이대로 생성하면 부담이 클 수 있어요.`,
+        confirmText: '이대로 생성',
+      });
       if (!confirmed) {
         return;
       }
@@ -2010,8 +2022,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   };
 
   // 커스텀 카테고리 추가 로직
-  const handleCreateCustomCategory = () => {
-    const categoryName = prompt('새로운 학습 자료 그룹(카테고리) 이름을 입력해주세요:');
+  const handleCreateCustomCategory = async () => {
+    const categoryName = await prompt({
+      title: '새 학습 자료 그룹',
+      description: '카테고리 이름을 입력하세요.',
+      placeholder: '예: 심화 문제집',
+      confirmText: '추가',
+    });
     if (!categoryName) return;
     const trimmed = categoryName.trim();
     if (!trimmed) return;
@@ -2079,7 +2096,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
 
   // 7. 교재/인강 추가/수정/삭제 진도 관리
-  const updateProgress = (
+  const updateProgress = async (
     subId: string,
     type: 'book' | 'lecture',
     materialId: string,
@@ -2088,8 +2105,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   ) => {
     // 교재/인강 삭제는 진도·상세계획·회독설정이 함께 사라지므로 확인 후 진행(오클릭 방지)
     if (action === 'delete') {
-      const ok = typeof window === 'undefined'
-        || window.confirm('이 학습자료를 삭제하면 진도·상세계획·회독설정이 함께 삭제됩니다. 계속할까요?');
+      const ok = await confirm({
+        title: '이 학습자료를 삭제할까요?',
+        description: '진도·상세계획·회독설정이 함께 삭제됩니다.',
+        tone: 'danger',
+        confirmText: '삭제',
+      });
       if (!ok) return;
     }
     const nowStr = new Date().toISOString();
@@ -3657,7 +3678,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 성적 삭제
   const handleDeleteGrade = async (gradeId: string) => {
-    if (typeof window !== 'undefined' && !window.confirm('이 성적 기록을 삭제할까요? 추세 그래프에서도 함께 제거됩니다.')) return;
+    if (!(await confirm({ title: '이 성적 기록을 삭제할까요?', description: '추세 그래프에서도 함께 제거됩니다.', tone: 'danger', confirmText: '삭제' }))) return;
     const updatedStudent: Student = buildSavePayload({
       grades: student.grades.filter(g => g.id !== gradeId),
     });
@@ -3683,7 +3704,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 5. 학생 삭제
   const handleSetPassword = async () => {
-    const pw = window.prompt(`${name} 학생의 포털 비밀번호를 입력하세요 (4자 이상).`);
+    const pw = await prompt({
+      title: `${name} 학생 포털 비밀번호`,
+      description: '4자 이상으로 입력하세요.',
+      placeholder: '새 비밀번호',
+    });
     if (pw === null) return;
     if (pw.trim().length < 4) {
       toast.error('비밀번호는 4자 이상이어야 합니다.');
@@ -3726,7 +3751,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   };
 
   const handleDeleteStudent = async () => {
-    if (!confirm(`${name} 원생의 데이터를 모든 시트에서 정말 삭제하시겠습니까? 관련 데이터가 복구 불가능하게 지워집니다.`)) {
+    if (!(await confirm({
+      title: `${name} 원생을 정말 삭제할까요?`,
+      description: '모든 시트에서 관련 데이터가 복구 불가능하게 지워집니다.',
+      tone: 'danger',
+      confirmText: '삭제',
+    }))) {
       return;
     }
 

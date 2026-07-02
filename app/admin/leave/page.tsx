@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Ticket, Minus, Plus, Inbox, ChevronRight, Gift, Check, Clock, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Student, RewardRedemption } from '@/lib/types/student';
 import { REWARD_CATALOG, getRewardLabel } from '@/lib/leave';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
@@ -25,6 +26,7 @@ function campusLabel(val: string) {
 }
 
 export default function AdminLeavePage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
@@ -423,7 +425,7 @@ export default function AdminLeavePage() {
                           size="sm"
                           variant="outline"
                           disabled={busy[`rev_${r.id}`]}
-                          onClick={() => { if (confirm('이 교환 신청을 반려할까요? (쿠폰 미차감)')) reviewReward(student.id, r, 'reject'); }}
+                          onClick={async () => { if (await confirm({ title: '이 교환 신청을 반려할까요?', description: '쿠폰은 차감되지 않습니다.', tone: 'danger', confirmText: '반려' })) reviewReward(student.id, r, 'reject'); }}
                           className="h-8 rounded-lg border-black/[0.08] text-[11px] font-bold px-3 text-red-600"
                         >
                           <X className="w-3.5 h-3.5 mr-1" /> 반려

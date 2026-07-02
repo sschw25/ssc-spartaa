@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { Trophy, Ticket, Loader2, CheckCircle2, CalendarClock, Gift, X } from 'lucide-react';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface Mission {
   id: string;
@@ -41,6 +43,7 @@ const periodCls = (p: Mission['period']) =>
   : 'bg-slate-100 text-slate-600';
 
 export function MissionsCard() {
+  const confirm = useConfirm();
   const [data, setData] = useState<MissionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exchanging, setExchanging] = useState<RewardType | null>(null);
@@ -77,8 +80,13 @@ export function MissionsCard() {
         body: JSON.stringify({ rewardType: type }),
       });
       const json = await res.json().catch(() => ({}));
-      if (res.ok && json.success) await load();
-      else setExchangeError(json.message || '교환 신청에 실패했습니다.');
+      if (res.ok && json.success) {
+        await load();
+        toast.success('교환 신청이 접수되었어요.', { description: '실물 보상은 관리자 승인 후 지급돼요.' });
+      } else {
+        setExchangeError(json.message || '교환 신청에 실패했습니다.');
+        toast.error(json.message || '교환 신청에 실패했어요.');
+      }
     } catch {
       setExchangeError('네트워크 오류가 발생했습니다.');
     } finally {
@@ -87,9 +95,13 @@ export function MissionsCard() {
   };
 
   const cancelExchange = async (id: string) => {
+    if (!(await confirm({ title: '교환 신청을 취소할까요?', tone: 'danger', confirmText: '신청 취소' }))) return;
     try {
       const res = await fetch(`/api/student/reward?id=${id}`, { method: 'DELETE', credentials: 'same-origin' });
-      if (res.ok) await load();
+      if (res.ok) {
+        await load();
+        toast.success('교환 신청을 취소했어요.');
+      }
     } catch { /* noop */ }
   };
 

@@ -25,6 +25,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Loader2, Plus, Edit2, Trash2, Shield, User, Landmark, ShieldAlert } from 'lucide-react';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { cn } from '@/lib/utils';
 
 interface AdminAccountData {
@@ -36,6 +37,7 @@ interface AdminAccountData {
 }
 
 export default function AdminAccountsPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [currentSession, setCurrentSession] = useState<{ id: string; username: string; campus: string; role: string } | null>(null);
@@ -171,7 +173,7 @@ export default function AdminAccountsPage() {
       return;
     }
 
-    if (!confirm(`관리자 계정 "${username}"을(를) 정말 삭제하시겠습니까?`)) {
+    if (!(await confirm({ title: `관리자 계정 "${username}"을(를) 삭제할까요?`, description: '삭제하면 되돌릴 수 없습니다.', tone: 'danger', confirmText: '삭제' }))) {
       return;
     }
 

@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import { ThemeProvider } from '@/components/theme-provider'
 import { SiteChrome } from '@/components/ssc/site-chrome'
 import { Toaster } from '@/components/ui/sonner'
+import { ConfirmProvider } from '@/components/ui/confirm-dialog'
 import './globals.css'
 
 const inter = Inter({
@@ -53,7 +54,9 @@ export default function RootLayout({
       </head>
       <body className={`${inter.variable} font-sans antialiased text-[#1D1D1F] overflow-x-hidden`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <SiteChrome>{children}</SiteChrome>
+          <ConfirmProvider>
+            <SiteChrome>{children}</SiteChrome>
+          </ConfirmProvider>
         </ThemeProvider>
         <Toaster richColors position="top-center" />
         <Analytics />

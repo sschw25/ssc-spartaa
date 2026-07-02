@@ -549,7 +549,7 @@ export function ExecutionPlanTab({
                         <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{getRequestTypeLabel(r.requestType)}</span>
                         {getTimelineStatusBadge(r.status || 'pending', r.adminReply)}
                       </span>
-                      <button type="button" onClick={() => { if (window.confirm('이 신청을 취소할까요?')) cancelRequest(r.id); }} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                      <button type="button" onClick={() => cancelRequest(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>

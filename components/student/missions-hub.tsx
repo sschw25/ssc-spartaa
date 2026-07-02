@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
+import { toast } from 'sonner';
 import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles, CalendarDays, Presentation, PenLine, PartyPopper } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { MissionsCard } from '@/components/report/missions-card';
 
 type Recommendation = {
@@ -93,6 +95,7 @@ const SECTION_SURFACE = 'rounded-xl border border-black/5 bg-white p-5 shadow-sm
 
 // embedded: 리포트 탭 안에서 렌더될 때 — 풀스크린 배경/뒤로가기 없이 섹션만 출력한다.
 export function MissionsHub({ studentId, studentName, embedded = false }: { studentId: string; studentName: string; embedded?: boolean }) {
+  const confirm = useConfirm();
   const [data, setData] = useState<HubData | null>(null);
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -182,8 +185,9 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
       const json = await res.json();
       if (res.ok && json.success) {
         await load();
-      } else if (json?.message && typeof window !== 'undefined') {
-        window.alert(json.message);
+        toast.success('오늘 컨디션을 기록했어요.');
+      } else if (json?.message) {
+        toast.error(json.message);
       }
     } catch {
       // noop
@@ -195,7 +199,12 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
   const repairStreak = async () => {
     const repair = data?.streakRepair;
     if (!repair || repairing) return;
-    if (typeof window !== 'undefined' && !window.confirm(`쿠폰 ${repair.cost}개로 끊긴 스트릭을 이을까요?\n(${repair.restoredStreak}일 연속으로 복구돼요)`)) return;
+    const ok = await confirm({
+      title: '끊긴 스트릭을 이을까요?',
+      description: `쿠폰 ${repair.cost}개를 사용하면 ${repair.restoredStreak}일 연속으로 복구돼요.`,
+      confirmText: '스트릭 잇기',
+    });
+    if (!ok) return;
     setRepairing(true);
     try {
       const res = await fetch('/api/student/streak-repair', {
@@ -206,8 +215,9 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
       const json = await res.json();
       if (res.ok && json.success) {
         await load();
-      } else if (json?.message && typeof window !== 'undefined') {
-        window.alert(json.message);
+        toast.success('스트릭을 이었어요!');
+      } else if (json?.message) {
+        toast.error(json.message);
         await load();
       }
     } catch {

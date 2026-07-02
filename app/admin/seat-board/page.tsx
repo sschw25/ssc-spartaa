@@ -10,6 +10,7 @@ import type { Student, LeaveRequest } from '@/lib/types/student';
 import { leaveBlockKind, leaveKindCoversPeriod, approvedLeavesOn, type LeaveBlockKind } from '@/lib/leave-blocks';
 import { CAMPUS_LAYOUTS, CAMPUS_LABELS, type CampusKey, type Cell } from '@/lib/seat-layouts';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 import { Input } from '@/components/ui/input';
 
@@ -897,6 +898,7 @@ const CAMPUS_KEYS: CampusKey[] = ['wonju', 'chungju', 'chuncheon'];
 
 export default function SeatBoardPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
@@ -1262,7 +1264,12 @@ export default function SeatBoardPage() {
       return;
     }
     const names = targets.map((s) => s.name).join(', ');
-    if (!confirm(`${label}교시 출석체크 시 ${names} 님이 자리에 없습니다.\n학생에게 알림을 발송하시겠습니까?`)) return;
+    const ok = await confirm({
+      title: `${label}교시 미착석 학생에게 알림을 발송할까요?`,
+      description: `${names} 님이 자리에 없습니다.`,
+      confirmText: '발송',
+    });
+    if (!ok) return;
     try {
       const res = await fetch('/api/admin/seat-board/notify', {
         method: 'POST',

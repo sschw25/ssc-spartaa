@@ -11,6 +11,7 @@ import {
   Target, BookOpen, Tv, User, Search, Send, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Student, LeaveType, ProposedGoal } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
@@ -48,6 +49,7 @@ const CATEGORY_TABS: { value: InboxCategory; label: string }[] = [
 ];
 
 export default function AdminInboxPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -736,7 +738,7 @@ export default function AdminInboxPage() {
   const handleBulkApprove = async () => {
     const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료' && i.type !== 'reward' && i.type !== 'signup');
     if (targets.length === 0) return;
-    if (!confirm(`선택한 ${targets.length}건을 일괄 승인 처리할까요?`)) return;
+    if (!(await confirm({ title: `선택한 ${targets.length}건을 일괄 승인할까요?`, confirmText: '일괄 승인' }))) return;
     setBulkProcessing(true);
     let ok = 0;
     let fail = 0;
@@ -767,13 +769,19 @@ export default function AdminInboxPage() {
   };
 
   // 선택 변경 시 폼 바인딩 (초안 유실 경고). 답변은 스레드에 append 되므로 새 메시지는 항상 빈 칸에서 시작.
-  const handleSelectItem = (item: InboxItem) => {
+  const handleSelectItem = async (item: InboxItem) => {
     if (
       selectedItem &&
       selectedItem.id !== item.id &&
       replyText.trim() !== ''
     ) {
-      if (!window.confirm('작성 중인 답변이 저장되지 않습니다. 항목을 전환할까요?')) return;
+      const ok = await confirm({
+        title: '항목을 전환할까요?',
+        description: '작성 중인 답변이 저장되지 않아요.',
+        tone: 'danger',
+        confirmText: '전환',
+      });
+      if (!ok) return;
     }
     setSelectedItem(item);
     setReplyText('');

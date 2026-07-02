@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { toast } from 'sonner';
+import { usePrompt } from '@/components/ui/confirm-dialog';
 import { Calendar, Trash2, MessageSquare } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
 import {
@@ -80,6 +82,7 @@ export function ConsultationTab({
   homeFullLeft,
   homeLeaveCoupons,
 }: ConsultationTabProps) {
+  const prompt = usePrompt();
   if (!isStudentReport) return null;
 
   const getTimelineStatusBadge = (status: string, adminReply?: string, autoApproved?: boolean) => {
@@ -296,11 +299,17 @@ export function ConsultationTab({
                 <button
                   type="button"
                   onClick={async () => {
-                    const note = window.prompt('재승인 요청 사유를 입력해 주세요. (코멘터에게 함께 전달됩니다)', '');
+                    const note = await prompt({
+                      title: '재승인 요청 사유',
+                      description: '코멘터에게 함께 전달됩니다.',
+                      placeholder: '예) 병원 예약이 확정되어 증빙을 첨부할 수 있어요.',
+                      multiline: true,
+                      confirmText: '재승인 요청',
+                    });
                     if (note === null) return;
                     const ok = await reappealLeave(r.id, note.trim());
-                    if (ok) window.alert('재승인 요청이 접수되었습니다. 코멘터 확인 후 다시 안내드릴게요.');
-                    else window.alert('재승인 요청에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+                    if (ok) toast.success('재승인 요청이 접수되었어요.', { description: '코멘터 확인 후 다시 안내드릴게요.' });
+                    else toast.error('재승인 요청에 실패했어요. 잠시 후 다시 시도해 주세요.');
                   }}
                   className="mt-2 w-full rounded-xl border border-amber-300 bg-amber-50 px-2.5 py-1.5 text-[10px] font-black text-amber-700 transition hover:bg-amber-100"
                 >
@@ -319,7 +328,7 @@ export function ConsultationTab({
                         {leaveStatusBadge(r.status, r.adminReply, auto)}
                       </span>
                       {r.status === 'pending' && (
-                        <button type="button" onClick={() => { if (window.confirm('이 휴가 신청을 취소할까요?')) cancelLeave(r.id); }} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                        <button type="button" onClick={() => cancelLeave(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
                           <Trash2 className="w-3 h-3" />
                         </button>
                       )}

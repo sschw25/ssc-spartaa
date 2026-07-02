@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { CalendarClock, Trash2, CheckCircle2, MessageSquarePlus, Star, Wifi, UserCog, Clock, AlertTriangle } from 'lucide-react';
 import { WEEKDAY_LABEL, type Weekday } from '@/lib/consultation-schedule';
 import { CONSULT_SIGNAL, studentFacingConsultReason } from '@/lib/consultation-signals';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import type { ConsultationBooking } from '@/lib/types/student';
 
 interface CalendarDay {
@@ -57,6 +58,7 @@ const mondayOf = (date: string) => {
 };
 
 export function ConsultationBookingPanel({ whyConsultation, consultationHistory }: ConsultationBookingPanelProps) {
+  const confirm = useConfirm();
   const history: ConsultationHistoryItem[] = consultationHistory || [];
   const [loading, setLoading] = useState(true);
   const [calendar, setCalendar] = useState<CalendarDay[]>([]);
@@ -192,7 +194,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
 
   const cancelBooking = async () => {
     if (!myBooking) return;
-    if (!window.confirm('이 상담 예약을 취소할까요?')) return;
+    if (!(await confirm({ title: '이 상담 예약을 취소할까요?', tone: 'danger', confirmText: '예약 취소' }))) return;
     setSubmitting(true);
     setError('');
     setSuccessMsg('');

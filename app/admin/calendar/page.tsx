@@ -13,6 +13,7 @@ import { Student, LeaveRequest, LeaveType, CampusEvent, MockExam, OtEvent } from
 import { LEAVE_TYPES, getLeaveTypeLabel, COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
@@ -53,6 +54,7 @@ interface LeaveEvent {
 
 export default function AdminCalendarPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
@@ -210,7 +212,7 @@ export default function AdminCalendarPage() {
   };
 
   const deleteEvent = async (eventId: string) => {
-    if (!confirm('이 일정을 삭제하시겠습니까?')) return;
+    if (!(await confirm({ title: '이 일정을 삭제할까요?', tone: 'danger', confirmText: '삭제' }))) return;
     try {
       const res = await fetch(`/api/admin/campus-events?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
       const json = await res.json();
@@ -222,7 +224,7 @@ export default function AdminCalendarPage() {
   };
 
   const notifyEvent = async (eventId: string, action: 'send' | 'cancel' = 'send') => {
-    if (action === 'cancel' && !confirm('발송된 참여 미션 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
+    if (action === 'cancel' && !(await confirm({ title: '발송된 참여 미션 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
     const key = `notify_${eventId}`;
     setBusy((b) => ({ ...b, [key]: true }));
     try {
@@ -240,7 +242,7 @@ export default function AdminCalendarPage() {
 
   const grantEventCoupons = async (event: CampusEvent) => {
     const key = `grant_${event.id}`;
-    if (!confirm(`수락한 참여자에게 쿠폰 ${event.couponReward || 0}장을 일괄 지급할까요?`)) return;
+    if (!(await confirm({ title: '쿠폰을 일괄 지급할까요?', description: `수락한 참여자에게 쿠폰 ${event.couponReward || 0}장을 지급합니다.`, confirmText: '지급' }))) return;
     setBusy((b) => ({ ...b, [key]: true }));
     try {
       const res = await fetch('/api/admin/campus-events/grant', {

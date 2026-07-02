@@ -8,6 +8,7 @@ import {
   Loader2, CalendarClock, Search, Check, X, RefreshCw, Plus, AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { buildConsultationDigest } from '@/lib/consultation-digest';
 import { Student, ConsultationBooking, BlackoutEntry } from '@/lib/types/student';
 import {
@@ -77,6 +78,7 @@ interface ApiResponse {
 }
 
 export default function AdminConsultationBookingsPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const { openStudent } = useAdminGlobalSheet();
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -235,7 +237,7 @@ export default function AdminConsultationBookingsPage() {
   };
 
   const cancelBooking = async (booking: ConsultationBooking) => {
-    if (!window.confirm('이 예약을 취소하시겠습니까?')) return;
+    if (!(await confirm({ title: '이 예약을 취소할까요?', tone: 'danger', confirmText: '예약 취소' }))) return;
     const ok = await patchBooking(booking, { status: 'cancelled' }, `cancel_${booking.id}`);
     if (ok) toast.success('예약을 취소했습니다.');
   };
@@ -327,7 +329,7 @@ export default function AdminConsultationBookingsPage() {
     if (ok) toast.success('변경 요청을 승인했어요.');
   };
   const rejectReschedule = async (b: ConsultationBooking) => {
-    if (!window.confirm('이 변경 요청을 거절할까요?')) return;
+    if (!(await confirm({ title: '이 변경 요청을 거절할까요?', tone: 'danger', confirmText: '거절' }))) return;
     const ok = await patchBooking(b, { action: 'reject' }, `rs_${b.id}`);
     if (ok) toast.success('변경 요청을 거절했어요.');
   };
@@ -395,7 +397,7 @@ export default function AdminConsultationBookingsPage() {
       body: JSON.stringify({ campus: c, blackouts: next }),
     });
     const json = await res.json();
-    if (!json.success) { alert(json.message || '차단 저장 실패'); return; }
+    if (!json.success) { toast.error(json.message || '차단 저장에 실패했어요.'); return; }
     await loadData();
   };
 

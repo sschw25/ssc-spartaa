@@ -12,6 +12,7 @@ import { Student, MealPlan, MealKind, MealDay, MealOrder, MealAddRequest } from 
 import type { MealPlanRoutineTemplate } from '@/lib/meal-routines';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import {
   MEAL_DAYS, MEAL_DAY_LABELS, MEAL_KIND_LABELS, CAMPUSES, getCampusLabel,
   weekRangeLabel, formatDeadline, isPastDeadline, isClosedDay, eatsOn, orderHasMeal, mealCounts, withSelection, mondayOf,
@@ -83,6 +84,7 @@ function createRoutineDraft(campus = 'all'): MealPlanRoutineTemplate {
 
 export default function MealsPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [plans, setPlans] = useState<MealPlan[]>([]);
@@ -216,7 +218,7 @@ export default function MealsPage() {
   };
 
   const deletePlan = async (planId: string) => {
-    if (!confirm('이 도시락 라운드를 삭제하시겠습니까? (학생 신청 내역은 보존되나 표에서 사라집니다)')) return;
+    if (!(await confirm({ title: '이 도시락 라운드를 삭제할까요?', description: '학생 신청 내역은 보존되나 표에서 사라집니다.', tone: 'danger', confirmText: '삭제' }))) return;
     try {
       const res = await fetch(`/api/admin/meal-plans?planId=${encodeURIComponent(planId)}`, { method: 'DELETE' });
       const json = await res.json();
@@ -230,7 +232,7 @@ export default function MealsPage() {
 
   const notifyToStudents = async (planId: string, action: 'send' | 'cancel' = 'send') => {
     if (notifyingId) return;
-    if (action === 'cancel' && !confirm('발송된 도시락 신청 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
+    if (action === 'cancel' && !(await confirm({ title: '발송된 도시락 신청 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
     setNotifyingId(planId);
     try {
       const res = await fetch('/api/admin/meal-plans', {
@@ -272,7 +274,7 @@ export default function MealsPage() {
   };
 
   const deleteRoutineTemplate = async (id: string) => {
-    if (!confirm('이 반복 템플릿을 삭제할까요? 이미 생성된 도시락 라운드는 유지됩니다.')) return;
+    if (!(await confirm({ title: '이 반복 템플릿을 삭제할까요?', description: '이미 생성된 도시락 라운드는 유지됩니다.', tone: 'danger', confirmText: '삭제' }))) return;
     try {
       const res = await fetch(`/api/admin/meal-routines?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const json = await res.json();

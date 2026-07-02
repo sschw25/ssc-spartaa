@@ -9,6 +9,7 @@ import {
   Send, CheckSquare, Square, AlertTriangle, CheckCircle2, Bookmark, BookmarkPlus, X, Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm, usePrompt } from '@/components/ui/confirm-dialog';
 import { Student } from '@/lib/types/student';
 import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
@@ -28,6 +29,8 @@ interface MessageTemplate {
 }
 
 export default function MessagesPage() {
+  const confirm = useConfirm();
+  const prompt = usePrompt();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -98,7 +101,11 @@ export default function MessagesPage() {
 
   const saveCurrentAsTemplate = async () => {
     if (!message.trim()) { toast.error('저장할 메시지 내용을 먼저 작성하세요.'); return; }
-    const title = window.prompt('템플릿 이름을 입력하세요 (예: 주간 성적 안내)');
+    const title = await prompt({
+      title: '템플릿 이름',
+      placeholder: '예: 주간 성적 안내',
+      confirmText: '저장',
+    });
     if (!title || !title.trim()) return;
     setSavingTpl(true);
     try {
@@ -113,7 +120,7 @@ export default function MessagesPage() {
   };
 
   const deleteTemplate = async (id: string) => {
-    if (!confirm('이 템플릿을 삭제할까요? (모든 관리자에게 적용)')) return;
+    if (!(await confirm({ title: '이 템플릿을 삭제할까요?', description: '모든 관리자에게 적용됩니다.', tone: 'danger', confirmText: '삭제' }))) return;
     try {
       const res = await fetch(`/api/admin/message-templates?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const json = await res.json();

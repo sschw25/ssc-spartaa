@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Smartphone, Lock, Package, X, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
 import type { Student, PhoneSubmission, LeaveRequest } from '@/lib/types/student';
 
@@ -91,7 +92,7 @@ export function PhoneSubmissionCard({ student, setStudent, todayDate }: PhoneSub
       const res = await fetch(`/api/student/phone-submission?id=${todaySubmission.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok || !json.success) {
-        alert(json.message || '취소 실패');
+        toast.error(json.message || '취소에 실패했어요.');
         return;
       }
       setStudent((prev) =>
@@ -103,7 +104,7 @@ export function PhoneSubmissionCard({ student, setStudent, todayDate }: PhoneSub
           : prev,
       );
     } catch {
-      alert('네트워크 오류가 발생했습니다.');
+      toast.error('네트워크 오류가 발생했어요.');
     } finally {
       setCancelling(false);
     }

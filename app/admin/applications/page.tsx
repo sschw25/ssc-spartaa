@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Loader2, UserPlus, Check, X, Phone, Building2, Target, Clock, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 
 type Application = {
@@ -67,6 +68,7 @@ function formatDateTime(iso: string) {
 }
 
 export default function AdminApplicationsPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -151,7 +153,7 @@ export default function AdminApplicationsPage() {
   };
 
   const rejectPassword = async (req: PasswordRequest) => {
-    if (!confirm(`${req.name} 님의 출결번호 변경 신청을 반려할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!(await confirm({ title: `${req.name} 님의 출결번호 변경 신청을 반려할까요?`, description: '이 작업은 되돌릴 수 없습니다.', tone: 'danger', confirmText: '반려' }))) return;
     setPwBusy((b) => ({ ...b, [req.id]: true }));
     try {
       const res = await fetch(`/api/admin/password-requests/${req.id}`, { method: 'DELETE' });
@@ -234,7 +236,7 @@ export default function AdminApplicationsPage() {
   };
 
   const reject = async (app: Application) => {
-    if (!confirm(`${app.name} 님의 가입신청을 반려할까요? 이 작업은 되돌릴 수 없습니다.`)) return;
+    if (!(await confirm({ title: `${app.name} 님의 가입신청을 반려할까요?`, description: '이 작업은 되돌릴 수 없습니다.', tone: 'danger', confirmText: '반려' }))) return;
     setBusy((b) => ({ ...b, [app.id]: true }));
     try {
       const res = await fetch(`/api/admin/applications/${app.id}`, { method: 'DELETE' });

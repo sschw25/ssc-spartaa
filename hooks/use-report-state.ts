@@ -20,6 +20,7 @@ import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { buildDisplayThread } from '@/lib/thread';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const BRIEFING_MESSAGES: Record<string, string[]> = {
   studying: [
@@ -280,6 +281,7 @@ const STUDENT_TAB_IDS = [
 ];
 
 export function useReportState() {
+  const confirm = useConfirm();
   const params = useParams();
   const searchParams = useSearchParams();
   const studentId = params.id as string;
@@ -704,8 +706,10 @@ export function useReportState() {
           score: '',
           date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date()),
         });
+        toast.success('성적을 저장했어요.');
       } else {
         setGradeError(json.message || '저장에 실패했습니다.');
+        toast.error(json.message || '저장에 실패했어요.');
       }
     } catch {
       setGradeError('네트워크 오류가 발생했습니다.');
@@ -720,6 +724,7 @@ export function useReportState() {
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, grades: (prev.grades || []).filter((g) => g.id !== id) } : prev));
+        toast.success('성적 기록을 삭제했어요.');
       }
     } catch {
       // noop
@@ -962,9 +967,11 @@ export function useReportState() {
         if (json.rewardGranted) {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
           setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 5000);
+        } else {
+          toast.success('오늘 컨디션을 기록했어요.');
         }
       } else if (json?.message) {
-        if (typeof window !== 'undefined') window.alert(json.message);
+        toast.error(json.message);
       }
     } catch {
       // noop
@@ -1003,8 +1010,10 @@ export function useReportState() {
           currentGoalSnapshot: null,
         });
         setRequestCustomOpen(false);
+        toast.success('신청이 접수되었어요.', { description: '코멘터 확인 후 알림으로 결과를 알려드릴게요.' });
       } else {
         setRequestError(json.message || '신청에 실패했습니다.');
+        toast.error(json.message || '신청에 실패했어요.');
       }
     } catch {
       setRequestError('네트워크 오류가 발생했습니다.');
@@ -1012,13 +1021,15 @@ export function useReportState() {
       setRequestSubmitting(false);
     }
   };
-  
+
   const cancelRequest = async (id: string) => {
+    if (!(await confirm({ title: '이 신청을 취소할까요?', tone: 'danger', confirmText: '신청 취소' }))) return;
     try {
       const res = await fetch(`/api/student/requests?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, changeRequests: (prev.changeRequests || []).filter((r) => r.id !== id) } : prev));
+        toast.success('신청을 취소했어요.');
       }
     } catch {
       // noop
@@ -1043,9 +1054,12 @@ export function useReportState() {
       const now = new Date();
       if (now.getTime() > deadline.getTime()) {
         urgent = true;
-        const ok = window.confirm(
-          '반차는 기본적으로 사용 전날 18:00까지 신청해야 합니다. 당일 오전 등 급하게 신청하는 경우, 긴급한 상황에만 사용해 주시기 바랍니다. 신청하시겠습니까?'
-        );
+        const ok = await confirm({
+          title: '긴급 반차로 신청할까요?',
+          description:
+            '반차는 사용 전날 18:00까지 신청하는 게 원칙이에요. 당일 등 급하게 신청하는 경우는 긴급한 상황에만 사용해 주세요.',
+          confirmText: '긴급 신청',
+        });
         if (!ok) return;
       }
     }
@@ -1063,10 +1077,13 @@ export function useReportState() {
         setLeaveForm((f) => ({ ...f, reason: '' }));
         // 반차 자동 승인 시 즉시 안내 — 학생이 '자동 승인됨'을 바로 인지하도록
         if (json.request?.autoApproved) {
-          window.alert(`✅ ${json.request.date} 반차가 자동 승인되었습니다. 신청 내역에서 확인할 수 있어요.`);
+          toast.success(`${json.request.date} 반차가 자동 승인되었어요.`, { description: '신청 내역에서 확인할 수 있어요.' });
+        } else {
+          toast.success('신청이 접수되었어요.', { description: '코멘터 확인 후 알림으로 결과를 알려드릴게요.' });
         }
       } else {
         setLeaveError(json.message || '신청에 실패했습니다.');
+        toast.error(json.message || '신청에 실패했어요.');
       }
     } catch {
       setLeaveError('네트워크 오류가 발생했습니다.');
@@ -1076,11 +1093,13 @@ export function useReportState() {
   };
   
   const cancelLeave = async (id: string) => {
+    if (!(await confirm({ title: '이 휴가 신청을 취소할까요?', tone: 'danger', confirmText: '신청 취소' }))) return;
     try {
       const res = await fetch(`/api/student/leave?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, leaveRequests: (prev.leaveRequests || []).filter((r) => r.id !== id) } : prev));
+        toast.success('신청을 취소했어요.');
       }
     } catch {
       // noop
@@ -1125,8 +1144,10 @@ export function useReportState() {
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, suggestionRequests: [json.suggestion as ConsultationLog, ...(prev.suggestionRequests || [])] } : prev));
         setSuggestionMessage('');
+        toast.success('건의가 접수되었어요.', { description: '코멘터 확인 후 알림으로 답변드릴게요.' });
       } else {
         setSuggestionError(json.message || '건의사항 등록에 실패했습니다.');
+        toast.error(json.message || '건의 등록에 실패했어요.');
       }
     } catch {
       setSuggestionError('네트워크 오류가 발생했습니다.');
@@ -1136,11 +1157,13 @@ export function useReportState() {
   };
 
   const cancelSuggestion = async (id: string) => {
+    if (!(await confirm({ title: '이 건의를 취소할까요?', tone: 'danger', confirmText: '건의 취소' }))) return;
     try {
       const res = await fetch(`/api/student/suggestions?id=${encodeURIComponent(id)}&studentId=${encodeURIComponent(studentId)}`, { method: 'DELETE' });
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, suggestionRequests: (prev.suggestionRequests || []).filter((r) => r.id !== id) } : prev));
+        toast.success('건의를 취소했어요.');
       }
     } catch {
       // noop

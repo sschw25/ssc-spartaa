@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Bell, CalendarClock, ClipboardCheck, ClipboardPaste, Loader2, Trash2, UserPlus, X } from 'lucide-react';
 import type { AwaySchedule, Student } from '@/lib/types/student';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -134,6 +135,7 @@ function parentSmsEnabled(value: string): boolean {
 }
 
 export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: AddStudentModalProps) {
+  const confirm = useConfirm();
   const [mode, setMode] = useState<Mode>('single');
 
   // ── 개별 등록 상태 ──────────────────────────────────────────────
@@ -300,9 +302,11 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     if (!name.trim()) { toast.error('원생 이름을 입력해 주세요.'); return; }
     if (password.trim() && password.trim().length < 4) { toast.error('비밀번호는 4자 이상이어야 합니다.'); return; }
     if (seatConflicts.length > 0) {
-      const ok = confirm(
-        `이 센터에 이미 ${parsedSeat}번 좌석을 쓰는 원생이 있습니다.\n\n대상: ${seatConflicts.map((s) => s.name).join(', ')}\n\n그래도 같은 좌석으로 등록할까요?`
-      );
+      const ok = await confirm({
+        title: `그래도 ${parsedSeat}번 좌석으로 등록할까요?`,
+        description: `이 센터에 이미 ${parsedSeat}번 좌석을 쓰는 원생이 있습니다.\n대상: ${seatConflicts.map((s) => s.name).join(', ')}`,
+        confirmText: '등록',
+      });
       if (!ok) return;
     }
     setLoading(true);
@@ -388,7 +392,11 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
       const detail = seatConflictRows
         .map((item) => `${item.row.seatNumber}번 ${item.row.name.trim()} ↔ ${item.conflicts.join(', ')}`)
         .join('\n');
-      const ok = confirm(`같은 센터에 좌석번호가 겹치는 원생이 있습니다.\n\n${detail}\n\n그래도 등록할까요?`);
+      const ok = await confirm({
+        title: '좌석번호가 겹치지만 그래도 등록할까요?',
+        description: `같은 센터에 좌석번호가 겹치는 원생이 있습니다.\n${detail}`,
+        confirmText: '등록',
+      });
       if (!ok) return;
     }
     const duplicateAwayNames = bulkRows
@@ -399,7 +407,11 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
       );
     if (duplicateAwayNames.length > 0) {
       const names = Array.from(new Set(duplicateAwayNames.map((row) => row.name.trim()))).join(', ');
-      const ok = confirm(`빠지는 요일이 있는 동명이인 또는 기존 원생 이름이 있습니다.\n\n대상: ${names}\n\n0번 좌석/동명이인 여부를 확인한 뒤 등록할까요?`);
+      const ok = await confirm({
+        title: '동명이인 여부를 확인한 뒤 등록할까요?',
+        description: `빠지는 요일이 있는 동명이인 또는 기존 원생 이름이 있습니다.\n대상: ${names}\n0번 좌석/동명이인 여부를 확인해 주세요.`,
+        confirmText: '등록',
+      });
       if (!ok) return;
     }
     setBulkLoading(true);

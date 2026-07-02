@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Trophy, Loader2, Save, Sparkles, Ticket, PlayCircle, CalendarClock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import {
   MissionId, MissionConfig, MISSION_ORDER, MISSION_META, DEFAULT_MISSION_CONFIG, normalizeMissionConfig,
@@ -15,6 +16,7 @@ import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 type ConfigMap = Record<MissionId, MissionConfig>;
 
 export default function MissionsPage() {
+  const confirm = useConfirm();
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [config, setConfig] = useState<ConfigMap>(normalizeMissionConfig(DEFAULT_MISSION_CONFIG));
@@ -104,8 +106,8 @@ export default function MissionsPage() {
   };
 
   const settleNow = async () => {
-    if (dirty && !confirm('저장하지 않은 변경사항이 있습니다. 현재 저장된 설정 기준으로 정산할까요?')) return;
-    if (!confirm('지금 미션을 정산하고 조건을 충족한 학생에게 쿠폰을 지급할까요? (같은 기간 중복 지급은 자동 방지)')) return;
+    if (dirty && !(await confirm({ title: '저장하지 않은 변경사항이 있습니다. 계속할까요?', description: '현재 저장된 설정 기준으로 정산됩니다.', confirmText: '계속' }))) return;
+    if (!(await confirm({ title: '지금 미션을 정산하고 쿠폰을 지급할까요?', description: '조건을 충족한 학생에게 쿠폰을 지급합니다. 같은 기간 중복 지급은 자동 방지됩니다.', tone: 'danger', confirmText: '정산·지급' }))) return;
     setSettling(true);
     try {
       const res = await fetch('/api/admin/missions/settle', { method: 'POST' });

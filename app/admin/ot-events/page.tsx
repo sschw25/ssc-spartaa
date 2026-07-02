@@ -11,6 +11,7 @@ import {
 import { toast } from 'sonner';
 import { Student, OtEvent, OtParticipation } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const getCampusLabel = (c: string) => ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' }[c] ?? '기타');
@@ -25,6 +26,7 @@ const STATUS_CONFIG: Record<'attending' | 'absent' | 'undecided', { label: strin
 
 export default function OtEventsPage() {
   const router = useRouter();
+  const confirm = useConfirm();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [students, setStudents] = useState<Student[]>([]);
   const [events, setEvents] = useState<OtEvent[]>([]);
@@ -97,7 +99,7 @@ export default function OtEventsPage() {
   };
 
   const deleteEvent = async (eventId: string) => {
-    if (!confirm('이 OT 일정을 삭제하시겠습니까?')) return;
+    if (!(await confirm({ title: '이 OT 일정을 삭제할까요?', tone: 'danger', confirmText: '삭제' }))) return;
     try {
       const res = await fetch(`/api/admin/ot-events?eventId=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
       const json = await res.json();
@@ -111,7 +113,7 @@ export default function OtEventsPage() {
 
   const notifyToStudents = async (eventId: string, action: 'send' | 'cancel' = 'send') => {
     if (notifyingEventId) return;
-    if (action === 'cancel' && !confirm('발송된 OT 참여 알림을 취소할까요? 학생 화면에서 사라지고, 다시 발송할 수 있습니다.')) return;
+    if (action === 'cancel' && !(await confirm({ title: '발송된 OT 참여 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
     setNotifyingEventId(eventId);
     try {
       const res = await fetch('/api/admin/ot-events', {
