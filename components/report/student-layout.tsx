@@ -125,12 +125,14 @@ export function StudentLayout({
   const getNavItem = (id: string) => reportNavItems.find((item) => item.href === `#${id}`);
   const quickTabItems: QuickTabItem[] = [];
   const homeNavItem = getNavItem('report-overview');
+  const missionsNavItem = getNavItem('student-missions');
   const requestNavItem = getNavItem('student-requests');
   const learningPlanNavItem = getNavItem('execution-plan');
   const attendanceNavItem = getNavItem('attendance-status');
   const notificationNavItem = getNavItem('student-notifications');
 
   if (homeNavItem) quickTabItems.push({ ...homeNavItem, key: 'report-overview', tabId: 'report-overview' });
+  if (missionsNavItem) quickTabItems.push({ ...missionsNavItem, label: '미션', meta: '오늘 할 일', key: 'student-missions', tabId: 'student-missions' });
   if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '휴식신청', meta: '반차·휴식', key: 'student-requests', tabId: 'student-requests' });
   if (learningPlanNavItem) quickTabItems.push({ ...learningPlanNavItem, label: '학습계획', meta: '전체 계획', key: 'execution-plan', tabId: 'execution-plan' });
   if (attendanceNavItem) quickTabItems.push({ ...attendanceNavItem, label: '등하원', meta: '순공/랭킹', key: 'attendance-status', tabId: 'attendance-status' });
@@ -357,7 +359,7 @@ export function StudentLayout({
                         type="button"
                         onClick={() => selectStudentTab(item.tabId, item.scrollTargetId, item.key)}
                         aria-current={active ? 'page' : undefined}
-                        className={`relative flex min-w-[56px] flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 transition-all duration-300 active:scale-[0.94] sm:min-w-[64px] sm:px-3.5 ${
+                        className={`relative flex min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 transition-all duration-300 active:scale-[0.94] sm:min-w-[64px] sm:px-3.5 ${
                           active
                             ? 'bg-[#0071E3]/12 text-[#0071E3]'
                             : 'text-[#86868B] hover:bg-black/[0.04] hover:text-[#1D1D1F]'
