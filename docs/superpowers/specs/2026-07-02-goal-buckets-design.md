@@ -1,146 +1,115 @@
-# 주간/월간 목표 버킷 + 페이스 시각화 — 설계
+# 기간 목표(1~12주) + 분 정규화 페이스 — 설계 (v2, 페르소나 반영)
 
 작성일: 2026-07-02
 브랜치: `feat/goal-buckets`
+개정: 10 페르소나(관리자5/학생5) 스트레스 테스트 결과 반영. 초기 "주간/월간 버킷 + 단순 합계 판정"에서
+"기간 목표 창 + 분 정규화 집계 + 자료별 마감 위험 경보"로 재설계.
 
 ## 배경 / 문제
 
-학생 "오늘 미션"은 `student.subjects[].detailedPlans`에서 실시간 파생되며, 미션 화면은
-학습계획 표에는 없는 두 게이트를 건다:
-- (A) 과목 `studyDays` — 오늘이 학습요일이 아니면 제외
-- (B) 날짜창 — `startDate ≤ today ≤ endDate`인 세부계획만
+학생 "오늘 미션"은 `subjects[].detailedPlans`에서 파생되며, 미션 화면은 (A) 과목 studyDays,
+(B) 날짜창 게이트를 건다. 그래서 "주당/기간 목표"를 잡아도 매일 하루치로 쪼개져 특정 요일에만 뜬다.
+그러나 기간 목표의 본질은 "기간 내에 끝내면 됨"이다. 학생이 특정 과목을 몰아서 할 수 있어야 한다.
 
-이 때문에 "주당 분량"으로 목표를 잡아도 매일 하루치(예: 하루 2강)로 쪼개져 학습요일에만 뜬다.
-그러나 주당/월간 목표의 본질은 **"기간 내에 그 분량을 끝내면 됨"**이지, 특정 요일에 강제 배정하는 게
-아니다. 매일 공부하지 않는 학생 현실과도 맞지 않는다.
+## 두 모드
 
-## 목표
-
-목표 유형에 따라 미션 표현을 두 모드로 분리한다.
-
-| 목표 유형 | 모드 | 미션 표현 |
+| 모드 | 조건 | 미션 표현 |
 |---|---|---|
-| `weeks` (주수) | 매일 시간표 | 학습요일마다 하루치 (기존 동작 유지) |
-| `dailyAmount` (일일 학습량) | 매일 시간표 | 학습요일마다 하루치 (기존 동작 유지) |
-| `weeklyAmount` (주당 분량) | **주간 버킷** | 이번 주 내 목표량, 한 만큼 입력 |
-| `monthlyAmount` (월간 분량, 신규) | **월간 버킷** | 이번 달(달력 월) 내 목표량, 한 만큼 입력 |
+| **A. 반복 시간표** | 요일이 정해져 매주 반복 | 기존 유지 — 그 학습요일에 하루치 |
+| **B. 기간 목표** | 1~12주 기간 안에 완료 | 기간 목표 창 + 분 정규화 집계 달성 + 자료별 위험 경보 |
 
-## 동작 정의
+모드는 자료(교재/인강)별 목표 설정에서 결정된다. `goalType`:
+- `weeks`, `dailyAmount` → 모드 A(반복 시간표, 기존).
+- `weeklyAmount` → 모드 B, 기간 = 1주.
+- `deadlineWeeks` (신규) → 모드 B, 기간 = N주(1~12).
 
-### 버킷 모드 (주간·월간 공통)
-- 기간 = 주간 버킷은 주(월~일), 월간 버킷은 **달력 월(1일~말일)**.
-- 학생이 **누적 진행량을 직접 입력**한다(예: 이번 주 6강 중 3강 완료).
-- 해당 기간 내내 미션에 표시되고, `누적 ≥ 목표량`이면 그 기간 완료로 처리.
-- **요일 게이트 없음, 하루 할당 없음** — 주/월 내 아무 때나 채우면 됨.
-- **일일 쿠폰 판정과 분리** — 버킷 미달이어도 그날의 "매일 시간표" 미션/쿠폰을 막지 않는다.
-  일일 완료 판정은 daily-timetable 항목만으로 한다.
-- 월간 목표 달성 시 별도 보상은 이번 범위에 **미포함**.
+(주간/월간을 따로 두지 않고 "N주 기간"으로 일반화. 주간=1주, 월간≈4주.)
 
-### 페이스 기준선 (학습일 기준)
-- 기대 진행률 = (기간 내 **경과 학습일** ÷ 기간 **총 학습일**) × 100
-  - 경과 학습일: 기간 시작일 ~ 오늘(포함) 사이의 학습요일 수
-  - 총 학습일: 기간 전체(시작~끝)의 학습요일 수
-  - 학습요일은 과목 `studyDays`(미설정 시 기본 월~토)
-- 기대 목표량 = round(목표량 × 기대 진행률)
-- UI: 진행바 + 기준 마커 + 문구
-  "지금이면 약 {기대%}({기대량}) 했어야 해요 · 현재 {실제%}({실제량})"
-- 뒤처짐(실제 < 기대)이면 경고색(amber/red 계열), 도달/앞섬이면 안심색(emerald 계열).
-  색=의미 규칙(iOS26 Liquid Glass) 준수, 보라/인디고 금지.
+## 모드 B 판정·표시 (페르소나 반영)
 
-## 데이터 모델
+### 데이터 모델
+- `DetailedPlan.periodType?: 'deadline'` — 기간 목표 창 plan 표시(undefined=기존 daily).
+- 기간 목표 자료는 **자료당 plan 1개**가 전체 기간을 덮는다:
+  `startDate` = 이번 주 시작(또는 오늘), `endDate` = start + N주 - 1일, `targetAmount` = 기간 내 완료 분량,
+  `actualAmount` = 누적 진행량, `periodType='deadline'`.
 
-### `DetailedPlan` 확장 (`lib/types/student.ts`)
-- `periodType?: 'week' | 'month'` 추가.
-  - `undefined` = 매일 시간표(daily). 기존 데이터 하위호환.
-  - `'week'` = 주간 버킷, `'month'` = 월간 버킷.
-- 누적 진행은 기존 `actualAmount`(units 완료) + `isCompleted`(≥목표) 재사용.
-  per-date `dailyCompletions`는 버킷에서 사용하지 않는다.
+### 1) 일일 달성 = 분(min) 정규화 집계
+- 자료마다 단위(강/페이지/문제)가 달라 개수 합산은 무의미 → **분으로 환산해 합산.**
+- 자료별 환산: 기존 `getEstimatedStudyTimeMin(unit, amount, type, estimatedMinutesPerUnit)`
+  (인강은 배속 반영). "1강=estimatedMinutesPerUnit(기본 60)/배속" 등.
+- 오늘까지 누적 기대 분 = Σ(자료별 targetAmount 분) × (경과 학습일 ÷ 총 학습일)
+- 실제 진행 분 = Σ(자료별 actualAmount 분)
+- **오늘 미션 달성 = 실제 진행 분 ≥ 오늘까지 누적 기대 분.** 몰빵/순서 자유(사용자 의도 유지).
 
-### `goalType` enum
-- `'weeks' | 'weeklyAmount' | 'dailyAmount' | 'monthlyAmount'` — `monthlyAmount` 추가.
-  (`BookProgress.goalType`, `LectureProgress.goalType`, `ProposedGoal.goalType`,
-   관련 UI select, `generateDetailedPlans` 시그니처)
+### 2) 오늘 권장 (구체)
+- 자료별 "오늘 권장 진행" = ceil(남은량 ÷ 남은 학습일). 미션에 "오늘 권장: {자료} {범위}"로 표시.
+- 집계 달성이므로 강제는 아니지만, 초보/상위권이 항상 "오늘 뭘"을 알 수 있게 한다.
+
+### 3) 자료별 마감 위험 경보 (편식 방지, 하루 차단 아님)
+- 자료별 "남은 기간 완료 필요 페이스" = 남은량 ÷ 남은 학습일(분 환산).
+- 이 필요 페이스가 그 자료의 하루 가용 한도 대비 과도하거나, 자료 진행률이 기대 대비 임계(예: 기대의 60%) 미만이면 **위험 배지**.
+- 하루 미션을 막지 않고 조기 경보만. 관리자 대시보드 bottleneck(최저 진행 자료) 표기.
+
+### 4) 선행/뒤처짐 분리 (복귀자·상위권)
+- "오늘 목표"(오늘 하루 공정분, 분) vs "누적 격차"(밀린 총 분) 분리 표시.
+- 실제 ≥ 오늘 기대면 "오늘치 완료 · 약 N일치 앞섬" 배지(앞선 분 ÷ 하루 평균 분).
+- 뒤처지면 "현재 X%(기대 Y%)" + 격차 progress bar. 매일 "미달"만 반복되지 않게 오늘 목표 자체는 도달 가능하게.
+
+### 5) 페이스 기준
+- 학습일 기준(과목 studyDays, 미설정 시 월~토). (출석일 기준 리베이스는 v1 제외.)
+
+### 6) 일일 쿠폰
+- 모드 B(기간 목표) 자료는 위 집계 달성으로 "오늘 미션 달성" 판정에 참여. 모드 A와 함께 오늘 전체 달성 계산.
+  (기존 daily 항목 + 기간목표 집계가 모두 충족일 때 쿠폰.)
 
 ## 계획 생성 (`lib/progress-plan.ts`)
+- `deadlineWeeks` 분기: 자료당 단일 plan(전체 기간 창), `periodType='deadline'`, targetAmount=완료분량.
+- `weeklyAmount`: 기존 주간 청킹 대신 기간=1주짜리 deadline plan으로 통일(또는 기존 유지 + periodType 태깅).
+  → 구현 단순화를 위해 `weeklyAmount`도 deadline 창(1주)으로 취급.
+- 신규 유틸:
+  - `getPlanUnitMinutes(material)` → 자료 1단위 분(배속 반영) — `getEstimatedStudyTimeMin` 래핑.
+  - `getDeadlinePace(plan, material, today, studyDays)` → { expectedRatio, expectedAmount, actualAmount,
+    behind, todayRecommend, aheadDays } (분 환산 포함).
 
-`generateDetailedPlans`에 모드별 분기 추가:
-- `weeklyAmount`: 기존 주간 청킹 유지하되, 생성되는 각 plan에 `periodType='week'` 세팅.
-- `monthlyAmount` (신규): **달력 월** 단위로 plan 생성. 각 plan은
-  `startDate` = 해당 월 1일(단, 첫 plan은 오늘이 속한 월의 1일), `endDate` = 해당 월 말일,
-  `targetAmount` = min(남은 분량, goalValue), `rangeText`는 "N회독 a~b" 형식,
-  `dailyAmount`는 참고용(월 학습일로 나눈 근사), `periodType='month'`.
-  남은 분량 소진까지 다음 달로 반복. 회독(reviewPasses)도 동일 규칙으로 이어붙임.
-- `weeks`, `dailyAmount`: 변화 없음(`periodType` undefined).
+## 미션 파생 (`missions-hub` + `weeklyDailyPlans`)
+- daily 항목: `!periodType`만(기존).
+- 기간목표(`periodType==='deadline'` 현재 활성) 자료들을 모아 **분 정규화 집계** 계산:
+  응답에 `deadlineGoals: DeadlineGoal[]` + `deadlineSummary`(오늘 기대분/실제분/달성/앞선일수) 추가.
+- 일일 완료/쿠폰 판정 = daily 항목 전부 완료 AND `deadlineSummary.metToday`(있을 때).
 
-### 페이스 유틸 (신규, `lib/progress-plan.ts` 또는 `lib/student-activity.ts`)
-```
-getBucketPace(plan, today, studyDays): {
-  totalStudyDays, elapsedStudyDays, expectedRatio, expectedAmount,
-  actualAmount, actualRatio, behind: boolean
-}
-```
-`countStudyDaysInRange`(기존) 재사용.
-
-## 미션 파생 (분리)
-
-두 파생 지점을 동일 규칙으로 수정한다.
-- `app/api/student/missions-hub/route.ts` (서버, MissionsHub 탭)
-- `hooks/use-report-state.ts` `weeklyDailyPlans` (클라, 홈 "오늘 미션" 카드)
-
-변경:
-- 각 자료의 `detailedPlans`를 `periodType` 유무로 분리.
-  - `periodType` 없음 → 기존 daily 항목(studyDays 게이트 + 날짜창 + per-date 완료).
-  - `periodType` 있음 → **버킷 항목**: 현재 기간 활성(startDate≤today≤endDate)인 것만,
-    studyDays 게이트 **미적용**, 자료당 현재 기간 1건, 진행(`actualAmount/targetAmount`) + 페이스 포함.
-- 응답/반환에 `bucketGoals`(주간+월간) 목록을 daily 목록과 **별도**로 제공.
-- 일일 완료/쿠폰 판정 로직은 daily 목록만 본다(버킷 제외).
-
-## 진행 입력 (완료 경로)
-
-- 기존 `updatePlanCompletion`(클라, `hooks/use-report-state.ts`) + 서버 저장 경로를 버킷용으로 확장.
-  - 버킷 항목은 "체크"가 아니라 **누적량 입력**(number). 입력 시 해당 plan의 `actualAmount` 설정,
-    `isCompleted = actualAmount ≥ targetAmount`.
-  - 자료 진행(currentPage/completedLectures)도 best-effort 동기화:
-    `parsePlanBounds(plan).start - 1 + actualAmount`로 세팅(범위 밖이면 클램프).
-- 서버 저장은 기존 진도 PATCH 경로(`patchStudentProgress`, subjects 단일소스) 재사용.
+## 진행 입력
+- 기간목표 자료는 누적 진행량 입력(number) → plan.actualAmount, 자료 current 동기화(best-effort),
+  isCompleted=actualAmount≥targetAmount. 기존 progress 저장 경로 재사용.
 
 ## UI
+### 학생
+- "오늘 미션"(daily) + **"기간 목표"** 섹션: 상단에 집계 요약(오늘 기대분 vs 실제분, 달성/앞선일수 배지),
+  아래 자료별 카드(진행바+기대 마커, "오늘 권장 ~", 누적 입력, 마감 위험 배지). 색=의미(iOS26).
+- 홈 카드: 기간목표 있으면 요약 한 줄 + 위험 자료 경고.
 
-### 학생 (미션 허브 + 홈 카드)
-- 기존 "오늘 미션"(daily) 위/아래에 **"이번 주 · 이번 달 목표"** 섹션 추가.
-- 각 버킷 카드: 과목·자료명, 진행바(실제) + 기준 마커(기대), 문구, 누적량 입력 스텝퍼/인풋,
-  완료 시 배지. 주간/월간 라벨 구분.
-- iOS26 Glass 규칙 준수(.glass 유틸 재사용, 색=의미, word-break 한글깨짐 주의).
+### 관리자
+- `student-detail-sheet` 설정 방식에 **"기간 목표(주 선택)"** 추가 + 주수(1~12) 입력. 미리보기: "이 속도면 하루 약 N분".
+- 대시보드/진도 탭에 자료별 진행 + bottleneck 표기(가능 범위).
+- 요청 폼(`execution-plan-tab`)에 기간목표 옵션.
 
-### 관리자 (`components/admin/student-detail-sheet.tsx`)
-- "설정 방식" 드롭다운에 **"월간 분량 지정"** 추가. 기존 "주당 분량 지정"과 병렬.
-- 목표 수치 단위 라벨(주/월/일) 및 미리보기 추정치(`estimatedDailyAmount`)에 월간 분기 반영
-  (월간: goalValue / 월 학습일 근사).
-
-### 학생 요청 폼 (`components/report/execution-plan-tab.tsx`)
-- goalType select에 "월간 분량" 옵션 추가.
-
-## 손대는 파일 요약
-- `lib/types/student.ts` — `periodType`, `monthlyAmount`
-- `lib/progress-plan.ts` — 월간 생성 분기, 주간 `periodType` 태깅, 페이스 유틸
-- `app/api/student/missions-hub/route.ts` — 버킷 분리 + 페이스
-- `hooks/use-report-state.ts` — `weeklyDailyPlans` 버킷 분리, `updatePlanCompletion` 버킷 확장
-- `components/student/missions-hub.tsx` — 버킷 섹션 UI
-- `components/report/home-overview-tab.tsx` — 홈 버킷 표시(간략)
-- `components/admin/student-detail-sheet.tsx` — 월간 옵션/미리보기
-- `components/report/execution-plan-tab.tsx` — 요청 폼 월간 옵션
-- 승인 경로 `app/api/admin/students/[id]/requests/route.ts` — monthlyAmount 전달 확인
+## 손대는 파일
+- `lib/types/student.ts` — `periodType`, goalType에 `deadlineWeeks`(+`weeklyAmount` 유지)
+- `lib/progress-plan.ts` — deadline 생성, 분 환산·페이스 유틸
+- `app/api/student/missions-hub/route.ts` — deadlineGoals/summary
+- `hooks/use-report-state.ts` — weeklyDailyPlans 분리, 진행 입력, 요약 파생
+- `components/student/missions-hub.tsx`, `components/report/home-overview-tab.tsx`, `app/report/[id]/page.tsx`
+- `components/admin/student-detail-sheet.tsx`, `components/report/execution-plan-tab.tsx`
+- 승인 경로 `app/api/admin/students/[id]/requests/route.ts` — deadlineWeeks 전달
 
 ## 마이그레이션
-- 신규 컬럼 없음. `periodType`/`monthlyAmount`는 `subjects` JSONB 내부에 저장 — **마이그레이션 불필요**.
+없음 — 신규 필드는 `subjects` JSONB 내부.
 
 ## 하위호환
-- 기존 `periodType` 없는 plan은 daily로 동작(변화 없음).
-- 기존 `weeklyAmount` 자료: 재생성 전까지는 plan에 `periodType`가 없어 daily로 보임.
-  관리자/학생이 계획을 재생성(승인)하면 버킷으로 전환된다. (일괄 마이그레이션은 범위 밖)
+- `periodType` 없는 기존 plan = daily 유지. 재생성 전까지 기존 동작.
 
-## 검증 계획
-- 데브서버(로컬 폴백)에서 학생/관리자 왕복.
-- 예시 5종: (1) 주수, (2) 일일 학습량, (3) 주당 분량, (4) 월간 분량, (5) 주당+월간 혼합.
-- 관리자로 계획 생성 → 학생 화면에서 daily는 요일별 표시, 버킷은 진행 입력·페이스 확인 →
-  학생이 진행 입력 → 관리자 화면 반영 확인. 각 입장 문제없으면 main 병합·푸시.
+## 검증
+- 데브서버(로컬 폴백) 학생/관리자 왕복, 예시 5종:
+  (1) weeks(반복), (2) dailyAmount(반복), (3) deadlineWeeks 2주 단일자료,
+  (4) deadlineWeeks 4주 다자료(편식 시 위험 경보 확인), (5) 반복+기간 혼합.
+- 확인: 모드A는 요일별, 모드B는 요일 무관·집계 달성·오늘 권장·위험 경보·앞선일수. 진행 입력 왕복 반영.
+- 각 입장 문제없고 콘솔/네트워크 에러 0이면 main 병합·푸시. 아니면 브랜치 유지 + 보고.
