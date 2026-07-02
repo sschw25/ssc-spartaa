@@ -127,14 +127,14 @@ export function StudentLayout({
   const homeNavItem = getNavItem('report-overview');
   const missionsNavItem = getNavItem('student-missions');
   const requestNavItem = getNavItem('student-requests');
-  const learningPlanNavItem = getNavItem('execution-plan');
+  const suggestionNavItem = getNavItem('student-suggestions');
   const attendanceNavItem = getNavItem('attendance-status');
   const notificationNavItem = getNavItem('student-notifications');
 
   if (homeNavItem) quickTabItems.push({ ...homeNavItem, key: 'report-overview', tabId: 'report-overview' });
   if (missionsNavItem) quickTabItems.push({ ...missionsNavItem, label: '미션', meta: '오늘 할 일', key: 'student-missions', tabId: 'student-missions' });
   if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '휴식신청', meta: '반차·휴식', key: 'student-requests', tabId: 'student-requests' });
-  if (learningPlanNavItem) quickTabItems.push({ ...learningPlanNavItem, label: '학습계획', meta: '전체 계획', key: 'execution-plan', tabId: 'execution-plan' });
+  if (suggestionNavItem) quickTabItems.push({ ...suggestionNavItem, label: '건의사항', meta: '의견 남기기', key: 'student-suggestions', tabId: 'student-suggestions' });
   if (attendanceNavItem) quickTabItems.push({ ...attendanceNavItem, label: '등하원', meta: '순공/랭킹', key: 'attendance-status', tabId: 'attendance-status' });
   if (notificationNavItem) quickTabItems.push({ ...notificationNavItem, key: 'student-notifications', tabId: 'student-notifications' });
   const selectedQuickItem = quickNavActiveKey
