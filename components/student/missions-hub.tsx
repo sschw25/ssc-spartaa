@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles, CalendarDays, Presentation, PenLine, PartyPopper } from 'lucide-react';
+import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles, CalendarDays, Presentation, PenLine, PartyPopper, Target, AlertTriangle } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { MissionsCard } from '@/components/report/missions-card';
@@ -40,6 +40,39 @@ type PlanEntry = {
   rangeText: string;
 };
 
+type DeadlineGoal = {
+  id: string;
+  subject: string;
+  title: string;
+  type: '강의' | '교재';
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  planId: string;
+  periodWeeks: number;
+  targetAmount: number;
+  actualAmount: number;
+  unit: string;
+  rangeText: string;
+  dateKey: string;
+  endDate: string;
+  expectedAmount: number;
+  expectedRatio: number;
+  actualRatio: number;
+  behind: boolean;
+  todayRecommend: number;
+  aheadUnits: number;
+  riskLevel: 'ok' | 'warn' | 'danger';
+};
+
+type DeadlineSummary = {
+  expectedMinutes: number;
+  actualMinutes: number;
+  metToday: boolean;
+  aheadDays: number;
+  riskCount: number;
+  goalCount: number;
+} | null;
+
 type Checklist = {
   sleep_hours?: number;
   phone_submitted?: boolean;
@@ -66,6 +99,8 @@ type HubData = {
   recommendations?: Recommendation[];
   schedule?: ScheduleItem[];
   leaveCoupons: number;
+  deadlineGoals?: DeadlineGoal[];
+  deadlineSummary?: DeadlineSummary;
 };
 
 const SCHEDULE_KIND: Record<ScheduleItem['kind'], { label: string; icon: LucideIcon }> = {
@@ -110,6 +145,9 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
   }>({ sleepHours: 7, phoneStatus: 'submitted', phoneReason: '' });
   const [checklistSubmitting, setChecklistSubmitting] = useState(false);
   const [repairing, setRepairing] = useState(false);
+  // 기간 목표 누적 진행량 입력 draft (goalId → 문자열) + 저장 중 표시
+  const [deadlineDrafts, setDeadlineDrafts] = useState<Record<string, string>>({});
+  const [savingDeadlineId, setSavingDeadlineId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -166,6 +204,40 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
       // noop
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  // 기간 목표 누적 진행량 저장 — deadlineAmount 전용 경로. 저장 후 허브 데이터 재로드로 페이스 갱신.
+  const saveDeadlineProgress = async (goal: DeadlineGoal, rawAmount: number) => {
+    if (savingDeadlineId) return;
+    const amount = Math.max(0, Math.min(goal.targetAmount, Math.round(rawAmount)));
+    setSavingDeadlineId(goal.id);
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          materialType: goal.materialType,
+          materialId: goal.materialId,
+          planId: goal.planId,
+          deadlineAmount: amount,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        await load();
+        setDeadlineDrafts((prev) => {
+          const next = { ...prev };
+          delete next[goal.id];
+          return next;
+        });
+      } else if (json?.message) {
+        toast.error(json.message);
+      }
+    } catch {
+      // noop
+    } finally {
+      setSavingDeadlineId(null);
     }
   };
 
@@ -253,6 +325,8 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
   const recommendations = data?.recommendations ?? [];
   const isCelebrate = recommendations.length === 1 && recommendations[0].tone === 'celebrate';
   const schedule = data?.schedule ?? [];
+  const deadlineGoals = data?.deadlineGoals ?? [];
+  const deadlineSummary = data?.deadlineSummary ?? null;
 
   const inner = (
       <>
@@ -447,6 +521,141 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
             </div>
           )}
         </section>
+
+        {/* 3.2 기간 목표 — 정해진 기간 안에 끝내면 되는 목표(요일 무관·분 정규화 집계) */}
+        {deadlineGoals.length > 0 && (
+          <section className={SECTION_SURFACE}>
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-[#0071E3]" />
+              <h2 className="text-sm font-semibold text-slate-800 break-keep">기간 목표</h2>
+            </div>
+            <p className="mt-1 text-[11px] font-semibold text-slate-400 break-keep">
+              기간 안에 끝내면 되는 목표예요. 요일에 얽매이지 말고 원하는 만큼 몰아서 해도 좋아요.
+            </p>
+
+            {/* 오늘 집계 요약 카드 */}
+            {deadlineSummary && (
+              <div
+                className={`mt-3 rounded-xl border px-4 py-3.5 ${
+                  deadlineSummary.metToday ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200/70 bg-amber-50'
+                }`}
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-bold text-slate-900 break-keep">오늘 기간 목표 집계</span>
+                  {deadlineSummary.metToday ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-white break-keep">
+                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      오늘치 완료
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white break-keep">오늘치 미달</span>
+                  )}
+                </div>
+                <p className="mt-1.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+                  진행 {deadlineSummary.actualMinutes}분 / 오늘 기대 {deadlineSummary.expectedMinutes}분
+                </p>
+                <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold break-keep">
+                  {deadlineSummary.metToday && deadlineSummary.aheadDays > 0 && (
+                    <span className="text-emerald-600">약 {deadlineSummary.aheadDays}일치 앞서 있어요</span>
+                  )}
+                  {deadlineSummary.riskCount > 0 && (
+                    <span className="inline-flex items-center gap-1 text-amber-600">
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      뒤처진 자료 {deadlineSummary.riskCount}개
+                    </span>
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* 자료별 카드 */}
+            <div className="mt-3 flex flex-col gap-2.5">
+              {deadlineGoals.map((goal) => {
+                const actualPct = Math.round(goal.actualRatio * 100);
+                const expectedPct = Math.round(goal.expectedRatio * 100);
+                const draft = deadlineDrafts[goal.id] ?? String(goal.actualAmount);
+                const riskBadge =
+                  goal.riskLevel === 'danger'
+                    ? { cls: 'bg-red-500 text-white', label: '많이 뒤처짐' }
+                    : goal.riskLevel === 'warn'
+                    ? { cls: 'bg-amber-500 text-white', label: '뒤처지는 중' }
+                    : null;
+                const done = goal.targetAmount > 0 && goal.actualAmount >= goal.targetAmount;
+                return (
+                  <div key={goal.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="min-w-0 text-xs font-bold text-slate-900 break-keep">
+                        {goal.subject} · {goal.title}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        {done && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 break-keep">
+                            <CheckCircle2 className="h-3 w-3" />
+                            달성
+                          </span>
+                        )}
+                        {!done && riskBadge && (
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold break-keep ${riskBadge.cls}`}>
+                            {riskBadge.label}
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400 break-keep">
+                      {goal.rangeText} · {goal.periodWeeks}주 안에
+                    </p>
+
+                    {/* 진행바 + 기대 마커 */}
+                    <div className="relative mt-2.5 h-2.5 w-full rounded-full bg-slate-100">
+                      <div
+                        className={`h-2.5 rounded-full ${done ? 'bg-emerald-500' : goal.behind ? 'bg-amber-400' : 'bg-[#0071E3]'}`}
+                        style={{ width: `${Math.min(100, actualPct)}%` }}
+                      />
+                      <div
+                        className="absolute top-[-2px] h-3.5 w-0.5 rounded bg-slate-500"
+                        style={{ left: `${Math.min(100, expectedPct)}%` }}
+                        title={`오늘 기대 ${expectedPct}%`}
+                      />
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-slate-400 tabular-nums">
+                      <span>{goal.actualAmount}/{goal.targetAmount}{goal.unit} ({actualPct}%)</span>
+                      <span>오늘 기대 {expectedPct}%</span>
+                    </div>
+
+                    {goal.todayRecommend > 0 && !done && (
+                      <p className="mt-2 text-[11px] font-semibold text-[#0071E3] break-keep">
+                        오늘 권장: {goal.todayRecommend}{goal.unit}
+                      </p>
+                    )}
+
+                    {/* 누적 진행량 입력 */}
+                    <div className="mt-2.5 flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={goal.targetAmount}
+                        value={draft}
+                        onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [goal.id]: e.target.value }))}
+                        className="w-24 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none tabular-nums"
+                        aria-label="누적 진행량"
+                      />
+                      <span className="text-xs font-semibold text-slate-400">{goal.unit} 까지 완료</span>
+                      <button
+                        type="button"
+                        onClick={() => saveDeadlineProgress(goal, Number(draft))}
+                        disabled={savingDeadlineId === goal.id || draft === String(goal.actualAmount)}
+                        className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-40"
+                      >
+                        {savingDeadlineId === goal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        기록
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
 
         {/* 3.5 이번 주 집중 포인트 — 약점 기반 개인화 코칭(건강지수 factors → 학생 코칭 문구) */}
         {recommendations.length > 0 && (

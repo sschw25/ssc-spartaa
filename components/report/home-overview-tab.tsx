@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
@@ -62,6 +62,14 @@ interface HomeOverviewTabProps {
   studyStats: StudyStats | null;
   completedQuests: Record<number, boolean>;
   setCompletedQuests: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
+  deadlineSummary?: {
+    expectedMinutes: number;
+    actualMinutes: number;
+    metToday: boolean;
+    aheadDays: number;
+    riskCount: number;
+    goalCount: number;
+  } | null;
 }
 
 export function HomeOverviewTab({
@@ -93,6 +101,7 @@ export function HomeOverviewTab({
   studyStats,
   completedQuests,
   setCompletedQuests,
+  deadlineSummary,
 }: HomeOverviewTabProps) {
   const confirm = useConfirm();
   // D-Day FAB state
@@ -400,6 +409,35 @@ export function HomeOverviewTab({
                 style={{ width: `${todayMissionPercent}%` }}
               />
             </div>
+
+            {/* 기간 목표 요약 한 줄 — 자세한 진행/입력은 미션 탭에서 */}
+            {deadlineSummary && deadlineSummary.goalCount > 0 && (
+              <div
+                className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-3.5 py-2.5 text-[11px] font-semibold break-keep ${
+                  deadlineSummary.metToday ? 'border-emerald-100 bg-emerald-50/60' : 'border-amber-200/60 bg-amber-50/70'
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5 text-slate-700">
+                  <Target className="h-3.5 w-3.5 text-[#0071E3]" />
+                  기간 목표 {deadlineSummary.goalCount}개
+                </span>
+                {deadlineSummary.metToday ? (
+                  <span className="text-emerald-600">
+                    오늘치 완료{deadlineSummary.aheadDays > 0 ? ` · 약 ${deadlineSummary.aheadDays}일치 앞섬` : ''}
+                  </span>
+                ) : (
+                  <span className="text-amber-600 tabular-nums">
+                    진행 {deadlineSummary.actualMinutes}분 / 기대 {deadlineSummary.expectedMinutes}분
+                  </span>
+                )}
+                {deadlineSummary.riskCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-amber-600">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    뒤처진 자료 {deadlineSummary.riskCount}개
+                  </span>
+                )}
+              </div>
+            )}
 
             <div className="mt-4 space-y-2.5">
               <button

@@ -187,6 +187,7 @@ function StudentReportInner() {
     updateProgress,
     updateBookSolvedQuestions,
     updatePlanCompletion,
+    deadlineSummary,
     incrementBookIncorrectTag,
     submitChecklist,
     studyTimeLabels,
@@ -465,6 +466,7 @@ function StudentReportInner() {
           studyStats={studyStats}
           completedQuests={completedQuests}
           setCompletedQuests={setCompletedQuests}
+          deadlineSummary={deadlineSummary}
         />
 
         {/* 2. 오늘 계획 (시간표) 탭 */}
