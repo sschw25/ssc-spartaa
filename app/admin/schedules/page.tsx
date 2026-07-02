@@ -59,13 +59,14 @@ export default function SchedulesPage() {
               <AlarmClock className="w-5 h-5 text-[#0071E3]" /> 예약 스케줄
             </h1>
             <p className="text-xs font-bold text-slate-400 mt-0.5">
-              자동 실행 작업의 요일·시각·사용 여부를 한 곳에서 관리합니다.
+              자동 실행 작업의 요일·시각·사용 여부를 관리합니다(KST). 15분마다 점검해 설정 시각 이후 실행됩니다.
             </p>
           </div>
         </div>
 
-        {/* 전체 잡 설정 패널 — 각 기능 페이지(출결·도시락·미션·상담 예약·대시보드)에도 해당 잡만 임베드됨 */}
-        <ScheduledJobsPanel />
+        {/* 전체 잡 설정 패널 — 각 기능 페이지(출결·도시락·미션·상담 예약·대시보드)에도 해당 잡만 임베드됨.
+            제목은 위 페이지 헤더가 담당하므로 패널 자체 제목은 숨긴다(중복 방지). */}
+        <ScheduledJobsPanel hideHeading />
       </main>
     </div>
   );

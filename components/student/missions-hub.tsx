@@ -245,27 +245,34 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
 
   const inner = (
       <>
-        <header className="flex flex-col gap-1">
+        {/* 헤더 — 다른 리포트 탭(알림 등)과 동일한 아이브로우 칩 + 큰 제목 + 부제 패턴 */}
+        <header className="min-w-0">
           {!embedded && (
             <a
               href={`/report/${studentId}?audience=student`}
-              className="inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
+              className="mb-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               리포트로 돌아가기
             </a>
           )}
-          <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">오늘 할 일</p>
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
+            <Flame className="h-3.5 w-3.5" />
+            Today Missions
+          </div>
           {/* embedded(리포트 탭 내부)에서는 h1 중복을 피해 h2 사용 */}
           {embedded ? (
-            <h2 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
               {studentName}님, 오늘도 화이팅이에요
             </h2>
           ) : (
-            <h1 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
+            <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
               {studentName}님, 오늘도 화이팅이에요
             </h1>
           )}
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+            연속출석 스트릭, 오늘 계획, 아침 점검표, 쿠폰 미션까지 오늘 할 일을 한곳에 모았습니다.
+          </p>
         </header>
 
         {/* 1. 연속출석 스트릭 */}
@@ -313,7 +320,75 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
           )}
         </section>
 
-        {/* 2. 오늘 계획(진도) */}
+        {/* 2. 아침 자가 점검표 (휴대폰 제출 · 수면) — 하루 시작 루틴이라 계획보다 먼저 */}
+        <section className={SECTION_SURFACE}>
+          <h2 className="text-sm font-semibold text-slate-800">아침 자가 점검표</h2>
+          {checklist ? (
+            <div className="mt-3 flex flex-wrap gap-3">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
+                <Moon className="h-3.5 w-3.5 text-slate-400" />
+                수면 {checklist.sleep_hours}시간
+              </span>
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
+                <Smartphone className="h-3.5 w-3.5 text-slate-400" />
+                휴대폰 {PHONE_LABEL[checklist.phone_status || (checklist.phone_submitted ? 'submitted' : 'locker')] || '미제출'}
+              </span>
+            </div>
+          ) : (
+            <form onSubmit={submitChecklist} className="mt-3 flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-2">
+                <label htmlFor="hub-sleep-hours" className="text-xs font-semibold text-slate-600">어젯밤 수면 시간</label>
+                <select
+                  id="hub-sleep-hours"
+                  value={checklistForm.sleepHours}
+                  onChange={(e) => setChecklistForm((f) => ({ ...f, sleepHours: Number(e.target.value) }))}
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-[#0071E3] focus:outline-none"
+                >
+                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map((h) => (
+                    <option key={h} value={h}>{h}시간</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-slate-600">등원 시 휴대폰</span>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {(['submitted', 'locker', 'off_hold'] as const).map((val) => (
+                    <button
+                      key={val}
+                      type="button"
+                      onClick={() => setChecklistForm((f) => ({ ...f, phoneStatus: val }))}
+                      className={`rounded-lg px-1.5 py-2 text-[11px] font-semibold border transition active:scale-95 leading-tight ${
+                        checklistForm.phoneStatus === val
+                          ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3]'
+                          : 'border-slate-200 bg-white text-slate-500'
+                      }`}
+                    >
+                      {PHONE_LABEL[val]}
+                    </button>
+                  ))}
+                </div>
+                {checklistForm.phoneStatus !== 'submitted' && (
+                  <textarea
+                    value={checklistForm.phoneReason}
+                    onChange={(e) => setChecklistForm((f) => ({ ...f, phoneReason: e.target.value }))}
+                    rows={2}
+                    placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요"
+                    className="w-full resize-none rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none"
+                  />
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
+                className="w-full rounded-lg bg-slate-900 py-2.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
+              >
+                {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
+              </button>
+            </form>
+          )}
+        </section>
+
+        {/* 3. 오늘 계획(진도) */}
         <section className={SECTION_SURFACE}>
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-slate-800">오늘 계획</h2>
@@ -362,7 +437,7 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
           )}
         </section>
 
-        {/* 2.5 이번 주 집중 포인트 — 약점 기반 개인화 코칭(건강지수 factors → 학생 코칭 문구) */}
+        {/* 3.5 이번 주 집중 포인트 — 약점 기반 개인화 코칭(건강지수 factors → 학생 코칭 문구) */}
         {recommendations.length > 0 && (
           <section className={SECTION_SURFACE}>
             <div className="flex items-center gap-2">
@@ -402,74 +477,6 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
             </div>
           </section>
         )}
-
-        {/* 3. 체크리스트 (휴대폰 제출 · 수면) */}
-        <section className={SECTION_SURFACE}>
-          <h2 className="text-sm font-semibold text-slate-800">아침 자가 점검표</h2>
-          {checklist ? (
-            <div className="mt-3 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
-                <Moon className="h-3.5 w-3.5 text-slate-400" />
-                수면 {checklist.sleep_hours}시간
-              </span>
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
-                <Smartphone className="h-3.5 w-3.5 text-slate-400" />
-                휴대폰 {PHONE_LABEL[checklist.phone_status || (checklist.phone_submitted ? 'submitted' : 'locker')] || '미제출'}
-              </span>
-            </div>
-          ) : (
-            <form onSubmit={submitChecklist} className="mt-3 flex flex-col gap-3">
-              <div className="flex items-center justify-between gap-2">
-                <label htmlFor="hub-sleep-hours" className="text-xs font-semibold text-slate-600">어젯밤 수면 시간</label>
-                <select
-                  id="hub-sleep-hours"
-                  value={checklistForm.sleepHours}
-                  onChange={(e) => setChecklistForm((f) => ({ ...f, sleepHours: Number(e.target.value) }))}
-                  className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-[#0071E3] focus:outline-none"
-                >
-                  {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map((h) => (
-                    <option key={h} value={h}>{h}시간</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-slate-600">등원 시 휴대폰</span>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(['submitted', 'locker', 'off_hold'] as const).map((val) => (
-                    <button
-                      key={val}
-                      type="button"
-                      onClick={() => setChecklistForm((f) => ({ ...f, phoneStatus: val }))}
-                      className={`rounded-xl px-1.5 py-2 text-[11px] font-semibold border transition active:scale-95 leading-tight ${
-                        checklistForm.phoneStatus === val
-                          ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3]'
-                          : 'border-slate-200 bg-white text-slate-500'
-                      }`}
-                    >
-                      {PHONE_LABEL[val]}
-                    </button>
-                  ))}
-                </div>
-                {checklistForm.phoneStatus !== 'submitted' && (
-                  <textarea
-                    value={checklistForm.phoneReason}
-                    onChange={(e) => setChecklistForm((f) => ({ ...f, phoneReason: e.target.value }))}
-                    rows={2}
-                    placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요"
-                    className="w-full resize-none rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none"
-                  />
-                )}
-              </div>
-              <button
-                type="submit"
-                disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
-                className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
-              >
-                {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
-              </button>
-            </form>
-          )}
-        </section>
 
         {/* 4. 학원 일정 (OT · 모의고사 · 참여 행사) — 다가오는 30일, 임박순 */}
         {schedule.length > 0 && (

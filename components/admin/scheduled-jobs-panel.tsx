@@ -18,6 +18,8 @@ type ScheduledJobsPanelProps = {
   /** 기능 페이지 임베드에서 기본은 버튼만 보이고, 클릭 시 설정 패널을 연다. */
   collapsible?: boolean;
   triggerLabel?: string;
+  /** 패널 자체 제목/부제 숨김 — 페이지가 이미 같은 제목을 크게 표시할 때(/admin/schedules) 중복 방지. */
+  hideHeading?: boolean;
 };
 
 // 관리자: 예약 스케줄(자동 작업 실행 요일·시각·on/off) 설정 패널. 자기완결(fetch/save 자체 처리).
@@ -29,6 +31,7 @@ export function ScheduledJobsPanel({
   compact = false,
   collapsible = false,
   triggerLabel = '예약 확인',
+  hideHeading = false,
 }: ScheduledJobsPanelProps) {
   const [config, setConfig] = useState<JobConfigMap>(() => normalizeJobConfig(null));
   const [runs, setRuns] = useState<Record<string, string>>({});
@@ -114,7 +117,8 @@ export function ScheduledJobsPanel({
 
   return (
     <section className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${compact ? 'p-3.5 sm:p-4' : 'p-4 sm:p-5'}`}>
-      <div className="flex items-center justify-between gap-3">
+      <div className={`flex items-center gap-3 ${hideHeading ? 'justify-end' : 'justify-between'}`}>
+        {!hideHeading && (
         <div className="flex items-start gap-2.5 min-w-0">
           <CalendarClock className={`text-[#0071E3] shrink-0 mt-0.5 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
           <div className="min-w-0">
@@ -128,6 +132,7 @@ export function ScheduledJobsPanel({
             </p>
           </div>
         </div>
+        )}
         <div className="flex shrink-0 items-center gap-1.5">
           {collapsible && (
             <Button
