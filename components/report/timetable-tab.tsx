@@ -98,7 +98,7 @@ export function TimetableTab({
                   if (subject.studyTime === period.studyTime) {
                     // 교재 계획 체크
                     (subject.books || []).forEach((book) => {
-                      const activePlan = (book.detailedPlans || []).find((plan) => plan.startDate <= todayStr && todayStr <= plan.endDate);
+                      const activePlan = (book.detailedPlans || []).find((plan) => !plan.periodType && plan.startDate <= todayStr && todayStr <= plan.endDate);
                       if (activePlan) {
                         const dailyVal = activePlan.dailyAmount || Math.ceil(activePlan.targetAmount / 6);
                         const dailyCompletion = getPlanDailyCompletion(activePlan, todayStr);
@@ -116,7 +116,7 @@ export function TimetableTab({
                     });
                     // 인강 계획 체크
                     (subject.lectures || []).forEach((lecture) => {
-                      const activePlan = (lecture.detailedPlans || []).find((plan) => plan.startDate <= todayStr && todayStr <= plan.endDate);
+                      const activePlan = (lecture.detailedPlans || []).find((plan) => !plan.periodType && plan.startDate <= todayStr && todayStr <= plan.endDate);
                       if (activePlan) {
                         const dailyVal = activePlan.dailyAmount || Math.ceil(activePlan.targetAmount / 6);
                         const dailyCompletion = getPlanDailyCompletion(activePlan, todayStr);

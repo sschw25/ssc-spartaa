@@ -97,7 +97,11 @@ function isSameDay(a: Date | null, b: Date) {
 export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false) {
   if (!plans || plans.length === 0) return null;
 
-  const sortedPlans = [...plans].sort((a, b) => a.startDate.localeCompare(b.startDate));
+  // 기간 목표(periodType) plan 은 일일 진도 기대치 계산에서 제외(요일 무관·별도 페이스로 판정).
+  const dailyPlans = plans.filter((p) => !p.periodType);
+  if (dailyPlans.length === 0) return null;
+
+  const sortedPlans = [...dailyPlans].sort((a, b) => a.startDate.localeCompare(b.startDate));
   let latestPastPlan: DetailedPlan | null = null;
 
   for (const plan of sortedPlans) {
@@ -331,7 +335,8 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
     lectureSpeedMultiplier = 1.0
   ) => {
     if (!plans) return;
-    const todayPlan = plans.find(p => p.startDate <= targetDateStr && targetDateStr <= p.endDate);
+    // 기간 목표(periodType) plan 은 일일 시간표 예산에 넣지 않는다(요일 무관·별도 페이스 집계).
+    const todayPlan = plans.find(p => !p.periodType && p.startDate <= targetDateStr && targetDateStr <= p.endDate);
     if (todayPlan) {
       const dayIndex = new Date(targetDateStr).getDay();
       const dayKeys: Array<'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat'> = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
