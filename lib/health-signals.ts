@@ -103,14 +103,15 @@ function computePenaltyPoints(student: Student, today: Date): number {
 export function buildHealthSignals(
   student: Student,
   absence: { absentDays: number; leftDays: number } | null,
-  opts?: { today?: Date },
+  opts?: { today?: Date; includeTodayInPlan?: boolean },
 ): HealthSignals {
   const today = opts?.today ?? new Date();
   const last7 = recentDateKeys(today, 7);
   const last14 = recentDateKeys(today, 14);
   // 계획 이행률은 "완결된 최근 7일"(어제~7일 전)로 계산 — 아직 진행 중인 오늘을
   // 분모에 넣으면 아침 접속 시 미완료로 잡혀 이행률이 사실과 다르게 낮아진다.
-  const plan7 = recentDateKeys(today, 8).slice(1);
+  // 단, 일일 브리핑처럼 today 자체가 이미 끝난 기준일이면 includeTodayInPlan 으로 포함한다.
+  const plan7 = opts?.includeTodayInPlan ? last7 : recentDateKeys(today, 8).slice(1);
   const { avgSleepHours, phoneNonSubmitDays } = computeSleepAndPhone(student, last7);
   return {
     absentDays: absence?.absentDays ?? 0,

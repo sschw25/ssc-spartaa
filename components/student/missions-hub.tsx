@@ -89,6 +89,8 @@ const PHONE_LABEL: Record<string, string> = {
   off_hold: '전원끄고 소지',
 };
 
+const SECTION_SURFACE = 'rounded-xl border border-black/5 bg-white p-5 shadow-sm sm:p-6';
+
 export function MissionsHub({ studentId, studentName }: { studentId: string; studentName: string }) {
   const [data, setData] = useState<HubData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -251,7 +253,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
         </header>
 
         {/* 1. 연속출석 스트릭 */}
-        <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+        <section className={SECTION_SURFACE}>
           <div className="flex items-center gap-4">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
               <Flame
@@ -275,7 +277,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
             </div>
           </div>
           {streakRepair && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-orange-200/70 bg-orange-50/60 px-3.5 py-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200/70 bg-orange-50 px-3.5 py-3">
               <span className="min-w-0 flex-1">
                 <span className="block text-xs font-semibold text-slate-900">아깝게 끊긴 스트릭이 있어요</span>
                 <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
@@ -296,7 +298,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
         </section>
 
         {/* 2. 오늘 계획(진도) */}
-        <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+        <section className={SECTION_SURFACE}>
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-slate-800">오늘 계획</h2>
             {entries.length > 0 && (
@@ -315,8 +317,8 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
                   type="button"
                   onClick={() => togglePlanEntry(entry)}
                   disabled={togglingId === entry.id}
-                  className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 text-left transition active:scale-[0.99] ${
-                    entry.isCompleted ? 'border-emerald-200 bg-emerald-50/60' : 'border-slate-200/80 bg-white/70'
+                  className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition active:scale-[0.99] ${
+                    entry.isCompleted ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
                   } ${justCompletedId === entry.id ? 'animate-scale-in-up' : ''}`}
                 >
                   <span className="shrink-0">
@@ -346,7 +348,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
 
         {/* 2.5 이번 주 집중 포인트 — 약점 기반 개인화 코칭(건강지수 factors → 학생 코칭 문구) */}
         {recommendations.length > 0 && (
-          <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+          <section className={SECTION_SURFACE}>
             <div className="flex items-center gap-2">
               <Sparkles className={`h-4 w-4 ${isCelebrate ? 'text-emerald-500' : 'text-amber-500'}`} />
               <h2 className="text-sm font-semibold text-slate-800">
@@ -363,12 +365,12 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
                 return (
                   <div
                     key={rec.key}
-                    className={`flex items-start gap-3 rounded-2xl border px-3.5 py-3 ${
-                      celebrate ? 'border-emerald-200 bg-emerald-50/50' : 'border-amber-200/70 bg-amber-50/40'
+                    className={`flex items-start gap-3 rounded-lg border px-3.5 py-3 ${
+                      celebrate ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200/70 bg-amber-50'
                     }`}
                   >
                     <span
-                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                      className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                         celebrate ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
                       }`}
                     >
@@ -386,15 +388,15 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
         )}
 
         {/* 3. 체크리스트 (휴대폰 제출 · 수면) */}
-        <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+        <section className={SECTION_SURFACE}>
           <h2 className="text-sm font-semibold text-slate-800">아침 자가 점검표</h2>
           {checklist ? (
             <div className="mt-3 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
                 <Moon className="h-3.5 w-3.5 text-slate-400" />
                 수면 {checklist.sleep_hours}시간
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-2xl border border-slate-200/80 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
                 <Smartphone className="h-3.5 w-3.5 text-slate-400" />
                 휴대폰 {PHONE_LABEL[checklist.phone_status || (checklist.phone_submitted ? 'submitted' : 'locker')] || '미제출'}
               </span>
@@ -438,7 +440,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
                     onChange={(e) => setChecklistForm((f) => ({ ...f, phoneReason: e.target.value }))}
                     rows={2}
                     placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요"
-                    className="w-full resize-none rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none"
+                    className="w-full resize-none rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none"
                   />
                 )}
               </div>
@@ -455,7 +457,7 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
 
         {/* 4. 학원 일정 (OT · 모의고사 · 참여 행사) — 다가오는 30일, 임박순 */}
         {schedule.length > 0 && (
-          <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+          <section className={SECTION_SURFACE}>
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-[#0071E3]" />
               <h2 className="text-sm font-semibold text-slate-800">학원 일정</h2>
@@ -469,12 +471,12 @@ export function MissionsHub({ studentId, studentName }: { studentId: string; stu
                 return (
                   <div
                     key={item.id}
-                    className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 ${
-                      urgent ? 'border-amber-200/70 bg-amber-50/40' : 'border-slate-200/80 bg-white/70'
+                    className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 ${
+                      urgent ? 'border-amber-200/70 bg-amber-50' : 'border-slate-200 bg-white'
                     }`}
                   >
                     <span
-                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
                         urgent ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-[#0071E3]'
                       }`}
                     >

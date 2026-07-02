@@ -41,7 +41,7 @@ async function dispatch(now: Date, force?: string) {
     const runner = JOB_RUNNERS[meta.id];
     if (!runner) continue;
     try {
-      const result = await runner();
+      const result = await runner({ occurrence, forced, now });
       // 강제 실행은 발생분 키를 소모하지 않는다(테스트가 정상 스케줄을 건너뛰지 않도록).
       if (!forced && occurrence !== null) { runs[meta.id] = occurrence; runsChanged = true; }
       ran.push({ id: meta.id, occurrence, forced, result });

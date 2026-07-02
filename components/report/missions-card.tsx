@@ -38,7 +38,7 @@ const periodCls = (p: Mission['period']) =>
   p === 'weekly' ? 'bg-blue-50 text-blue-600'
   : p === 'monthly' ? 'bg-slate-100 text-slate-600'
   : p === 'daily' ? 'bg-emerald-50 text-emerald-600'
-  : 'bg-amber-50 text-amber-600';
+  : 'bg-slate-100 text-slate-600';
 
 export function MissionsCard() {
   const [data, setData] = useState<MissionsData | null>(null);
@@ -103,29 +103,29 @@ export function MissionsCard() {
   if (!data) return null;
   if (data.missions.length === 0 && (data.rewardCatalog?.length ?? 0) === 0) return null;
 
-  const toHalfday = data.couponsPerHalfday > 0 ? Math.floor(data.coupons / data.couponsPerHalfday) : 0;
+  const toRestRequest = data.couponsPerHalfday > 0 ? Math.floor(data.coupons / data.couponsPerHalfday) : 0;
   const available = data.couponsAvailable ?? data.coupons;
   const activeRedemptions = (data.redemptions || []).filter((r) => r.status === 'requested' || r.status === 'pending');
 
   return (
-    <div className="no-print rounded-3xl border border-amber-200/60 bg-gradient-to-br from-amber-50/60 to-white p-5 md:p-6 shadow-sm space-y-4">
+    <div className="no-print rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-4 md:p-6">
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <h3 className="flex items-center gap-2 text-sm font-black text-amber-700">
-          <Trophy className="w-4 h-4" /> 쿠폰 미션
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <Trophy className="w-4 h-4 text-[#0071E3]" /> 쿠폰 보상
         </h3>
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white border border-amber-200 px-3 py-1 text-xs font-black text-amber-700 shadow-sm">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/[0.06] px-3 py-1 text-xs font-black text-[#0071E3] shadow-sm">
             <Ticket className="w-3.5 h-3.5" /> 내 쿠폰 {data.coupons}장
           </span>
-          {toHalfday > 0 && (
-            <span className="text-[10px] font-bold text-amber-600/80">= 반차권 {toHalfday}회</span>
+          {toRestRequest > 0 && (
+            <span className="text-[10px] font-bold text-slate-400">= 휴식신청 {toRestRequest}회</span>
           )}
         </div>
       </div>
 
       {data.missions.length > 0 && (
       <p className="text-[11px] font-semibold text-slate-500 -mt-1">
-        아래 미션을 달성하면 쿠폰이 자동 적립돼요. 쿠폰 {data.couponsPerHalfday}장이면 반차/휴식을 추가로 신청할 수 있어요.
+        아래 미션을 달성하면 쿠폰이 자동 적립돼요. 쿠폰 {data.couponsPerHalfday}장이면 휴식신청에 사용할 수 있어요.
       </p>
       )}
 
@@ -133,14 +133,14 @@ export function MissionsCard() {
       <div className="space-y-2.5">
         {data.missions.map((m) => (
           <div key={m.id} className={`rounded-2xl border p-3.5 flex items-start gap-3 ${m.earned ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white'}`}>
-            <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl ${m.earned ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+            <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl ${m.earned ? 'bg-emerald-100 text-emerald-700' : 'bg-[#0071E3]/10 text-[#0071E3]'}`}>
               {m.earned ? <CheckCircle2 className="w-4 h-4" /> : m.period === 'event' ? <CalendarClock className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
             </span>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="text-xs font-black text-slate-800">{m.name}</span>
                 <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${periodCls(m.period)}`}>{periodLabel(m.period)}</span>
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-50 text-amber-600 px-1.5 py-0.5 text-[9px] font-black">
+                <span className="inline-flex items-center gap-0.5 rounded-full bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 text-[9px] font-black">
                   <Ticket className="w-2.5 h-2.5" /> +{m.coupons}
                 </span>
                 {m.earned && (
@@ -161,12 +161,12 @@ export function MissionsCard() {
 
       {/* 쿠폰 교환 신청 — 관리자 승인 후 차감/지급 */}
       {(data.rewardCatalog?.length ?? 0) > 0 && (
-        <div className="border-t border-amber-100 pt-3 space-y-2.5">
+        <div className="border-t border-slate-100 pt-3 space-y-2.5">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="flex items-center gap-1.5 text-[11px] font-black text-amber-700">
+            <p className="flex items-center gap-1.5 text-[11px] font-black text-[#0071E3]">
               <Gift className="w-3.5 h-3.5" /> 쿠폰 교환
             </p>
-            <span className="text-[10px] font-bold text-slate-400">교환 가능 쿠폰 {available}장 · 반차권/휴식권 즉시 · 실물은 승인 후</span>
+            <span className="text-[10px] font-bold text-slate-400">교환 가능 쿠폰 {available}장 · 휴식권 즉시 · 실물은 승인 후</span>
           </div>
           <div className="grid grid-cols-2 gap-2">
             {data.rewardCatalog.map((r) => {
@@ -178,15 +178,15 @@ export function MissionsCard() {
                   type="button"
                   disabled={!affordable || busy}
                   onClick={() => requestExchange(r.type)}
-                  className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${affordable ? 'border-amber-200 bg-white hover:border-amber-400' : 'border-slate-100 bg-slate-50 opacity-60'}`}
+                  className={`flex items-center justify-between rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${affordable ? 'border-slate-200 bg-white hover:border-[#0071E3]/40' : 'border-slate-100 bg-slate-50 opacity-60'}`}
                 >
                   <span className="min-w-0">
                     <span className="block text-xs font-black text-slate-700">{r.label}</span>
-                    <span className="block text-[10px] font-bold text-amber-600">쿠폰 {r.cost}장{r.physical ? ' · 신청 후 지급' : ' · 즉시 교환'}</span>
+                    <span className="block text-[10px] font-bold text-[#0071E3]">쿠폰 {r.cost}장{r.physical ? ' · 신청 후 지급' : ' · 즉시 교환'}</span>
                   </span>
                   {busy
-                    ? <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-600 shrink-0" />
-                    : <Ticket className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin text-[#0071E3] shrink-0" />
+                    : <Ticket className="w-3.5 h-3.5 text-[#0071E3] shrink-0" />}
                 </button>
               );
             })}
@@ -202,7 +202,7 @@ export function MissionsCard() {
                 return (
                   <div key={r.id} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-white px-3 py-2 text-[11px]">
                     <span className="font-black text-slate-700">{meta?.label || r.type}</span>
-                    <span className="text-[10px] font-bold text-amber-600">{r.cost}장</span>
+                    <span className="text-[10px] font-bold text-[#0071E3]">{r.cost}장</span>
                     <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-black ${st.cls}`}>{st.label}</span>
                     {r.status === 'requested' && (
                       <button
@@ -223,13 +223,13 @@ export function MissionsCard() {
       )}
 
       {data.recent.length > 0 && (
-        <div className="border-t border-amber-100 pt-3 space-y-1.5">
-          <p className="text-[10px] font-black text-amber-600/80 uppercase tracking-wider">최근 적립</p>
+        <div className="border-t border-slate-100 pt-3 space-y-1.5">
+          <p className="text-[10px] font-black text-[#0071E3] uppercase tracking-wider">최근 적립</p>
           {data.recent.filter((r) => r.rewardGranted > 0).slice(0, 4).map((r, i) => (
             <div key={i} className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
               <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
               <span className="font-bold text-slate-700">{r.missionName}</span>
-              <span className="text-amber-600 font-black">+{r.rewardGranted}장</span>
+              <span className="text-[#0071E3] font-black">+{r.rewardGranted}장</span>
             </div>
           ))}
         </div>

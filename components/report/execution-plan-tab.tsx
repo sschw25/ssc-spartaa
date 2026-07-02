@@ -123,7 +123,7 @@ export function ExecutionPlanTab({
     progress: '진도 정정',
     subject: '과목 변경',
     plan: '학습계획',
-    halfDay: '반차 신청',
+    halfDay: '휴식신청',
     restPass: '휴식권 신청',
     etc: '기타',
   };

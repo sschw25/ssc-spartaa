@@ -46,7 +46,6 @@ interface HomeOverviewTabProps {
   homeTotalMin: number;
   currentSubjectText: string;
   currentStudyLabel: string;
-  currentStudyRange: string;
   timeGreeting: string;
   currentBriefingPhrase: string;
   briefingSubMessage: string;
@@ -57,7 +56,6 @@ interface HomeOverviewTabProps {
   setChecklistForm: React.Dispatch<React.SetStateAction<{ sleepHours: number; phoneSubmitted: boolean; phoneStatus: 'submitted' | 'locker' | 'off_hold'; phoneReason: string }>>;
   checklistSubmitting: boolean;
   activeTab: string;
-  setActiveTab: (tab: string) => void;
   studyTimeLabels: Record<string, string>;
   studyStats: StudyStats | null;
   completedQuests: Record<number, boolean>;
@@ -79,7 +77,6 @@ export function HomeOverviewTab({
   homeTotalMin,
   currentSubjectText,
   currentStudyLabel,
-  currentStudyRange,
   timeGreeting,
   currentBriefingPhrase,
   briefingSubMessage,
@@ -90,7 +87,6 @@ export function HomeOverviewTab({
   setChecklistForm,
   checklistSubmitting,
   activeTab,
-  setActiveTab,
   studyTimeLabels,
   studyStats,
   completedQuests,
@@ -105,13 +101,27 @@ export function HomeOverviewTab({
 
   const ddays: DDayEvent[] = student.ddays || [];
 
-  const calcDiff = (dateStr: string) => {
+  const calcDiffDays = (dateStr: string) => {
     const today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Seoul' }));
     const target = new Date(dateStr);
-    const diff = Math.round((target.getTime() - today.getTime()) / 86400000);
+    return Math.round((target.getTime() - today.getTime()) / 86400000);
+  };
+
+  const calcDiff = (dateStr: string) => {
+    const diff = calcDiffDays(dateStr);
     if (diff === 0) return 'D-Day';
     return diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
   };
+
+  const ddaySummary = [...ddays].sort((a, b) => {
+    const aDiff = calcDiffDays(a.date);
+    const bDiff = calcDiffDays(b.date);
+    const aRank = aDiff >= 0 ? aDiff : 10000 + Math.abs(aDiff);
+    const bRank = bDiff >= 0 ? bDiff : 10000 + Math.abs(bDiff);
+    return aRank - bRank || a.date.localeCompare(b.date);
+  });
+  const primaryDday = ddaySummary[0];
+  const secondaryDdays = ddaySummary.slice(1, 3);
 
   const handleAddDday = async () => {
     if (!ddayTitle.trim() || !ddayDate) return;
@@ -217,6 +227,13 @@ export function HomeOverviewTab({
   };
 
   const coachQuests = extractQuestsFromComment(student.studentLifeComment);
+  const todayChecklistKey = getSeoulDateKey();
+  const todayChecklistNote = getSpecialNoteObj();
+  const todayChecklist = todayChecklistNote.daily_checklist?.[todayChecklistKey];
+  const completedPlanCount = todayPlanEntries.filter((entry) => entry.isCompleted).length;
+  const todayMissionTotal = todayPlanEntries.length + 1;
+  const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0);
+  const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
 
   const renderCoachQuestList = () => {
     if (coachQuests.length === 0) return null;
@@ -263,34 +280,71 @@ export function HomeOverviewTab({
     <>
     <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
       {isStudentReport ? (
-        <div className="w-full space-y-6">
-          <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+        <div className="w-full space-y-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 space-y-3">
-              <div className="inline-flex items-center gap-1.5 rounded-lg bg-[#0071E3]/5 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#0071E3]">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/[0.07] px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
                 <Sparkles className="h-3.5 w-3.5 text-[#0071E3]" />
-                SSC SPARTA DAILY BRIEFING
+                오늘 브리핑
               </div>
               <div>
-                <p className="text-sm font-black text-[#0071E3]">
+                <p className="text-[13px] font-semibold text-[#0071E3]">
                   오늘의 학습 브리핑
-                  <span className="ml-1.5 text-[11px] font-bold text-slate-400">· {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 발행</span>
+                  <span className="ml-1.5 text-[11px] font-medium text-slate-400">· {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 발행</span>
                 </p>
-                <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-900 md:text-5xl md:leading-tight">
+                <h1 className="mt-2 text-[24px] font-semibold leading-[1.18] tracking-tight text-slate-900 md:text-[34px] md:leading-[1.16]">
                   {student.name}님, {timeGreeting} 👋
                   <span className="block text-[#0071E3]">
                     {currentBriefingPhrase}
                   </span>
                 </h1>
               </div>
-              <p className="max-w-2xl text-sm font-semibold leading-7 text-slate-500">
+              <p className="max-w-2xl text-[13px] font-medium leading-6 text-slate-500">
                 {briefingSubMessage}
               </p>
             </div>
 
-            <div className="shrink-0 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/5 p-4 text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)] md:min-w-[190px] md:text-right">
-              <span className="block text-[10px] font-bold uppercase tracking-wider text-[#0071E3]/70">현재 시간대</span>
-              <span className="mt-1 block text-sm font-black text-slate-800">{currentStudyLabel}</span>
-              <span className="mt-1 block text-[10px] font-bold text-slate-400">{currentStudyRange}</span>
+            <div className="shrink-0 md:min-w-[240px]">
+              <button
+                type="button"
+                onClick={() => setDdayOpen(true)}
+                className="no-print w-full rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.04] p-3.5 text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)] transition hover:border-[#0071E3]/25 active:scale-[0.99]"
+                aria-label="D-Day 관리"
+              >
+                <span className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#0071E3]">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    D-Day
+                  </span>
+                  <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-400 shadow-sm">관리</span>
+                </span>
+                {primaryDday ? (
+                  <>
+                    <span className="mt-2 flex items-end justify-between gap-3">
+                      <span className="min-w-0">
+                        <span className="block truncate text-[13px] font-semibold text-slate-900">{primaryDday.title}</span>
+                        <span className="mt-0.5 block text-[10px] font-medium text-slate-400">{primaryDday.date}</span>
+                      </span>
+                      <span className="shrink-0 text-[18px] font-semibold leading-none text-[#0071E3] tabular-nums">
+                        {calcDiff(primaryDday.date)}
+                      </span>
+                    </span>
+                    {secondaryDdays.length > 0 && (
+                      <span className="mt-2 flex flex-wrap gap-1.5">
+                        {secondaryDdays.map((d) => (
+                          <span key={d.id} className="max-w-full truncate rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-slate-500 shadow-sm">
+                            {calcDiff(d.date)} · {d.title}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span className="mt-2 block rounded-xl border border-dashed border-[#0071E3]/20 bg-white/70 px-3 py-2 text-[11px] font-medium text-slate-400">
+                    등록된 일정이 없습니다.
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 
@@ -317,8 +371,172 @@ export function HomeOverviewTab({
             </div>
           )}
 
+          <div id="today-mission-card" className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold text-[#0071E3]">오늘 미션</p>
+                <h2 className="mt-1 text-[17px] font-semibold leading-tight text-slate-900">
+                  {todayMissionDone}/{todayMissionTotal}개 완료
+                </h2>
+                <p className="mt-1 text-[11px] font-medium text-slate-400">
+                  {todayDailyPlan ? `${todayDailyPlan.label} ${todayDailyPlan.dateLabel}` : '오늘 기준 실행 항목'}
+                </p>
+              </div>
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.06] text-[15px] font-semibold text-[#0071E3] tabular-nums">
+                {todayMissionPercent}%
+              </div>
+            </div>
+
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-[#0071E3] transition-[width] duration-500"
+                style={{ width: `${todayMissionPercent}%` }}
+              />
+            </div>
+
+            <div className="mt-4 space-y-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  if (!todayChecklist) {
+                    document.getElementById('morning-checklist-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  }
+                }}
+                className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
+                  todayChecklist
+                    ? 'border-emerald-100 bg-emerald-50/45'
+                    : 'border-slate-100 bg-slate-50/70 hover:border-[#0071E3]/20 hover:bg-[#0071E3]/[0.03]'
+                }`}
+              >
+                <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${
+                  todayChecklist ? 'border-emerald-200 bg-emerald-500 text-white' : 'border-slate-200 bg-white text-slate-300'
+                }`}>
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-[13px] font-semibold ${todayChecklist ? 'text-emerald-800' : 'text-slate-800'}`}>
+                    아침 자가 점검
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400">
+                    {todayChecklist
+                      ? `수면 ${todayChecklist.sleep_hours}시간 · 휴대폰 기록 완료`
+                      : '컨디션을 기록하면 오늘 미션 진행률에 반영돼요'}
+                  </span>
+                </span>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                  todayChecklist ? 'bg-white text-emerald-700' : 'bg-white text-slate-500'
+                }`}>
+                  {todayChecklist ? '완료' : '기록'}
+                </span>
+              </button>
+
+              {todayPlanEntries.length > 0 ? (
+                todayPlanEntries.map((entry, index) => {
+                  const isPending = pendingPlanId === entry.id;
+                  const _r = entry.rangeText || '';
+                  const unit = _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
+                  return (
+                    <div key={entry.id} className={`rounded-2xl border p-3 transition ${
+                      entry.isCompleted ? 'border-emerald-100 bg-emerald-50/45' : isPending ? 'border-amber-200 bg-amber-50/60' : 'border-slate-100 bg-white'
+                    }`}>
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (entry.isCompleted) {
+                              updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
+                            } else {
+                              setPendingPlanId(entry.id);
+                              setPendingAmount(entry.dailyAmount ?? 1);
+                            }
+                          }}
+                          aria-pressed={entry.isCompleted}
+                          className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border transition active:scale-95 ${
+                            entry.isCompleted
+                              ? 'border-emerald-200 bg-emerald-500 text-white'
+                              : isPending
+                                ? 'border-amber-300 bg-white text-amber-500'
+                                : 'border-slate-200 bg-white text-slate-300 hover:border-[#0071E3]/40 hover:text-[#0071E3]'
+                          }`}
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className={`truncate text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 line-through decoration-emerald-500/40' : 'text-slate-900'}`}>
+                                {entry.subject} · {entry.title}
+                              </p>
+                              <p className="mt-1 truncate text-[11px] font-medium text-slate-400">
+                                {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
+                              </p>
+                            </div>
+                            <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                              entry.isCompleted ? 'bg-white text-emerald-700' : isPending ? 'bg-white text-amber-700' : 'bg-slate-50 text-slate-500'
+                            }`}>
+                              {entry.isCompleted ? `완료 ${entry.actualAmount ?? '?'}${unit}` : `${index + 1}번`}
+                            </span>
+                          </div>
+
+                          {isPending && (
+                            <div className="mt-3 rounded-2xl border border-amber-100 bg-white p-3">
+                              <p className="text-[11px] font-semibold text-slate-600">실제로 얼마나 했나요?</p>
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingAmount((v) => Math.max(0, v - 1))}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 active:scale-95"
+                                >
+                                  -
+                                </button>
+                                <span className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-900">
+                                  {pendingAmount}{unit}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingAmount((v) => v + 1)}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 hover:bg-slate-50 active:scale-95"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <div className="mt-3 flex gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
+                                    setPendingPlanId(null);
+                                  }}
+                                  className="flex-1 rounded-full bg-emerald-500 py-2 text-[11px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                >
+                                  완료 확인
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingPlanId(null)}
+                                  className="flex-1 rounded-full border border-slate-200 bg-white py-2 text-[11px] font-semibold text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-xs font-medium text-slate-500">
+                  오늘 배정된 실행 항목이 없습니다. 자율 학습 계획을 확인해 주세요.
+                </p>
+              )}
+            </div>
+
+          </div>
+
           {/* 🔵 뽀모도로 타이머 & 아침 자가 점검표 위젯 레이아웃 (가로 2열 그리드) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
             {/* 1. 뽀모도로 타이머 */}
             <PomodoroTimer
               student={student}
@@ -334,21 +552,21 @@ export function HomeOverviewTab({
 
               if (!checklist) {
                 return (
-                  <form onSubmit={submitChecklist} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col justify-between gap-3">
+                  <form id="morning-checklist-card" onSubmit={submitChecklist} className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col justify-between gap-5 sm:p-6">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침 자가 점검표</p>
-                      <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">매일 아침 본인의 컨디션과 환경을 스스로 기록하세요.</p>
+                      <p className="text-[13px] font-semibold text-slate-800">아침 자가 점검표</p>
+                      <p className="mt-1 text-[11px] font-medium leading-5 text-slate-400">매일 아침 본인의 컨디션과 환경을 스스로 기록하세요.</p>
                     </div>
                     
-                    <div className="space-y-3 my-1">
-                      <div className="flex justify-between items-center">
-                        <label htmlFor="sleepHoursInput" className="text-xs font-bold text-slate-600">어젯밤 수면 시간:</label>
-                        <div className="flex items-center gap-1">
+                    <div className="space-y-5">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <label htmlFor="sleepHoursInput" className="text-[13px] font-semibold text-slate-700">어젯밤 수면 시간</label>
+                        <div className="flex items-center gap-2">
                           <select
                             id="sleepHoursInput"
                             value={checklistForm.sleepHours}
                             onChange={(e) => setChecklistForm(f => ({ ...f, sleepHours: Number(e.target.value) }))}
-                            className="rounded-xl border border-slate-200 bg-slate-50/50 px-2 py-1 text-xs font-black text-slate-700 focus:border-[#0071E3] focus:outline-none"
+                            className="h-11 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 text-[13px] font-semibold text-slate-700 focus:border-[#0071E3] focus:outline-none"
                           >
                             {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map(h => (
                               <option key={h} value={h}>{h}시간</option>
@@ -357,9 +575,9 @@ export function HomeOverviewTab({
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-600">등원 시 휴대폰:</label>
-                        <div className="grid grid-cols-3 gap-1.5">
+                      <div className="space-y-2.5">
+                        <label className="text-[13px] font-semibold text-slate-700">등원 시 휴대폰</label>
+                        <div className="grid grid-cols-3 gap-2">
                           {([
                             ['submitted', '제출완료', '🟢'],
                             ['locker', '임시보관함', '📦'],
@@ -369,7 +587,7 @@ export function HomeOverviewTab({
                               key={val}
                               type="button"
                               onClick={() => setChecklistForm(f => ({ ...f, phoneStatus: val, phoneSubmitted: val === 'submitted' }))}
-                              className={`rounded-xl px-1.5 py-2 text-[11px] font-black border transition active:scale-95 leading-tight ${
+                              className={`min-h-14 rounded-2xl border px-1.5 py-2.5 text-[11px] font-semibold leading-tight transition active:scale-95 ${
                                 checklistForm.phoneStatus === val
                                   ? 'bg-[#0071E3]/[0.06] border-[#0071E3] text-[#0071E3]'
                                   : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
@@ -389,14 +607,14 @@ export function HomeOverviewTab({
                             className="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none resize-none"
                           />
                         )}
-                        <p className="text-[10px] font-semibold text-slate-400">휴대폰은 원칙적으로 제출이에요. 부득이하면 임시보관함/전원끄고소지를 사유와 함께 신청해 주세요.</p>
+                        <p className="text-[11px] font-medium leading-5 text-slate-400">휴대폰은 원칙적으로 제출이에요. 부득이하면 임시보관함/전원끄고소지를 사유와 함께 신청해 주세요.</p>
                       </div>
                     </div>
 
                     <button
                       type="submit"
                       disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
-                      className="w-full rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black py-2.5 transition active:scale-95 shadow-sm disabled:opacity-50"
+                      className="w-full rounded-full bg-slate-900 py-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95 disabled:opacity-50"
                     >
                       {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
                     </button>
@@ -430,7 +648,7 @@ export function HomeOverviewTab({
               }
 
               return (
-                <div className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
+                <div id="morning-checklist-card" className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
                   <div>
                     <div className="flex justify-between items-center">
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁 ⚪</p>
@@ -452,134 +670,6 @@ export function HomeOverviewTab({
                 </div>
               );
             })()}
-          </div>
-
-          {/* 휴대폰 제출 방식은 위 '아침 자가 점검표'에서 3택(제출완료/임시보관함/전원끄고소지)으로 통합 신청 */}
-
-          <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-4 shadow-sm md:p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]">오늘 바로 할 일</p>
-                <p className="mt-1 text-xs font-bold text-slate-500">
-                  {todayDailyPlan ? `${todayDailyPlan.label} ${todayDailyPlan.dateLabel}` : '오늘 기준 실행 항목'}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('execution-plan');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="w-full rounded-full border border-[#0071E3]/20 bg-white px-3 py-2 text-[11px] font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 sm:w-auto"
-              >
-                전체 계획 보기
-              </button>
-            </div>
-
-            {todayPlanEntries.length > 0 ? (
-              <div className="mt-4 grid gap-2 md:grid-cols-3">
-                {todayPlanEntries.map((entry, index) => {
-                  const isPending = pendingPlanId === entry.id;
-                  const _r = entry.rangeText || '';
-                  const unit = _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
-                  return (
-                    <div key={entry.id} className="min-w-0 rounded-2xl border border-white/80 bg-white/90 p-3 shadow-[0_6px_18px_rgba(0,113,227,0.04)]">
-                      <div className="flex items-start gap-2.5">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-[10px] font-black text-white">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-black text-slate-900">{entry.subject} · {entry.title}</p>
-                          <p className="mt-1 truncate text-[10px] font-bold text-slate-500">
-                            {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
-                          </p>
-                        </div>
-                        {isStudentReport ? (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (entry.isCompleted) {
-                                updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
-                              } else {
-                                setPendingPlanId(entry.id);
-                                setPendingAmount(entry.dailyAmount ?? 1);
-                              }
-                            }}
-                            aria-pressed={entry.isCompleted}
-                            className={`inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border px-2 text-[10px] font-black transition active:scale-[0.96] ${
-                              entry.isCompleted
-                                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                : isPending
-                                ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
-                            }`}
-                          >
-                            <CheckCircle2 className="h-3 w-3" />
-                            {entry.isCompleted ? `완료 (${entry.actualAmount ?? '?'}${unit})` : '완료'}
-                          </button>
-                        ) : entry.isCompleted ? (
-                          <span className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-emerald-100 bg-emerald-50 px-2 text-[10px] font-black text-emerald-700">
-                            <CheckCircle2 className="h-3 w-3" />
-                            완료 ({entry.actualAmount ?? '?'}{unit})
-                          </span>
-                        ) : (
-                          <span className="inline-flex h-7 shrink-0 items-center justify-center gap-1 rounded-full border border-slate-100 bg-slate-50 px-2 text-[10px] font-black text-slate-400">
-                            미완료
-                          </span>
-                        )}
-                      </div>
-                      {isPending && (
-                        <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3">
-                          <p className="text-[10px] font-black text-slate-500">실제로 얼마나 했나요?</p>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPendingAmount((v) => Math.max(0, v - 1))}
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 active:scale-95"
-                            >
-                              −
-                            </button>
-                            <span className="min-w-[3rem] text-center text-sm font-black text-slate-900">
-                              {pendingAmount}{unit}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setPendingAmount((v) => v + 1)}
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 active:scale-95"
-                            >
-                              +
-                            </button>
-                          </div>
-                          <div className="flex gap-2">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
-                                setPendingPlanId(null);
-                              }}
-                              className="flex-1 rounded-full bg-emerald-500 py-1.5 text-[10px] font-black text-white hover:bg-emerald-600 active:scale-[0.97]"
-                            >
-                              완료 확인
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setPendingPlanId(null)}
-                              className="flex-1 rounded-full border border-slate-200 bg-white py-1.5 text-[10px] font-black text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
-                            >
-                              취소
-                            </button>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="mt-4 rounded-2xl border border-dashed border-[#0071E3]/20 bg-white/70 px-4 py-5 text-center text-xs font-bold text-slate-500">
-                오늘 배정된 실행 항목이 없습니다. 자율 학습 계획을 확인해 주세요.
-              </p>
-            )}
           </div>
 
           {/* 홈 상태 카드 4개 */}
@@ -604,9 +694,9 @@ export function HomeOverviewTab({
               <p className="mt-1 text-[10px] font-bold text-slate-400">{getCampusLabel(student.campus)}</p>
             </div>
             <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3.5">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">학습 기기 번호</p>
-              <p className="mt-2 text-xs font-black text-slate-800 leading-tight truncate">{student.contact ? student.contact.slice(-4) : '등록 바람'}</p>
-              <p className="mt-1 text-[10px] font-bold text-slate-400">SMS 수신 설정 완료</p>
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">학습직렬</p>
+              <p className="mt-2 text-xs font-black text-slate-800 leading-tight truncate">{student.contact || '등록 바람'}</p>
+              <p className="mt-1 text-[10px] font-bold text-slate-400">목표시험 기준</p>
             </div>
           </div>
 
@@ -652,9 +742,15 @@ export function HomeOverviewTab({
       <section id="attendance-status" className={`scroll-mt-24 print-card ${activeTab === 'attendance-status' ? '' : 'hidden print:block'}`}>
         <div className="mb-4 flex items-center gap-2">
           <Clock className="h-4 w-4 text-[#0071E3]" />
-          <h3 className="text-xs font-black tracking-wider text-slate-800 uppercase">실시간 등하원 상태</h3>
+          <h3 className="text-xs font-black tracking-wider text-slate-800 uppercase">등하원 · 순공/랭킹</h3>
         </div>
-        <AttendanceStatusCard />
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+          <div className="space-y-5">
+            <AttendanceStatusCard />
+            <StudyStatsCard stats={studyStats} />
+          </div>
+          <LeaderboardCard studentId={student.id} />
+        </div>
       </section>
     )}
 
@@ -704,24 +800,8 @@ export function HomeOverviewTab({
       {isStudentReport && renderCoachQuestList()}
     </section>
 
-    {/* D-Day 플로팅 버튼 */}
-    {isStudentReport && (
-      <>
-        {/* FAB */}
-        <button
-          onClick={() => setDdayOpen(true)}
-          className="fixed bottom-24 right-4 z-40 flex items-center gap-1.5 rounded-2xl bg-[#1D1D1F] px-4 py-2.5 text-white shadow-xl text-xs font-black hover:scale-105 active:scale-95 transition-transform no-print"
-          aria-label="D-Day 관리"
-        >
-          <CalendarDays className="w-4 h-4" />
-          D-Day
-          {ddays.length > 0 && (
-            <span className="ml-0.5 rounded-full bg-[#0071E3] px-1.5 py-0.5 text-[10px] font-black">{ddays.length}</span>
-          )}
-        </button>
-
-        {/* 모달 오버레이 */}
-        {ddayOpen && (
+    {/* D-Day 관리 모달 */}
+    {isStudentReport && ddayOpen && (
           <div className="fixed inset-0 z-50 flex items-end justify-center pb-6 px-4 bg-black/30 backdrop-blur-sm no-print" onClick={() => setDdayOpen(false)}>
             <div
               className="w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden"
@@ -801,8 +881,6 @@ export function HomeOverviewTab({
               </div>
             </div>
           </div>
-        )}
-      </>
     )}
     </>
   );

@@ -64,7 +64,7 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
   progress: '진도 정정',
   subject: '과목 변경',
   plan: '학습계획',
-  halfDay: '반차 신청',
+  halfDay: '휴식신청',
   restPass: '휴식권 신청',
   etc: '기타',
 };
@@ -150,6 +150,7 @@ type SpecialNoteEnvelope = {
   noteText?: string;
   pomodoro_minutes?: Record<string, number>;
   dismissed_notifications?: string[];
+  daily_checklist?: Record<string, unknown>;
   [key: string]: unknown;
 };
 
@@ -1374,9 +1375,6 @@ export function useReportState() {
   const currentStudyLabel = currentStudyTimeKey
     ? STUDY_TIME_LABELS[currentStudyTimeKey]
     : nonStudyPeriodLabel || '운영 시간 외';
-  const currentStudyRange = currentPeriod
-    ? `${currentPeriod.start}~${currentPeriod.end}`
-    : '시간표 외 구간';
 
   const thisMonthLeaveUsage = isStudentReport ? getMonthlyLeaveUsage(student.leaveRequests || [], kstYearMonth()) : null;
   // 교환 추가권(반차권/휴식권) 잔여를 기본 잔여에 합산
@@ -1699,7 +1697,6 @@ export function useReportState() {
     (sum: number, p: any) => sum + (p.type === 'penalty' ? p.points : -p.points),
     0
   );
-
   const reportNavItems = isStudentReport
     ? [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
@@ -1707,13 +1704,13 @@ export function useReportState() {
         { href: '#attendance-status', label: '등하원', meta: '실시간 출결', icon: Clock },
         { href: '#study-stats', label: '순공/랭킹', meta: '학습 시간 비교', icon: Award },
         { href: '#timetable', label: '오늘 계획', meta: `${todaySubjects.length}개 과목`, icon: Target },
-        { href: '#execution-plan', label: '실행 계획표', meta: '학습 플래너', icon: Sparkles },
+        { href: '#execution-plan', label: '학습계획', meta: '전체 계획표', icon: Sparkles },
         { href: '#coach-feedback', label: '코멘팅 소견', meta: '학생 피드백', icon: MessageSquare },
-        { href: '#student-requests', label: '반차 신청', meta: `반차 ${homeHalfLeft}회 남음`, icon: Calendar },
+        { href: '#student-requests', label: '휴식신청', meta: `반차 ${homeHalfLeft}회 남음`, icon: Calendar },
         ...(isConsultationCampus(student.campus)
           ? [{ href: '#clinic-booking', label: '클리닉 상담', meta: '날짜·시간 예약', icon: CalendarClock }]
           : []),
-        { href: '#student-missions', label: '쿠폰 미션', meta: `쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Ticket },
+        { href: '#student-missions', label: '쿠폰', meta: `보상 ${student.leaveCoupons ?? 0}장`, icon: Ticket },
         { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
         { href: '#grade-analysis', label: '성적 분석', meta: `${(student.grades || []).length}건`, icon: FileText },
         { href: '#student-penalties', label: '벌점', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },
@@ -1840,7 +1837,6 @@ export function useReportState() {
     currentBriefingPhrase,
     briefingSubMessage,
     currentStudyLabel,
-    currentStudyRange,
     homeHalfLeft,
     homeFullLeft,
     homeLeaveCoupons,

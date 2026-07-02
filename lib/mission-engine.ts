@@ -69,6 +69,8 @@ export interface SettleOptions {
   scope?: 'all' | 'weekly' | 'monthly';
   // 월간 미션 평가 대상 월 이동(0=이번 달, -1=지난 달). 월말/익월1일 크론에서 -1 사용 권장.
   monthOffset?: number;
+  // 예약 스케줄러가 지연 실행될 때 "실행됐어야 하는 날짜" 기준으로 주간 범위를 고정한다.
+  now?: Date;
 }
 
 export async function settleMissions(opts: SettleOptions = {}): Promise<SettleResult> {
@@ -78,7 +80,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   const runMonthly = scope === 'all' || scope === 'monthly';
 
   const config = await getActiveMissionConfig();
-  const { todayStr, weekStart, monthStart } = getPeriodBounds();
+  const { todayStr, weekStart, monthStart } = getPeriodBounds(opts.now);
   const weekKey = weekStart;             // 주 시작일(YYYY-MM-DD)
 
   // 월간 미션 평가 구간 (monthOffset 적용)
@@ -118,7 +120,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   const monthDailyByStudent = new Map<string, Map<string, number>>(); // studentId -> (date -> minutes)
   if (sessionsAvailable) {
     if (runWeekly && config.weekly_top_rank.enabled) {
-      weekMin = await getStudyMinutesByStudent(weekStart);
+      weekMin = await getStudyMinutesByStudent(weekStart, todayStr);
     }
     if (runMonthly && config.weekend_study.enabled) {
       const monthSessions = await getSessionsInRange(monthRangeStart, monthRangeEnd);

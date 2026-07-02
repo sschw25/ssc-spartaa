@@ -38,7 +38,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { username, password } = await request.json();
+    const { username: rawUsername, password } = await request.json();
+    const username = String(rawUsername ?? '').trim();
 
     // 1. 마스터 관리자(환경변수) 검사
     if (username === 'admin' && typeof correctPassword === 'string' && correctPassword.length > 0 && safeEqual(String(password), correctPassword)) {

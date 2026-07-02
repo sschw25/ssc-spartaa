@@ -1155,7 +1155,7 @@ export default function MealsPage() {
 
         {/* 도시락 반복 생성(meal) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리. 인쇄 제외 */}
         <div className="no-print">
-          <ScheduledJobsPanel jobIds={['meal']} compact />
+          <ScheduledJobsPanel jobIds={['meal']} compact collapsible />
         </div>
       </main>
     </div>

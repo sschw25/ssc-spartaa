@@ -465,11 +465,13 @@ export async function getStudySessionsSupabase(studentId: string, sinceDate?: st
 }
 
 // 기간 내 전체 학생의 (학생별) 순공 합계 — 등수 계산용 (서버 전용 집계)
-export async function getStudyMinutesByStudentSupabase(sinceDate: string): Promise<Record<string, number>> {
-  const { data, error } = await getClient()
+export async function getStudyMinutesByStudentSupabase(sinceDate: string, untilDate?: string): Promise<Record<string, number>> {
+  let query = getClient()
     .from('study_sessions')
     .select('student_id, minutes')
     .gte('date', sinceDate);
+  if (untilDate) query = query.lte('date', untilDate);
+  const { data, error } = await query;
   if (error) throw error;
   const totals: Record<string, number> = {};
   (data || []).forEach((r: any) => {

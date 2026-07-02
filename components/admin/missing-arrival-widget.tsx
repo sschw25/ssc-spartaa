@@ -54,39 +54,40 @@ export function MissingArrivalWidget({
   if (!configured) return null;
 
   return (
-    <div className="border border-amber-200/70 rounded-2xl bg-gradient-to-br from-white to-amber-50/40 p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)]">
-      <div className="flex items-center justify-between px-1 pb-2">
-        <div className="flex items-center gap-1.5">
-          <AlertTriangle className="w-4 h-4 text-amber-500" />
-          <h3 className="text-xs font-semibold text-[#1D1D1F]">
-            미등원 알림 {checkpoint && <span className="text-[#86868B] font-medium">({checkpoint} 기준)</span>}
+    <div className="admin-fit-box rounded-3xl border border-amber-500/20 bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2 text-left">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+          <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-[15px] font-semibold tracking-tight text-[#1D1D1F]">
+            <span>미등원 알림</span>
+            {checkpoint && <span className="text-[11px] font-medium text-[#86868B]">({checkpoint} 기준)</span>}
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${filtered.length > 0 ? 'bg-amber-500/15 text-amber-700' : 'bg-emerald-500/12 text-emerald-700'}`}>
+          <span className={`rounded-full px-2.5 py-1 text-[12px] font-semibold ${filtered.length > 0 ? 'bg-amber-500/15 text-amber-700' : 'bg-emerald-500/12 text-emerald-700'}`}>
             {filtered.length}명
           </span>
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
             title={collapsed ? '펼치기' : '접기'}
             aria-label={collapsed ? '미등원 알림 펼치기' : '미등원 알림 접기'}
           >
-            {collapsed ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
           </button>
           <button
             onClick={load}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[#86868B] hover:bg-black/[0.04] hover:text-[#0071E3] transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
             title="새로고침"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
       {!collapsed && (
         <>
-          <p className="px-1 text-[10px] text-[#86868B] mb-2">
+          <p className="mt-2 text-[12px] font-medium leading-relaxed text-[#86868B]">
             등원 마감 시각이 지났는데 아직 등원하지 않은 학생입니다. (09시 이후 수동 시각 포함)
           </p>
           {filtered.length === 0 ? (
@@ -94,16 +95,16 @@ export function MissingArrivalWidget({
               마감 시각이 지난 미등원 학생이 없습니다.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-1.5">
+            <div className="mt-3 flex flex-wrap gap-2">
               {filtered.map((r) => (
                 <button
                   key={r.id}
                   type="button"
                   onClick={() => onSelectStudentId?.(r.id)}
-                  className="flex items-center gap-1.5 rounded-full border border-amber-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-amber-700 hover:border-amber-400 hover:bg-amber-50 transition-colors"
+                  className="flex min-h-9 items-center gap-1.5 rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition-colors hover:border-amber-400 hover:bg-amber-50"
                 >
                   {r.name}
-                  <span className="text-[9px] font-semibold text-[#86868B]">{CAMPUS_LABEL[r.campus] || r.campus} · {r.expectedArrival}</span>
+                  <span className="text-[11px] font-semibold text-[#86868B]">{CAMPUS_LABEL[r.campus] || r.campus} · {r.expectedArrival}</span>
                 </button>
               ))}
             </div>

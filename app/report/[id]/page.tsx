@@ -157,7 +157,6 @@ function StudentReportInner() {
     currentBriefingPhrase,
     briefingSubMessage,
     currentStudyLabel,
-    currentStudyRange,
     homeHalfLeft,
     homeFullLeft,
     homeLeaveCoupons,
@@ -321,7 +320,9 @@ function StudentReportInner() {
       {/* 결과 리포트 종이 영역 */}
       <div
         ref={paperRef}
-        className="report-paper bg-white border border-slate-100 rounded-[32px] p-8 md:p-14 shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10 min-h-[70vh] print:min-h-0"
+        className={`report-paper bg-white border border-slate-100 rounded-[32px] shadow-[0_30px_70px_rgba(15,23,42,0.06)] print-card space-y-10 min-h-[70vh] print:min-h-0 ${
+          isStudentReport ? 'p-5 sm:p-7 md:p-10' : 'p-8 md:p-14'
+        }`}
         onTouchStart={isStudentReport ? handleSwipeStart : undefined}
         onTouchEnd={isStudentReport ? handleSwipeEnd : undefined}
       >
@@ -396,7 +397,7 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 쿠폰 미션 탭 (학생 전용, 독립 탭) */}
+        {/* 미션 탭 (학생 전용, 독립 탭) */}
         {isStudentReport && (
           <div
             id="student-missions"
@@ -422,7 +423,6 @@ function StudentReportInner() {
           homeTotalMin={homeTotalMin}
           currentSubjectText={currentSubjectText}
           currentStudyLabel={currentStudyLabel}
-          currentStudyRange={currentStudyRange}
           timeGreeting={timeGreeting}
           currentBriefingPhrase={currentBriefingPhrase}
           briefingSubMessage={briefingSubMessage}
@@ -433,7 +433,6 @@ function StudentReportInner() {
           setChecklistForm={setChecklistForm}
           checklistSubmitting={checklistSubmitting}
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
           studyTimeLabels={studyTimeLabels}
           studyStats={studyStats}
           completedQuests={completedQuests}

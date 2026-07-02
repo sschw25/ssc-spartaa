@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Users, User, Calendar, BarChart3, Search, LogOut, Loader2,
   AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw, Clock,
-  ChevronRight, XCircle
+  CalendarClock, ChevronRight, XCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
@@ -44,6 +44,7 @@ export default function AdminDashboardPage() {
   const [analysisTarget, setAnalysisTarget] = useState<{ type: 'subject' | 'book'; name: string } | null>(null);
   // 출결 위젯 새로고침 신호
   const [attendanceRefresh, setAttendanceRefresh] = useState(0);
+  const [showDailyDigestSchedule, setShowDailyDigestSchedule] = useState(false);
 
   // 관리자 ID 및 요약 카드 마지막 조회 시각 상태
   const [adminId, setAdminId] = useState('admin');
@@ -864,10 +865,19 @@ export default function AdminDashboardPage() {
         <div className="space-y-3.5">
           <div className="flex items-end justify-between gap-3">
             <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">오늘의 브리핑</h2>
+            <button
+              type="button"
+              aria-expanded={showDailyDigestSchedule}
+              onClick={() => setShowDailyDigestSchedule((open) => !open)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-[#0071E3] transition-colors hover:bg-[#0071E3]/10"
+            >
+              <CalendarClock className="h-3.5 w-3.5" />
+              {showDailyDigestSchedule ? '예약 닫기' : '예약 확인'}
+            </button>
           </div>
           <DailyDigestWidget campusFilter={campusFilter} onSelectStudentId={handleOpenStudentById} />
           {/* 일일 브리핑 생성(daily_digest) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
-          <ScheduledJobsPanel jobIds={['daily_digest']} compact />
+          {showDailyDigestSchedule && <ScheduledJobsPanel jobIds={['daily_digest']} compact />}
         </div>{/* /섹션2 */}
 
         {/* ── 섹션 3: 출결 현황 ── */}
@@ -875,10 +885,11 @@ export default function AdminDashboardPage() {
           <div className="flex items-end justify-between gap-3">
             <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">출결 현황</h2>
             <button
+              type="button"
               onClick={() => router.push('/admin/attendance')}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] text-[#0071E3] hover:bg-[#0071E3]/10 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full bg-black/[0.04] px-3 py-1.5 text-[12px] font-medium text-[#0071E3] transition-colors hover:bg-[#0071E3]/10"
             >
-              <ClipboardList className="w-3.5 h-3.5" />
+              <ClipboardList className="h-3.5 w-3.5" />
               출결 상세
             </button>
           </div>

@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar, Flame } from 'lucide-react';
+import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { Student } from '@/lib/types/student';
 import { StudentNotification, StudentNotificationTone } from './notifications-section';
 import { ParentSidebar } from './parent-sidebar';
-import { StudentTabNav } from './student-tab-nav';
 
 interface ReportNavItem {
   href: string;
@@ -91,22 +90,60 @@ export function StudentLayout({
 }: StudentLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
+  const [quickNavActiveKey, setQuickNavActiveKey] = useState<string | null>(null);
 
   const truncateNotificationText = (value: string, max = 120) => {
     const normalized = value.replace(/\s+/g, ' ').trim();
     return normalized.length > max ? `${normalized.slice(0, max)}...` : normalized;
   };
 
-  const openNotificationTab = () => {
-    slideDirRef.current = tabIds.indexOf('student-notifications') >= tabIds.indexOf(activeTab) ? 1 : -1;
-    setActiveTab('student-notifications');
+  const selectStudentTab = (tabId: string, scrollTargetId?: string, quickKey?: string) => {
+    slideDirRef.current = tabIds.indexOf(tabId) >= tabIds.indexOf(activeTab) ? 1 : -1;
+    setActiveTab(tabId);
+    setQuickNavActiveKey(quickKey ?? tabId);
     setMobileMenuOpen(false);
     setNotificationPanelOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.setTimeout(() => {
+      if (scrollTargetId) {
+        document.getElementById(scrollTargetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
   };
 
+  const openNotificationTab = () => {
+    selectStudentTab('student-notifications');
+  };
+
+  type QuickTabItem = ReportNavItem & {
+    key: string;
+    tabId: string;
+    scrollTargetId?: string;
+  };
+
+  const getNavItem = (id: string) => reportNavItems.find((item) => item.href === `#${id}`);
+  const quickTabItems: QuickTabItem[] = [];
+  const homeNavItem = getNavItem('report-overview');
+  const requestNavItem = getNavItem('student-requests');
+  const learningPlanNavItem = getNavItem('execution-plan');
+  const attendanceNavItem = getNavItem('attendance-status');
+  const notificationNavItem = getNavItem('student-notifications');
+
+  if (homeNavItem) quickTabItems.push({ ...homeNavItem, key: 'report-overview', tabId: 'report-overview' });
+  if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '휴식신청', meta: '반차·휴식', key: 'student-requests', tabId: 'student-requests' });
+  if (learningPlanNavItem) quickTabItems.push({ ...learningPlanNavItem, label: '학습계획', meta: '전체 계획', key: 'execution-plan', tabId: 'execution-plan' });
+  if (attendanceNavItem) quickTabItems.push({ ...attendanceNavItem, label: '등하원', meta: '순공/랭킹', key: 'attendance-status', tabId: 'attendance-status' });
+  if (notificationNavItem) quickTabItems.push({ ...notificationNavItem, key: 'student-notifications', tabId: 'student-notifications' });
+  const selectedQuickItem = quickNavActiveKey
+    ? quickTabItems.find((item) => item.key === quickNavActiveKey)
+    : null;
+  const shouldUseQuickActiveKey = Boolean(selectedQuickItem && selectedQuickItem.tabId === activeTab);
+
   return (
-    <div className="report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] py-8 md:py-16 px-4 font-sans text-[#1E293B] antialiased transition-all">
+    <div className={`report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] px-4 font-sans text-[#1E293B] antialiased transition-all ${
+      isStudentReport ? 'pt-8 pb-28 md:pt-16 md:pb-32' : 'py-8 md:py-16'
+    }`}>
       {/* 등록 만료 3일 이내 경고 배너 */}
       {showEnrollmentWarning && (
         <div className="no-print sticky top-0 z-40 w-full bg-amber-500 text-white px-4 py-2.5 flex items-center justify-center gap-2 text-xs font-bold shadow-md">
@@ -152,6 +189,18 @@ export function StudentLayout({
           {/* 2. 상단 컨트롤러 (인쇄 제외) */}
           {isStudentReport ? (
             <>
+              {(mobileMenuOpen || notificationPanelOpen) && (
+                <button
+                  type="button"
+                  aria-label="열린 메뉴 닫기"
+                  className="no-print fixed inset-0 z-[45] cursor-default bg-transparent"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setNotificationPanelOpen(false);
+                  }}
+                />
+              )}
+
               <div className="no-print fixed left-4 top-4 z-50">
                 <button
                   type="button"
@@ -181,19 +230,6 @@ export function StudentLayout({
                     </div>
 
                     <div className="grid grid-cols-1 gap-1.5">
-                      {/* 오늘 할 일 허브(/student/missions) — 실제 라우트 이동이라 다른 항목(탭 전환)과 분리해 최상단 배치 */}
-                      <a
-                        href="/student/missions"
-                        className="flex min-h-12 items-center gap-2.5 rounded-2xl border border-orange-200/70 bg-orange-50/60 px-3 py-2 text-left shadow-sm transition-colors active:bg-orange-100"
-                      >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-white text-orange-500 ring-1 ring-orange-100">
-                          <Flame className="h-4 w-4" />
-                        </span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-[11px] font-black text-slate-800">미션</span>
-                          <span className="block truncate text-[10px] font-bold text-slate-400">오늘 할 일 허브 · 연속출석</span>
-                        </span>
-                      </a>
                       {reportNavItems.map((item) => {
                         const Icon = item.icon;
                         return (
@@ -203,10 +239,7 @@ export function StudentLayout({
                             onClick={(e) => {
                               e.preventDefault();
                               const id = item.href.slice(1);
-                              slideDirRef.current = tabIds.indexOf(id) >= tabIds.indexOf(activeTab) ? 1 : -1;
-                              setActiveTab(id);
-                              setMobileMenuOpen(false);
-                              window.scrollTo({ top: 0, behavior: 'smooth' });
+                              selectStudentTab(id);
                             }}
                             className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${
                               activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-white'
@@ -306,6 +339,43 @@ export function StudentLayout({
                   </div>
                 )}
               </div>
+
+              <nav
+                aria-label="하단 빠른 이동"
+                className="no-print fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-40 flex justify-center px-4 pointer-events-none"
+              >
+                <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-full p-1.5">
+                  {quickTabItems.map((item) => {
+                    const Icon = item.icon;
+                    const active = shouldUseQuickActiveKey
+                      ? quickNavActiveKey === item.key
+                      : activeTab === item.tabId && !item.scrollTargetId;
+                    return (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => selectStudentTab(item.tabId, item.scrollTargetId, item.key)}
+                        aria-current={active ? 'page' : undefined}
+                        className={`relative flex min-w-[56px] flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-1.5 transition-all duration-300 active:scale-[0.94] sm:min-w-[64px] sm:px-3.5 ${
+                          active
+                            ? 'bg-[#0071E3]/12 text-[#0071E3]'
+                            : 'text-[#86868B] hover:bg-black/[0.04] hover:text-[#1D1D1F]'
+                        }`}
+                      >
+                        <Icon className="h-[18px] w-[18px]" />
+                        <span className={`whitespace-nowrap text-[10px] tracking-tight ${active ? 'font-semibold' : 'font-bold'}`}>
+                          {item.label}
+                        </span>
+                        {item.tabId === 'student-notifications' && notificationCount > 0 && (
+                          <span className="absolute right-2.5 top-1.5 grid h-3 min-w-3 place-items-center rounded-full bg-red-500 px-[3px] text-[7px] font-semibold leading-none text-white">
+                            {notificationCount > 9 ? '9+' : notificationCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </nav>
             </>
           ) : (
             <div className="no-print flex flex-col gap-4 rounded-3xl border border-slate-200/80 bg-white/80 p-4 shadow-[0_10px_30px_rgba(0,0,0,0.03)] backdrop-blur-xl transition-all sm:flex-row sm:items-center sm:justify-between sm:p-5">
@@ -336,19 +406,7 @@ export function StudentLayout({
             </div>
           )}
 
-          {/* 3. 학생용 sticky 상단 탭 네비게이션 */}
-          {isStudentReport && (
-            <StudentTabNav
-              reportNavItems={reportNavItems}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              notificationCount={notificationCount}
-              tabIds={tabIds}
-              slideDirRef={slideDirRef}
-            />
-          )}
-
-          {/* 4. children 본문 콘텐츠 렌더링 */}
+          {/* 3. children 본문 콘텐츠 렌더링 */}
           {children}
         </div>
       </div>

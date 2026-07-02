@@ -549,9 +549,9 @@ export async function getStudySessions(studentId: string, sinceDate?: string): P
   requireSupabase();
   return getStudySessionsSupabase(studentId, sinceDate);
 }
-export async function getStudyMinutesByStudent(sinceDate: string): Promise<Record<string, number>> {
+export async function getStudyMinutesByStudent(sinceDate: string, untilDate?: string): Promise<Record<string, number>> {
   requireSupabase();
-  return getStudyMinutesByStudentSupabase(sinceDate);
+  return getStudyMinutesByStudentSupabase(sinceDate, untilDate);
 }
 
 // ── 모의고사 일정 ──
