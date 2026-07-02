@@ -16,8 +16,10 @@ export interface DetailedPlan {
   targetAmount: number;    // 이번 주 목표량 (페이지 또는 강의 수)
   dailyAmount?: number;    // 과목 학습 요일 기준 일일 학습량
   rangeText: string;       // 범위 설명 (예: "1p ~ 40p" 또는 "1강 ~ 8강")
+  periodType?: 'deadline'; // 기간 목표 창(모드 B). undefined = 매일 시간표(daily). 하위호환.
+  periodWeeks?: number;    // 기간 목표 총 주수(1~12). periodType==='deadline'일 때.
   isCompleted: boolean;    // 완료 여부
-  actualAmount?: number;   // 실제 학습량 (완료 시 입력)
+  actualAmount?: number;   // 실제 학습량 (완료 시 입력 / 버킷 모드는 기간 누적 진행량)
   dailyCompletions?: Record<string, {
     isCompleted: boolean;
     actualAmount?: number;
@@ -41,7 +43,7 @@ export interface BookProgress {
   unit?: string;           // 개편 추가: 학습 단위 (예: '페이지', '회')
   
   // 개편 추가: 교재별 학습 목표 및 세부 계획
-  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
   goalValue?: number;
   goalDescription?: string;
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
@@ -61,7 +63,7 @@ export interface LectureProgress {
   category?: '기본' | '문제풀이' | '요약강의' | string; // 학습 자료 유형 분류
 
   // 개편 추가: 인강별 학습 목표 및 세부 계획
-  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
   goalValue?: number;
   goalDescription?: string;
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
@@ -73,7 +75,7 @@ export interface LectureProgress {
 export interface ProposedGoal {
   materialId: string;
   materialType: 'book' | 'lecture';
-  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
   goalValue: number;
   targetDate?: string;
   proposedWeekNumber?: number;
@@ -81,7 +83,7 @@ export interface ProposedGoal {
   speedMultiplier?: number;
   // 변경 전 현재 상태 (관리자가 before/after 비교에 사용)
   currentGoal?: {
-    goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+    goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
     goalValue?: number;
     speedMultiplier?: number;
   };
