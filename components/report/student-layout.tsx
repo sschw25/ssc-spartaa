@@ -215,8 +215,8 @@ export function StudentLayout({
                 </button>
 
                 {mobileMenuOpen && (
-                  <div className="mt-2 w-[min(82vw,320px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
-                    <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                  <div className="mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                    <div className="mb-2 flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 pb-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Menu</p>
                         <p className="mt-0.5 text-sm font-black text-slate-900">학습 메뉴</p>
