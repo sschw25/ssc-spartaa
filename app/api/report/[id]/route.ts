@@ -66,6 +66,7 @@ function buildMaskedStudent(
           consultationCancellations,
         }
       : {}),
+    ddays: audience === 'student' ? (student.ddays || []) : [],
   };
 }
 
