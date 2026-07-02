@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { CalendarClock, Loader2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,29 @@ import {
   type JobConfigMap, type JobSchedule,
 } from '@/lib/scheduled-jobs';
 
+type ScheduledJobsPanelProps = {
+  /** 표시할 잡 id 목록 — 생략하면 전체. 기능 페이지에 해당 잡만 임베드할 때 사용. */
+  jobIds?: string[];
+  /** 컴팩트 표시 — 기능 페이지 하단 임베드용(안내문·여백 축소). */
+  compact?: boolean;
+};
+
 // 관리자: 예약 스케줄(자동 작업 실행 요일·시각·on/off) 설정 패널. 자기완결(fetch/save 자체 처리).
-export function ScheduledJobsPanel() {
+// 전체 화면(/admin/schedules)과 각 기능 페이지 임베드(jobIds 필터)가 공유한다.
+// 저장은 표시 중인 잡만 PUT하고 서버가 부분 병합 — 오래 열어둔 임베드 화면이 저장해도
+// 그 사이 다른 화면/관리자가 바꾼 나머지 잡 설정을 stale 스냅샷으로 되돌리지 않는다.
+export function ScheduledJobsPanel({ jobIds, compact = false }: ScheduledJobsPanelProps) {
   const [config, setConfig] = useState<JobConfigMap>(() => normalizeJobConfig(null));
   const [runs, setRuns] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const visibleJobs = useMemo(
+    () => (jobIds ? SCHEDULED_JOBS.filter((j) => jobIds.includes(j.id)) : SCHEDULED_JOBS),
+    [jobIds],
+  );
+  const partial = !!jobIds; // 일부만 표시 중 → 전체 관리 화면 링크 노출
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -25,6 +42,9 @@ export function ScheduledJobsPanel() {
       if (res.ok && json.success) {
         setConfig(normalizeJobConfig(json.config));
         setRuns(json.runs && typeof json.runs === 'object' ? json.runs : {});
+      } else {
+        // 401 등 — 기본값을 실제 설정처럼 보여주지 않도록 에러를 표면화
+        toast.error(json?.message || '예약 스케줄을 불러오지 못했습니다.');
       }
     } catch {
       toast.error('예약 스케줄을 불러오지 못했습니다.');
@@ -43,10 +63,12 @@ export function ScheduledJobsPanel() {
   const save = async () => {
     setSaving(true);
     try {
+      // 표시 중인 잡만 전송 — 서버가 부분 병합하므로 숨은 잡의 stale 값이 함께 저장되지 않는다.
+      const visibleConfig = Object.fromEntries(visibleJobs.map((j) => [j.id, config[j.id]]));
       const res = await fetch('/api/admin/scheduled-jobs', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ config }),
+        body: JSON.stringify({ config: visibleConfig }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -64,14 +86,18 @@ export function ScheduledJobsPanel() {
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
+    <section className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${compact ? 'p-3.5 sm:p-4' : 'p-4 sm:p-5'}`}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-start gap-2.5 min-w-0">
-          <CalendarClock className="w-5 h-5 text-[#0071E3] shrink-0 mt-0.5" />
+          <CalendarClock className={`text-[#0071E3] shrink-0 mt-0.5 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
           <div className="min-w-0">
-            <h2 className="text-sm font-black text-slate-800">예약 스케줄</h2>
+            <h2 className={`font-semibold text-slate-800 ${compact ? 'text-[13px]' : 'text-sm'}`}>
+              {partial ? '자동 실행 예약' : '예약 스케줄'}
+            </h2>
             <p className="text-[11px] font-semibold text-slate-500 mt-0.5 leading-relaxed">
-              자동 작업의 실행 요일·시각을 설정합니다(KST). 15분마다 점검해 설정 시각 이후 실행됩니다.
+              {compact
+                ? '실행 요일·시각 설정(KST) · 실행은 최대 +15분 지연될 수 있습니다.'
+                : '자동 작업의 실행 요일·시각을 설정합니다(KST). 15분마다 점검해 설정 시각 이후 실행됩니다.'}
             </p>
           </div>
         </div>
@@ -87,10 +113,12 @@ export function ScheduledJobsPanel() {
       </div>
 
       {loading ? (
-        <div className="py-10 text-center"><Loader2 className="w-5 h-5 animate-spin text-[#0071E3] mx-auto" /></div>
+        <div className={compact ? 'py-6 text-center' : 'py-10 text-center'}>
+          <Loader2 className="w-5 h-5 animate-spin text-[#0071E3] mx-auto" />
+        </div>
       ) : (
-        <div className="mt-4 space-y-2.5">
-          {SCHEDULED_JOBS.map((meta) => {
+        <div className={`space-y-2.5 ${compact ? 'mt-3' : 'mt-4'}`}>
+          {visibleJobs.map((meta) => {
             const c = config[meta.id];
             if (!c) return null;
             const typeLabel = meta.type === 'daily' ? '매일' : meta.type === 'weekly' ? '매주' : '매월';
@@ -102,8 +130,8 @@ export function ScheduledJobsPanel() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-[13px] font-black text-slate-800">{meta.label}</h3>
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black text-slate-500">{typeLabel}</span>
+                      <h3 className="text-[13px] font-semibold text-slate-800">{meta.label}</h3>
+                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">{typeLabel}</span>
                     </div>
                     <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{meta.description}</p>
                   </div>
@@ -117,7 +145,7 @@ export function ScheduledJobsPanel() {
                 <div className="mt-3 flex flex-wrap items-end gap-x-4 gap-y-2.5 border-t border-slate-100 pt-3">
                   {meta.type === 'weekly' && (
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">요일</span>
+                      <span className="text-[11px] font-semibold text-slate-500">요일</span>
                       <select
                         value={c.weekday}
                         onChange={(e) => update(meta.id, { weekday: Number(e.target.value) })}
@@ -129,7 +157,7 @@ export function ScheduledJobsPanel() {
                   )}
                   {meta.type === 'monthly' && (
                     <label className="flex flex-col gap-1">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">날짜</span>
+                      <span className="text-[11px] font-semibold text-slate-500">날짜</span>
                       <select
                         value={c.day}
                         onChange={(e) => update(meta.id, { day: Number(e.target.value) })}
@@ -140,7 +168,7 @@ export function ScheduledJobsPanel() {
                     </label>
                   )}
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">시각</span>
+                    <span className="text-[11px] font-semibold text-slate-500">시각</span>
                     <input
                       type="time"
                       value={c.time}
@@ -149,15 +177,26 @@ export function ScheduledJobsPanel() {
                     />
                   </label>
                   {runs[meta.id] && (
-                    <span className="text-[10px] font-semibold text-slate-400 ml-auto self-center">마지막 실행: {runs[meta.id]}</span>
+                    <span className="text-[11px] font-semibold text-slate-400 ml-auto self-center">마지막 실행: {runs[meta.id]}</span>
                   )}
                 </div>
               </div>
             );
           })}
-          <p className="text-[10px] font-semibold text-slate-400 leading-relaxed pt-1">
-            월간 정산은 실행일과 무관하게 항상 &lsquo;지난달&rsquo; 전체를 평가합니다. 실행 시각은 최대 +15분 지연될 수 있습니다.
-          </p>
+          {visibleJobs.some((j) => j.type === 'monthly') && (
+            <p className="text-[11px] font-semibold text-slate-400 leading-relaxed pt-1">
+              월간 정산은 실행일과 무관하게 항상 &lsquo;지난달&rsquo; 전체를 평가합니다. 실행 시각은 최대 +15분 지연될 수 있습니다.
+            </p>
+          )}
+          {partial && (
+            <p className="text-[11px] font-semibold text-slate-400 pt-1">
+              전체 예약 스케줄은{' '}
+              <Link href="/admin/schedules" className="font-bold text-[#0071E3] underline underline-offset-2">
+                예약 스케줄 메뉴
+              </Link>
+              에서 한 번에 관리할 수 있습니다.
+            </p>
+          )}
         </div>
       )}
     </section>

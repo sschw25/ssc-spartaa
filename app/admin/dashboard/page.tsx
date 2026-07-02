@@ -19,6 +19,7 @@ import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { MissionSummaryWidget } from '@/components/admin/mission-summary-widget';
 import { MissingArrivalWidget } from '@/components/admin/missing-arrival-widget';
 import { DailyDigestWidget } from '@/components/admin/daily-digest-widget';
+import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { AnimatedNumber } from '@/components/admin/animated-number';
@@ -867,6 +868,8 @@ export default function AdminDashboardPage() {
             <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">오늘의 브리핑</h2>
           </div>
           <DailyDigestWidget campusFilter={campusFilter} onSelectStudentId={handleOpenStudentById} />
+          {/* 일일 브리핑 생성(daily_digest) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
+          <ScheduledJobsPanel jobIds={['daily_digest']} compact />
         </div>{/* /섹션2 */}
 
         {/* ── 섹션 3: 출결 현황 ── */}

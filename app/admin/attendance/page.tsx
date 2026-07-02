@@ -15,6 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { WeeklyTardiness } from '@/components/admin/weekly-tardiness';
+import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 import { Button } from '@/components/ui/button';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { Student, PhoneSubmission } from '@/lib/types/student';
@@ -1013,6 +1014,9 @@ function AdminAttendanceContent() {
             )}
           </>
         )}
+
+        {/* 출결 자동마감(sweep) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
+        <ScheduledJobsPanel jobIds={['sweep']} compact />
 
         {/* 벌점 부여 모달 */}
         {demeritModal && (

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useState } from 'react';
-import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles } from 'lucide-react';
+import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles, CalendarDays, Presentation, PenLine, PartyPopper } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { MissionsCard } from '@/components/report/missions-card';
 
@@ -45,14 +45,43 @@ type Checklist = {
   submitted_at?: string;
 } | null;
 
+type ScheduleItem = {
+  id: string;
+  kind: 'ot' | 'mock' | 'event';
+  title: string;
+  date: string;
+  endDate?: string;
+  startTime?: string;
+  dday: number;
+  needsResponse: boolean;
+};
+
 type HubData = {
   todayPlanEntries: PlanEntry[];
   checklist: Checklist;
   streak: { current: number; best?: number };
   streakRepair?: { date: string; restoredStreak: number; cost: number } | null;
   recommendations?: Recommendation[];
+  schedule?: ScheduleItem[];
   leaveCoupons: number;
 };
+
+const SCHEDULE_KIND: Record<ScheduleItem['kind'], { label: string; icon: LucideIcon }> = {
+  ot: { label: 'OT', icon: Presentation },
+  mock: { label: '모의고사', icon: PenLine },
+  event: { label: '행사', icon: PartyPopper },
+};
+
+// 'YYYY-MM-DD' → '6월 30일 (화)' (서울 기준)
+function formatScheduleDate(ymd: string): string {
+  const d = new Date(`${ymd}T00:00:00+09:00`);
+  if (Number.isNaN(d.getTime())) return ymd;
+  const parts = new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric', weekday: 'short',
+  }).format(d); // 예: "6. 30. (화)"
+  const m = parts.match(/(\d+)\. (\d+)\. \((.)\)/);
+  return m ? `${m[1]}월 ${m[2]}일 (${m[3]})` : parts;
+}
 
 const PHONE_LABEL: Record<string, string> = {
   submitted: '제출 완료',
@@ -210,6 +239,7 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
   const completedCount = entries.filter((e) => e.isCompleted).length;
   const recommendations = data?.recommendations ?? [];
   const isCelebrate = recommendations.length === 1 && recommendations[0].tone === 'celebrate';
+  const schedule = data?.schedule ?? [];
 
   const inner = (
       <>
@@ -439,7 +469,62 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
           )}
         </section>
 
-        {/* 4. 쿠폰 미션 */}
+        {/* 4. 학원 일정 (OT · 모의고사 · 참여 행사) — 다가오는 30일, 임박순 */}
+        {schedule.length > 0 && (
+          <section className="glass rounded-[28px] p-5 shadow-sm sm:p-6">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-[#0071E3]" />
+              <h2 className="text-sm font-semibold text-slate-800">학원 일정</h2>
+            </div>
+            <p className="mt-1 text-[11px] font-semibold text-slate-400">앞으로 한 달 안에 참여할 일정이에요</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {schedule.map((item) => {
+                const kind = SCHEDULE_KIND[item.kind];
+                const KindIcon = kind.icon;
+                const urgent = item.dday <= 3;
+                return (
+                  <div
+                    key={item.id}
+                    className={`flex items-center gap-3 rounded-2xl border px-3.5 py-3 ${
+                      urgent ? 'border-amber-200/70 bg-amber-50/40' : 'border-slate-200/80 bg-white/70'
+                    }`}
+                  >
+                    <span
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${
+                        urgent ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-[#0071E3]'
+                      }`}
+                    >
+                      <KindIcon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-xs font-semibold text-slate-900">{item.title}</span>
+                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">{kind.label}</span>
+                      </span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
+                        <span>{formatScheduleDate(item.date)}</span>
+                        {item.endDate && item.endDate !== item.date && <span>~ {formatScheduleDate(item.endDate)}</span>}
+                        {item.startTime && <span>{item.startTime}</span>}
+                        {item.needsResponse && (
+                          <span className="text-[#0071E3]">· 참석 응답이 필요해요</span>
+                        )}
+                      </span>
+                    </span>
+                    <span
+                      className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
+                        urgent ? 'bg-amber-500 text-white' : 'bg-blue-50 text-[#0071E3]'
+                      }`}
+                    >
+                      {item.dday === 0 ? 'D-Day' : `D-${item.dday}`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {/* 5. 쿠폰 미션 */}
         <MissionsCard />
       </>
   );
