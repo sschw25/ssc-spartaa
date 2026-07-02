@@ -280,6 +280,7 @@ export function getDeadlinePace(
   elapsedStudyDays: number;
   expectedRatio: number;
   expectedAmount: number;
+  expectedRatioPrior: number;
   actualAmount: number;
   behind: boolean;
   todayRecommend: number;
@@ -291,15 +292,32 @@ export function getDeadlinePace(
   const day = new Date(today);
   day.setHours(0, 0, 0, 0);
 
+  // 학습일 수를 세되 하한(Math.max(1,..)) 없이 — 기간 시작 전/당일이면 0 이 나와야 한다.
+  const countRaw = (a: Date, b: Date) => {
+    if (b < a) return 0;
+    const cur = new Date(a); cur.setHours(0, 0, 0, 0);
+    const last = new Date(b); last.setHours(0, 0, 0, 0);
+    let c = 0;
+    while (cur <= last) { if (isStudyDay(cur, studyDays)) c++; cur.setDate(cur.getDate() + 1); }
+    return c;
+  };
+
   const totalStudyDays = Math.max(1, countStudyDaysInRange(start, end, studyDays));
+  // 포함(오늘까지) — "오늘까지 했어야 할" 표시/달성 판정용.
   const cappedToday = day > end ? end : day;
-  const elapsedStudyDays = Math.min(totalStudyDays, countStudyDaysInRange(start, cappedToday, studyDays));
+  const elapsedStudyDays = Math.min(totalStudyDays, countRaw(start, cappedToday));
+  // 이전(어제까지) — 뒤처짐/위험 판정용. 오늘 몫을 아직 안 했다고 위험으로 보지 않는다(당일등록·당일수정 보호).
+  const yesterday = new Date(day); yesterday.setDate(day.getDate() - 1);
+  const cappedPrior = yesterday > end ? end : yesterday;
+  const elapsedPrior = Math.min(totalStudyDays, countRaw(start, cappedPrior));
 
   const targetAmount = Math.max(0, Number(plan.targetAmount || 0));
   const expectedRatio = totalStudyDays > 0 ? Math.min(1, elapsedStudyDays / totalStudyDays) : 0;
+  const expectedRatioPrior = totalStudyDays > 0 ? Math.min(1, elapsedPrior / totalStudyDays) : 0;
   const expectedAmount = Math.round(targetAmount * expectedRatio);
+  const expectedPriorAmount = Math.round(targetAmount * expectedRatioPrior);
   const actualAmount = Math.max(0, Number(plan.actualAmount || 0));
-  const behind = actualAmount < expectedAmount;
+  const behind = actualAmount < expectedPriorAmount;
   const aheadUnits = Math.max(0, actualAmount - expectedAmount);
 
   // 오늘 권장: 오늘이 학습일이면 (남은량 / 남은 학습일)로 오늘 몫을 낸다. 아니면 0.
@@ -315,6 +333,7 @@ export function getDeadlinePace(
     elapsedStudyDays,
     expectedRatio,
     expectedAmount,
+    expectedRatioPrior,
     actualAmount,
     behind,
     todayRecommend,
@@ -483,9 +502,14 @@ export function generateDetailedPlans(
   // 미션은 periodType==='deadline' 을 버킷으로 인식해 요일 무관·분 정규화 집계로 판정한다.
   if (goalType === 'deadlineWeeks' || goalType === 'weeklyAmount') {
     const unit = customUnit || (type === 'book' ? 'p' : '강');
-    // 각 회독을 이어붙일 창 시작. 1회독은 이번 주 시작, 이후 회독은 직전 창 다음날부터.
-    let phaseStart = new Date(startOfWeek);
+    // 기간 목표는 "지금부터 N주 안에 끝내기" — 생성/수정 시점(오늘)을 기간 시작으로 잡는다.
+    // (이번 주 월요일 기준으로 잡으면 주중 당일등록·당일수정 학생이 곧바로 며칠 뒤처진 것으로 표시됨)
+    // 각 회독은 직전 창 다음날부터 이어붙인다.
+    let phaseStart = new Date(today);
 
+    // 기간 목표 날짜는 서울(KST) 기준으로 직렬화한다. toISOString()은 UTC라 KST 자정이 전날로
+    // 밀려(당일이 어제로 저장) 당일등록 학생이 하루 뒤처진 것으로 계산되던 문제를 막는다.
+    const seoulDateStr = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d);
     const appendDeadlineWindow = (passNumber: number, windowStart: Date, weeks: number, amount: number, baseAmount: number) => {
       const safeWeeks = Math.max(1, Math.min(12, Math.round(weeks)));
       const start = new Date(windowStart);
@@ -493,8 +517,8 @@ export function generateDetailedPlans(
       const end = new Date(start);
       end.setDate(start.getDate() + safeWeeks * 7 - 1);
 
-      const startStr = start.toISOString().split('T')[0];
-      const endStr = end.toISOString().split('T')[0];
+      const startStr = seoulDateStr(start);
+      const endStr = seoulDateStr(end);
       const studyDaysInWindow = Math.max(1, countStudyDaysInRange(start, end, studyDays));
       const dailyAmount = Math.max(1, Math.ceil(amount / studyDaysInWindow));
       const fromNum = baseAmount + 1;

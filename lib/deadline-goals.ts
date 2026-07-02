@@ -102,7 +102,9 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
         const pace = getDeadlinePace(plan, unitMinutes, today, studyDays);
         const targetAmount = Math.max(0, Number(plan.targetAmount || 0));
         const actualRatio = targetAmount > 0 ? Math.min(1, pace.actualAmount / targetAmount) : 0;
-        const riskLevel = computeRiskLevel(actualRatio, pace.expectedRatio);
+        // 위험 판정은 "어제까지 했어야 할" 기준(expectedRatioPrior) — 오늘 몫을 아직 안 했다고
+        // 위험으로 표시하지 않는다(당일등록·당일수정 학생이 곧바로 danger 로 뜨는 문제 방지).
+        const riskLevel = computeRiskLevel(actualRatio, pace.expectedRatioPrior);
         if (riskLevel !== 'ok') riskCount++;
 
         // 분 정규화 집계
