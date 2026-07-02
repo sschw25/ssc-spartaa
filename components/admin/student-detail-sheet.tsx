@@ -1479,7 +1479,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     materialId: string,
     totalAmount: number,
     type: 'book' | 'lecture',
-    goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount',
+    goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks',
     goalValue: number,
     currentAmount = 0,
     customUnit?: string,
@@ -1758,6 +1758,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       estimatedDailyAmount = goalValue / daysCount;
     } else if (goalType === 'weeks') {
       const totalDays = adjustedSpeedGoalValue * daysCount;
+      estimatedDailyAmount = totalDays > 0 ? remainingAmount / totalDays : 0;
+    } else if (goalType === 'deadlineWeeks') {
+      // 기간 목표: 남은 분량을 N주 학습일에 균등 분배한 하루 근사치("이 속도면 하루 약 X").
+      const totalDays = Math.max(1, Math.round(goalValue)) * daysCount;
       estimatedDailyAmount = totalDays > 0 ? remainingAmount / totalDays : 0;
     }
 
@@ -2848,7 +2852,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       };
     }
 
-    let goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' = fallbackGoalType;
+    let goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' = fallbackGoalType;
     let goalValue = fallbackGoalValue;
     const parentSubject = findSubjectByMaterialId(material.id);
 

@@ -4,7 +4,7 @@ import React from 'react';
 import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2 } from 'lucide-react';
 import { ProposedGoal, Student } from '@/lib/types/student';
 
-type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount';
+type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
 
 type RequestForm = {
   requestType: string;
@@ -425,7 +425,7 @@ export function ExecutionPlanTab({
                       {requestForm.currentGoalSnapshot?.goalValue ? (
                         <div className="rounded-lg bg-slate-100/80 border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 flex items-center gap-1.5">
                           <span className="font-black text-slate-400">현재 설정:</span>
-                          <span>{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '목표 기간' : requestForm.currentGoalSnapshot.goalType === 'weeklyAmount' ? '주간 학습량' : '일일 학습량'} {requestForm.currentGoalSnapshot.goalValue}{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}</span>
+                          <span>{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '목표 기간' : requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '기간 목표' : requestForm.currentGoalSnapshot.goalType === 'weeklyAmount' ? '주간 학습량' : '일일 학습량'} {requestForm.currentGoalSnapshot.goalValue}{requestForm.currentGoalSnapshot.goalType === 'weeks' || requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}</span>
                           {requestForm.currentGoalSnapshot.speedMultiplier && requestForm.currentGoalSnapshot.speedMultiplier !== 1.0 && (
                             <span>· {requestForm.currentGoalSnapshot.speedMultiplier}배속</span>
                           )}
@@ -441,6 +441,7 @@ export function ExecutionPlanTab({
                             className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-type-select"
                           >
                             <option value="weeks">목표 기간(주)</option>
+                            <option value="deadlineWeeks">기간 목표(주 선택)</option>
                             <option value="weeklyAmount">주간 학습량</option>
                             <option value="dailyAmount">일일 학습량</option>
                           </select>
@@ -456,7 +457,7 @@ export function ExecutionPlanTab({
                               className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-value-input"
                             />
                             <span className="text-xs font-bold text-slate-500">
-                              {requestForm.goalType === 'weeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}
+                              {requestForm.goalType === 'weeks' || requestForm.goalType === 'deadlineWeeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}
                             </span>
                           </div>
                         </div>

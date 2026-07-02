@@ -1116,13 +1116,14 @@ export function ProgressTab() {
                                             <Label className="text-[9px] text-[#86868B]">설정 방식</Label>
                                             <Select
                                               value={book.goalType || 'weeks'}
-                                              onValueChange={(val: 'weeks' | 'weeklyAmount' | 'dailyAmount') => updateBookGoalField(sub.id, book.id, 'goalType', val)}
+                                              onValueChange={(val: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks') => updateBookGoalField(sub.id, book.id, 'goalType', val)}
                                             >
                                               <SelectTrigger className="admin-fit-text h-8 text-[10px] bg-white rounded-lg border-black/[0.08] goal-type-select-book">
                                                 <SelectValue />
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="weeks">기간 지정 (몇 주)</SelectItem>
+                                                <SelectItem value="deadlineWeeks">기간 목표 (주 선택)</SelectItem>
                                                 <SelectItem value="weeklyAmount">주당 분량 지정</SelectItem>
                                                 <SelectItem value="dailyAmount">일일 분량 (학습 요일 기준)</SelectItem>
                                               </SelectContent>
@@ -1131,7 +1132,7 @@ export function ProgressTab() {
 
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">
-                                              {book.goalType === 'weeks' ? '총 주 수' : book.goalType === 'weeklyAmount' ? '주당 페이지' : '하루 페이지'}
+                                              {book.goalType === 'weeks' ? '총 주 수' : book.goalType === 'deadlineWeeks' ? '기간(주)' : book.goalType === 'weeklyAmount' ? '주당 페이지' : '하루 페이지'}
                                             </Label>
                                             <Input
                                               type="number"
@@ -1520,13 +1521,14 @@ export function ProgressTab() {
                                             <Label className="text-[9px] text-[#86868B]">설정 방식</Label>
                                             <Select
                                               value={lec.goalType || 'weeks'}
-                                              onValueChange={(val: 'weeks' | 'weeklyAmount' | 'dailyAmount') => updateLectureGoalField(sub.id, lec.id, 'goalType', val)}
+                                              onValueChange={(val: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks') => updateLectureGoalField(sub.id, lec.id, 'goalType', val)}
                                             >
                                               <SelectTrigger className="admin-fit-text h-8 text-[10px] bg-white rounded-lg border-black/[0.08] goal-type-select-lecture">
                                                 <SelectValue />
                                               </SelectTrigger>
                                               <SelectContent>
                                                 <SelectItem value="weeks">기간 지정 (몇 주)</SelectItem>
+                                                <SelectItem value="deadlineWeeks">기간 목표 (주 선택)</SelectItem>
                                                 <SelectItem value="weeklyAmount">주당 분량 지정</SelectItem>
                                                 <SelectItem value="dailyAmount">일일 분량 (학습 요일 기준)</SelectItem>
                                               </SelectContent>
@@ -1535,7 +1537,7 @@ export function ProgressTab() {
 
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">
-                                              {lec.goalType === 'weeks' ? '총 주 수' : lec.goalType === 'weeklyAmount' ? '주당 강의' : '하루 강의'}
+                                              {lec.goalType === 'weeks' ? '총 주 수' : lec.goalType === 'deadlineWeeks' ? '기간(주)' : lec.goalType === 'weeklyAmount' ? '주당 강의' : '하루 강의'}
                                             </Label>
                                             <Input
                                               type="number"

@@ -333,7 +333,7 @@ export function useReportState() {
     message: '',
     materialId: '',
     materialType: 'book' as 'book' | 'lecture',
-    goalType: 'weeks' as 'weeks' | 'weeklyAmount' | 'dailyAmount',
+    goalType: 'weeks' as 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks',
     goalValue: '',
     proposedWeekNumber: '',
     proposedRangeText: '',
