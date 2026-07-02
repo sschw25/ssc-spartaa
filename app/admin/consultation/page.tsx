@@ -631,16 +631,17 @@ function ConsultationContent() {
       case 'behind': return 'bg-red-50 text-red-700 border-red-100';
       case 'ahead': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
       case 'on-track': return 'bg-blue-50 text-blue-700 border-blue-100';
-      default: return 'bg-gray-100 text-gray-600 border-gray-200';
+      default: return 'bg-[#F5F5F7] text-[#86868B] border-black/[0.06] break-keep';
     }
   };
 
-  const getProgressStatusLabel = (status: string) => {
+  // no-plan 은 두 갈래: 기간 목표 전용(판정은 미션허브 deriveDeadlineGoals) vs 진짜 목표 미설정.
+  const getProgressStatusLabel = (status: string, planKind?: 'daily' | 'deadline' | 'none') => {
     switch (status) {
       case 'behind': return '부족';
       case 'ahead': return '충족';
       case 'on-track': return '진행중';
-      default: return '계획 없음';
+      default: return planKind === 'deadline' ? '기간 목표' : '목표 미설정';
     }
   };
 
@@ -1329,7 +1330,7 @@ function ConsultationContent() {
 
                             <td className="p-3.5 text-center">
                               <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${getProgressStatusStyle(item.status)}`}>
-                                {getProgressStatusLabel(item.status)}
+                                {getProgressStatusLabel(item.status, item.planKind)}
                               </span>
                             </td>
 
@@ -1450,7 +1451,7 @@ function ConsultationContent() {
                               </h4>
                             </div>
                             <span className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[9px] font-bold shrink-0 ${getProgressStatusStyle(item.status)}`}>
-                              {getProgressStatusLabel(item.status)}
+                              {getProgressStatusLabel(item.status, item.planKind)}
                             </span>
                           </div>
 

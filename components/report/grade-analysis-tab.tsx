@@ -17,7 +17,7 @@ type RequestForm = {
   message: string;
   materialId: string;
   materialType: 'book' | 'lecture';
-  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount';
+  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
   goalValue: string;
   proposedWeekNumber: string;
   proposedRangeText: string;
@@ -342,7 +342,7 @@ export function GradeAnalysisTab({
                     message: `${dropInfo.subject} 성적 보완을 위한 1:1 약점 피드백 상담을 신청합니다. (최근 시험: ${dropInfo.testName} ${dropInfo.currentScore}점)`,
                     materialId: '',
                     materialType: 'book',
-                    goalType: 'weeks',
+                    goalType: 'deadlineWeeks',
                     goalValue: '',
                     proposedWeekNumber: '',
                     proposedRangeText: '',

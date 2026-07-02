@@ -70,8 +70,11 @@ export function SubjectProgressTab({
   };
 
   // 오늘 기준 1개월치 상세 계획 필터링 (지난 1주 ~ 향후 3주, 약 4~5주 분량)
+  // 기간 목표(periodType) plan 은 주간 스케줄 카드로 노출하지 않는다(미션탭 전용 입력 UI 사용).
+  // 여기서 탭 완료 처리되면 dailyCompletions 이중기록·완료 해제 시 actualAmount(누적 진행) 소실 위험.
   const getOneMonthPlans = (plans: DetailedPlan[] | undefined) => {
-    if (!plans || plans.length === 0) return [];
+    const dailyPlans = (plans || []).filter(plan => !plan.periodType);
+    if (dailyPlans.length === 0) return [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -80,7 +83,7 @@ export function SubjectProgressTab({
     const endLimit = new Date(today);
     endLimit.setDate(today.getDate() + 24);
 
-    const filtered = plans.filter(plan => {
+    const filtered = dailyPlans.filter(plan => {
       const pStart = new Date(plan.startDate);
       const pEnd = new Date(plan.endDate);
       pStart.setHours(0, 0, 0, 0);
@@ -89,7 +92,7 @@ export function SubjectProgressTab({
     });
 
     if (filtered.length === 0) {
-      return plans.slice(-4);
+      return dailyPlans.slice(-4);
     }
     return filtered;
   };
@@ -121,7 +124,8 @@ export function SubjectProgressTab({
   // 오늘 할당량 범위 안에서 학습 중이면 '계획대로 진행중', 그보다 많으면 '빠름',
   // 전날까지 목표(expectedByStart)에도 못 미치면 진짜 뒤처진 것 → '느림'.
   const getPlanStatus = (current: number, plans?: DetailedPlan[], studyDays?: string[]) => {
-    if (!plans || plans.length === 0) return null;
+    // 계획이 아예 없는 자료 = 목표 미설정. 판정(빠름/느림) 대신 중립 뱃지로 안내한다.
+    if (!plans || plans.length === 0) return '목표 미설정';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const expectedByStart = getExpectedFromPlans(plans, today, studyDays, student.createdAt);
@@ -143,6 +147,8 @@ export function SubjectProgressTab({
         return 'bg-amber-50 text-amber-700 border-amber-200';
       case '진도 정체':
         return 'bg-red-50 text-red-700 border-red-200';
+      case '목표 미설정':
+        return 'bg-[#F5F5F7] text-[#86868B] border-black/[0.06] break-keep';
       default:
         return 'bg-slate-50 text-slate-500 border-slate-200';
     }

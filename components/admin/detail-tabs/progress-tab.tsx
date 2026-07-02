@@ -176,8 +176,8 @@ export function ProgressTab() {
                           className="rounded-xl border border-black/[0.06] bg-white p-4 text-left transition-colors hover:bg-[#F5F5F7]"
                         >
                           <div className="text-sm font-bold text-[#1D1D1F]">빠른 학습 입력</div>
-                          <p className="mt-1 text-xs leading-5 text-[#86868B]">
-                            한 줄 입력으로 과목, 교재/강좌, 목표량을 일괄 반영합니다.
+                          <p className="mt-1 text-xs leading-5 text-[#86868B] break-keep">
+                            한 줄 입력으로 과목, 교재/강좌와 현재 진도 위치를 일괄 등록합니다.
                           </p>
                         </button>
                         <button
@@ -197,15 +197,15 @@ export function ProgressTab() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <h4 className="text-xs font-bold text-[#1D1D1F]">빠른 학습 입력</h4>
-                    <p className="text-[10px] text-[#86868B] mt-0.5">
-                      Todoist처럼 한 줄로 입력하면 과목과 교재/강좌 목표를 자동으로 잡습니다.
+                    <p className="text-[10px] text-[#86868B] mt-0.5 break-keep">
+                      한 줄로 입력하면 과목과 자료, 현재 진도 위치가 등록됩니다. 목표는 등록 후 자료별로 설정합니다.
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => setQuickPlanText('매 월수금 오전 행정법 기본강의 3강/30강\n매일 영어 단어장 20p/200p\n화목금 오후 수학I 기출문제집 15/150p\n매 월수금 오후 국어 봉투모의고사 1회/10회')}
+                      onClick={() => setQuickPlanText('행정법 기본강의 4강/64강\n매일 영어 단어장 30p/200p\n월수금 오후 수학I 기출문제집 15/150p\n국어 봉투모의고사 10회')}
                       className="admin-fit-button rounded-lg text-xs h-8 border-black/[0.08] bg-white px-3 font-bold text-[#1D1D1F] hover:bg-[#F5F5F7]"
                     >
                       예시 입력
@@ -229,7 +229,7 @@ export function ProgressTab() {
                 </div>
 
                 <textarea
-                  placeholder={'예: 매 월수금 오전 행정법 기본강의 3강/30강\n예: 매일 영어 단어장 20p/200p\n예: 화목금 오후 수학I 기출문제집 15/150p\n예: 매 월수금 오후 국어 봉투모의고사 1회/10회'}
+                  placeholder={'예: 행정법 기본강의 4강/64강 (64강 중 4강까지 들음)\n예: 영어 단어장 30p/200p (200p 중 30p까지 풂)\n예: 수학I 기출문제집 150p (새 교재 = 0/150p)\n예: 월수금 오전 국어 봉투모의고사 2회/10회 (요일·시간대는 선택)'}
                   value={quickPlanText}
                   onChange={(e) => setQuickPlanText(e.target.value)}
                   className="flex w-full rounded-lg border border-black/[0.08] px-3 py-2 text-xs bg-white min-h-[78px] resize-y outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/20"
@@ -249,8 +249,8 @@ export function ProgressTab() {
                     </button>
                   </div>
                   {!showGuideDetail ? (
-                    <p className="text-[10px] text-[#86868B] leading-normal">
-                      한 줄에 하나씩 입력하여 여러 교재/인강의 다중 요일 주기, 시간표 및 상세 계획표를 원클릭으로 자동 일괄 생성합니다.
+                    <p className="text-[10px] text-[#86868B] leading-normal break-keep">
+                      한 줄에 하나씩 입력하면 자료와 현재 진도 위치가 일괄 등록됩니다. 첫 숫자 = 지금까지 한 위치, 둘째 숫자 = 총량입니다.
                     </p>
                   ) : (
                     <>
@@ -258,25 +258,28 @@ export function ProgressTab() {
                         • <strong>한 줄에 하나씩</strong> 입력하여 여러 자료를 동시에 등록할 수 있습니다.
                       </p>
                       <p>
-                        • 입력 형식: <strong>[주기(선택)] [시간대(선택)] [과목명] [자료명] [목표량/총분량(필수)]</strong>
+                        • 입력 형식: <strong>[요일(선택)] [시간대(선택)] [과목명] [자료명] [현재 위치/총분량(필수)]</strong>
                       </p>
                       <p>
-                        • <strong>주기/시간대</strong>: <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">매일</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">매 월요일</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">월수금</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">화목금</code> 등을 문장 앞에 붙여 요일/시간대를 자동 지정합니다. 여러 요일을 연속해서 입력하면(예: <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">월수금</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">화목</code>) 다중 요일이 한 번에 지정됩니다. 쉼표(`,`)나 슬래시(`/`)로 구분한 요일(예: <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">월,수,금</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">월/수/금</code>)도 정상 감지합니다.
+                        • <strong>현재 위치/총분량</strong>: <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">4강/64강</code>은 <strong>총 64강 중 4강까지 수강함</strong>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">30p/200p</code>는 <strong>총 200p 중 30p까지 풂</strong>을 뜻합니다. 슬래시 없이 <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">150p</code>처럼 총량만 쓰면 아직 시작 전(0/150p)으로 등록됩니다. 페이지(p), 강의(강), 회차(회) 외에 <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">장</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">문제</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">세트</code> 등 커스텀 단위도 감지합니다.
                       </p>
                       <p>
-                        • <strong>과목 및 자료명</strong>: 주기/시간대 키워드 뒤에 오는 <strong>첫 단어</strong>가 과목명으로 감지되며, 그 뒤 단어들이 교재/강좌명이 됩니다.
+                        • <strong>과목 및 자료명</strong>: 요일/시간대 키워드 뒤에 오는 <strong>첫 단어</strong>가 과목명으로 감지되며, 그 뒤 단어들이 교재/강좌명이 됩니다.
                       </p>
                       <p>
-                        • <strong>목표량 및 총분량</strong>: 끝 부분에 슬래시(/)를 사용하여 <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">3/30강</code>(매회 3강/총 30강), <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">20/200p</code>(매회 20p/총 200페이지) 또는 <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">1/10회</code>(매회 1회/총 10회) 처럼 <strong>[1회분량]/[총분량][단위]</strong> 형식으로 등록하면 총 강의수, 총 페이지수, 모의고사 총 회수가 지정됩니다. 페이지(p), 강의(강), 회차(회) 외에도 <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">장</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">문제</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">세트</code> 등 임의의 커스텀 단위도 감지하여 계획을 세웁니다.
+                        • <strong>요일/시간대(선택)</strong>: <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">매일</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">월수금</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">월,수,금</code>, <code className="bg-black/[0.05] px-1 rounded text-[#1D1D1F]">오전/오후</code> 등을 문장 앞에 붙이면 과목의 학습 요일/시간대로만 저장됩니다. 없어도 등록에는 지장이 없습니다.
+                      </p>
+                      <p>
+                        • <strong>목표와 계획</strong>: 빠른 입력은 자료 등록까지만 담당합니다. 기간 목표(N주 완주)나 일일 목표(하루 N강/Np)는 등록 후 자료별 <strong>학습 목표 설정</strong>에서 지정하세요.
                       </p>
                       <div className="border-t border-black/[0.05] pt-1.5 mt-1.5 text-xs text-[#1D1D1F] space-y-1">
                         <p className="text-[10px] font-bold text-[#6E6E73]">정확한 입력 예시:</p>
                         <p className="text-[11px] font-mono bg-white/60 p-1.5 rounded border border-black/[0.04] leading-relaxed">
-                          매 월, 수, 금 오전 행정법 기본강의 3강/30강 <span className="text-[#86868B] text-[10px]">(쉼표 포함 요일, 3강씩 총 30강)</span> <br/>
-                          월/수/금 오후 영어 10문제/100문제 <span className="text-[#86868B] text-[10px]">(슬래시 포함 요일, 커스텀 단위 '문제')</span> <br/>
-                          화목금 오후 수학I 기출문제집 15/150p <span className="text-[#86868B] text-[10px]">(화, 목, 금 오후 15p씩 총 150페이지)</span> <br/>
-                          매 월수금 오후 국어 봉투모의고사 1회/10회 <span className="text-[#86868B] text-[10px]">(월, 수, 금 오후 1회씩 총 10회 모의고사)</span> <br/>
-                          매일 영어 단어장 20p/200p <span className="text-[#86868B] text-[10px]">(매일 20p씩 총 200페이지)</span>
+                          행정법 기본강의 4강/64강 <span className="text-[#86868B] text-[10px]">(총 64강 중 4강까지 들음)</span> <br/>
+                          영어 단어장 30p/200p <span className="text-[#86868B] text-[10px]">(총 200p 중 30p까지 풂)</span> <br/>
+                          수학I 기출문제집 150p <span className="text-[#86868B] text-[10px]">(새 교재, 0/150p로 등록)</span> <br/>
+                          월수금 오전 국어 봉투모의고사 2회/10회 <span className="text-[#86868B] text-[10px]">(요일·시간대는 선택 입력)</span> <br/>
+                          영어 어휘 10문제/100문제 <span className="text-[#86868B] text-[10px]">(커스텀 단위 '문제')</span>
                         </p>
                       </div>
                     </>
@@ -287,20 +290,31 @@ export function ProgressTab() {
                   <div className="space-y-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.03] p-3">
                     <p className="text-[10px] font-bold text-[#86868B]">자동 감지 결과</p>
                     {quickPlanPreview.length === 0 ? (
-                      <p className="text-[10px] text-red-500">
-                        인식할 수 없습니다. 마지막에 3강, 20p처럼 분량을 붙여주세요.
+                      <p className="text-[10px] text-red-500 break-keep">
+                        인식할 수 없습니다. 마지막에 4강/64강, 30p/200p처럼 [현재 위치/총량]을 붙여주세요.
                       </p>
                     ) : (
-                      quickPlanPreview.map((plan, index) => (
-                        <div key={`${plan.original}_${index}`} className="admin-fit-row flex items-center justify-between gap-2 text-[10px]">
-                          <span className="admin-fit-text font-bold text-[#1D1D1F]">
-                            {plan.subjectName} · {plan.title}
-                          </span>
-                          <span className="shrink-0 text-[#0071E3] font-bold">
-                            {plan.cadence} {plan.timeLabel} · {plan.amount}{plan.unit}
-                          </span>
-                        </div>
-                      ))
+                      <>
+                        {quickPlanPreview.map((plan, index) => (
+                          <div key={`${plan.original}_${index}`} className="admin-fit-row flex items-center justify-between gap-2 text-[10px]">
+                            <span className="admin-fit-text font-bold text-[#1D1D1F]">
+                              {plan.subjectName} · {plan.title}
+                            </span>
+                            {plan.invalidReason ? (
+                              <span className="shrink-0 text-red-500 font-bold break-keep">
+                                {plan.invalidReason}
+                              </span>
+                            ) : (
+                              <span className="shrink-0 text-[#0071E3] font-bold">
+                                {[plan.cadence, plan.timeLabel].filter(Boolean).join(' ')}{plan.cadence || plan.timeLabel ? ' · ' : ''}현재 {plan.currentAmount}/{plan.totalAmount}{plan.unit}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                        <p className="text-[10px] text-[#86868B] break-keep">
+                          목표(기간/일일)는 등록 후 자료별 학습 목표 설정에서 지정합니다.
+                        </p>
+                      </>
                     )}
                   </div>
                 )}
@@ -1115,24 +1129,23 @@ export function ProgressTab() {
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">설정 방식</Label>
                                             <Select
-                                              value={book.goalType || 'weeks'}
-                                              onValueChange={(val: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks') => updateBookGoalField(sub.id, book.id, 'goalType', val)}
+                                              // 2택(기간/일일)만 노출. 레거시(weeks/weeklyAmount) 저장값은 placeholder로 재선택 유도.
+                                              value={book.goalType === 'deadlineWeeks' || book.goalType === 'dailyAmount' ? book.goalType : ''}
+                                              onValueChange={(val: 'dailyAmount' | 'deadlineWeeks') => updateBookGoalField(sub.id, book.id, 'goalType', val)}
                                             >
                                               <SelectTrigger className="admin-fit-text h-8 text-[10px] bg-white rounded-lg border-black/[0.08] goal-type-select-book">
-                                                <SelectValue />
+                                                <SelectValue placeholder="목표 방식 선택" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="weeks">기간 지정 (몇 주)</SelectItem>
-                                                <SelectItem value="deadlineWeeks">기간 목표 (주 선택)</SelectItem>
-                                                <SelectItem value="weeklyAmount">주당 분량 지정</SelectItem>
-                                                <SelectItem value="dailyAmount">일일 분량 (학습 요일 기준)</SelectItem>
+                                                <SelectItem value="deadlineWeeks">기간 목표 (N주 안에 완주)</SelectItem>
+                                                <SelectItem value="dailyAmount">일일 목표 (하루 Np, 공부 요일만)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
 
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">
-                                              {book.goalType === 'weeks' ? '총 주 수' : book.goalType === 'deadlineWeeks' ? '기간(주)' : book.goalType === 'weeklyAmount' ? '주당 페이지' : '하루 페이지'}
+                                              {book.goalType === 'deadlineWeeks' ? '기간(주, 1~12)' : book.goalType === 'dailyAmount' ? '하루 페이지' : '목표 값'}
                                             </Label>
                                             <Input
                                               type="number"
@@ -1520,24 +1533,23 @@ export function ProgressTab() {
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">설정 방식</Label>
                                             <Select
-                                              value={lec.goalType || 'weeks'}
-                                              onValueChange={(val: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks') => updateLectureGoalField(sub.id, lec.id, 'goalType', val)}
+                                              // 2택(기간/일일)만 노출. 레거시(weeks/weeklyAmount) 저장값은 placeholder로 재선택 유도.
+                                              value={lec.goalType === 'deadlineWeeks' || lec.goalType === 'dailyAmount' ? lec.goalType : ''}
+                                              onValueChange={(val: 'dailyAmount' | 'deadlineWeeks') => updateLectureGoalField(sub.id, lec.id, 'goalType', val)}
                                             >
                                               <SelectTrigger className="admin-fit-text h-8 text-[10px] bg-white rounded-lg border-black/[0.08] goal-type-select-lecture">
-                                                <SelectValue />
+                                                <SelectValue placeholder="목표 방식 선택" />
                                               </SelectTrigger>
                                               <SelectContent>
-                                                <SelectItem value="weeks">기간 지정 (몇 주)</SelectItem>
-                                                <SelectItem value="deadlineWeeks">기간 목표 (주 선택)</SelectItem>
-                                                <SelectItem value="weeklyAmount">주당 분량 지정</SelectItem>
-                                                <SelectItem value="dailyAmount">일일 분량 (학습 요일 기준)</SelectItem>
+                                                <SelectItem value="deadlineWeeks">기간 목표 (N주 안에 완주)</SelectItem>
+                                                <SelectItem value="dailyAmount">일일 목표 (하루 N강, 공부 요일만)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
 
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-[#86868B]">
-                                              {lec.goalType === 'weeks' ? '총 주 수' : lec.goalType === 'deadlineWeeks' ? '기간(주)' : lec.goalType === 'weeklyAmount' ? '주당 강의' : '하루 강의'}
+                                              {lec.goalType === 'deadlineWeeks' ? '기간(주, 1~12)' : lec.goalType === 'dailyAmount' ? '하루 강의' : '목표 값'}
                                             </Label>
                                             <Input
                                               type="number"

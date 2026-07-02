@@ -38,7 +38,9 @@ function computePlanCompletionRate(student: Student, last7: string[]): number | 
   let expected = 0;
   let completed = 0;
   for (const dk of last7) {
-    const inWindow = plans.filter((p) => p.startDate <= dk && dk <= p.endDate);
+    // 기간 목표(periodType) plan 은 일일 이행률 집계에서 제외 — dailyCompletions 가 생기지 않아
+    // "기대 1건·완료 0건"이 매일 쌓여 이행률 0% 고정(케어지수 폭락)되는 오염을 막는다.
+    const inWindow = plans.filter((p) => !p.periodType && p.startDate <= dk && dk <= p.endDate);
     if (inWindow.length === 0) continue; // 그 날 활성 계획 없음 → 분모 제외
     expected++;
     if (inWindow.some((p) => getPlanDailyCompletion(p, dk).isCompleted)) completed++;

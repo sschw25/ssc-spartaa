@@ -390,7 +390,7 @@ export function ExecutionPlanTab({
                           ...f,
                           materialId: selectedId,
                           materialType: isBook ? 'book' : 'lecture',
-                          goalType: material?.goalType || 'weeks',
+                          goalType: material?.goalType === 'dailyAmount' ? 'dailyAmount' : 'deadlineWeeks',
                           goalValue: material?.goalValue ? String(material.goalValue) : '',
                           speedMultiplier: !isBook && lecture?.speedMultiplier ? String(lecture.speedMultiplier) : '1.0',
                           currentGoalSnapshot: material ? {
@@ -440,9 +440,7 @@ export function ExecutionPlanTab({
                             onChange={(e) => setRequestForm((f) => ({ ...f, goalType: e.target.value as GoalType }))}
                             className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-type-select"
                           >
-                            <option value="weeks">목표 기간(주)</option>
                             <option value="deadlineWeeks">기간 목표(주 선택)</option>
-                            <option value="weeklyAmount">주간 학습량</option>
                             <option value="dailyAmount">일일 학습량</option>
                           </select>
                         </div>

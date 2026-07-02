@@ -18,6 +18,8 @@ export interface ManagedProgressItem {
   expectedToday: number | null;
   shortage: number | null;
   status: 'ahead' | 'on-track' | 'behind' | 'no-plan';
+  // 계획 유형: daily=일일 계획 있음, deadline=기간 목표 전용(미션허브 deriveDeadlineGoals 가 판정), none=목표 미설정
+  planKind: 'daily' | 'deadline' | 'none';
   daysToTarget: number | null;
   daysToConsultation: number | null;
 }
@@ -123,17 +125,6 @@ export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: D
   return latestPastPlan ? parsePlanEndAmount(latestPastPlan) : null;
 }
 
-function getExpectedLinear(total: number, startDate?: string, targetDate?: string, today = new Date()) {
-  const start = parseDate(startDate);
-  const target = parseDate(targetDate);
-  if (!start || !target || total <= 0) return null;
-
-  const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / DAY_MS));
-  const elapsedDays = Math.min(totalDays, Math.max(0, Math.ceil((today.getTime() - start.getTime()) / DAY_MS)));
-
-  return Math.min(total, Math.ceil((total * elapsedDays) / totalDays));
-}
-
 function buildItem(
   student: Student,
   subjectName: string,
@@ -156,8 +147,16 @@ function buildItem(
   const isMaterialTouchedToday = isSameDay(parseDate(material.updatedAt), today);
   const isFreshToday = isCreatedToday || isMaterialTouchedToday;
   const progressBaselineDate = isFreshToday ? (material.updatedAt || student.createdAt) : student.createdAt;
-  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate)
-    ?? getExpectedLinear(total, progressBaselineDate, material.targetDate, today);
+  const allPlans = material.detailedPlans || [];
+  const planKind: ManagedProgressItem['planKind'] = allPlans.length === 0
+    ? 'none'
+    : allPlans.some((p) => !p.periodType)
+    ? 'daily'
+    : 'deadline';
+  // 목표(계획) 미설정 자료는 달력 선형 추정(과거 getExpectedLinear 폴백)으로 뒤처짐을 만들지
+  // 않는다 — 기대치 null → 판정 제외(no-plan). 기간 목표(deadline) 전용 자료도 여기서는 null
+  // (deriveDeadlineGoals 가 마감 위험 판정의 단일 소스).
+  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate);
   const expectedToday = rawExpectedToday === null
     ? null
     : isFreshToday
@@ -190,6 +189,7 @@ function buildItem(
     expectedToday,
     shortage,
     status,
+    planKind,
     daysToTarget: diffDays(today, material.targetDate),
     daysToConsultation: diffDays(today, student.nextConsultationDate),
   };
@@ -458,15 +458,11 @@ export function generateDetailedPlans(
   }
 
   // 2. 시간표 한계에 따른 목표 값 보정
+  // (weeklyAmount 는 아래 기간 목표 창 분기로 빠지므로 여기서는 dailyAmount 만 보정)
   let adjustedGoalValue = goalValue;
   if (type === 'lecture' && category !== '문제풀이' && maxLecturesPerDay !== Infinity) {
     if (goalType === 'dailyAmount' && goalValue > maxLecturesPerDay) {
       adjustedGoalValue = maxLecturesPerDay;
-    } else if (goalType === 'weeklyAmount') {
-      const maxWeeklyAmount = maxLecturesPerDay * daysCountPerWeek;
-      if (goalValue > maxWeeklyAmount) {
-        adjustedGoalValue = maxWeeklyAmount;
-      }
     }
   }
 
@@ -544,8 +540,11 @@ export function generateDetailedPlans(
       return next;
     };
 
-    // weeklyAmount → 1주, deadlineWeeks → N주.
-    const firstWeeks = goalType === 'weeklyAmount' ? 1 : Math.max(1, Math.min(12, Math.round(goalValue || 1)));
+    // deadlineWeeks → N주. weeklyAmount(레거시 데이터 폴백) → 주당량을 주수로 환산:
+    // ceil(잔량/주당량)을 1~12주로 클램프. (과거 "1주 창에 전체 잔량" 회귀 방지)
+    const firstWeeks = goalType === 'weeklyAmount'
+      ? Math.max(1, Math.min(12, Math.ceil(planAmount / Math.max(1, Math.round(goalValue || 1)))))
+      : Math.max(1, Math.min(12, Math.round(goalValue || 1)));
 
     if (planAmount > 0) {
       phaseStart = appendDeadlineWindow(1, phaseStart, firstWeeks, planAmount, safeCurrentAmount);

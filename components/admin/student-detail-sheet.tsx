@@ -34,7 +34,7 @@ import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
 import { ProgressTab } from '@/components/admin/detail-tabs/progress-tab';
 import { ConsultTab } from '@/components/admin/detail-tabs/consult-tab';
 import { PenaltyTab } from '@/components/admin/detail-tabs/penalty-tab';
-import { DetailSheetProvider } from '@/components/admin/detail-tabs/detail-sheet-context';
+import { DetailSheetProvider, type QuickPlanPreviewItem } from '@/components/admin/detail-tabs/detail-sheet-context';
 
 interface StudentDetailSheetProps {
   student: Student | null;
@@ -1547,9 +1547,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         books: sub.books.map(b => {
           if (b.id !== bookId) return b;
           const updatedBook = { ...b, [field]: value };
-          const goalType = updatedBook.goalType || 'weeks';
+          // 목표 방식 미선택 상태에서는 계획을 생성하지 않는다(숨은 'weeks' 폴백 금지)
+          const goalType = updatedBook.goalType;
           const goalValue = updatedBook.goalValue || 0;
-          if (goalValue > 0 && (field === 'goalType' || field === 'goalValue')) {
+          if (goalType && goalValue > 0 && (field === 'goalType' || field === 'goalValue')) {
             const { plans, calculatedTargetDate } = generateDetailedPlansLib(
               bookId,
               updatedBook.totalPages,
@@ -1584,9 +1585,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         lectures: sub.lectures.map(l => {
           if (l.id !== lectureId) return l;
           const updatedLec = { ...l, [field]: value };
-          const goalType = updatedLec.goalType || 'weeks';
+          // 목표 방식 미선택 상태에서는 계획을 생성하지 않는다(숨은 'weeks' 폴백 금지)
+          const goalType = updatedLec.goalType;
           const goalValue = updatedLec.goalValue || 0;
-          if (goalValue > 0 && (field === 'goalType' || field === 'goalValue' || field === 'speedMultiplier' || field === 'estimatedMinutesPerUnit')) {
+          if (goalType && goalValue > 0 && (field === 'goalType' || field === 'goalValue' || field === 'speedMultiplier' || field === 'estimatedMinutesPerUnit')) {
             const { plans, calculatedTargetDate } = generateDetailedPlansLib(
               lectureId,
               updatedLec.totalLectures,
@@ -1639,11 +1641,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           books: sub.books.map(b => {
             if (b.id !== materialId) return b;
             const newPasses = normalizePasses(b.reviewPasses);
-            const goalType = b.goalType || 'weeks';
+            const goalType = b.goalType;
             const goalValue = b.goalValue || 0;
             let newPlans = b.detailedPlans || [];
             let newTargetDate = b.targetDate;
-            if (goalValue > 0) {
+            if (goalType && goalValue > 0) {
               const { plans, calculatedTargetDate } = generateDetailedPlansLib(
                 materialId,
                 b.totalPages,
@@ -1671,11 +1673,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         lectures: sub.lectures.map(l => {
           if (l.id !== materialId) return l;
           const newPasses = normalizePasses(l.reviewPasses);
-          const goalType = l.goalType || 'weeks';
+          const goalType = l.goalType;
           const goalValue = l.goalValue || 0;
           let newPlans = l.detailedPlans || [];
           let newTargetDate = l.targetDate;
-          if (goalValue > 0) {
+          if (goalType && goalValue > 0) {
             const { plans, calculatedTargetDate } = generateDetailedPlansLib(
               materialId,
               l.totalLectures,
@@ -1720,7 +1722,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
     if (!targetMaterial) return;
 
-    const goalType = targetMaterial.goalType || 'weeks';
+    const goalType = targetMaterial.goalType;
+    if (!goalType) {
+      toast.error('목표 방식을 먼저 선택해 주세요.');
+      return;
+    }
     const goalValue = targetMaterial.goalValue || 0;
     const goalDescription = targetMaterial.goalDescription || '';
     const reviewPasses = (targetMaterial.reviewPasses || []).filter((pass) => pass.days > 0);
@@ -1933,22 +1939,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (sub.id !== targetSubject!.id) return sub;
 
       if (newMaterialType === 'book') {
+        // 등록=자료만. 목표/계획은 등록 후 자료별 학습 목표 설정에서 지정한다(자동 4주 계획 생성 금지).
         const tempBookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const { plans, calculatedTargetDate } = generateDetailedPlansLib(
-          tempBookId,
-          total,
-          'book',
-          'weeks',
-          4,
-          0,
-          newMaterialUnit,
-          [],
-          sub.studyDays,
-          1.0,
-          newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
-          sub.studyTime,
-          newMaterialCategory
-        );
         const newBook: BookProgress = {
           id: tempBookId,
           title: title,
@@ -1957,12 +1949,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           updatedAt: nowStr,
           category: newMaterialCategory,
           unit: newMaterialUnit,
-          goalType: 'weeks',
-          goalValue: 4,
-          goalDescription: '',
           estimatedMinutesPerUnit: newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
-          detailedPlans: plans,
-          targetDate: calculatedTargetDate
         };
         return {
           ...sub,
@@ -1971,21 +1958,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         };
       } else {
         const tempLecId = `lec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-        const { plans, calculatedTargetDate } = generateDetailedPlansLib(
-          tempLecId,
-          total,
-          'lecture',
-          'weeks',
-          4,
-          0,
-          undefined,
-          [],
-          sub.studyDays,
-          newMaterialSpeedMultiplier,
-          newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
-          sub.studyTime,
-          newMaterialCategory
-        );
         const newLecture: LectureProgress = {
           id: tempLecId,
           name: title,
@@ -1993,13 +1965,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           completedLectures: 0,
           updatedAt: nowStr,
           category: newMaterialCategory,
-          goalType: 'weeks',
-          goalValue: 4,
-          goalDescription: '',
           estimatedMinutesPerUnit: newMaterialEstimatedMinutes !== '' ? Number(newMaterialEstimatedMinutes) : undefined,
           speedMultiplier: newMaterialSpeedMultiplier,
-          detailedPlans: plans,
-          targetDate: calculatedTargetDate
         };
         return {
           ...sub,
@@ -3251,31 +3218,34 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         beforeDigits = beforeDigits.replace(/([월화수목금토일])\s*[\s,\/]\s*(?=[월화수목금토일])/g, '$1');
         const line = beforeDigits + afterDigits;
 
-        // 1. [매회분량]/[총분량][단위] 패턴 매칭 (장, 문제, 세트, 과, 단원, ch, chpater, Ch, Chapter, 일차 등 포함)
+        // 1. [현재위치]/[총분량][단위] 패턴 매칭 — "행정법 기본강의 4강/64강" = 총 64강 중 4강까지 수강함
+        //    (장, 문제, 세트, 과, 단원, ch, chpater, Ch, Chapter, 일차 등 커스텀 단위 포함)
         let totalAmount = 0;
-        let amount = 0;
+        let currentAmount = 0;
         let unitText = '';
         let matchedIndex = -1;
 
         const slashMatch = line.match(/(\d+)\s*(?:강의|강|페이지|쪽|p|P|회|장|문제|세트|과|단원|ch|Ch|chapter|Chapter|일차)?\s*[\/\uFF0F]\s*(\d+)\s*(강의|강|페이지|쪽|p|P|회|장|문제|세트|과|단원|ch|Ch|chapter|Chapter|일차)$/i);
         if (slashMatch && slashMatch.index !== undefined) {
-          amount = Number(slashMatch[1]);
+          currentAmount = Number(slashMatch[1]);
           totalAmount = Number(slashMatch[2]);
           unitText = slashMatch[3];
           matchedIndex = slashMatch.index;
         } else {
-          // 2. 기존 단일 [매회분량][단위] 패턴 매칭
+          // 2. 단일 [총분량][단위] 패턴 — 슬래시가 없으면 "현재 0, 총량 그 숫자"로 해석 (예: 64강 = 0/64강)
           const amountMatch = line.match(/(\d+)\s*(강의|강|페이지|쪽|p|P|회|장|문제|세트|과|단원|ch|Ch|chapter|Chapter|일차)$/i);
           if (!amountMatch || amountMatch.index === undefined) return null;
-          amount = Number(amountMatch[1]);
+          totalAmount = Number(amountMatch[1]);
+          currentAmount = 0;
           unitText = amountMatch[2];
-          const lowerUnit = unitText.toLowerCase();
-          const isLec = lowerUnit.includes('강');
-          const isExam = lowerUnit.includes('회');
-          const isCustom = ['장', '문제', '세트', '과', '단원', 'ch', 'chapter', '일차'].some(u => lowerUnit.includes(u));
-          totalAmount = isLec ? Math.max(30, amount * 10) : (isExam ? Math.max(10, amount * 10) : (isCustom ? Math.max(20, amount * 10) : Math.max(200, amount * 10)));
           matchedIndex = amountMatch.index;
         }
+
+        // 현재 위치가 총량보다 크면 오타(순서 뒤집힘) 가능성이 높으므로 조용히 캡하지 않고 오류로 표시
+        const invalidReason = currentAmount > totalAmount
+          ? `현재 위치(${currentAmount})가 총량(${totalAmount})보다 큽니다 — [현재/총량] 순서를 확인해 주세요`
+          : '';
+        currentAmount = Math.max(0, currentAmount);
 
         const lowerUnitText = unitText.toLowerCase();
         const type: 'book' | 'lecture' = lowerUnitText.includes('강') ? 'lecture' : 'book';
@@ -3334,7 +3304,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         }
 
         const materialTokens = tokens.slice(cursor);
-        if (materialTokens.length === 0 || amount <= 0) return null;
+        if (materialTokens.length === 0 || totalAmount <= 0) return null;
 
         const subjectName = materialTokens[0];
         const title = materialTokens.join(' ');
@@ -3357,28 +3327,17 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           subjectName,
           title,
           type,
-          amount,
+          currentAmount,
           totalAmount,
           unit,
-          cadence: cadence || '단회',
+          cadence: cadence || '',
           timeLabel,
           studyTime: timeLabel === '오전' || timeLabel === '아침' ? 'morning' as const : timeLabel === '오후' ? 'afternoon' as const : timeLabel ? 'night' as const : '' as const,
           studyDays,
+          invalidReason,
         };
       })
-      .filter(Boolean) as Array<{
-        original: string;
-        subjectName: string;
-        title: string;
-        type: 'book' | 'lecture';
-        amount: number;
-        totalAmount: number;
-        unit: string;
-        cadence: string;
-        timeLabel: string;
-        studyTime: 'morning' | 'afternoon' | 'night' | '';
-        studyDays: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
-      }>;
+      .filter(Boolean) as QuickPlanPreviewItem[];
   };
 
   const quickPlanPreview = parseQuickPlanLines(debouncedQuickPlanText);
@@ -3405,11 +3364,18 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const handleApplyQuickPlan = async () => {
     if (isApplyingQuickPlan) return;
 
-    const parsedPlans = parseQuickPlanLines(quickPlanText);
-    if (parsedPlans.length === 0) {
-      toast.error('예: 매 월요일 오전 행정법 기본강의 3강 형식으로 입력해 주세요.');
+    const allParsedPlans = parseQuickPlanLines(quickPlanText);
+    if (allParsedPlans.length === 0) {
+      toast.error('예: 행정법 기본강의 4강/64강 형식으로 입력해 주세요. (총 64강 중 4강까지 들음)');
       return;
     }
+
+    const invalidPlans = allParsedPlans.filter((plan) => plan.invalidReason);
+    if (invalidPlans.length > 0) {
+      toast.error(`입력 오류: ${invalidPlans[0].subjectName} - ${invalidPlans[0].title} — ${invalidPlans[0].invalidReason}${invalidPlans.length > 1 ? ` 외 ${invalidPlans.length - 1}건` : ''}`);
+      return;
+    }
+    const parsedPlans = allParsedPlans;
 
     const existingPlanKeys = new Set<string>();
     subjectsState.forEach((subject) => {
@@ -3494,9 +3460,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         }
       }
 
-      const goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' = 'dailyAmount';
-      const goalDescription = `${plan.cadence}${plan.timeLabel ? ` ${plan.timeLabel}` : ''} ${plan.title} ${plan.amount}${plan.unit}`;
-
+      // 빠른 입력은 "자료 + 현재 진도 위치" 등록만 담당한다.
+      // 목표(기간/일일)와 상세 계획(detailedPlans)은 등록 후 자료별 '학습 목표 설정'에서 지정 —
+      // 여기서 계획을 자동 생성하지 않는다(목표 관련 필드는 비워둠).
       if (plan.type === 'lecture') {
         const existing = subject.lectures.find(lecture => normalizeQuickPlanKeyPart(lecture.name) === normalizedTitle);
         if (existing) {
@@ -3504,31 +3470,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           duplicatePlanLabels.push(`${plan.subjectName} - ${plan.title}`);
           return;
         } else {
-          const newLecId = `lec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-          const { plans: lPlans, calculatedTargetDate: lDate } = generateDetailedPlans(
-            newLecId,
-            plan.totalAmount,
-            'lecture',
-            goalType,
-            plan.amount,
-            0,
-            undefined,
-            [],
-            undefined,
-            undefined,
-            undefined,
-            subject // 신규 강의 — 부모 과목 직접 전달(studyDays/studyTime 반영)
-          );
           subject.lectures.push({
-            id: newLecId,
+            id: `lec_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             name: plan.title,
             totalLectures: plan.totalAmount,
-            completedLectures: 0,
-            goalType,
-            goalValue: plan.amount,
-            goalDescription,
-            targetDate: lDate,
-            detailedPlans: lPlans,
+            completedLectures: Math.min(plan.currentAmount, plan.totalAmount),
             updatedAt: now,
           });
           appliedPlanCount += 1;
@@ -3540,32 +3486,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           duplicatePlanLabels.push(`${plan.subjectName} - ${plan.title}`);
           return;
         } else {
-          const newBookId = `book_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
-          const { plans: bPlans, calculatedTargetDate: bDate } = generateDetailedPlans(
-            newBookId,
-            plan.totalAmount,
-            'book',
-            goalType,
-            plan.amount,
-            0,
-            plan.unit,
-            [],
-            undefined,
-            undefined,
-            undefined,
-            subject // 신규 교재 — 부모 과목 직접 전달(studyDays/studyTime 반영)
-          );
           subject.books.push({
-            id: newBookId,
+            id: `book_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
             title: plan.title,
             totalPages: plan.totalAmount,
-            currentPage: 0,
-            goalType,
-            goalValue: plan.amount,
-            goalDescription,
-            targetDate: bDate,
+            currentPage: Math.min(plan.currentAmount, plan.totalAmount),
             unit: plan.unit,
-            detailedPlans: bPlans,
             updatedAt: now,
           });
           appliedPlanCount += 1;
@@ -3606,8 +3532,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         setSubjectsState(updatedSubjects);
         setQuickPlanText('');
         toast.success(totalDuplicateCount > 0
-          ? `빠른 학습 입력이 학습관리 DB에 반영되었습니다. 중복 제외: ${duplicateSummary}${hiddenDuplicateCount > 0 ? ` 외 ${hiddenDuplicateCount}건` : ''}`
-          : '빠른 학습 입력이 학습관리 DB에 반영되었습니다.');
+          ? `자료와 현재 진도가 등록되었습니다. 중복 제외: ${duplicateSummary}${hiddenDuplicateCount > 0 ? ` 외 ${hiddenDuplicateCount}건` : ''}`
+          : '자료와 현재 진도가 등록되었습니다. 목표는 자료별 학습 목표 설정에서 지정해 주세요.');
       }
     } finally {
       setIsApplyingQuickPlan(false);
