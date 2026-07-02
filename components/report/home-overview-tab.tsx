@@ -379,7 +379,8 @@ export function HomeOverviewTab({
                   {todayMissionDone}/{todayMissionTotal}개 완료
                 </h2>
                 <p className="mt-1 text-[11px] font-medium text-slate-400">
-                  {todayDailyPlan ? `${todayDailyPlan.label} ${todayDailyPlan.dateLabel}` : '오늘 기준 실행 항목'}
+                  {/* 미션 탭의 '오늘 계획 N건'과 숫자가 달라 보이지 않게 집계 기준(계획+점검표)을 명시 */}
+                  오늘 계획 {todayPlanEntries.length}건 + 아침 점검표{todayDailyPlan ? ` · ${todayDailyPlan.dateLabel}` : ''}
                 </p>
               </div>
               <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.06] text-[15px] font-semibold text-[#0071E3] tabular-nums">

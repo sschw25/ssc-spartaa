@@ -64,6 +64,9 @@ function buildMaskedStudent(
           consultationBookings,
           consultationHistory,
           consultationCancellations,
+          // 반차/휴식권 잔여에 교환 추가권을 합산(getLeaveCredits)하려면 본인 교환 내역이 필요 —
+          // 누락 시 서버는 신청을 허용하는데 화면은 '0회 남음'으로 보이는 불일치가 난다.
+          rewardRedemptions: student.rewardRedemptions || [],
         }
       : {}),
     ddays: audience === 'student' ? (student.ddays || []) : [],
