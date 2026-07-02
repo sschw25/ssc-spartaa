@@ -39,6 +39,12 @@ function flattenSubjects(subjects: any[]): { books: BookProgress[]; lectures: Le
   return { books, lectures };
 }
 
+function readDdaysFromRow(r: any) {
+  if (Array.isArray(r.ddays)) return r.ddays;
+  if (Array.isArray(r.student_state?.ddays)) return r.student_state.ddays;
+  return [];
+}
+
 function rowToStudent(r: any): Student {
   const subjects = (r.subjects || []) as any[];
   const { books, lectures } = flattenSubjects(subjects);
@@ -91,7 +97,7 @@ function rowToStudent(r: any): Student {
       }
       return item;
     }),
-    ddays: r.ddays || [],
+    ddays: readDdaysFromRow(r),
     mealOrders: r.meal_orders || [],
     seatAlerts: r.seat_alerts || [],
     subjects,
@@ -106,6 +112,11 @@ function studentToRow(student: Student, nowIso: string) {
     student.lectures || [],
     nowIso
   );
+  const ddays = Array.isArray(student.ddays)
+    ? student.ddays
+    : Array.isArray(student.studentState?.ddays)
+    ? student.studentState.ddays
+    : [];
   return {
     id: student.id,
     name: student.name,
@@ -136,11 +147,11 @@ function studentToRow(student: Student, nowIso: string) {
     ot_events: student.otEvents || [],
     event_participations: student.eventParticipations || [],
     // enrollStartDate(이용 시작일)는 별도 컬럼 없이 student_state(jsonb)에 함께 보관 — 마이그레이션 불필요
-    student_state: { ...(student.studentState || {}), enrollStartDate: student.enrollStartDate || null },
+    student_state: { ...(student.studentState || {}), enrollStartDate: student.enrollStartDate || null, ddays },
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
     phone_submissions: student.phoneSubmissions || [],
-    ddays: student.ddays || [],
+    ddays,
     meal_orders: student.mealOrders || [],
     seat_alerts: student.seatAlerts || [],
     // share_token / share_token_expires_at / share_password 는 의도적으로 제외한다.
@@ -183,7 +194,7 @@ const SUMMARY_COLS = [
   'parent_phone', 'student_phone', 'sms_targets',
   'life_comment', 'special_note', 'student_life_comment',
   'leave_coupons', 'share_token', 'share_token_expires_at',
-  'expected_arrival', 'seat_number', 'saturday_late_excuses', 'away_schedules', 'created_at', 'updated_at',
+  'expected_arrival', 'seat_number', 'saturday_late_excuses', 'away_schedules', 'student_state', 'ddays', 'created_at', 'updated_at',
 ].join(', ');
 
 export async function getStudentsSummarySupabase(): Promise<Student[]> {

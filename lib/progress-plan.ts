@@ -148,14 +148,22 @@ function buildItem(
     ? (material as BookProgress).title
     : (material as LectureProgress).name;
 
-  const expectedFromPlans = getExpectedFromPlans(material.detailedPlans, today, studyDays, student.createdAt);
-  const expectedToday = expectedFromPlans ?? getExpectedLinear(total, student.createdAt, material.targetDate, today);
   const isCreatedToday = isSameDay(parseDate(student.createdAt), today);
-  const shortage = expectedToday === null || isCreatedToday ? null : Math.max(0, expectedToday - current);
+  const isMaterialTouchedToday = isSameDay(parseDate(material.updatedAt), today);
+  const isFreshToday = isCreatedToday || isMaterialTouchedToday;
+  const progressBaselineDate = isFreshToday ? (material.updatedAt || student.createdAt) : student.createdAt;
+  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate)
+    ?? getExpectedLinear(total, progressBaselineDate, material.targetDate, today);
+  const expectedToday = rawExpectedToday === null
+    ? null
+    : isFreshToday
+    ? current
+    : rawExpectedToday;
+  const shortage = expectedToday === null ? null : Math.max(0, expectedToday - current);
   const status = expectedToday === null
     ? 'no-plan'
-    : isCreatedToday
-    ? (current >= expectedToday ? 'ahead' : 'on-track')
+    : isFreshToday
+    ? 'on-track'
     : current + 1 < expectedToday
     ? 'behind'
     : current >= expectedToday
