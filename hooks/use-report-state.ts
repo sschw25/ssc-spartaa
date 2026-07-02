@@ -301,9 +301,12 @@ export function useReportState() {
   const [error, setError] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [visiblePlanWeeks, setVisiblePlanWeeks] = useState(1);
+  // 학생 뷰에서만 ?tab= 초기 탭 허용 — 학부모/공유 뷰에는 학생 전용 탭이 없어 빈 화면이 된다.
   const initialTabParam = searchParams.get('tab');
   const [activeTab, setActiveTab] = useState(() =>
-    initialTabParam && STUDENT_TAB_IDS.includes(initialTabParam) ? initialTabParam : 'report-overview'
+    isStudentReport && initialTabParam && STUDENT_TAB_IDS.includes(initialTabParam)
+      ? initialTabParam
+      : 'report-overview'
   );
 
   const paperRef = useRef<HTMLDivElement>(null);
@@ -450,6 +453,8 @@ export function useReportState() {
   // 4. 리포트 본 데이터 로드
   useEffect(() => {
     setMounted(true);
+    // effect 재실행(학생/audience 변경) 후 늦게 도착한 응답이 새 데이터를 덮어쓰지 않게 가드
+    let stale = false;
     async function loadReport() {
       try {
         if (shareTokenParam) {
@@ -459,6 +464,7 @@ export function useReportState() {
           });
           if (res.ok) {
             const json = await res.json();
+            if (stale) return;
             if (json.success) {
               setStudent(json.data);
               setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
@@ -479,6 +485,7 @@ export function useReportState() {
         const res = await fetch(`/api/report/${studentId}?audience=${audience}&scope=core`);
         if (res.ok) {
           const json = await res.json();
+          if (stale) return;
           if (json.success) {
             setStudent(json.data);
             setDismissedNotificationIds(json.data?.id ? getInitialDismissedNotificationIds(json.data) : []);
@@ -486,6 +493,7 @@ export function useReportState() {
             fetch(`/api/report/${studentId}?audience=${audience}&scope=extras`)
               .then((extrasRes) => (extrasRes.ok ? extrasRes.json() : null))
               .then((extras) => {
+                if (stale) return;
                 if (extras?.success) {
                   setMaterialBenchmarks(extras.materialBenchmarks || {});
                   setStudyStats(extras.studyStats || null);
@@ -503,12 +511,15 @@ export function useReportState() {
       } catch (err) {
         setError(true);
       } finally {
-        setLoading(false);
+        if (!stale) setLoading(false);
       }
     }
     if (studentId && (!shareTokenParam || sharePasswordVerified)) {
       loadReport();
     }
+    return () => {
+      stale = true;
+    };
   }, [studentId, audience, sharePasswordVerified]);
 
   const getCampusLabel = (val: string) => {

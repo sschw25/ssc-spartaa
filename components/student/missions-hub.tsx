@@ -224,9 +224,16 @@ export function MissionsHub({ studentId, studentName, embedded = false }: { stud
             </a>
           )}
           <p className="mt-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">오늘 할 일</p>
-          <h1 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
-            {studentName}님, 오늘도 화이팅이에요
-          </h1>
+          {/* embedded(리포트 탭 내부)에서는 h1 중복을 피해 h2 사용 */}
+          {embedded ? (
+            <h2 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
+              {studentName}님, 오늘도 화이팅이에요
+            </h2>
+          ) : (
+            <h1 className="flex flex-wrap items-center gap-1.5 text-xl font-semibold text-slate-900">
+              {studentName}님, 오늘도 화이팅이에요
+            </h1>
+          )}
         </header>
 
         {/* 1. 연속출석 스트릭 */}

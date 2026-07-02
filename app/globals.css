@@ -496,13 +496,11 @@ body:has(.admin-fluid-ui) {
   transform-origin: center bottom;
 }
 
-/* 라우트 전환 진입 — admin/report template.tsx 가 사용. 짧은 페이드+상승으로 페이지 전환을 부드럽게. */
-@keyframes routeEnter {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* 라우트 전환 진입 — admin/report template.tsx 가 사용. 짧은 페이드로 페이지 전환을 부드럽게.
+   주의: transform 을 쓰면(identity 라도) 래퍼가 내부 position:fixed 요소(모달·플로팅 버튼)의
+   컨테이닝 블록이 되어 배치가 깨진다 — opacity 전용을 유지할 것. */
 .route-transition {
-  animation: routeEnter 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* 접근성 가드 — prefers-reduced-motion */
