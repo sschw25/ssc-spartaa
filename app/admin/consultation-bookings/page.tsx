@@ -441,7 +441,7 @@ export default function AdminConsultationBookingsPage() {
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-sm font-black text-[#1D1D1F]">추가 · 긴급 상담 신청</h2>
+            <h2 className="text-[17px] font-semibold text-[#1D1D1F]">추가 · 긴급 상담 신청</h2>
             <span className="text-[11px] font-bold text-[#86868B]">{extraRequests.length}건 대기</span>
           </div>
           {extraRequests.length === 0 ? (
@@ -478,7 +478,7 @@ export default function AdminConsultationBookingsPage() {
           <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
             <div className="flex items-center gap-2">
               <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-              <h2 className="text-sm font-black text-[#1D1D1F]">상담 시간 변경</h2>
+              <h2 className="text-[17px] font-semibold text-[#1D1D1F]">상담 시간 변경</h2>
               <span className="text-[11px] font-bold text-[#86868B]">{rescheduleRequests.length}건</span>
             </div>
             <div className="space-y-2">
@@ -535,7 +535,7 @@ export default function AdminConsultationBookingsPage() {
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4 text-[#0071E3]" />
-            <h2 className="text-sm font-black text-[#1D1D1F]">관리자 직접 예약</h2>
+            <h2 className="text-[17px] font-semibold text-[#1D1D1F]">관리자 직접 예약</h2>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2 space-y-1.5">
@@ -585,7 +585,7 @@ export default function AdminConsultationBookingsPage() {
             return (
               <div className="flex items-center gap-2 px-1 flex-wrap">
                 <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-                <h2 className="text-sm font-black text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
+                <h2 className="text-[17px] font-semibold text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
                 <span className="text-[11px] font-bold text-[#86868B]">앞 요일부터 채워집니다</span>
                 <span className="ml-auto text-[11px] font-bold text-[#86868B]">
                   신청 {s.total} · 완료 {s.done} · 노쇼 {s.noshow} (노쇼율 {s.noshowRate}%)
@@ -694,7 +694,7 @@ export default function AdminConsultationBookingsPage() {
                                         type="button"
                                         disabled={!!busy[`resolve_${bk.id}`]}
                                         onClick={() => resolveBooking(bk, 'noshow')}
-                                        className="flex-1 rounded-md bg-rose-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-rose-600 transition-colors disabled:opacity-50"
+                                        className="flex-1 rounded-md bg-red-500 px-1 py-0.5 text-[9px] font-black text-white hover:bg-red-600 transition-colors disabled:opacity-50"
                                       >
                                         {busy[`resolve_${bk.id}`] ? '…' : '노쇼'}
                                       </button>

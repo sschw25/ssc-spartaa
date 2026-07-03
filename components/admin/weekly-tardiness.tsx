@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Loader2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown, Loader2, TriangleAlert } from 'lucide-react';
 
 interface Row { id: string; name: string; campus: string; expectedArrival: string; attendedDays: number; lateDays: number; lateRate: number }
 interface Data {
@@ -114,7 +114,7 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
                   <td className="px-4 py-3 tabular-nums">{r.attendedDays}일</td>
                   <td className="px-4 py-3">
                     {r.lateDays > 0
-                      ? <span className={`font-bold tabular-nums ${r.lateDays >= 3 ? 'text-red-700' : 'text-[#FF9500]'}`}>{r.lateDays}일{r.lateDays >= 3 ? ' ⚠' : ''}</span>
+                      ? <span className={`font-bold tabular-nums inline-flex items-center gap-0.5 ${r.lateDays >= 3 ? 'text-red-700' : 'text-[#FF9500]'}`}>{r.lateDays}일{r.lateDays >= 3 && <TriangleAlert className="w-3 h-3 shrink-0" />}</span>
                       : <span className="text-emerald-700 font-bold">0일</span>}
                   </td>
                   <td className="px-4 py-3 tabular-nums text-[#86868B]">{r.lateRate}%</td>
@@ -124,7 +124,7 @@ export function WeeklyTardiness({ campusFilter }: { campusFilter: string }) {
           </table>
         )}
       </div>
-      <p className="text-[10px] text-[#86868B] text-center">이번 주 학생별 지각 누적(본인 기준 대비). 지각 3일 이상은 ⚠ 강조됩니다. 컬럼 머리글로 정렬하세요.</p>
+      <p className="text-[10px] text-[#86868B] text-center">이번 주 학생별 지각 누적(본인 기준 대비). 지각 3일 이상은 <TriangleAlert className="inline w-2.5 h-2.5 -mt-0.5" /> 강조됩니다. 컬럼 머리글로 정렬하세요.</p>
     </div>
   );
 }

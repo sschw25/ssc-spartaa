@@ -227,7 +227,7 @@ export default function AdminAccountsPage() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-xl font-bold tracking-tight">센터별 관리자 계정</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight">센터별 관리자 계정</h2>
             <p className="text-xs text-[#86868B] mt-1">
               어드민 권한을 분할하여 특정 센터 정보만 조회할 수 있는 계정을 관리합니다.
             </p>

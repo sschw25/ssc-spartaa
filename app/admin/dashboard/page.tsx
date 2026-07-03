@@ -1103,7 +1103,7 @@ export default function AdminDashboardPage() {
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868B]">
                   {analysisData.type === 'subject' ? '과목 분석' : '교재/강의 분석'}
                 </span>
-                <h2 className="text-lg font-semibold text-[#1D1D1F] tracking-tight mt-0.5">{analysisData.name}</h2>
+                <h2 className="text-[17px] font-semibold text-[#1D1D1F] tracking-tight mt-0.5">{analysisData.name}</h2>
               </div>
               <button
                 onClick={() => setAnalysisTarget(null)}

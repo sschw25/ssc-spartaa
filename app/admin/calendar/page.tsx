@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import {
   Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, X, RefreshCw,
   Ticket, Minus, Plus, ChevronDown, PenLine, MessageSquare, ShieldAlert, CalendarHeart,
-  ClipboardCheck, CalendarClock, Trash2, Bell, Gift, Search,
+  ClipboardCheck, CalendarClock, Trash2, Bell, Gift, Search, Pin, GraduationCap,
+  MessageCircle, TriangleAlert, CheckCircle2, Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, LeaveRequest, LeaveType, CampusEvent, MockExam, OtEvent } from '@/lib/types/student';
@@ -491,7 +492,7 @@ export default function AdminCalendarPage() {
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
           <div className="flex items-center gap-3">
             <Button size="icon" variant="outline" onClick={prevMonth} className="h-9 w-9 rounded-xl border-black/[0.05]"><ChevronLeft className="w-5 h-5" /></Button>
-            <h2 className="text-base font-black tracking-tight min-w-[100px] text-center">{currentYear}년 {currentMonth + 1}월</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight min-w-[100px] text-center">{currentYear}년 {currentMonth + 1}월</h2>
             <Button size="icon" variant="outline" onClick={nextMonth} className="h-9 w-9 rounded-xl border-black/[0.05]"><ChevronRight className="w-5 h-5" /></Button>
             <Button size="sm" variant="ghost" onClick={goToday} className="text-xs font-bold text-[#0071E3] hover:bg-[#0071E3]/[0.06] rounded-xl px-3 h-9">오늘</Button>
           </div>
@@ -548,13 +549,13 @@ export default function AdminCalendarPage() {
 
                       {act && (
                         <div className="flex-1 w-full flex flex-col gap-0.5 overflow-hidden mt-0.5">
-                          {act.missions > 0 && <Pill cls="bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/15" icon="🎁" text={`미션 ${act.missions}`} />}
-                          {act.events > 0 && <Pill cls="bg-slate-100 text-slate-600 border-slate-200/60" icon="📌" text={`일정 ${act.events}`} />}
-                          {act.exams > 0 && <Pill cls="bg-violet-50 text-violet-700 border-violet-100/60" icon="📝" text={`모고 ${act.exams}`} />}
-                          {act.ot > 0 && <Pill cls="bg-teal-50 text-teal-700 border-teal-100/60" icon="🎓" text={`OT ${act.ot}`} />}
-                          {act.leaves > 0 && <Pill cls="bg-sky-50 text-sky-700 border-sky-100/60" icon="🎫" text={`휴가 ${act.leaves}`} />}
-                          {act.consultations > 0 && <Pill cls="bg-emerald-50 text-emerald-700 border-emerald-100/50" icon="💬" text={`상담 ${act.consultations}`} />}
-                          {act.penalties > 0 && <Pill cls="bg-amber-50 text-amber-700 border-amber-100/50" icon="⚠️" text={`벌점 ${act.penalties}`} />}
+                          {act.missions > 0 && <Pill cls="bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/15" icon={<Gift className="w-2.5 h-2.5 shrink-0" />} text={`미션 ${act.missions}`} />}
+                          {act.events > 0 && <Pill cls="bg-slate-100 text-slate-600 border-slate-200/60" icon={<Pin className="w-2.5 h-2.5 shrink-0" />} text={`일정 ${act.events}`} />}
+                          {act.exams > 0 && <Pill cls="bg-violet-50 text-violet-700 border-violet-100/60" icon={<PenLine className="w-2.5 h-2.5 shrink-0" />} text={`모고 ${act.exams}`} />}
+                          {act.ot > 0 && <Pill cls="bg-teal-50 text-teal-700 border-teal-100/60" icon={<GraduationCap className="w-2.5 h-2.5 shrink-0" />} text={`OT ${act.ot}`} />}
+                          {act.leaves > 0 && <Pill cls="bg-sky-50 text-sky-700 border-sky-100/60" icon={<Ticket className="w-2.5 h-2.5 shrink-0" />} text={`휴가 ${act.leaves}`} />}
+                          {act.consultations > 0 && <Pill cls="bg-emerald-50 text-emerald-700 border-emerald-100/50" icon={<MessageCircle className="w-2.5 h-2.5 shrink-0" />} text={`상담 ${act.consultations}`} />}
+                          {act.penalties > 0 && <Pill cls="bg-amber-50 text-amber-700 border-amber-100/50" icon={<TriangleAlert className="w-2.5 h-2.5 shrink-0" />} text={`벌점 ${act.penalties}`} />}
                         </div>
                       )}
                     </button>
@@ -626,7 +627,7 @@ export default function AdminCalendarPage() {
                                 <div className="flex items-center gap-1.5 text-[10px] font-bold flex-wrap pt-0.5">
                                   <span className="rounded bg-emerald-50 text-emerald-700 px-1.5 py-0.5">수락 {stat.accepted}</span>
                                   <span className="rounded bg-slate-50 text-slate-500 px-1.5 py-0.5">미응답 {stat.pending}</span>
-                                  <span className="rounded bg-rose-50 text-rose-600 px-1.5 py-0.5">불참 {stat.declined}</span>
+                                  <span className="rounded bg-red-50 text-red-600 px-1.5 py-0.5">불참 {stat.declined}</span>
                                   <span className="rounded bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 inline-flex items-center gap-0.5"><Ticket className="w-2.5 h-2.5" />{ev.couponReward}장</span>
                                   {stat.rewarded > 0 && <span className="rounded bg-amber-50 text-amber-600 px-1.5 py-0.5">지급 {stat.rewarded}</span>}
                                 </div>
@@ -727,7 +728,7 @@ export default function AdminCalendarPage() {
                   <div className="flex items-center justify-between px-5 py-3 bg-[#FAFAFA] border-b border-black/[0.02]">
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-5 rounded-full shrink-0 bg-sky-500" />
-                      <span className="text-xs font-black text-[#1D1D1F]">🎫 휴식반차 신청</span>
+                      <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5"><Ticket className="w-3.5 h-3.5 text-sky-600" /><span>휴식반차 신청</span></span>
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-sky-50 text-sky-700 border-sky-200/60">{selectedDateEvents.length}건</span>
                     </div>
                     <button onClick={openAddModal} className="flex items-center gap-1 text-[11px] font-extrabold text-[#0071E3] hover:bg-[#0071E3]/[0.08] rounded-lg px-2 py-1">
@@ -1001,9 +1002,11 @@ export default function AdminCalendarPage() {
             <div className="space-y-1.5">
               <Label className="text-xs font-extrabold text-[#1D1D1F]">등록 상태</Label>
               <div className="flex gap-2">
-                {([['approved', '✅ 바로 승인'], ['pending', '⏳ 대기 중']] as const).map(([val, label]) => (
+                {([['approved', '바로 승인'], ['pending', '대기 중']] as const).map(([val, label]) => (
                   <button key={val} type="button" onClick={() => setAddForm((f) => ({ ...f, status: val }))}
-                    className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition ${addForm.status === val ? (val === 'approved' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-amber-500 text-white border-amber-500') : 'bg-white text-[#1D1D1F] border-black/[0.08] hover:bg-[#F5F5F7]'}`}>{label}</button>
+                    className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition inline-flex items-center justify-center gap-1 ${addForm.status === val ? (val === 'approved' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-amber-500 text-white border-amber-500') : 'bg-white text-[#1D1D1F] border-black/[0.08] hover:bg-[#F5F5F7]'}`}>
+                    {val === 'approved' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}{label}
+                  </button>
                 ))}
               </div>
             </div>
@@ -1017,10 +1020,10 @@ export default function AdminCalendarPage() {
   );
 }
 
-function Pill({ cls, icon, text }: { cls: string; icon: string; text: string }) {
+function Pill({ cls, icon, text }: { cls: string; icon: React.ReactNode; text: string }) {
   return (
     <div className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border truncate flex items-center gap-1 ${cls}`}>
-      <span>{icon}</span><span className="truncate">{text}</span>
+      {icon}<span className="truncate">{text}</span>
     </div>
   );
 }

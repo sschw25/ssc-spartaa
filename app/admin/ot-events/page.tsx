@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   ChevronLeft, CalendarClock, RefreshCw, Loader2, Plus, Trash2,
-  CheckCircle2, XCircle, HelpCircle, Bell, MessageSquare, Ticket,
+  CheckCircle2, XCircle, HelpCircle, Bell, MessageSquare, Ticket, Lightbulb,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, OtEvent, OtParticipation } from '@/lib/types/student';
@@ -227,8 +227,9 @@ export default function OtEventsPage() {
             rows={2}
             className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none resize-none"
           />
-          <p className="text-[11px] font-semibold text-slate-400">
-            💡 센터별로 날짜가 다르면 같은 OT명으로 센터를 바꿔 각각 등록하세요. 학생에게는 <b>OT 날짜 3일 전부터 자동</b>으로 알림이 뜹니다. (즉시 보내려면 ‘학생 알림’)
+          <p className="text-[11px] font-semibold text-slate-400 flex items-start gap-1">
+            <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
+            <span>센터별로 날짜가 다르면 같은 OT명으로 센터를 바꿔 각각 등록하세요. 학생에게는 <b>OT 날짜 3일 전부터 자동</b>으로 알림이 뜹니다. (즉시 보내려면 ‘학생 알림’)</span>
           </p>
 
           {events.length > 0 && (

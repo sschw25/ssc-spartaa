@@ -2884,7 +2884,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
         const isOverloaded = estimatedDailyAmount > 30;
         const warningMessage = isOverloaded
-          ? `⚠️ 완료를 위해 시간이 더 필요합니다. (하루에 약 ${Math.round(estimatedDailyAmount)}p 학습 필요)`
+          ? `완료를 위해 시간이 더 필요합니다. (하루에 약 ${Math.round(estimatedDailyAmount)}p 학습 필요)`
           : null;
 
         return {
@@ -2939,7 +2939,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
         const isOverloaded = estimatedDailyAmount > 3;
         const warningMessage = isOverloaded
-          ? `⚠️ 완료를 위해 시간이 더 필요합니다. (하루에 약 ${Math.round(estimatedDailyAmount)}강 수강 필요)`
+          ? `완료를 위해 시간이 더 필요합니다. (하루에 약 ${Math.round(estimatedDailyAmount)}강 수강 필요)`
           : null;
 
         return {

@@ -279,7 +279,7 @@ export default function AdminApplicationsPage() {
         {/* 출결번호 변경 신청 */}
         <section className="space-y-3">
           <div>
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold text-[#1D1D1F]">
+            <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-[#1D1D1F]">
               <KeyRound className="w-4 h-4 text-[#0071E3]" /> 출결번호 변경 신청
             </h2>
             <p className="mt-1 text-[11px] font-semibold text-[#86868B]">
@@ -342,7 +342,7 @@ export default function AdminApplicationsPage() {
         </section>
 
         {/* 가입신청 */}
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold text-[#1D1D1F] pt-2">
+        <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-[#1D1D1F] pt-2">
           <UserPlus className="w-4 h-4 text-[#0071E3]" /> 가입신청
         </h2>
 

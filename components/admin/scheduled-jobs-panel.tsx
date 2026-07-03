@@ -122,7 +122,7 @@ export function ScheduledJobsPanel({
         <div className="flex items-start gap-2.5 min-w-0">
           <CalendarClock className={`text-[#0071E3] shrink-0 mt-0.5 ${compact ? 'w-4 h-4' : 'w-5 h-5'}`} />
           <div className="min-w-0">
-            <h2 className={`font-semibold text-slate-800 ${compact ? 'text-[13px]' : 'text-sm'}`}>
+            <h2 className={`font-semibold text-slate-800 ${compact ? 'text-[13px]' : 'text-[17px]'}`}>
               {partial ? '자동 실행 예약' : '예약 스케줄'}
             </h2>
             <p className="text-[11px] font-semibold text-slate-500 mt-0.5 leading-relaxed">

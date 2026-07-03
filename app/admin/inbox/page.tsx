@@ -216,7 +216,7 @@ export default function AdminInboxPage() {
             campus: student.campus,
             type: 'leave',
             category: 'living',
-            title: `${isReappeal ? '🔁 재승인 요청: ' : '반차/휴가 신청: '}${formatLeaveLabel(r.type, r.slot)}`,
+            title: `${isReappeal ? '재승인 요청: ' : '반차/휴가 신청: '}${formatLeaveLabel(r.type, r.slot)}`,
             content: isReappeal && r.reappealReason
               ? `${r.reason || '(원 사유 없음)'}\n\n[재승인 요청 사유] ${r.reappealReason}`
               : (r.reason || '(사유 없음)'),
@@ -1225,8 +1225,8 @@ export default function AdminInboxPage() {
                         </span>
                       )}
 
-                      <p className="text-[9px] font-bold text-[#0071E3]/70">
-                        ✅ 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
+                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
                       </p>
                     </div>
                   );

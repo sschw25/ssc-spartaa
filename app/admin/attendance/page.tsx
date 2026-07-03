@@ -773,7 +773,7 @@ function AdminAttendanceContent() {
                 </div>
                 {/* 요약 */}
                 <div className="text-sm text-[#86868B] font-medium">
-                  대상 {ranking.length}명 · 총 결석 <span className="text-rose-600 font-semibold">{ranking.reduce((s, r) => s + r.absentDays, 0)}</span>일 · 총 이탈 <span className="text-amber-600 font-semibold">{ranking.reduce((s, r) => s + r.leftDays, 0)}</span>일
+                  대상 {ranking.length}명 · 총 결석 <span className="text-red-600 font-semibold">{ranking.reduce((s, r) => s + r.absentDays, 0)}</span>일 · 총 이탈 <span className="text-amber-600 font-semibold">{ranking.reduce((s, r) => s + r.leftDays, 0)}</span>일
                 </div>
                 {/* 표 */}
                 <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-x-auto">
@@ -782,7 +782,7 @@ function AdminAttendanceContent() {
                       <tr>
                         <th className="px-4 py-3 font-bold text-[#1D1D1F] w-10">#</th>
                         <th className="px-4 py-3 font-bold text-[#1D1D1F]">학생</th>
-                        <th className="px-4 py-3 font-bold text-rose-600">결석일</th>
+                        <th className="px-4 py-3 font-bold text-red-600">결석일</th>
                         <th className="px-4 py-3 font-bold text-amber-600">이탈일</th>
                         <th className="px-4 py-3 font-bold text-[#1D1D1F]">총X</th>
                         <th className="px-4 py-3 font-bold text-[#1D1D1F]">최근</th>
@@ -800,7 +800,7 @@ function AdminAttendanceContent() {
                             <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
                             <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
                           </td>
-                          <td className="px-4 py-3 text-rose-600 font-semibold">{r.absentDays}</td>
+                          <td className="px-4 py-3 text-red-600 font-semibold">{r.absentDays}</td>
                           <td className="px-4 py-3 text-amber-600 font-semibold">{r.leftDays}</td>
                           <td className="px-4 py-3 text-[#1D1D1F] font-medium">{r.totalMarks}</td>
                           <td className="px-4 py-3 text-[#86868B]">{r.lastDate || '-'}</td>
