@@ -10,6 +10,7 @@ import {
 import { toast } from 'sonner';
 import { Student, LeaveRequest, LeaveType } from '@/lib/types/student';
 import { LEAVE_TYPES, LEAVE_TYPE_ORDER, formatLeaveLabel, COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
+import { LeaveTypeIcon } from '@/components/leave-type-icon';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
@@ -283,8 +284,8 @@ export default function AdminLeaveRequestsPage() {
               </button>
               {LEAVE_TYPE_ORDER.map((t) => (
                 <button key={t} type="button" onClick={() => setTypeFilter(t)}
-                  className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold border transition-all ${typeFilter === t ? 'bg-slate-900 text-white border-transparent' : 'bg-white text-slate-500 border-black/[0.08] hover:text-black'}`}>
-                  {LEAVE_TYPES[t].icon} {LEAVE_TYPES[t].label}
+                  className={`inline-flex h-7.5 items-center gap-1 rounded-lg px-2.5 text-[11px] font-bold border transition-all ${typeFilter === t ? 'bg-slate-900 text-white border-transparent' : 'bg-white text-slate-500 border-black/[0.08] hover:text-black'}`}>
+                  <LeaveTypeIcon type={t} className="h-3 w-3 shrink-0" /> {LEAVE_TYPES[t].label}
                 </button>
               ))}
             </div>
@@ -331,7 +332,7 @@ export default function AdminLeaveRequestsPage() {
                     <div key={ev.request.id} className={`rounded-2xl border border-black/[0.05] border-l-[3px] overflow-hidden bg-white shadow-sm ${statusBar}`}>
                       <button type="button" onClick={() => setExpandedId(isExpanded ? null : ev.request.id)}
                         className="w-full text-left flex items-center gap-3 px-4 py-3 hover:bg-[#F8F9FA] transition-colors">
-                        <span className="text-base shrink-0">{LEAVE_TYPES[ev.request.type]?.icon}</span>
+                        <LeaveTypeIcon type={ev.request.type} className="h-4 w-4 shrink-0 text-slate-500" />
                         <div className="flex-1 min-w-0">
                           <span className="font-extrabold text-[13px] text-slate-900 truncate block">
                             {ev.student.name}

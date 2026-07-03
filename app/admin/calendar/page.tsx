@@ -12,6 +12,7 @@ import {
 import { toast } from 'sonner';
 import { Student, LeaveRequest, LeaveType, CampusEvent, MockExam, OtEvent } from '@/lib/types/student';
 import { LEAVE_TYPES, getLeaveTypeLabel, COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
+import { LeaveTypeIcon } from '@/components/leave-type-icon';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -744,7 +745,7 @@ export default function AdminCalendarPage() {
                       return (
                         <div key={type} className="space-y-1.5">
                           <div className="px-2 py-1 text-[10px] font-black text-slate-400 flex items-center gap-1.5">
-                            <span>{typeInfo?.icon}</span>
+                            <LeaveTypeIcon type={type} className="h-3 w-3 shrink-0" />
                             <span>{getLeaveTypeLabel(type)} ({typeEvents.length}명)</span>
                           </div>
                           {typeEvents.map((ev) => {
@@ -986,7 +987,7 @@ export default function AdminCalendarPage() {
                 {(Object.entries(LEAVE_TYPES) as [LeaveType, typeof LEAVE_TYPES[LeaveType]][]).map(([key, info]) => (
                   <button key={key} type="button" onClick={() => setAddForm((f) => ({ ...f, type: key }))}
                     className={`rounded-xl border px-2 py-2 text-[11px] font-extrabold flex flex-col items-center gap-0.5 transition ${addForm.type === key ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-slate-900 border-black/[0.08] hover:bg-[#F5F5F7]'}`}>
-                    <span>{info.icon}</span><span>{info.label}</span>
+                    <LeaveTypeIcon type={key} className="h-4 w-4" /><span>{info.label}</span>
                   </button>
                 ))}
               </div>

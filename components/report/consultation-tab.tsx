@@ -5,19 +5,9 @@ import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
-import { Armchair, BedDouble, Calendar, CalendarClock, ClipboardList, CloudSun, MessageSquare, Moon, Sunrise, Thermometer, Ticket, Trash2, UserRound, Zap, type LucideIcon } from 'lucide-react';
+import { Armchair, Calendar, CalendarClock, ClipboardList, MessageSquare, Thermometer, Ticket, Trash2, Zap } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
-
-// 신청 화면 이모지 → lucide SVG 통일(앱 아이콘 시스템과 일관). 공유 LEAVE_TYPES 데이터는 건드리지 않는다.
-const LEAVE_TYPE_ICON: Record<LeaveType, LucideIcon> = {
-  morning: Sunrise,
-  afternoon: CloudSun,
-  night: Moon,
-  fullday: BedDouble,
-  personal_halfday: UserRound,
-  personal_fullday: UserRound,
-  sick: Thermometer,
-};
+import { LEAVE_TYPE_ICON } from '@/components/leave-type-icon';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
   LEAVE_TYPES,
