@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { Ticket, Loader2, CheckCircle2, Gift, X, Sparkles } from 'lucide-react';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -34,18 +34,25 @@ const REDEMPTION_STATUS: Record<Redemption['status'], { label: string; cls: stri
 
 // 쿠폰 교환소 — 미션에서 모은 쿠폰을 반차권/휴식권/상품권 등으로 교환하는 독립 탭.
 // 미션(적립 조건)과 분리해 "교환"에만 집중하도록 별도 화면으로 뺐다.
-export function CouponExchangeCard() {
+// onCouponsChange: 교환·취소로 쿠폰 잔액이 바뀌면 부모(리포트 상태)의 leaveCoupons를 갱신해
+// 상단 서브탭 메타·다른 화면의 쿠폰 수가 새로고침 없이 즉시 맞춰지게 한다.
+export function CouponExchangeCard({ onCouponsChange }: { onCouponsChange?: (coupons: number) => void }) {
   const confirm = useConfirm();
   const [data, setData] = useState<MissionsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [exchanging, setExchanging] = useState<RewardType | null>(null);
+  const onCouponsChangeRef = useRef(onCouponsChange);
+  onCouponsChangeRef.current = onCouponsChange;
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/student/missions', { credentials: 'same-origin' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) setData(json);
+        if (json.success) {
+          setData(json);
+          if (typeof json.coupons === 'number') onCouponsChangeRef.current?.(json.coupons);
+        }
       }
     } catch { /* noop */ }
   }, []);
@@ -78,7 +85,7 @@ export function CouponExchangeCard() {
       const json = await res.json().catch(() => ({}));
       if (res.ok && json.success) {
         await load();
-        toast.success('교환 신청이 접수되었어요.', { description: item.physical ? '관리자 승인·지급 후 알림으로 알려드릴게요.' : '신청 내역에서 확인할 수 있어요.' });
+        toast.success(item.physical ? '교환 신청이 접수되었어요.' : '교환이 완료됐어요.', { description: item.physical ? '관리자 승인·지급 후 알림으로 알려드릴게요.' : '바로 사용할 수 있어요. 신청 내역에서 확인하세요.' });
       } else {
         toast.error(json.message || '교환 신청에 실패했어요.');
       }

@@ -91,7 +91,17 @@ type ScheduleItem = {
   needsResponse: boolean;
 };
 
+type MockReview = {
+  id: string;
+  testName: string;
+  testDate: string;
+  wrongNotes: string;
+  actionPlan: string;
+  submittedAt: string;
+};
+
 type HubData = {
+  todayKey?: string;
   todayPlanEntries: PlanEntry[];
   checklist: Checklist;
   streak: { current: number; best?: number };
@@ -101,6 +111,7 @@ type HubData = {
   leaveCoupons: number;
   deadlineGoals?: DeadlineGoal[];
   deadlineSummary?: DeadlineSummary;
+  mockReviews?: MockReview[];
 };
 
 const SCHEDULE_KIND: Record<ScheduleItem['kind'], { label: string; icon: LucideIcon }> = {
@@ -148,13 +159,26 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
   // 기간 목표 누적 진행량 입력 draft (goalId → 문자열) + 저장 중 표시
   const [deadlineDrafts, setDeadlineDrafts] = useState<Record<string, string>>({});
   const [savingDeadlineId, setSavingDeadlineId] = useState<string | null>(null);
+  const [mockReviewForm, setMockReviewForm] = useState({
+    testName: '',
+    testDate: '',
+    wrongNotes: '',
+    actionPlan: '',
+  });
+  const [mockReviewSubmitting, setMockReviewSubmitting] = useState(false);
+  const [missionsVersion, setMissionsVersion] = useState(0);
 
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/student/missions-hub', { credentials: 'same-origin', cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
-        if (json.success) setData(json);
+        if (json.success) {
+          setData(json);
+          if (json.todayKey) {
+            setMockReviewForm((prev) => prev.testDate ? prev : { ...prev, testDate: json.todayKey });
+          }
+        }
       }
     } catch {
       // noop
@@ -231,6 +255,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           delete next[goal.id];
           return next;
         });
+        toast.success('진행량을 기록했어요.');
       } else if (json?.message) {
         toast.error(json.message);
       }
@@ -266,6 +291,37 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
       // noop
     } finally {
       setChecklistSubmitting(false);
+    }
+  };
+
+  const submitMockReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (mockReviewSubmitting) return;
+    setMockReviewSubmitting(true);
+    try {
+      const res = await fetch('/api/student/mock-review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mockReviewForm),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        await load();
+        setMissionsVersion((v) => v + 1);
+        setMockReviewForm((prev) => ({
+          testName: '',
+          testDate: prev.testDate || data?.todayKey || '',
+          wrongNotes: '',
+          actionPlan: '',
+        }));
+        toast.success('오답분석을 제출했어요.');
+      } else if (json?.message) {
+        toast.error(json.message);
+      }
+    } catch {
+      // noop
+    } finally {
+      setMockReviewSubmitting(false);
     }
   };
 
@@ -327,6 +383,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
   const schedule = data?.schedule ?? [];
   const deadlineGoals = data?.deadlineGoals ?? [];
   const deadlineSummary = data?.deadlineSummary ?? null;
+  const mockReviews = data?.mockReviews ?? [];
 
   const inner = (
       <>
@@ -809,8 +866,101 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           </section>
         )}
 
+        {/* 4.5 모의고사 오답분석 — 쿠폰 미션 원천 기록 */}
+        <section className={SECTION_SURFACE}>
+          <div className="flex items-center gap-2">
+            <PenLine className="h-4 w-4 text-[#0071E3]" />
+            <h2 className="text-sm font-semibold text-slate-800">모의고사 오답분석</h2>
+          </div>
+          <form onSubmit={submitMockReview} className="mt-3 flex flex-col gap-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_150px]">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-500">시험명</span>
+                <input
+                  type="text"
+                  value={mockReviewForm.testName}
+                  onChange={(e) => setMockReviewForm((prev) => ({ ...prev, testName: e.target.value }))}
+                  maxLength={80}
+                  placeholder="예: 7월 전국모의고사"
+                  className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                  required
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-[11px] font-semibold text-slate-500">시험일</span>
+                <input
+                  type="date"
+                  value={mockReviewForm.testDate}
+                  onChange={(e) => setMockReviewForm((prev) => ({ ...prev, testDate: e.target.value }))}
+                  className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
+                  required
+                />
+              </label>
+            </div>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-500">오답/약점 요약</span>
+              <textarea
+                value={mockReviewForm.wrongNotes}
+                onChange={(e) => setMockReviewForm((prev) => ({ ...prev, wrongNotes: e.target.value }))}
+                rows={3}
+                minLength={5}
+                maxLength={1000}
+                placeholder="틀린 유형, 실수 패턴, 시간이 부족했던 영역"
+                className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold leading-relaxed text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                required
+              />
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-500">보완계획</span>
+              <textarea
+                value={mockReviewForm.actionPlan}
+                onChange={(e) => setMockReviewForm((prev) => ({ ...prev, actionPlan: e.target.value }))}
+                rows={3}
+                minLength={5}
+                maxLength={1000}
+                placeholder="다시 풀 문제, 복습 범위, 다음 시험 전 점검할 기준"
+                className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold leading-relaxed text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                required
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={
+                mockReviewSubmitting ||
+                !mockReviewForm.testName.trim() ||
+                !mockReviewForm.testDate ||
+                mockReviewForm.wrongNotes.trim().length < 5 ||
+                mockReviewForm.actionPlan.trim().length < 5
+              }
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {mockReviewSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+              제출 완료
+            </button>
+          </form>
+
+          {mockReviews.length > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0071E3]">최근 제출</p>
+              <div className="mt-2 flex flex-col gap-2">
+                {mockReviews.map((review) => (
+                  <div key={review.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3.5 py-3">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5">
+                      <span className="text-xs font-semibold text-slate-800">{review.testName}</span>
+                      <span className="text-[11px] font-semibold text-slate-400">{formatScheduleDate(review.testDate)}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-relaxed text-slate-500">
+                      {review.wrongNotes}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* 5. 쿠폰 미션 */}
-        <MissionsCard onGoToExchange={onGoToExchange} />
+        <MissionsCard key={missionsVersion} onGoToExchange={onGoToExchange} />
       </>
   );
 

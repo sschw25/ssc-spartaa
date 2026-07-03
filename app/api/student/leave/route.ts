@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
       urgent,
       ...(usedCredit ? { usedCredit: true } : {}),
       createdAt: nowIso,
-      ...(autoApprove ? { reviewedAt: nowIso, adminReply: usedCredit ? '교환한 반차권으로 자동 승인되었습니다.' : '잔여 반차권이 존재하여 자동 승인되었습니다.' } : {}),
+      ...(autoApprove ? { reviewedAt: nowIso, adminReply: usedCredit ? '교환한 반차권으로 자동 승인되었습니다.' : '이번 달 잔여 반차 한도가 있어 자동 승인되었습니다.' } : {}),
     };
     student.leaveRequests = [...existing, request];
 

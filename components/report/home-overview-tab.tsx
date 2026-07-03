@@ -837,7 +837,7 @@ export function HomeOverviewTab({
                 <div id="morning-checklist-card" className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
                   <div>
                     <div className="flex justify-between items-center">
-                      <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁 <Circle className="w-2.5 h-2.5" /></p>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁</p>
                       <span className="text-[8px] font-bold text-slate-400">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
 

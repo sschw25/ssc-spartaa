@@ -590,7 +590,7 @@ export async function markStudentOnboarded(studentId: string): Promise<boolean> 
 
 // ── 출결/순공 (Supabase 필요) ──
 function requireSupabase() {
-  if (!isSupabaseConfigured()) throw new Error('Supabase가 설정되어야 출결 기능을 사용할 수 있습니다.');
+  if (!isSupabaseConfigured()) throw new Error('이 기능은 Supabase(운영 DB) 연결이 필요합니다.');
 }
 export async function getOpenSession(studentId: string): Promise<StudySession | null> {
   requireSupabase();

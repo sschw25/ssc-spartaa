@@ -62,6 +62,7 @@ interface ConsultationTabProps {
   homeHalfLeft: number;
   homeFullLeft: number;
   homeLeaveCoupons: number;
+  onCouponsChange?: (coupons: number) => void;
 }
 
 export function ConsultationTab({
@@ -91,6 +92,7 @@ export function ConsultationTab({
   homeHalfLeft,
   homeFullLeft,
   homeLeaveCoupons,
+  onCouponsChange,
 }: ConsultationTabProps) {
   const prompt = usePrompt();
   if (!isStudentReport) return null;
@@ -449,7 +451,7 @@ export function ConsultationTab({
 
       {requestSubTab === 'coupon' && (
         <div id="coupon-exchange" className="no-print scroll-mt-24">
-          <CouponExchangeCard />
+          <CouponExchangeCard onCouponsChange={onCouponsChange} />
         </div>
       )}
 

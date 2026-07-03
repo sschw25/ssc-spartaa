@@ -676,6 +676,7 @@ function StudentReportInner() {
           homeHalfLeft={homeHalfLeft}
           homeFullLeft={homeFullLeft}
           homeLeaveCoupons={homeLeaveCoupons}
+          onCouponsChange={(n) => setStudent((prev: Student | null) => (prev ? { ...prev, leaveCoupons: n } : prev))}
         />
 
         {/* 6-1. 클리닉 상담 예약 탭 (상담 운영 센터 학생 전용) */}
