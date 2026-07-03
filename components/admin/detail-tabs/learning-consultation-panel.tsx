@@ -171,7 +171,7 @@ export function LearningConsultationPanel() {
         </div>
       )}
 
-      <div className="rounded-lg border border-black/[0.04] bg-white p-3 text-[10px] text-[#434345]">
+      <div className="rounded-lg border border-black/[0.04] bg-white p-3 text-[10px] text-slate-700">
         <div className="font-bold text-slate-900 mb-1">현재 학습상황 요약</div>
         <div className="space-y-1">
           {subjectsState.length === 0 ? (
@@ -337,7 +337,7 @@ export function LearningConsultationPanel() {
                       {item.newGoalLabel}
                     </span>
                   </div>
-                  <div className="mt-2 grid grid-cols-2 gap-2 text-[#434345]">
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-slate-700">
                     <div>
                       <span className="text-slate-500">기존</span> {item.oldGoalLabel} · {item.oldTargetDate}
                     </div>

@@ -41,21 +41,21 @@ export default function AdminAccountsPage() {
   const router = useRouter();
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [currentSession, setCurrentSession] = useState<{ id: string; username: string; campus: string; role: string } | null>(null);
-  
+
   const [accounts, setAccounts] = useState<AdminAccountData[]>([]);
   const [loading, setLoading] = useState(false);
-  
+
   // 모달 상태
   const [isOpen, setIsOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  
+
   // 폼 입력 상태
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [campusInput, setCampusInput] = useState('wonju');
   const [roleInput, setRoleInput] = useState('campus_admin');
-  
+
   // 1. 인증 정보 확인
   useEffect(() => {
     async function checkAuth() {
@@ -251,7 +251,7 @@ export default function AdminAccountsPage() {
               현재 시스템에 생성된 센터별 관리자 권한 목록입니다.
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="p-0">
             {loading && accounts.length === 0 ? (
               <div className="py-12 flex flex-col items-center justify-center">
@@ -294,8 +294,8 @@ export default function AdminAccountsPage() {
                       <TableCell className="py-4">
                         <span className={cn(
                           "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold gap-1",
-                          account.role === 'super' 
-                            ? "bg-emerald-50 text-[#34C759] border border-emerald-500/10" 
+                          account.role === 'super'
+                            ? "bg-emerald-50 text-[#34C759] border border-emerald-500/10"
                             : "bg-[#F5F5F7] text-slate-500"
                         )}>
                           <Shield className="w-3 h-3" />
@@ -353,7 +353,7 @@ export default function AdminAccountsPage() {
               {isEditMode ? '관리자 계정 정보 수정' : '신규 관리자 계정 추가'}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              {isEditMode 
+              {isEditMode
                 ? '관리자의 소속 센터나 권한을 수정합니다. 비밀번호를 변경하려면 값을 입력하고, 변경하지 않으려면 비워두세요.'
                 : '신규로 추가할 관리자의 정보와 담당 센터 및 권한을 설정해 주세요.'}
             </DialogDescription>

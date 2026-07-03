@@ -84,7 +84,7 @@ export function MissionSummaryWidget() {
         <>
           <div className="mt-4 grid grid-cols-3 gap-2.5">
             {([
-              ['이번 달', data?.month, 'bg-black/[0.03] text-[#1d1d1f]'],
+              ['이번 달', data?.month, 'bg-black/[0.03] text-slate-900'],
               ['이번 주', data?.week, 'bg-[#0071E3]/[0.08] text-[#0071E3]'],
               ['오늘', data?.today, 'bg-emerald-500/10 text-emerald-600'],
             ] as [string, Bucket | undefined, string][]).map(([label, b, cls]) => (

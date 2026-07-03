@@ -101,18 +101,18 @@ export default function WeeklyLeaderboardPage() {
 
   const allRows = data?.rows || [];
   const scopedRows = allRows.filter((r) => campusFilter === 'all' || r.campus === campusFilter);
-  
+
   // 검색어 필터링
-  const filteredRows = scopedRows.filter((r) => 
+  const filteredRows = scopedRows.filter((r) =>
     r.name.toLowerCase().includes(searchQuery.toLowerCase())
   ).map((r, index) => ({ ...r, rank: index + 1 }));
 
   const studiedCount = scopedRows.filter((r) => r.weekMinutes > 0).length;
   const notStudiedCount = scopedRows.filter((r) => r.weekMinutes === 0).length;
-  const avgWeekMin = scopedRows.length > 0 
-    ? Math.round(scopedRows.reduce((sum, r) => sum + r.weekMinutes, 0) / scopedRows.length) 
+  const avgWeekMin = scopedRows.length > 0
+    ? Math.round(scopedRows.reduce((sum, r) => sum + r.weekMinutes, 0) / scopedRows.length)
     : 0;
-  
+
   const liveCount = scopedRows.filter((r) => r.isOpen).length;
 
   const getRankBadgeStyle = (rank: number, hasMinutes: boolean) => {
@@ -125,7 +125,7 @@ export default function WeeklyLeaderboardPage() {
       case 3:
         return 'bg-orange-100/80 text-orange-800 border border-orange-200/50 font-black shadow-sm';
       default:
-        return 'bg-[#F5F5F7] text-[#434345] font-bold border border-black/[0.02]';
+        return 'bg-[#F5F5F7] text-slate-700 font-bold border border-black/[0.02]';
     }
   };
 
@@ -163,7 +163,7 @@ export default function WeeklyLeaderboardPage() {
               <span className="text-[18px] leading-none font-semibold tracking-tight text-emerald-600">{studiedCount}</span>
               <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
-            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">누적 학습 인원</p>
+            <p className="text-[13px] font-medium text-slate-900 mt-2">누적 학습 인원</p>
             <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">이번 주 순공 시간이 기록된 원생 수</p>
           </Card>
 
@@ -175,7 +175,7 @@ export default function WeeklyLeaderboardPage() {
               <span className="text-[18px] leading-none font-semibold tracking-tight text-amber-600">{notStudiedCount}</span>
               <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
-            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">미학습 인원</p>
+            <p className="text-[13px] font-medium text-slate-900 mt-2">미학습 인원</p>
             <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">누적 순공 시간이 0분인 원생 수</p>
           </Card>
 
@@ -187,7 +187,7 @@ export default function WeeklyLeaderboardPage() {
               <span className="text-[18px] leading-none font-semibold tracking-tight text-blue-600">{Math.floor(avgWeekMin / 60)}</span>
               <span className="text-[15px] font-medium text-slate-500">시간 {avgWeekMin % 60}분</span>
             </div>
-            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">평균 학습 시간</p>
+            <p className="text-[13px] font-medium text-slate-900 mt-2">평균 학습 시간</p>
             <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">전체 수강생의 주간 평균 순공 시간</p>
           </Card>
 
@@ -200,7 +200,7 @@ export default function WeeklyLeaderboardPage() {
               <span className="text-[18px] leading-none font-semibold tracking-tight text-blue-600">{liveCount}</span>
               <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
-            <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">실시간 몰입 인원</p>
+            <p className="text-[13px] font-medium text-slate-900 mt-2">실시간 몰입 인원</p>
             <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">현재 등원 중인 실시간 학습자 수</p>
           </Card>
         </div>

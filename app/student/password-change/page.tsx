@@ -84,11 +84,11 @@ export default function StudentPasswordChangePage() {
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">SSC Student Report</p>
             <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               출결번호 변경 신청
             </h1>
-            <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
+            <p className="max-w-lg text-sm leading-7 text-slate-500 md:text-base">
               현재 출결번호와 새 출결번호를 입력해 변경을 신청해 주세요. 관리자 승인 후 적용됩니다.
             </p>
           </div>
@@ -103,7 +103,7 @@ export default function StudentPasswordChangePage() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-xl font-semibold tracking-tight">변경 신청 완료</h2>
-                  <p className="text-sm leading-6 text-[#64748B]">{successMsg}</p>
+                  <p className="text-sm leading-6 text-slate-500">{successMsg}</p>
                 </div>
                 <Button
                   asChild
@@ -120,7 +120,7 @@ export default function StudentPasswordChangePage() {
             <>
               <CardHeader className="space-y-2 pb-5">
                 <CardTitle className="text-xl font-semibold tracking-tight">출결번호 변경 신청</CardTitle>
-                <CardDescription className="text-sm text-[#64748B]">
+                <CardDescription className="text-sm text-slate-500">
                   아래 정보를 입력해 출결번호 변경을 신청해 주세요.
                 </CardDescription>
               </CardHeader>
@@ -188,7 +188,7 @@ export default function StudentPasswordChangePage() {
                         className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                       />
                     </div>
-                    <p className="text-xs leading-5 text-[#64748B]">숫자 6자리 · 휴대폰 번호와 겹치지 않게</p>
+                    <p className="text-xs leading-5 text-slate-500">숫자 6자리 · 휴대폰 번호와 겹치지 않게</p>
                   </div>
 
                   <div className="space-y-2">
@@ -229,7 +229,7 @@ export default function StudentPasswordChangePage() {
                     )}
                   </Button>
 
-                  <div className="text-center text-sm text-[#64748B]">
+                  <div className="text-center text-sm text-slate-500">
                     <Link href="/student/login" className="font-semibold text-[#0071E3] hover:underline">
                       로그인 화면으로 돌아가기
                     </Link>

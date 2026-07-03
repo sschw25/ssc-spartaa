@@ -379,7 +379,7 @@ export function ConsultTab({
                       면담자: {log.manager}
                     </span>
                   </div>
-                  <pre className="text-xs text-[#434345] leading-relaxed whitespace-pre-wrap font-sans">
+                  <pre className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">
                     {log.content}
                   </pre>
                 </div>

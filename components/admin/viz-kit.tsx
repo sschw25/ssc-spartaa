@@ -122,7 +122,7 @@ export function VizLegend({ segments }: { segments: VizSegment[] }) {
       {segments.map((s) => (
         <div key={s.label} className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
-          <span className="text-[12px] font-medium text-[#6e6e73]">
+          <span className="text-[12px] font-medium text-slate-600">
             {s.label} <b className="tabular-nums font-semibold" style={{ color: s.color }}>{s.value}</b>
           </span>
         </div>
@@ -139,7 +139,7 @@ export function CompareBar({ label, value, max = 100, color, suffix = '%', delay
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[13px] font-medium text-[#434345]">{label}</span>
+        <span className="text-[13px] font-medium text-slate-700">{label}</span>
         <span className="text-[13px] font-semibold tabular-nums" style={{ color }}>{value}{suffix}</span>
       </div>
       <div className="h-2.5 rounded-full overflow-hidden" style={{ background: TRACK }}>

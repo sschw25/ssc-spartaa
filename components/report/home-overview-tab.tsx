@@ -218,7 +218,7 @@ export function HomeOverviewTab({
     if (!comment) return [];
     const lines = comment.split('\n');
     const quests: string[] = [];
-    
+
     lines.forEach(line => {
       const trimmed = line.trim();
       const match = trimmed.match(/^(?:(?:\d+[\.\)]\s*)|(?:[-\*]\s*)|(?:\[\s*\]\s*)|(?:[①-⑨]\s*))(.*)$/);
@@ -743,7 +743,7 @@ export function HomeOverviewTab({
                       <p className="text-[13px] font-semibold text-slate-800">아침 자가 점검표</p>
                       <p className="mt-1 text-[11px] font-medium leading-5 text-slate-400">매일 아침 본인의 컨디션과 환경을 스스로 기록하세요.</p>
                     </div>
-                    
+
                     <div className="space-y-5">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <label htmlFor="sleepHoursInput" className="text-[13px] font-semibold text-slate-700">어젯밤 수면 시간</label>
@@ -813,7 +813,7 @@ export function HomeOverviewTab({
                 : checklist.phone_status === 'off_hold' ? '전원끄고 소지'
                 : (checklist.phone_status === 'submitted' || checklist.phone_submitted) ? '제출 완료' : '미제출';
               const isPhoneNotSubmitted = checklist.phone_status ? checklist.phone_status !== 'submitted' : !checklist.phone_submitted;
-              
+
               let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800';
               let BannerIcon = CheckCircle2;
               let bannerTitle = '쾌조의 스타트! 아침 공부를 시작해 봅시다.';
@@ -823,7 +823,7 @@ export function HomeOverviewTab({
                 bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900';
                 BannerIcon = AlertTriangle;
                 bannerTitle = '오전 효율 저하 요인이 감지되었습니다.';
-                
+
                 if (isSleepShort && isPhoneNotSubmitted) {
                   bannerTips = '수면이 부족(6시간 미만)하고 스마트폰이 주변에 있어 쉽게 산만해질 수 있습니다. 가벼운 스트레칭 후 스마트폰은 즉시 제출하여 방해요인을 최소화하세요!';
                 } else if (isSleepShort) {
@@ -840,7 +840,7 @@ export function HomeOverviewTab({
                       <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁 <Circle className="w-2.5 h-2.5" /></p>
                       <span className="text-[8px] font-bold text-slate-400">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
-                    
+
                     <div className="space-y-1 mt-2">
                       <h4 className="text-xs font-black flex items-center gap-1">
                         <BannerIcon className="h-4 w-4 shrink-0" /> {bannerTitle}
@@ -923,7 +923,7 @@ export function HomeOverviewTab({
         </div>
       )}
     </div>
-    
+
     {isStudentReport && (
       <section id="attendance-status" className={`scroll-mt-24 print-card ${activeTab === 'attendance-status' ? '' : 'hidden print:block'}`}>
         <div className="mb-4 flex items-center gap-2">

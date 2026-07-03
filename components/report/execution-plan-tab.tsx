@@ -554,7 +554,7 @@ export function ExecutionPlanTab({
                       )}
                     </select>
                   </div>
-                  
+
                   {requestForm.materialId && (
                     <>
                       {requestForm.currentGoalSnapshot?.goalValue ? (
@@ -675,7 +675,7 @@ export function ExecutionPlanTab({
             (pending.length > 0 || resolved.length > 0) && (
               <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 학습 요청 내역</p>
-                
+
                 {pending.map((r) => (
                   <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
                     <div className="flex items-center justify-between gap-2">
@@ -1024,7 +1024,7 @@ export function ExecutionPlanTab({
                                 미완료
                               </span>
                             )}
-                            
+
                             {isPending && (
                               <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-left">
                                 <p className="text-[10px] font-black text-slate-500">실제로 얼마나 했나요?</p>

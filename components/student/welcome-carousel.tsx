@@ -53,7 +53,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
           <button onClick={finish} className="text-xs text-slate-500" disabled={busy}>건너뛰기</button>
         </div>
         <h2 className="text-xl font-semibold mt-2">{current.title}</h2>
-        <p className="text-sm text-[#1d1d1f]/80 mt-3 leading-relaxed">{current.body}</p>
+        <p className="text-sm text-slate-900/80 mt-3 leading-relaxed">{current.body}</p>
         <div className="flex gap-1.5 justify-center mt-6">
           {stepIds.map((s, i) => (
             <span key={s} className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-[#0071E3]' : 'w-1.5 bg-[#D2D2D7]'}`} />

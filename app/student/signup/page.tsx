@@ -135,11 +135,11 @@ export default function StudentSignupPage() {
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">SSC Student Report</p>
             <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               학생 가입신청
             </h1>
-            <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
+            <p className="max-w-lg text-sm leading-7 text-slate-500 md:text-base">
               가입신청 후 담당 선생님의 승인을 거치면 학생 홈 화면을 이용하실 수 있습니다.
             </p>
           </div>
@@ -154,7 +154,7 @@ export default function StudentSignupPage() {
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-xl font-semibold tracking-tight">가입신청 완료</h2>
-                  <p className="text-sm leading-6 text-[#64748B]">{successMsg}</p>
+                  <p className="text-sm leading-6 text-slate-500">{successMsg}</p>
                 </div>
                 <Button
                   asChild
@@ -171,7 +171,7 @@ export default function StudentSignupPage() {
             <>
               <CardHeader className="space-y-2 pb-5">
                 <CardTitle className="text-xl font-semibold tracking-tight">가입신청하기</CardTitle>
-                <CardDescription className="text-sm text-[#64748B]">
+                <CardDescription className="text-sm text-slate-500">
                   아래 정보를 입력해 가입을 신청해 주세요.
                 </CardDescription>
               </CardHeader>
@@ -218,7 +218,7 @@ export default function StudentSignupPage() {
                         className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                       />
                     </div>
-                    <p className="text-xs leading-5 text-[#64748B]">영문/숫자 4자 이상</p>
+                    <p className="text-xs leading-5 text-slate-500">영문/숫자 4자 이상</p>
                   </div>
 
                   <div className="space-y-2">
@@ -239,7 +239,7 @@ export default function StudentSignupPage() {
                         className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                       />
                     </div>
-                    <p className="text-xs leading-5 text-[#64748B]">숫자 6자리 · 휴대폰 번호와 겹치지 않게</p>
+                    <p className="text-xs leading-5 text-slate-500">숫자 6자리 · 휴대폰 번호와 겹치지 않게</p>
                   </div>
 
                   <div className="space-y-2">
@@ -292,7 +292,7 @@ export default function StudentSignupPage() {
                       autoComplete="tel"
                       className="h-12 rounded-xl border-black/[0.08] bg-white text-base"
                     />
-                    <p className="text-xs leading-5 text-[#64748B]">
+                    <p className="text-xs leading-5 text-slate-500">
                       본인 / 학부모 휴대폰 중 하나는 반드시 입력해 주세요.
                     </p>
                   </div>
@@ -377,7 +377,7 @@ export default function StudentSignupPage() {
                     )}
                   </Button>
 
-                  <div className="text-center text-sm text-[#64748B]">
+                  <div className="text-center text-sm text-slate-500">
                     이미 계정이 있으신가요?{' '}
                     <Link href="/student/login" className="font-semibold text-[#0071E3] hover:underline">
                       로그인하기

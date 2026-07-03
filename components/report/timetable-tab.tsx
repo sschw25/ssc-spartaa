@@ -81,12 +81,12 @@ export function TimetableTab({
               const todayStr = getSeoulDateKey();
 
               // 이 교시에 공부해야 하는 과목과 그 계획 매핑
-              const matchedPlans: Array<{ 
-                subjectName: string; 
-                title: string; 
-                type: 'book' | 'lecture'; 
-                range: string; 
-                amount: number; 
+              const matchedPlans: Array<{
+                subjectName: string;
+                title: string;
+                type: 'book' | 'lecture';
+                range: string;
+                amount: number;
                 speed?: number;
                 isCompleted?: boolean;
                 actualAmount?: number;
@@ -162,8 +162,8 @@ export function TimetableTab({
                   </span>
 
                   <div className={`p-3 rounded-2xl border transition-all text-left ${
-                    isCurrent 
-                      ? 'bg-[#0071E3]/[0.04] border-[#0071E3]/25 shadow-sm' 
+                    isCurrent
+                      ? 'bg-[#0071E3]/[0.04] border-[#0071E3]/25 shadow-sm'
                       : isPast
                         ? 'bg-slate-50/50 border-slate-100 opacity-70'
                         : 'bg-white border-slate-100'
@@ -230,7 +230,7 @@ export function TimetableTab({
         </h3>
         <span className="text-[10px] font-bold text-slate-400">주 6일 스파르타 플래닝</span>
       </div>
-      
+
       <div className="print-week-grid grid grid-cols-2 md:grid-cols-7 gap-3">
         {weekDaySlots.map(day => {
           const subjectsInDay = (student.subjects || []).filter(subject => (subject.studyDays || []).includes(day.key));
@@ -238,8 +238,8 @@ export function TimetableTab({
           const isToday = day.key === todayDayKey;
 
           return (
-            <div 
-              key={day.key} 
+            <div
+              key={day.key}
               className={`p-3.5 rounded-2xl border transition-all duration-300 min-h-[105px] flex flex-col shadow-sm ${
                 isToday
                   ? 'bg-[#0071E3]/[0.04] border-[#0071E3] ring-1 ring-[#0071E3]/30 shadow-[0_4px_16px_rgba(0,113,227,0.12)]'
@@ -261,8 +261,8 @@ export function TimetableTab({
               ) : (
                 <div className="space-y-1.5 mt-auto">
                   {subjectsInDay.map(subject => (
-                    <span 
-                      key={`${day.key}_${subject.id}`} 
+                    <span
+                      key={`${day.key}_${subject.id}`}
                       className={`text-[8px] font-extrabold px-2 py-0.5 rounded-lg border block text-center truncate shadow-sm transition-transform hover:-translate-y-0.5 ${getSubjectColorClass(subject.name)}`}
                     >
                       {subject.name}
@@ -280,7 +280,7 @@ export function TimetableTab({
         {studyTimeSlots.map(slot => {
           const subjectsInSlot = (student.subjects || []).filter(subject => (subject.studyTime || '') === slot.key);
           if (slot.key === '' && subjectsInSlot.length === 0) return null;
-          
+
           const getSlotStyle = (key: string) => {
             switch(key) {
               case 'morning': return 'border-amber-100 bg-amber-50/10 hover:shadow-[0_8px_30px_rgba(245,158,11,0.04)]';
@@ -289,7 +289,7 @@ export function TimetableTab({
               default: return 'border-slate-100 bg-slate-50/10';
             }
           };
-          
+
           return (
             <div key={slot.key || 'none'} className={`p-5 rounded-2xl border bg-white space-y-4 shadow-sm transition-all duration-300 ${getSlotStyle(slot.key)}`}>
               <div className="border-b border-slate-100 pb-2.5">
@@ -302,7 +302,7 @@ export function TimetableTab({
                   <p className="mt-0.5 text-[10px] font-bold text-slate-400">{slot.periodLabel}</p>
                 )}
               </div>
-              
+
               {subjectsInSlot.length === 0 ? (
                 <p className="text-[10px] text-slate-300 font-bold py-4 text-center">배정된 학습 과목 없음</p>
               ) : (

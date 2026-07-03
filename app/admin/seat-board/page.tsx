@@ -18,12 +18,12 @@ import { Input } from '@/components/ui/input';
 // ── 수강만료일 D-Day 헬퍼 함수 ───────────────────────────────────────────────
 function getEnrollmentDDay(enrollmentEndDate?: string, todayStr?: string): { status: 'expired' | 'warning' | 'normal'; daysLeft?: number } {
   if (!enrollmentEndDate) return { status: 'normal' };
-  
+
   try {
     const todayStrClean = todayStr || new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
     const [tY, tM, tD] = todayStrClean.split('-').map(Number);
     const [eY, eM, eD] = enrollmentEndDate.split('-').map(Number);
-    
+
     if (isNaN(tY) || isNaN(eY)) {
       const todayFallback = new Date();
       todayFallback.setHours(0, 0, 0, 0);
@@ -36,13 +36,13 @@ function getEnrollmentDDay(enrollmentEndDate?: string, todayStr?: string): { sta
       if (days <= 3) return { status: 'warning', daysLeft: days };
       return { status: 'normal' };
     }
-    
+
     const today = new Date(tY, tM - 1, tD);
     const endDate = new Date(eY, eM - 1, eD);
-    
+
     const diffTime = endDate.getTime() - today.getTime();
     const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays < 0) {
       return { status: 'expired' };
     } else if (diffDays <= 3) {
@@ -634,14 +634,14 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
     : isLeftToday
     ? 'border-slate-300'
     : 'border-slate-200/80';
-  const bg = isCheckedIn 
-    ? 'bg-emerald-50/60' 
+  const bg = isCheckedIn
+    ? 'bg-emerald-50/60'
     : isUnauthorizedCheckout
     ? 'bg-red-50/70'
-    : isOnLeave 
-    ? 'bg-blue-50/60' 
-    : isLeftToday 
-    ? 'bg-slate-50/80' 
+    : isOnLeave
+    ? 'bg-blue-50/60'
+    : isLeftToday
+    ? 'bg-slate-50/80'
     : 'bg-white';
 
   return (
@@ -669,10 +669,10 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
           ))}
         </div>
       </div>
-      
+
       <div className="flex flex-col gap-[1px] my-0.5">
         <div className="flex items-center gap-1 min-w-0">
-          <p 
+          <p
             onClick={(e) => {
               if (onNameClick) {
                 e.stopPropagation();

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Users, User, Calendar, BarChart3, Search, LogOut, Loader2,
   AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw, Clock,
   CalendarClock, ChevronRight, XCircle
@@ -75,10 +75,10 @@ export default function AdminDashboardPage() {
         const json = await res.json();
         const userKey = json.userId || json.username || json.role || 'admin';
         setAdminId(userKey);
-        
+
         const userCampus = json.campus || 'all';
         setAdminCampus(userCampus);
-        
+
         const storageKey = `ssc-admin-dashboard-campus-filter:${userKey}`;
         if (userCampus !== 'all') {
           setCampusFilter(userCampus);
@@ -212,7 +212,7 @@ export default function AdminDashboardPage() {
   const campusScopedStudents = students.filter(s => effectiveFilter === 'all' || s.campus === effectiveFilter);
   const totalStudentsCount = campusScopedStudents.length;
   const selectedCampusLabel = effectiveFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(effectiveFilter);
-  
+
   // 등록 만료/임박 학생
   const RENEWAL_WARN_DAYS = 5;
   const expiredStudents = campusScopedStudents.filter(s => {
@@ -252,7 +252,7 @@ export default function AdminDashboardPage() {
   const lastConsultationUpdate = pendingConsultationStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
   const lastStudentUpdate = campusScopedStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
   const lastGradeUpdate = weeklyGradeMissingStudents.reduce((max, s) => s.updatedAt > max ? s.updatedAt : max, '');
-  
+
   const getLastProgressUpdate = () => {
     let max = '';
     campusScopedStudents.forEach(s => {
@@ -268,14 +268,14 @@ export default function AdminDashboardPage() {
     const midnight = new Date();
     midnight.setHours(0, 0, 0, 0);
     const midnightIso = midnight.toISOString();
-    
+
     // 조건 1: 마지막 업데이트가 오늘 자정 이후여야 함
     if (lastUpdateTime < midnightIso) return false;
-    
+
     // 조건 2: 사용자가 해당 카드를 마지막으로 조회한 시각이 마지막 업데이트 시각보다 이전이어야 함
     const viewedTime = viewedTimes[cardKey];
     if (!viewedTime) return true;
-    
+
     return viewedTime < lastUpdateTime;
   };
 
@@ -534,11 +534,11 @@ export default function AdminDashboardPage() {
       let unitLabel = '페이지';
 
       filteredStudentsForBook.forEach((s) => {
-        const findBook = s.books?.find((b) => b.title === name) || 
+        const findBook = s.books?.find((b) => b.title === name) ||
                          s.subjects?.flatMap((sub) => sub.books).find((b) => b?.title === name);
         const findLecture = s.lectures?.find((l) => l.name === name) ||
                             s.subjects?.flatMap((sub) => sub.lectures).find((l) => l?.name === name);
-        
+
         const mat = findBook || findLecture;
         if (mat) {
           if (findBook && findBook.unit) unitLabel = findBook.unit;
@@ -570,11 +570,11 @@ export default function AdminDashboardPage() {
 
       const goals: Array<{ studentName: string; text: string }> = [];
       filteredStudentsForBook.forEach((s) => {
-        const findBook = s.books?.find((b) => b.title === name) || 
+        const findBook = s.books?.find((b) => b.title === name) ||
                          s.subjects?.flatMap((sub) => sub.books).find((b) => b?.title === name);
         const findLecture = s.lectures?.find((l) => l.name === name) ||
                             s.subjects?.flatMap((sub) => sub.lectures).find((l) => l?.name === name);
-        
+
         const mat = findBook || findLecture;
         if (mat?.goalDescription) {
           goals.push({ studentName: s.name, text: mat.goalDescription });
@@ -699,18 +699,18 @@ export default function AdminDashboardPage() {
         <div className="space-y-4">
           {/* 헤더 + 보조 지표 칩 */}
           <div className="flex items-end justify-between gap-3 flex-wrap">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">알림 현황</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">알림 현황</h2>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => router.push('/admin/inbox')}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] text-[#6e6e73] hover:bg-black/[0.07]'}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] text-slate-600 hover:bg-black/[0.07]'}`}
               >
                 <ClipboardList className="w-3.5 h-3.5" />
                 대기요청 {pendingRequestsTotal}건
               </button>
               <button
                 onClick={() => { handleCardClick('grades'); router.push('/admin/consultation?filter=missing_grade'); }}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${weeklyGradeMissingStudents.length > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] text-[#6e6e73] hover:bg-black/[0.07]'}`}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${weeklyGradeMissingStudents.length > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] text-slate-600 hover:bg-black/[0.07]'}`}
               >
                 성적미입력 {weeklyGradeMissingStudents.length}명
               </button>
@@ -756,10 +756,10 @@ export default function AdminDashboardPage() {
                 {expiredStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <AnimatedNumber value={expiredStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${expiredStudents.length > 0 ? 'text-red-600' : 'text-[#1d1d1f]'}`} />
+                <AnimatedNumber value={expiredStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${expiredStudents.length > 0 ? 'text-red-600' : 'text-slate-900'}`} />
                 <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
-              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">만료 경고</p>
+              <p className="text-[13px] font-medium text-slate-900 mt-2">만료 경고</p>
               <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {expiredStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3.5 h-3.5" />
@@ -777,10 +777,10 @@ export default function AdminDashboardPage() {
                 {renewalWarnStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <AnimatedNumber value={renewalWarnStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${renewalWarnStudents.length > 0 ? 'text-amber-600' : 'text-[#1d1d1f]'}`} />
+                <AnimatedNumber value={renewalWarnStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${renewalWarnStudents.length > 0 ? 'text-amber-600' : 'text-slate-900'}`} />
                 <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
-              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">재등록 임박</p>
+              <p className="text-[13px] font-medium text-slate-900 mt-2">재등록 임박</p>
               <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {renewalWarnStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3.5 h-3.5" />
@@ -801,10 +801,10 @@ export default function AdminDashboardPage() {
                 {shouldShowDot('consultation', lastConsultationUpdate) && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <AnimatedNumber value={pendingConsultationStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingConsultationStudents.length > 0 ? 'text-amber-600' : 'text-[#1d1d1f]'}`} />
+                <AnimatedNumber value={pendingConsultationStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingConsultationStudents.length > 0 ? 'text-amber-600' : 'text-slate-900'}`} />
                 <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
-              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">상담 도래</p>
+              <p className="text-[13px] font-medium text-slate-900 mt-2">상담 도래</p>
               <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">{selectedCampusLabel} 기준 상담 일지 미작성 대상자</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">대상 원생 보기 <ChevronRight className="w-3.5 h-3.5" /></div>
             </Card>
@@ -823,10 +823,10 @@ export default function AdminDashboardPage() {
                 {behindStudentsCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <AnimatedNumber value={behindStudentsCount} className={`text-[18px] leading-none font-semibold tracking-tight ${behindStudentsCount > 0 ? 'text-orange-600' : 'text-[#1d1d1f]'}`} />
+                <AnimatedNumber value={behindStudentsCount} className={`text-[18px] leading-none font-semibold tracking-tight ${behindStudentsCount > 0 ? 'text-orange-600' : 'text-slate-900'}`} />
                 <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
-              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">진도 지연</p>
+              <p className="text-[13px] font-medium text-slate-900 mt-2">진도 지연</p>
               <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">목표 대비 진도가 뒤처진 원생</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {behindStudentsCount > 0 ? '지연 원생 보기' : '지연 없음'} <ChevronRight className="w-3.5 h-3.5" />
@@ -849,10 +849,10 @@ export default function AdminDashboardPage() {
                 )}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
-                <AnimatedNumber value={pendingRequestsTotal} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#1d1d1f]'}`} />
+                <AnimatedNumber value={pendingRequestsTotal} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-slate-900'}`} />
                 <span className="text-[15px] font-medium text-slate-500">건</span>
               </div>
-              <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">대기 요청</p>
+              <p className="text-[13px] font-medium text-slate-900 mt-2">대기 요청</p>
               <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">변경 {pendingChangeCount} · 휴가 {pendingLeaveCount} · 건의 {pendingSuggestionCount}</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {pendingRequestsTotal > 0 ? '인박스 열기' : '대기 없음'} <ChevronRight className="w-3.5 h-3.5" />
@@ -866,7 +866,7 @@ export default function AdminDashboardPage() {
         {/* ── 섹션 2: 오늘의 브리핑 (스마트화 Wave1 #2+#3: 연속결석·이탈급증·위험밴드) ── */}
         <div className="space-y-3.5">
           <div className="flex items-end justify-between gap-3">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">오늘의 브리핑</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">오늘의 브리핑</h2>
             <button
               type="button"
               aria-expanded={showDailyDigestSchedule}
@@ -885,7 +885,7 @@ export default function AdminDashboardPage() {
         {/* ── 섹션 3: 출결 현황 ── */}
         <div className="space-y-3.5">
           <div className="flex items-end justify-between gap-3">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">출결 현황</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">출결 현황</h2>
             <button
               type="button"
               onClick={() => router.push('/admin/attendance')}
@@ -922,7 +922,7 @@ export default function AdminDashboardPage() {
         {/* ── 섹션 4: 학습 현황 ── */}
         <div className="space-y-3.5">
           <div className="flex items-end justify-between gap-3">
-            <h2 className="text-[17px] font-semibold tracking-tight text-[#1d1d1f]">학습 현황</h2>
+            <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">학습 현황</h2>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
@@ -1096,7 +1096,7 @@ export default function AdminDashboardPage() {
             onClick={(e) => e.stopPropagation()}
             className="bg-white/95 border border-black/[0.06] shadow-2xl rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden backdrop-blur-md text-left animate-scale-in-up"
           >
-            
+
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-black/[0.04] p-5 shrink-0 bg-white/50">
               <div>
@@ -1115,7 +1115,7 @@ export default function AdminDashboardPage() {
 
             {/* 모달 바디 (스크롤 가능) */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
-              
+
               {/* 요약 KPI 카드 */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-2xl bg-black/[0.02] border border-black/[0.04] p-4 flex flex-col justify-between min-h-[90px]">
@@ -1135,8 +1135,8 @@ export default function AdminDashboardPage() {
                 <div className="rounded-2xl bg-gradient-to-br from-emerald-500/[0.02] to-emerald-500/[0.06] border border-emerald-500/10 p-4 flex flex-col justify-between min-h-[90px]">
                   <span className="text-[10px] font-semibold text-emerald-600 uppercase">하루 평균 진도</span>
                   <div className="text-xl font-semibold text-emerald-800 mt-2">
-                    {analysisData.avgDailyAmount !== '0.0' && analysisData.avgDailyAmount !== '0' 
-                      ? `${analysisData.avgDailyAmount} ${analysisData.unitLabel || '페이지'}` 
+                    {analysisData.avgDailyAmount !== '0.0' && analysisData.avgDailyAmount !== '0'
+                      ? `${analysisData.avgDailyAmount} ${analysisData.unitLabel || '페이지'}`
                       : '계획 없음'}
                   </div>
                 </div>
@@ -1175,7 +1175,7 @@ export default function AdminDashboardPage() {
 
               {/* 2단 그리드: 학습 목표 & 피드백 */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                
+
                 {/* 학습 목표 목록 */}
                 <div className="space-y-2 flex flex-col">
                   <h3 className="text-xs font-semibold text-slate-900">학생 설정 목표</h3>

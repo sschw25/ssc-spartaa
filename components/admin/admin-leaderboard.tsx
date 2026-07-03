@@ -92,7 +92,7 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
       case 3:
         return 'bg-orange-100 text-orange-800 border border-orange-200 font-semibold shadow-sm';
       default:
-        return 'bg-[#F5F5F7] text-[#434345] font-bold border border-black/[0.02]';
+        return 'bg-[#F5F5F7] text-slate-700 font-bold border border-black/[0.02]';
     }
   };
 

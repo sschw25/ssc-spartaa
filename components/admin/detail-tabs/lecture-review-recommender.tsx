@@ -90,7 +90,7 @@ export function LectureReviewRecommender({
             ))}
           </div>
 
-          <div className="rounded-md border border-black/[0.05] bg-white p-2 space-y-1 text-[#434345]">
+          <div className="rounded-md border border-black/[0.05] bg-white p-2 space-y-1 text-slate-700">
             <p>
               <span className="font-bold text-slate-900">강의 {lectureMin}분 · {speed}배속</span>
               {' '}→ 시청 {Math.round(watchMin)}분 + 복습 {reviewMin}분 = <span className="font-bold">{Math.round(perLecture)}분/강</span>

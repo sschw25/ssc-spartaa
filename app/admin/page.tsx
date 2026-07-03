@@ -85,7 +85,7 @@ export default function AdminLoginPage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#F5F5F7] via-white to-[#E5E7EB] flex flex-col items-center justify-center px-4 font-sans text-slate-900">
       <div className="w-full max-w-md">
-        
+
         {/* Logo or Title */}
         <div className="text-center mb-8">
           <span className="text-[10px] font-bold tracking-[0.4em] text-slate-500 uppercase block mb-2">
@@ -102,7 +102,7 @@ export default function AdminLoginPage() {
               원생 관리 및 진도 조절을 위한 대시보드에 로그인합니다.
             </CardDescription>
           </CardHeader>
-          
+
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               {errorMsg && (

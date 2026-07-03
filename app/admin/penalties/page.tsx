@@ -124,7 +124,7 @@ export default function PenaltiesPage() {
             <p className="text-[12px] font-medium text-slate-500 mt-2">벌점 보유 원생</p>
           </div>
           <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
-            <p className="text-[18px] leading-none font-semibold tracking-tight text-[#1d1d1f]">
+            <p className="text-[18px] leading-none font-semibold tracking-tight text-slate-900">
               {filtered.reduce((s, st) => s + (st.penalties || []).filter((p) => p.type === 'penalty').reduce((a, p) => a + p.points, 0), 0)}
             </p>
             <p className="text-[12px] font-medium text-slate-500 mt-2">총 벌점</p>

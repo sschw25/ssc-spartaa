@@ -513,7 +513,7 @@ export function ConsultationTab({
             (pending.length > 0 || resolved.length > 0) && (
               <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 건의사항 내역</p>
-                
+
                 {/* 대기중 건의사항 */}
                 {pending.map((r) => (
                   <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">

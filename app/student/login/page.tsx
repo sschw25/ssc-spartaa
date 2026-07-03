@@ -71,11 +71,11 @@ function StudentLoginForm() {
             <GraduationCap className="h-6 w-6" />
           </div>
           <div className="space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Home</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-slate-500">SSC Student Home</p>
             <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               학생 홈 로그인
             </h1>
-            <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
+            <p className="max-w-lg text-sm leading-7 text-slate-500 md:text-base">
               오늘의 학습 계획, 교재별 진도, 평균 페이스 비교를 학생 홈에서 확인합니다.
             </p>
           </div>
@@ -84,7 +84,7 @@ function StudentLoginForm() {
         <Card className="rounded-2xl border-black/[0.06] bg-white shadow-xl">
           <CardHeader className="space-y-2 pb-5">
             <CardTitle className="text-xl font-semibold tracking-tight">학생 홈 로그인</CardTitle>
-            <CardDescription className="text-sm text-[#64748B]">
+            <CardDescription className="text-sm text-slate-500">
               설정된 로그인 ID와 출결번호를 입력해 주세요.
             </CardDescription>
           </CardHeader>
@@ -131,7 +131,7 @@ function StudentLoginForm() {
                     className="h-12 rounded-xl border-black/[0.08] bg-white pl-10 text-base"
                   />
                 </div>
-                <p className="text-xs leading-5 text-[#64748B]">
+                <p className="text-xs leading-5 text-slate-500">
                   출결번호를 모르거나 분실한 경우, 담당 코멘터 선생님께 말씀해 주세요.
                 </p>
               </div>
@@ -154,7 +154,7 @@ function StudentLoginForm() {
                 )}
               </Button>
 
-              <div className="space-y-2 text-center text-sm text-[#64748B]">
+              <div className="space-y-2 text-center text-sm text-slate-500">
                 <div>
                   처음이신가요?{' '}
                   <Link href="/student/signup" className="font-semibold text-[#0071E3] hover:underline">

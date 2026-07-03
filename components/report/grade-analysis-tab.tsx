@@ -95,7 +95,7 @@ export function GradeAnalysisTab({
   // 성적 하락 감지 함수
   const detectScoreDrop = () => {
     if (!student || !student.grades || student.grades.length < 2) return null;
-    
+
     const gradesBySubject: Record<string, typeof student.grades> = {};
     student.grades.forEach(g => {
       const sub = (g.subject || '').trim();
@@ -105,13 +105,13 @@ export function GradeAnalysisTab({
       }
       gradesBySubject[sub].push(g);
     });
-    
+
     const drops: { subject: string; prevScore: number; currentScore: number; testName: string; dropPercent: number }[] = [];
-    
+
     for (const subject in gradesBySubject) {
       const list = [...gradesBySubject[subject]].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
       if (list.length < 2) continue;
-      
+
       for (let i = 1; i < list.length; i++) {
         const prev = Number(list[i-1].score) || 0;
         const curr = Number(list[i].score) || 0;
@@ -129,7 +129,7 @@ export function GradeAnalysisTab({
         }
       }
     }
-    
+
     return drops.length > 0 ? drops[drops.length - 1] : null;
   };
 
@@ -204,7 +204,7 @@ export function GradeAnalysisTab({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
-          
+
           {/* 성적 차트 시각화 */}
           <div className={`${isStudentReport ? 'md:col-span-2' : 'md:col-span-3'} p-5 rounded-3xl bg-gradient-to-br from-white to-slate-50/80 border border-slate-100 shadow-sm overflow-hidden relative`}>
             <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-[#0071E3]/[0.04] pointer-events-none" />
@@ -245,16 +245,16 @@ export function GradeAnalysisTab({
                       ];
                       const lineStyle = lineStyles[idx % lineStyles.length];
                       return (
-                        <Line 
+                        <Line
                           key={subject}
-                          type="monotone" 
-                          dataKey={subject} 
+                          type="monotone"
+                          dataKey={subject}
                           name={subject}
                           stroke={lineStyle.stroke}
                           strokeDasharray={lineStyle.strokeDasharray}
-                          strokeWidth={2.5} 
-                          activeDot={{ r: 5 }} 
-                          dot={{ strokeWidth: 2, r: 3.5 }} 
+                          strokeWidth={2.5}
+                          activeDot={{ r: 5 }}
+                          dot={{ strokeWidth: 2, r: 3.5 }}
                           connectNulls={true}
                         />
                       );
@@ -327,8 +327,8 @@ export function GradeAnalysisTab({
                 <span>🧡</span> 이번 {dropInfo.subject} 시험은 조금 아쉬웠지만 괜찮아요!
               </h4>
               <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
-                이전 시험({dropInfo.prevScore}점) 대비 점수가 약 <span className="text-[#F56300] font-black">{dropInfo.dropPercent}%</span> 하락({dropInfo.currentScore}점)한 것으로 분석되었습니다. 
-                공부법이나 취약 유형을 분석하고 보완하면 다음 시험에서는 충분히 극복할 수 있습니다. 
+                이전 시험({dropInfo.prevScore}점) 대비 점수가 약 <span className="text-[#F56300] font-black">{dropInfo.dropPercent}%</span> 하락({dropInfo.currentScore}점)한 것으로 분석되었습니다.
+                공부법이나 취약 유형을 분석하고 보완하면 다음 시험에서는 충분히 극복할 수 있습니다.
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2 shrink-0">

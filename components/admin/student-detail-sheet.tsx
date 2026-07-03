@@ -337,9 +337,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const today = todayAttendanceStatus.today || new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
     const checkOutTimeStr = todayAttendanceStatus.checkOutAt; // "HH:MM"
     if (!checkOutTimeStr) return null;
-    
+
     const checkOutMin = timeStringToMin(checkOutTimeStr);
-    
+
     // 현재 KST 시각
     const now = new Date();
     const kstOffset = 9 * 60 * 60 * 1000;
@@ -520,7 +520,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 과목 카드 아코디언 상태
   const [collapsedSubjects, setCollapsedSubjects] = useState<Record<string, boolean>>({});
-  
+
   // 통합 등록 폼 및 동적 카테고리 상태
   const [newMaterialType, setNewMaterialType] = useState<'book' | 'lecture'>('book');
   const [newMaterialSubject, setNewMaterialSubject] = useState('');
@@ -597,7 +597,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       } else {
         setCustomCategories(['기본', '문제풀이', '요약강의']);
       }
-      
+
       // 각 과목의 학습 목표 및 교재/강의 목표일 초기 세팅
       const goals: Record<string, string> = {};
       const dates: Record<string, string> = {};
@@ -622,7 +622,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       setMaterialTargetDates(dates);
       setWeeklyPlanRanges(planRanges);
       setProgressDrafts({});
-      
+
       // 상담 디폴트 값 세팅
       const today = new Date().toISOString().split('T')[0];
       if (shouldResetConsultationDraft) {
@@ -1023,7 +1023,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const handleManualSave = async (): Promise<boolean> => {
     setLoading(true);
-    
+
     // Merge any pending progressDrafts
     const nowStr = new Date().toISOString();
     const currentConsultationText = cslContentRef.current.trim();
@@ -1060,7 +1060,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
       updatedLogs = [newLearningLog, ...updatedLogs];
     }
-    
+
     if ((isLifeCommentChanged && lifeComment.trim()) || (isStudentCommentChanged && studentLifeComment.trim())) {
       const today = new Date().toISOString().split('T')[0];
       let logContent = '';
@@ -1079,7 +1079,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         content: logContent,
         type: 'life'
       };
-      
+
       updatedLogs = [newLog, ...updatedLogs];
     }
 
@@ -1132,7 +1132,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const isStudentCommentChanged = studentLifeComment.trim() !== (student.studentLifeComment || '').trim();
 
     let updatedLogs = [...(student.consultationLogs || [])];
-    
+
     if ((isLifeCommentChanged && lifeComment.trim()) || (isStudentCommentChanged && studentLifeComment.trim())) {
       const today = new Date().toISOString().split('T')[0];
       let logContent = '';
@@ -1151,7 +1151,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         content: logContent,
         type: 'life'
       };
-      
+
       updatedLogs = [newLog, ...updatedLogs];
     }
 
@@ -1421,7 +1421,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   // 4. 과목 학습 목표 저장
   const handleSaveLearningGoal = (subId: string) => {
     const goalText = editingGoals[subId] || '';
-    const updatedSubjects = subjectsState.map(s => 
+    const updatedSubjects = subjectsState.map(s =>
       s.id === subId ? { ...s, learningGoal: goalText, updatedAt: new Date().toISOString() } : s
     );
 
@@ -1730,8 +1730,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const goalValue = targetMaterial.goalValue || 0;
     const goalDescription = targetMaterial.goalDescription || '';
     const reviewPasses = (targetMaterial.reviewPasses || []).filter((pass) => pass.days > 0);
-    const totalAmount = type === 'book' 
-      ? (targetMaterial as BookProgress).totalPages 
+    const totalAmount = type === 'book'
+      ? (targetMaterial as BookProgress).totalPages
       : (targetMaterial as LectureProgress).totalLectures;
     const currentAmount = type === 'book'
       ? clampProgressValue(progressDrafts[materialId] ?? (targetMaterial as BookProgress).currentPage, totalAmount)
@@ -1838,7 +1838,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setSubjectsState(updatedSubjects);
     setMaterialTargetDates(prev => ({ ...prev, [materialId]: calculatedTargetDate }));
     clearProgressDraft(materialId);
-    
+
     const planRanges: Record<string, string> = { ...weeklyPlanRanges };
     plans.forEach(p => {
       planRanges[`${materialId}_${p.weekNumber}`] = p.rangeText || '';
@@ -1918,7 +1918,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     });
 
     const nowStr = new Date().toISOString();
-    
+
     // 1. 해당 과목이 존재하는지 확인하고 없으면 새로 만듦
     let targetSubject = subjectsState.find(s => s.name === subjectName);
     let updatedSubjects = [...subjectsState];
@@ -2170,14 +2170,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 );
                 newPlans = plans;
               }
-              return { 
-                ...b, 
-                title: payload.title, 
-                totalPages: newTotal, 
-                currentPage: Math.min(b.currentPage, newTotal), 
+              return {
+                ...b,
+                title: payload.title,
+                totalPages: newTotal,
+                currentPage: Math.min(b.currentPage, newTotal),
                 estimatedMinutesPerUnit: payload.estimatedMinutesPerUnit !== undefined ? (payload.estimatedMinutesPerUnit === null ? undefined : payload.estimatedMinutesPerUnit) : b.estimatedMinutesPerUnit,
-                detailedPlans: newPlans, 
-                updatedAt: nowStr 
+                detailedPlans: newPlans,
+                updatedAt: nowStr
               };
             }
             return b;
@@ -2267,15 +2267,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 );
                 newPlans = plans;
               }
-              return { 
-                ...l, 
-                name: payload.title, 
-                totalLectures: newTotal, 
-                completedLectures: Math.min(l.completedLectures, newTotal), 
+              return {
+                ...l,
+                name: payload.title,
+                totalLectures: newTotal,
+                completedLectures: Math.min(l.completedLectures, newTotal),
                 estimatedMinutesPerUnit: payload.estimatedMinutesPerUnit !== undefined ? (payload.estimatedMinutesPerUnit === null ? undefined : payload.estimatedMinutesPerUnit) : l.estimatedMinutesPerUnit,
                 speedMultiplier: newSpeed,
-                detailedPlans: newPlans, 
-                updatedAt: nowStr 
+                detailedPlans: newPlans,
+                updatedAt: nowStr
               };
             }
             return l;
@@ -2558,7 +2558,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const scrollToMaterial = (materialId: string, materialType: 'book' | 'lecture') => {
     setActiveTab('progress');
     let targetSubjectName = '';
-    
+
     for (const subject of subjectsState) {
       if (materialType === 'book') {
         if (subject.books?.some((b) => b.id === materialId)) {
@@ -3047,7 +3047,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const handleAddConsultationWithPlan = async (e: React.FormEvent) => {
     e.preventDefault();
     const currentText = cslContentRef.current;
-    
+
     const latestDrafts = parseProgressFromConsultationContent(currentText, subjectsState, progressDrafts);
     syncConsultationContent(currentText);
 
@@ -3125,7 +3125,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     lines.forEach(rawLine => {
       const line = rawLine.trim().replace(/\s+/g, ' ');
       if (!line) return;
-      
+
       const match = line.match(/^-\s*([^:]+):\s*([^/]+?)\s*[\/\uFF0F]\s*(.+)$/);
       if (!match) return;
 
@@ -3139,7 +3139,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
       const normalizedName = subjectAliases[subjectNameRaw] || subjectNameRaw;
       const subject = ensureSubject(normalizedName);
-      
+
       const dayKeys: SubjectProgress['studyDays'] = [];
       const rawDays = daysStr.split(/[\s,]+/);
       rawDays.forEach(d => {
@@ -3812,7 +3812,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       if (!open) requestClose();
     }}>
       <SheetContent className="w-full sm:max-w-2xl bg-white border-l border-black/[0.05] p-0 font-sans text-slate-900">
-        
+
         {/* 상시 플로팅 마스터 저장 버튼 & 동기화 뱃지 (X 버튼 바로 왼쪽 옆에 배치) */}
         <div className="absolute top-3 right-12 z-50 flex items-center gap-2">
           {loading || isAutoSaving ? (
@@ -3831,7 +3831,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               동기화 완료
             </span>
           )}
-          
+
           <Button
             size="sm"
             onClick={handleManualSave}
@@ -3852,7 +3852,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <SheetTitle>원생 상세 정보</SheetTitle>
             <SheetDescription>원생 상세 프로필 및 학습 진도를 관리하는 화면입니다.</SheetDescription>
           </SheetHeader>
-        
+
         {/* Header (Notion Page Title Banner) */}
         <div className="bg-slate-900 text-white p-6 md:p-8 relative flex flex-col gap-5">
           {/* Top Row: Title, Metadata, Status */}
@@ -3916,7 +3916,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <ArrowLeft className="w-3.5 h-3.5 mr-1" />
               목록
             </Button>
-            
+
             <Button
               size="sm"
               variant="outline"
@@ -3926,7 +3926,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <Home className="w-3.5 h-3.5 mr-1" />
               홈
             </Button>
-            
+
             <Button
               size="sm"
               variant="outline"
@@ -3936,7 +3936,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <User className="w-3.5 h-3.5 mr-1" />
               <span>학생페이지 보기</span>
             </Button>
-            
+
             <Button
               size="sm"
               variant="outline"
@@ -3967,7 +3967,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                     <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
 
                     {req.proposedGoal && (
-                      <div 
+                      <div
                         onClick={() => scrollToMaterial(req.proposedGoal?.materialId ?? '', req.proposedGoal?.materialType ?? 'book')}
                         className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[10px] space-y-1 my-1.5 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all active:scale-[0.99] group"
                         title="클릭하여 학습 현황 확인 및 스크롤"
@@ -4039,7 +4039,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         <Send className="h-3.5 w-3.5" />
                         <span className="sr-only">답변 전송</span>
                       </Button>
-                      
+
                       {req.proposedGoal ? (
                         <Button
                           size="sm"

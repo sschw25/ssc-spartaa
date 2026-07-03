@@ -575,7 +575,7 @@ function AdminAttendanceContent() {
                   <button
                     key={option.key}
                     onClick={() => setStatusFilter(option.key)}
-                    className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${statusFilter === option.key ? 'bg-slate-900 text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
+                    className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${statusFilter === option.key ? 'bg-slate-900 text-white font-semibold' : 'bg-black/[0.04] text-slate-600 font-medium hover:bg-black/[0.07]'}`}
                   >
                     {option.label}
                   </button>
@@ -654,12 +654,12 @@ function AdminAttendanceContent() {
                           className="rounded border-black/[0.1] text-[#0071E3] focus:ring-[#0071E3]/20"
                         />
                       </th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">이름</th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">캠퍼스</th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">담당 코멘터</th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">증빙 상태</th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73]">지각 사유 회신</th>
-                      <th className="px-4 py-3 text-[12px] font-semibold text-[#6e6e73] text-right">처리</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-slate-600">이름</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-slate-600">캠퍼스</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-slate-600">담당 코멘터</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-slate-600">증빙 상태</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-slate-600">지각 사유 회신</th>
+                      <th className="px-4 py-3 text-[12px] font-semibold text-slate-600 text-right">처리</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -765,7 +765,7 @@ function AdminAttendanceContent() {
                     <button
                       key={p}
                       onClick={() => setPeriod(p)}
-                      className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${period === p ? 'bg-slate-900 text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
+                      className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${period === p ? 'bg-slate-900 text-white font-semibold' : 'bg-black/[0.04] text-slate-600 font-medium hover:bg-black/[0.07]'}`}
                     >
                       {p === 'week' ? '이번주' : p === 'month' ? '이번달' : '지난 30일'}
                     </button>
@@ -822,9 +822,9 @@ function AdminAttendanceContent() {
               <div className="flex flex-wrap gap-2 text-[13px] font-medium">
                 <span className="px-3 py-1.5 rounded-full bg-emerald-500/12 text-emerald-700">정시 {s.ontime}</span>
                 <span className="px-3 py-1.5 rounded-full bg-red-500/12 text-red-700">지각 {s.late}</span>
-                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-[#6e6e73]">08:20 그룹 {s.group0820.total}명(지각 {s.group0820.late})</span>
-                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-[#6e6e73]">09:00 그룹 {s.group0900.total}명(지각 {s.group0900.late})</span>
-                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-[#1d1d1f]">출석 {data?.attended ?? '-'} / {data?.total ?? '-'}</span>
+                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-slate-600">08:20 그룹 {s.group0820.total}명(지각 {s.group0820.late})</span>
+                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-slate-600">09:00 그룹 {s.group0900.total}명(지각 {s.group0900.late})</span>
+                <span className="px-3 py-1.5 rounded-full bg-black/[0.04] text-slate-900">출석 {data?.attended ?? '-'} / {data?.total ?? '-'}</span>
               </div>
             )}
 
@@ -1029,7 +1029,7 @@ function AdminAttendanceContent() {
                   <b>{demeritModal.name}</b> 학생의 증빙 사유를 기각하고 단순 지각 벌점을 부여합니다.
                 </p>
               </div>
-              
+
               <div className="space-y-1.5">
                 <label className="text-[11px] font-black text-slate-500">벌점 점수</label>
                 <input

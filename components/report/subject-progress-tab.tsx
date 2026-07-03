@@ -349,7 +349,7 @@ export function SubjectProgressTab({
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-                          <div 
+                          <div
                             className="h-full rounded-full bg-[#0071E3] transition-all duration-500"
                             style={{ width: `${percent}%` }}
                           />
@@ -386,7 +386,7 @@ export function SubjectProgressTab({
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
-                          <div 
+                          <div
                             className="h-full rounded-full bg-[#0071E3] transition-all duration-500"
                             style={{ width: `${percent}%` }}
                           />
@@ -421,7 +421,7 @@ export function SubjectProgressTab({
                     <BookOpen className="w-4 h-4 mr-2 text-[#0071E3]" />
                     {isStudentReport ? '교재별 진도 관리 및 세부 학습 목표' : '교재 진도 현황'}
                   </h4>
-                  
+
                   <div className="space-y-5">
                     {sub.books.map(b => {
                       const percent = b.totalPages > 0 ? Math.round((b.currentPage / b.totalPages) * 100) : 0;
@@ -498,7 +498,7 @@ export function SubjectProgressTab({
                                       해결한 누적 문항 수를 기록하세요
                                     </span>
                                   </span>
-                                  
+
                                   <div className="flex flex-col gap-1 mt-1.5 text-[9px] font-semibold text-slate-400 max-w-[150px]">
                                     <div className="flex flex-col gap-1 items-end">
                                       <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">오답 사유 추가:</span>

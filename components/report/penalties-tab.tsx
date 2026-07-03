@@ -32,7 +32,7 @@ export function PenaltiesTab({ student, activeTab }: PenaltiesTabProps) {
             누적 {total > 0 ? `+${total}` : total}점
           </span>
         </div>
-        
+
         {penalties.length === 0 ? (
           <div className="text-center py-12 text-xs text-slate-400 font-bold bg-white">
             등록된 벌점 및 상점 내역이 없습니다.

@@ -320,7 +320,7 @@ export function ProgressTab() {
                 )}
               </div>
                     )}
-              
+
               {/* 통합 자료(교재/인강) 등록 폼 */}
               {learningInputMode === 'material' && (
               <div className="admin-fit-box p-5 rounded-2xl border border-black/[0.06] bg-[#F5F5F7] space-y-4 shadow-sm">
@@ -373,7 +373,7 @@ export function ProgressTab() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {/* 과목명 지정 영역 */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold text-[#434345]">과목 선택 및 입력</Label>
+                    <Label className="text-[10px] font-bold text-slate-700">과목 선택 및 입력</Label>
                     <div className="relative">
                       <Input
                         placeholder="과목명 직접 입력 (예: 수학I, 영어독해)"
@@ -412,7 +412,7 @@ export function ProgressTab() {
 
                   {/* 제목 입력 및 공유 DB 자동완성 영역 */}
                   <div className="space-y-2 relative">
-                    <Label className="text-[10px] font-bold text-[#434345]">
+                    <Label className="text-[10px] font-bold text-slate-700">
                       {newMaterialType === 'book' ? '교재명' : '인강 강좌명'}
                     </Label>
                     <div className="relative" ref={dropdownRef}>
@@ -441,14 +441,14 @@ export function ProgressTab() {
                         }}
                         className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
                       />
-                      
+
                       {/* 공유 DB 자동완성 드롭다운 */}
                       {showIntegratedSuggestions && (isSearchingIntegrated || hasSearchedIntegrated || integratedSearchResults.length > 0) && (
                         <div className="absolute left-0 right-0 mt-1 bg-white border border-black/[0.08] rounded-xl shadow-lg z-[60] max-h-56 overflow-y-auto">
                           <div className="px-2.5 py-1.5 text-[9px] font-bold text-slate-500 bg-[#F5F5F7] border-b border-black/[0.04] flex justify-between items-center">
                             <span>공유 DB 검색 결과</span>
-                            <button 
-                              type="button" 
+                            <button
+                              type="button"
                               onClick={() => setShowIntegratedSuggestions(false)}
                               className="text-slate-500 hover:text-slate-900 text-[9px]"
                             >
@@ -501,7 +501,7 @@ export function ProgressTab() {
                   {/* 총 분량 */}
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-bold text-[#434345]">
+                      <Label className="text-[10px] font-bold text-slate-700">
                         {newMaterialType === 'book' ? `총 분량 (${newMaterialUnit === 'p' ? '페이지' : newMaterialUnit})` : '총 강의 수'}
                       </Label>
                       {newMaterialType === 'book' && (
@@ -576,7 +576,7 @@ export function ProgressTab() {
 
                   {/* 출판사 (교재 전용) / 강사 (인강 전용) */}
                   <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-[#434345]">
+                    <Label className="text-[10px] font-bold text-slate-700">
                       {newMaterialType === 'book' ? '출판사 (선택)' : '강사/플랫폼 (선택)'}
                     </Label>
                     <Input
@@ -596,7 +596,7 @@ export function ProgressTab() {
                   {/* 저자 (교재 전용 필드) */}
                   {newMaterialType === 'book' && (
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-[#434345]">저자 (선택)</Label>
+                      <Label className="text-[10px] font-bold text-slate-700">저자 (선택)</Label>
                       <Input
                         placeholder="예: 홍길동"
                         value={newMaterialAuthor}
@@ -609,7 +609,7 @@ export function ProgressTab() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <Label className="text-[10px] font-bold text-[#434345]">
+                    <Label className="text-[10px] font-bold text-slate-700">
                       {newMaterialType === 'book' ? '단위당 예상 소요 시간 (선택)' : '강의당 예상 소요 시간 (선택)'}
                     </Label>
                     <div className="flex items-center gap-2">
@@ -629,7 +629,7 @@ export function ProgressTab() {
 
                   {newMaterialType === 'lecture' && (
                     <div className="space-y-1">
-                      <Label className="text-[10px] font-bold text-[#434345]">기본 강의 배속 설정</Label>
+                      <Label className="text-[10px] font-bold text-slate-700">기본 강의 배속 설정</Label>
                       <select
                         value={newMaterialSpeedMultiplier}
                         onChange={(e) => setNewMaterialSpeedMultiplier(Number(e.target.value))}
@@ -650,7 +650,7 @@ export function ProgressTab() {
 
                 {/* 학습 유형 분류 (동적 카테고리) 및 플러스 버튼 */}
                 <div className="space-y-1.5">
-                  <Label className="text-[10px] font-bold text-[#434345]">학습 자료 유형 (그룹)</Label>
+                  <Label className="text-[10px] font-bold text-slate-700">학습 자료 유형 (그룹)</Label>
                   <div className="flex flex-wrap gap-1.5 items-center">
                     {customCategories.map((cat) => {
                       const isActive = newMaterialCategory === cat;
@@ -691,8 +691,8 @@ export function ProgressTab() {
                     onClick={handleSaveMaterial}
                     disabled={loading || isAutoSaving}
                     className={`rounded-lg text-xs h-9 px-5 font-bold text-white transition-all shadow-sm flex items-center justify-center ${
-                      newMaterialType === 'book' 
-                        ? 'bg-slate-900 hover:bg-[#323236]' 
+                      newMaterialType === 'book'
+                        ? 'bg-slate-900 hover:bg-[#323236]'
                         : 'bg-[#0071E3] hover:bg-[#973df8]'
                     }`}
                   >
@@ -723,7 +723,7 @@ export function ProgressTab() {
                     const isCollapsed = collapsedSubjects[sub.id] ?? true;
                     return (
                       <Card key={sub.id} id={`subject-card-${sub.name}`} className="border border-black/[0.06] shadow-sm rounded-2xl overflow-hidden">
-                        <CardHeader 
+                        <CardHeader
                           className="bg-[#F5F5F7] p-4 flex flex-row items-center justify-between cursor-pointer select-none"
                           onClick={() => setCollapsedSubjects(prev => ({ ...prev, [sub.id]: !isCollapsed }))}
                         >
@@ -1083,7 +1083,7 @@ export function ProgressTab() {
                                                   )}
                                                   className="w-3.5 h-3.5"
                                                 />
-                                                <Label className="text-[9px] font-semibold text-[#434345] shrink-0">{passNumber}회독</Label>
+                                                <Label className="text-[9px] font-semibold text-slate-700 shrink-0">{passNumber}회독</Label>
                                                 <Input
                                                   type="number"
                                                   min={1}
@@ -1113,7 +1113,7 @@ export function ProgressTab() {
                                       <Label className="text-[10px] font-bold text-slate-900 flex items-center">
                                         학습 목표 설정
                                       </Label>
-                                      
+
                                       <div className="space-y-2">
                                         <div className="space-y-1">
                                           <Label className="text-[9px] text-slate-500">학습목표 세부사항</Label>
@@ -1184,8 +1184,8 @@ export function ProgressTab() {
                                     {/* 주간 학습 계획 테이블 */}
                                     {book.targetDate && (
                                       <div className="pt-2 border-t border-black/[0.03] space-y-2">
-                                        <Label className="text-[10px] font-bold text-[#434345]">주간 학습 계획표 (학습 요일 기준)</Label>
-                                        
+                                        <Label className="text-[10px] font-bold text-slate-700">주간 학습 계획표 (학습 요일 기준)</Label>
+
                                         {!hasDetailedPlans ? (
                                           <p className="text-[9px] text-slate-500 py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>
                                         ) : (
@@ -1223,7 +1223,7 @@ export function ProgressTab() {
                                                         className="w-full border-b border-dashed border-black/[0.1] hover:border-black/30 focus:border-[#0071E3] focus:outline-none bg-transparent py-0.5 plan-range-input-book"
                                                       />
                                                     </td>
-                                                    <td className="py-1.5 px-2 text-center font-semibold text-[#434345]">
+                                                    <td className="py-1.5 px-2 text-center font-semibold text-slate-700">
                                                       {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}{book.unit || 'p'}
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center">
@@ -1487,7 +1487,7 @@ export function ProgressTab() {
                                                   )}
                                                   className="w-3.5 h-3.5"
                                                 />
-                                                <Label className="text-[9px] font-semibold text-[#434345] shrink-0">{passNumber}회독</Label>
+                                                <Label className="text-[9px] font-semibold text-slate-700 shrink-0">{passNumber}회독</Label>
                                                 <Input
                                                   type="number"
                                                   min={1}
@@ -1517,7 +1517,7 @@ export function ProgressTab() {
                                       <Label className="text-[10px] font-bold text-slate-900 flex items-center">
                                         학습 목표 설정
                                       </Label>
-                                      
+
                                       <div className="space-y-2">
                                         <div className="space-y-1">
                                           <Label className="text-[9px] text-slate-500">학습목표 세부사항</Label>
@@ -1628,8 +1628,8 @@ export function ProgressTab() {
                                     {/* 주간 학습 계획 테이블 */}
                                     {lec.targetDate && (
                                       <div className="pt-2 border-t border-black/[0.03] space-y-2">
-                                        <Label className="text-[10px] font-bold text-[#434345]">주간 학습 계획표 (학습 요일 기준)</Label>
-                                        
+                                        <Label className="text-[10px] font-bold text-slate-700">주간 학습 계획표 (학습 요일 기준)</Label>
+
                                         {!hasDetailedPlans ? (
                                           <p className="text-[9px] text-slate-500 py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>
                                         ) : (
@@ -1667,7 +1667,7 @@ export function ProgressTab() {
                                                         className="w-full border-b border-dashed border-black/[0.1] hover:border-black/30 focus:border-[#0071E3] focus:outline-none bg-transparent py-0.5 plan-range-input-lecture"
                                                       />
                                                     </td>
-                                                    <td className="py-1.5 px-2 text-center font-semibold text-[#434345]">
+                                                    <td className="py-1.5 px-2 text-center font-semibold text-slate-700">
                                                       {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}강
                                                     </td>
                                                     <td className="py-1.5 px-2 text-center">
@@ -1831,7 +1831,7 @@ export function ProgressTab() {
                               상담자: {log.manager}
                             </span>
                           </div>
-                          <pre className="text-xs text-[#434345] leading-relaxed whitespace-pre-wrap font-sans">
+                          <pre className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-sans">
                             {log.content}
                           </pre>
                         </div>
