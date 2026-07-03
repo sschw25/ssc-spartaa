@@ -659,17 +659,21 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                       {goal.rangeText} · {goal.periodWeeks}주 안에
                     </p>
 
-                    {/* 진행바 + 기대 마커 */}
-                    <div className="relative mt-2.5 h-2.5 w-full rounded-full bg-slate-100">
+                    {/* 진행바 + 예상목표치 마커(오늘 도달 지점) */}
+                    <div className="relative mt-4 h-2.5 w-full rounded-full bg-slate-100">
                       <div
                         className={`h-2.5 rounded-full ${done ? 'bg-emerald-500' : goal.behind ? 'bg-amber-400' : 'bg-[#0071E3]'}`}
                         style={{ width: `${Math.min(100, actualPct)}%` }}
                       />
+                      {/* 다이아몬드+라인 핀으로 예상목표치 지점을 또렷하게 표시 */}
                       <div
-                        className="absolute top-[-2px] h-3.5 w-0.5 rounded bg-slate-500"
+                        className="absolute -top-2 z-10 flex -translate-x-1/2 flex-col items-center"
                         style={{ left: `${Math.min(100, expectedPct)}%` }}
                         title={`예상목표치 ${expectedPct}%`}
-                      />
+                      >
+                        <span className="h-1.5 w-1.5 rotate-45 rounded-[1px] bg-slate-900" />
+                        <span className="-mt-0.5 h-[18px] w-[2.5px] rounded-b bg-slate-900" />
+                      </div>
                     </div>
                     <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-slate-400 tabular-nums">
                       <span>{goal.actualAmount}/{goal.targetAmount}{goal.unit} ({actualPct}%)</span>

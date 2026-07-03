@@ -474,9 +474,11 @@ export function HomeOverviewTab({
 
                 {activeDeadlineGoals.map((goal) => {
                   const done = goal.actualAmount >= goal.targetAmount;
-                  const remaining = Math.max(0, goal.targetAmount - goal.actualAmount);
-                  const recommend = Math.min(remaining, Math.max(0, goal.todayRecommend));
-                  const nextAmount = Math.min(goal.targetAmount, goal.actualAmount + recommend);
+                  const recommend = Math.min(Math.max(0, goal.targetAmount - goal.actualAmount), Math.max(0, goal.todayRecommend));
+                  // 예상목표치(오늘까지 누적 기대) 90% 이상 채우면 오늘 완료. '오늘 완료' 버튼은 예상목표치까지 채운다.
+                  const todayTarget = Math.min(goal.targetAmount, Math.round(goal.expectedAmount));
+                  const metToday = goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount * 0.9;
+                  const fillGap = Math.max(0, todayTarget - goal.actualAmount);
                   const isSaving = deadlineSavingId === goal.id;
                   const isEditing = deadlineEditId === goal.id;
 
@@ -500,26 +502,31 @@ export function HomeOverviewTab({
 
                       <div className="mt-2 grid gap-1.5 text-[11px] font-semibold text-slate-500 sm:grid-cols-2">
                         <p className="rounded-lg bg-slate-50 px-2.5 py-1.5">
-                          오늘 권장: <span className="text-[#0071E3]">{recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
+                          오늘 권장: <span className={metToday ? 'text-emerald-600' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
                         </p>
                         <p className="rounded-lg bg-slate-50 px-2.5 py-1.5">
-                          오늘까지 권장 누적: <span className="text-slate-800">{goal.expectedAmount}{goal.unit}</span>
+                          예상목표치: <span className="text-slate-800">{goal.expectedAmount}{goal.unit}</span>
                         </p>
                       </div>
 
                       {!done && (
                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                          {recommend > 0 && (
+                          {metToday ? (
+                            <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold text-emerald-700">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              오늘 완료
+                            </span>
+                          ) : fillGap > 0 ? (
                             <button
                               type="button"
                               disabled={isSaving}
-                              onClick={() => saveDeadlineAmount(goal, nextAmount)}
+                              onClick={() => saveDeadlineAmount(goal, todayTarget)}
                               className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0071E3] px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-[0.97] disabled:opacity-40 sm:flex-none"
                             >
                               <CheckCircle2 className="h-3.5 w-3.5" />
-                              오늘 {recommend}{goal.unit} 완료
+                              오늘 완료
                             </button>
-                          )}
+                          ) : null}
                           <button
                             type="button"
                             onClick={() => {
@@ -527,10 +534,10 @@ export function HomeOverviewTab({
                               setDeadlineEditAmount(goal.actualAmount);
                             }}
                             className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-50 active:scale-[0.97] ${
-                              recommend > 0 ? '' : 'flex-1 sm:flex-none'
+                              metToday || fillGap <= 0 ? 'flex-1 sm:flex-none' : ''
                             }`}
                           >
-                            직접 입력
+                            {metToday ? '수정 · 추가 입력' : '직접 입력'}
                           </button>
                         </div>
                       )}

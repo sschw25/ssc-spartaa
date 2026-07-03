@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { toast } from 'sonner';
-import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Target, Clock } from 'lucide-react';
+import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Target, Clock, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw } from 'lucide-react';
 import { ProposedGoal, Student } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 
@@ -165,12 +165,12 @@ export function ExecutionPlanTab({
   const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
 
   const QUICK_REQUESTS = [
-    { type: 'etc', label: '상담 신청할래요', icon: '💬', message: '상담을 신청합니다.' },
-    { type: 'progress', label: '진도가 너무 빨라요', icon: '🏃', message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.' },
-    { type: 'progress', label: '진도가 너무 느려요', icon: '🐢', message: '진도가 너무 느려요. 계획을 조정하고 싶어요.' },
-    { type: 'subject', label: '과목 추가/변경', icon: '📚', message: '과목 추가 또는 변경을 신청합니다.' },
-    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: '🗓️', message: '학습계획 조정을 신청합니다.' },
-    { type: 'progress', label: '진도 숫자 정정', icon: '✏️', message: '진도 숫자 정정이 필요해요.' },
+    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.' },
+    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.' },
+    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.' },
+    { type: 'subject', label: '과목 추가/변경', icon: BookPlus, message: '과목 추가 또는 변경을 신청합니다.' },
+    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.' },
+    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.' },
   ];
 
   const handleQuickRequest = (type: string, message: string) => {
@@ -361,7 +361,8 @@ export function ExecutionPlanTab({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-black text-amber-800 flex items-center gap-1.5">
-                🔄 오랜만에 복귀하셨거나 진도가 많이 밀렸나요?
+                <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+                오랜만에 복귀하셨거나 진도가 많이 밀렸나요?
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-500">
                 계획 재설정은 코멘터 검토가 필요해요. 희망하는 방식을 코멘터에게 요청하면, 검토 후 반영하거나 상담을 안내해 드려요.
@@ -447,7 +448,7 @@ export function ExecutionPlanTab({
                 onClick={() => handleQuickRequest(q.type, q.message)}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] active:scale-[0.97] disabled:opacity-50"
               >
-                <span className="text-base leading-none">{q.icon}</span>
+                {React.createElement(q.icon, { className: 'h-4 w-4 shrink-0 text-[#0071E3]' })}
                 <span className="min-w-0 leading-tight">{q.label}</span>
               </button>
             ))}

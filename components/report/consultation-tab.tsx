@@ -5,8 +5,19 @@ import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
-import { Armchair, Calendar, CalendarClock, ClipboardList, MessageSquare, Ticket, Trash2 } from 'lucide-react';
+import { Armchair, BedDouble, Calendar, CalendarClock, ClipboardList, CloudSun, MessageSquare, Moon, Sunrise, Thermometer, Ticket, Trash2, UserRound, type LucideIcon } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
+
+// 신청 화면 이모지 → lucide SVG 통일(앱 아이콘 시스템과 일관). 공유 LEAVE_TYPES 데이터는 건드리지 않는다.
+const LEAVE_TYPE_ICON: Record<LeaveType, LucideIcon> = {
+  morning: Sunrise,
+  afternoon: CloudSun,
+  night: Moon,
+  fullday: BedDouble,
+  personal_halfday: UserRound,
+  personal_fullday: UserRound,
+  sick: Thermometer,
+};
 import {
   COUPONS_PER_EXTRA_HALFDAY,
   LEAVE_TYPES,
@@ -249,6 +260,7 @@ export function ConsultationTab({
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {LEAVE_TYPE_ORDER.map((t) => {
                 const info = LEAVE_TYPES[t];
+                const LeaveIcon = LEAVE_TYPE_ICON[t];
                 const active = leaveForm.type === t;
                 return (
                   <button
@@ -262,7 +274,10 @@ export function ConsultationTab({
                     }))}
                     className={`flex flex-col items-start gap-0.5 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] shadow-sm' : 'border-slate-200 bg-white hover:border-[#0071E3]/40'}`}
                   >
-                    <span className="text-[12px] font-black text-slate-700">{info?.icon} {info?.label}</span>
+                    <span className="flex items-center gap-1.5 text-[12px] font-black text-slate-700">
+                      <LeaveIcon className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-[#0071E3]' : 'text-slate-400'}`} />
+                      {info?.label}
+                    </span>
                     <span className="text-[10px] font-bold text-slate-400">{info?.slot}</span>
                   </button>
                 );
@@ -374,7 +389,10 @@ export function ConsultationTab({
                   <div key={r.id} className={`rounded-2xl border border-slate-100 p-3 text-[11px] ${muted ? 'bg-slate-50/50' : 'bg-white'}`}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 flex-wrap items-center gap-1.5">
-                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-black text-slate-500 ${muted ? 'border border-slate-200 bg-white' : 'bg-slate-100'}`}>{LEAVE_TYPES[r.type]?.icon} {formatLeaveLabel(r.type, r.slot)}</span>
+                        <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-black text-slate-500 ${muted ? 'border border-slate-200 bg-white' : 'bg-slate-100'}`}>
+                          {(() => { const HIcon = LEAVE_TYPE_ICON[r.type as LeaveType]; return HIcon ? <HIcon className="h-3 w-3 shrink-0" /> : null; })()}
+                          {formatLeaveLabel(r.type, r.slot)}
+                        </span>
                         <span className="shrink-0 text-[10px] font-bold text-slate-500">{r.date}</span>
                         {leaveStatusBadge(r.status, r.adminReply, auto)}
                       </span>
