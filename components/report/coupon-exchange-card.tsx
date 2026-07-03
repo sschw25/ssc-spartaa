@@ -27,7 +27,7 @@ interface MissionsData {
 
 const REDEMPTION_STATUS: Record<Redemption['status'], { label: string; cls: string }> = {
   requested: { label: '승인 대기', cls: 'bg-amber-100 text-amber-700' },
-  pending: { label: '지급 대기', cls: 'bg-blue-100 text-blue-700' },
+  pending: { label: '지급 대기', cls: 'bg-[#0071E3]/10 text-[#0071E3]' },
   fulfilled: { label: '지급 완료', cls: 'bg-emerald-100 text-emerald-700' },
   rejected: { label: '반려', cls: 'bg-slate-200 text-slate-500' },
 };

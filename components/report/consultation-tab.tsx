@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
-import { Armchair, BedDouble, Calendar, CalendarClock, ClipboardList, CloudSun, MessageSquare, Moon, Sunrise, Thermometer, Ticket, Trash2, UserRound, type LucideIcon } from 'lucide-react';
+import { Armchair, BedDouble, Calendar, CalendarClock, ClipboardList, CloudSun, MessageSquare, Moon, Sunrise, Thermometer, Ticket, Trash2, UserRound, Zap, type LucideIcon } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
 
 // 신청 화면 이모지 → lucide SVG 통일(앱 아이콘 시스템과 일관). 공유 LEAVE_TYPES 데이터는 건드리지 않는다.
@@ -110,7 +110,8 @@ export function ConsultationTab({
       return (
         <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-700">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-          {autoApproved ? '⚡ 자동 승인' : '승인'}
+          {autoApproved && <Zap className="w-3 h-3" />}
+          {autoApproved ? '자동 승인' : '승인'}
         </span>
       );
     }
@@ -251,7 +252,7 @@ export function ConsultationTab({
               </div>
               <div className="rounded-2xl border border-slate-100 bg-white px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">쿠폰</p>
-                <p className="mt-0.5 text-sm font-black text-slate-700">🎟️ {leaveCoupons}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-sm font-black text-slate-700"><Ticket className="w-4 h-4" /> {leaveCoupons}</p>
               </div>
             </div>
             <p className="text-[10px] font-bold text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도 무관(영수증 밴드 증빙) · 반차 추가는 쿠폰 {COUPONS_PER_EXTRA_HALFDAY}개 필요</p>
@@ -329,7 +330,7 @@ export function ConsultationTab({
               {/* 안내/경고 */}
               {isSick && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[10px] font-semibold text-amber-800">
-                  🤒 병가는 월 한도와 무관하지만, <b>영수증/진단서를 밴드 채팅으로 반드시 증빙</b>해 주세요.
+                  <Thermometer className="mr-0.5 inline h-3 w-3 align-[-1.5px]" />병가는 월 한도와 무관하지만, <b>영수증/진단서를 밴드 채팅으로 반드시 증빙</b>해 주세요.
                 </div>
               )}
               {!isSick && overQuota && (

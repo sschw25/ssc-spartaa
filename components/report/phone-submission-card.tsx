@@ -163,8 +163,12 @@ export function PhoneSubmissionCard({ student, setStudent, todayDate }: PhoneSub
         </div>
       ) : showForm ? (
         <form onSubmit={handleSubmit} className="space-y-3">
-          <p className="text-xs font-black text-slate-700">
-            {pendingType === 'keep' ? '📱 소지 신청' : '🔒 임시보관함 신청'}
+          <p className="inline-flex items-center gap-1 text-xs font-black text-slate-700">
+            {pendingType === 'keep' ? (
+              <><Smartphone className="w-3.5 h-3.5" /> 소지 신청</>
+            ) : (
+              <><Lock className="w-3.5 h-3.5" /> 임시보관함 신청</>
+            )}
           </p>
           {pendingType === 'keep' && (
             <div className="space-y-1">

@@ -402,7 +402,7 @@ export function ExecutionPlanTab({
                 className="p-3.5 rounded-2xl border border-[#0071E3]/20 bg-white hover:bg-[#0071E3]/[0.02] text-left transition shadow-sm hover:border-[#0071E3]/40 disabled:opacity-50 group"
               >
                 <div className="text-[11px] font-black text-[#0071E3] flex items-center justify-between">
-                  <span>📅 목표 완료일 유지 요청 (추천)</span>
+                  <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> 목표 완료일 유지 요청 (추천)</span>
                   <span className="text-[9px] font-bold bg-[#0071E3]/10 px-1.5 py-0.5 rounded">{realignRequesting === 'keepTargetDate' ? '전송 중' : '기본값'}</span>
                 </div>
                 <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
@@ -416,8 +416,8 @@ export function ExecutionPlanTab({
                 onClick={() => requestRealign('keepPace')}
                 className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition shadow-sm hover:border-[#86868B]/40 disabled:opacity-50"
               >
-                <div className="text-[11px] font-black text-slate-800">
-                  🐢 학습 페이스 유지 요청 {realignRequesting === 'keepPace' && <span className="text-[9px] text-slate-400">(전송 중)</span>}
+                <div className="flex items-center gap-1 text-[11px] font-black text-slate-800">
+                  <Turtle className="w-3.5 h-3.5" /> 학습 페이스 유지 요청 {realignRequesting === 'keepPace' && <span className="text-[9px] text-slate-400">(전송 중)</span>}
                 </div>
                 <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
                   하루 학습 강도는 유지하는 대신, 남은 분량만큼 완료 목표일을 늦추는 방향으로 코멘터에게 요청합니다.
@@ -975,10 +975,10 @@ export function ExecutionPlanTab({
                             }`}
                           >
                             <div className="mb-1 flex items-center gap-1.5">
-                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-[#111827]'}`}>
+                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-[#1D1D1F]'}`}>
                                 {index + 1}
                               </span>
-                              <span className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-500">
+                              <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-500">
                                 {studyTimeLabels[entry.studyTime] || '미지정'}
                               </span>
                             </div>

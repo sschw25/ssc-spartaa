@@ -139,7 +139,7 @@ export function SubjectProgressTab({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case '계획보다 빠름':
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/20';
       case '계획대로 진행중':
       case '계획대로 진행':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
@@ -470,7 +470,7 @@ export function SubjectProgressTab({
                                         defaultValue={b.currentPage}
                                         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                         onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== b.currentPage) updateProgress('book', b.id, v); }}
-                                        className="w-14 rounded-md border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                        className="w-14 rounded-lg border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                                         aria-label="현재 페이지 입력"
                                       />
                                       <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
@@ -490,7 +490,7 @@ export function SubjectProgressTab({
                                       defaultValue={b.solvedQuestions || 0}
                                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                       onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== (b.solvedQuestions || 0)) updateBookSolvedQuestions(b.id, v); }}
-                                      className="w-12 rounded-md border border-dashed border-slate-300 bg-white px-1 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                      className="w-12 rounded-lg border border-dashed border-slate-300 bg-white px-1 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                                       aria-label="푼 문항 수 입력"
                                     />
                                     <span>문항</span>
@@ -606,7 +606,7 @@ export function SubjectProgressTab({
                                                  cancelPlanCompletion();
                                                }
                                              }}
-                                             className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
                                              aria-label="오늘 실제 학습량"
                                            />
                                            <span className="shrink-0 text-[9px] font-semibold text-slate-500">{unit}</span>
@@ -735,7 +735,7 @@ export function SubjectProgressTab({
                                       defaultValue={l.completedLectures}
                                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                       onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== l.completedLectures) updateProgress('lecture', l.id, v); }}
-                                      className="w-14 rounded-md border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                      className="w-14 rounded-lg border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                                       aria-label="수강 강수 입력"
                                     />
                                     <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
@@ -818,7 +818,7 @@ export function SubjectProgressTab({
                                                  cancelPlanCompletion();
                                                }
                                              }}
-                                             className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
                                              aria-label="오늘 실제 수강량"
                                            />
                                            <span className="shrink-0 text-[9px] font-semibold text-slate-500">{unit}</span>

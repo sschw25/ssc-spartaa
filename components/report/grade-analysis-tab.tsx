@@ -291,7 +291,7 @@ export function GradeAnalysisTab({
                   {[...student.grades].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(g => (
                     <div key={g.id} className="flex justify-between items-center text-[10px] border-b border-slate-100/50 pb-2">
                       <div className="min-w-0 flex items-center gap-1.5">
-                        <span className="font-extrabold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-md shrink-0">{g.subject}</span>
+                        <span className="font-extrabold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-lg shrink-0">{g.subject}</span>
                         <span className="text-slate-500 font-semibold truncate max-w-[80px]">{g.testName}</span>
                         {g.source === 'student' && <span className="shrink-0 text-[7px] font-black text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.5 rounded-full">직접</span>}
                       </div>

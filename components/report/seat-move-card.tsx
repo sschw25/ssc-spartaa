@@ -152,7 +152,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
           <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
             <Armchair className="h-3.5 w-3.5" /> 자리이동
           </div>
-          <h3 className="mt-2 text-lg font-black text-slate-900">자리이동 신청</h3>
+          <h3 className="mt-2 text-xl font-black text-slate-900">자리이동 신청</h3>
           <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
             배치도에서 빈자리를 골라 신청하면 학원 확인 후 좌석이 옮겨져요.
             {data?.mySeat != null && (

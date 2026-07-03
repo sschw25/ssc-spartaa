@@ -35,7 +35,7 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
     <div className="@container rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-6">
       <div className="flex items-center gap-2">
         <Clock className="w-5 h-5 text-[#0071E3]" />
-        <h3 className="text-base font-bold text-[#1D1D1F]">순공 시간</h3>
+        <h3 className="text-[15px] font-semibold text-[#1D1D1F]">순공 시간</h3>
       </div>
 
       {!hasAny ? (

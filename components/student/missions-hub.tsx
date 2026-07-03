@@ -478,7 +478,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           <div className="flex items-center justify-between gap-2">
             <h2 className="text-sm font-semibold text-slate-800">오늘 계획</h2>
             {entries.length > 0 && (
-              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-600">
+              <span className="rounded-full bg-[#0071E3]/10 px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
                 {completedCount}/{entries.length} 완료
               </span>
             )}

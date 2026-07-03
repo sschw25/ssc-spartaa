@@ -22,7 +22,7 @@ interface MissionsData {
 
 const periodLabel = (p: Mission['period']) => (p === 'weekly' ? '매주' : p === 'monthly' ? '매월' : p === 'daily' ? '매일' : 'OT');
 const periodCls = (p: Mission['period']) =>
-  p === 'weekly' ? 'bg-blue-50 text-blue-600'
+  p === 'weekly' ? 'bg-[#0071E3]/10 text-[#0071E3]'
   : p === 'monthly' ? 'bg-slate-100 text-slate-600'
   : p === 'daily' ? 'bg-emerald-50 text-emerald-600'
   : 'bg-slate-100 text-slate-600';

@@ -136,7 +136,7 @@ export default function StudentSignupPage() {
           </div>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#111827] md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#1D1D1F] md:text-5xl">
               학생 가입신청
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">

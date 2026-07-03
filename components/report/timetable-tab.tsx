@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, Calendar } from 'lucide-react';
+import { Clock, Calendar, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE } from '@/lib/academy-timetable';
@@ -171,11 +171,11 @@ export function TimetableTab({
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
                       <div className="flex items-center gap-1.5">
                         {periodNumLabel ? (
-                          <Badge className="bg-slate-100 hover:bg-slate-100 text-slate-700 text-[10px] font-black shrink-0 px-2 py-0.5 rounded-md border-0">
+                          <Badge className="bg-slate-100 hover:bg-slate-100 text-slate-700 text-[10px] font-black shrink-0 px-2 py-0.5 rounded-lg border-0">
                             {periodNumLabel}
                           </Badge>
                         ) : (
-                          <span className="text-[10px] font-bold text-slate-400">☕️</span>
+                          <Coffee className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                         )}
                         <span className="text-[11px] font-black text-slate-800">{period.label.split(':')[1]?.trim() || period.label}</span>
                       </div>
@@ -246,7 +246,7 @@ export function TimetableTab({
                   : isWeekend
                     ? 'bg-slate-50/80 border-slate-100'
                     : subjectsInDay.length > 0
-                      ? 'bg-white border-blue-100 hover:border-blue-200 hover:shadow-md'
+                      ? 'bg-white border-[#0071E3]/10 hover:border-[#0071E3]/20 hover:shadow-md'
                       : 'bg-slate-50/30 border-slate-100'
               }`}
             >
@@ -254,7 +254,7 @@ export function TimetableTab({
                 isToday ? 'text-[#0071E3]' : isWeekend ? 'text-slate-400' : 'text-slate-700'
               }`}>
                 {day.label}
-                {isToday && <span className="rounded-full bg-[#0071E3] px-1.5 py-[1px] text-[7px] font-black text-white">오늘</span>}
+                {isToday && <span className="rounded-full bg-[#0071E3] px-1.5 py-[1px] text-[11px] font-black text-white">오늘</span>}
               </h4>
               {subjectsInDay.length === 0 ? (
                 <p className="text-[10px] text-slate-300 font-bold mt-auto mb-1">휴식</p>
@@ -284,7 +284,7 @@ export function TimetableTab({
           const getSlotStyle = (key: string) => {
             switch(key) {
               case 'morning': return 'border-amber-100 bg-amber-50/10 hover:shadow-[0_8px_30px_rgba(245,158,11,0.04)]';
-              case 'afternoon': return 'border-blue-100 bg-blue-50/10 hover:shadow-[0_8px_30px_rgba(59,130,246,0.04)]';
+              case 'afternoon': return 'border-[#0071E3]/10 bg-[#0071E3]/[0.02] hover:shadow-[0_8px_30px_rgba(0,113,227,0.04)]';
               case 'night': return 'border-slate-200 bg-slate-50/20 hover:shadow-[0_8px_30px_rgba(100,116,139,0.05)]';
               default: return 'border-slate-100 bg-slate-50/10';
             }
@@ -311,7 +311,7 @@ export function TimetableTab({
                     <div key={subject.id} className="rounded-xl bg-white border border-slate-100/80 p-3 text-[10px] shadow-sm hover:shadow transition-all">
                       <div className="flex justify-between items-center mb-1.5">
                         <p className="font-extrabold text-slate-700">{subject.name}</p>
-                        <span className="text-[8px] text-slate-400 font-bold bg-slate-50 px-1.5 py-0.5 rounded-md border border-slate-100">
+                        <span className="text-[8px] text-slate-400 font-bold bg-slate-50 px-1.5 py-0.5 rounded-lg border border-slate-100">
                           {(subject.books || []).length + (subject.lectures || []).length}개 자료
                         </span>
                       </div>

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -328,7 +328,7 @@ export function HomeOverviewTab({
                   오늘의 학습 브리핑
                   <span className="ml-1.5 text-[11px] font-medium text-slate-400">· {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 발행</span>
                 </p>
-                <h1 className="mt-2 text-[24px] font-semibold leading-[1.18] tracking-tight text-slate-900 md:text-[34px] md:leading-[1.16]">
+                <h1 className="mt-2 text-2xl font-semibold leading-[1.18] tracking-tight text-slate-900 md:text-4xl md:leading-[1.16]">
                   {student.name}님, {timeGreeting} 👋
                   <span className="block text-[#0071E3]">
                     {currentBriefingPhrase}
@@ -765,10 +765,10 @@ export function HomeOverviewTab({
                         <label className="text-[13px] font-semibold text-slate-700">등원 시 휴대폰</label>
                         <div className="grid grid-cols-3 gap-2">
                           {([
-                            ['submitted', '제출완료', '🟢'],
-                            ['locker', '임시보관함', '📦'],
-                            ['off_hold', '전원끄고소지', '📴'],
-                          ] as Array<['submitted' | 'locker' | 'off_hold', string, string]>).map(([val, label, emoji]) => (
+                            ['submitted', '제출완료', Smartphone],
+                            ['locker', '임시보관함', Archive],
+                            ['off_hold', '전원끄고소지', PowerOff],
+                          ] as Array<['submitted' | 'locker' | 'off_hold', string, LucideIcon]>).map(([val, label, Icon]) => (
                             <button
                               key={val}
                               type="button"
@@ -779,7 +779,7 @@ export function HomeOverviewTab({
                                   : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
                               }`}
                             >
-                              <span className="block">{emoji}</span>
+                              <Icon className="mx-auto mb-0.5 h-4 w-4" />
                               {label}
                             </button>
                           ))}
@@ -837,7 +837,7 @@ export function HomeOverviewTab({
                 <div id="morning-checklist-card" className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
                   <div>
                     <div className="flex justify-between items-center">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁 ⚪</p>
+                      <p className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁 <Circle className="w-2.5 h-2.5" /></p>
                       <span className="text-[8px] font-bold text-slate-400">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                     
