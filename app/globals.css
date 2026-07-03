@@ -477,6 +477,38 @@ body:has(.admin-fluid-ui) {
   animation: scaleInUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* 스프링 press — 눌렀다 튕기는 애플식 촉감. active:scale 대신 이 클래스를 쓰면 릴리즈 시 미세 바운스.
+   transform 은 바운스 커브, 색은 부드럽게 — Tailwind transition-* 와 충돌 없게 색까지 함께 선언. */
+.press-spring {
+  transition:
+    transform 0.26s cubic-bezier(0.34, 1.4, 0.64, 1),
+    background-color 0.3s ease,
+    color 0.3s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.press-spring:active {
+  transform: scale(0.93);
+}
+@media (prefers-reduced-motion: reduce) {
+  .press-spring { transition: none; }
+  .press-spring:active { transform: none; }
+}
+
+/* 콘텐츠 카드 2단 그림자 — 주변광(넓고 옅게) + 직사광(가깝고 또렷)으로 애플식 부양감. */
+.card-lift {
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 8px 24px -8px rgba(15, 23, 42, 0.10);
+}
+
+/* View Transitions — 라우트 전환 크로스페이드(지원 브라우저만; 미지원은 자동 폴백). */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.32s;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
 /* 리스트 계단식 등장 (stagger) — 소비자가 style={{animationDelay}} 로 순번 지정.
    fill-mode both 로 딜레이 동안 from-state(opacity:0)를 유지해 "튀었다 사라짐" 없이 대기. */
 .animate-stagger-in {

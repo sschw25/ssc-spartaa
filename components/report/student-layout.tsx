@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { haptic } from '@/lib/haptics';
 import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { Student } from '@/lib/types/student';
 import { StudentNotification, StudentNotificationTone } from './notifications-section';
@@ -92,6 +93,22 @@ export function StudentLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notificationPanelOpen, setNotificationPanelOpen] = useState(false);
   const [quickNavActiveKey, setQuickNavActiveKey] = useState<string | null>(null);
+  // iOS 큰 제목 접힘 — 히어로가 스크롤로 사라지면 상단 컴팩트 타이틀을 띄운다.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        setScrolled(window.scrollY > 150);
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
 
   const truncateNotificationText = (value: string, max = 120) => {
     const normalized = value.replace(/\s+/g, ' ').trim();
@@ -207,6 +224,23 @@ export function StudentLayout({
                       setNotificationPanelOpen(false);
                     }}
                   />
+                )}
+              </AnimatePresence>
+
+              {/* iOS 큰 제목 접힘 — 스크롤 시 상단 중앙에 컴팩트 타이틀 */}
+              <AnimatePresence>
+                {scrolled && (
+                  <motion.div
+                    className="no-print glass-strong pointer-events-none fixed left-1/2 top-4 z-40 flex h-12 -translate-x-1/2 items-center rounded-full px-4"
+                    initial={{ opacity: 0, y: -10, scale: 0.94 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -10, scale: 0.94 }}
+                    transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  >
+                    <span className="max-w-[42vw] truncate text-[13px] font-black tracking-tight text-slate-900">
+                      {student.name}
+                    </span>
+                  </motion.div>
                 )}
               </AnimatePresence>
 
@@ -383,9 +417,9 @@ export function StudentLayout({
                       <button
                         key={item.key}
                         type="button"
-                        onClick={() => selectStudentTab(item.tabId, item.scrollTargetId, item.key)}
+                        onClick={() => { haptic('select'); selectStudentTab(item.tabId, item.scrollTargetId, item.key); }}
                         aria-current={active ? 'page' : undefined}
-                        className={`relative flex min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 transition-all duration-300 active:scale-[0.94] sm:min-w-[64px] sm:px-3.5 ${
+                        className={`press-spring relative flex min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 transition-colors duration-300 sm:min-w-[64px] sm:px-3.5 ${
                           active
                             ? 'bg-[#0071E3]/12 text-[#0071E3]'
                             : 'text-slate-500 hover:bg-black/[0.04] hover:text-slate-900'

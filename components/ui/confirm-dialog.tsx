@@ -25,6 +25,7 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
 } from '@/components/ui/alert-dialog';
+import { haptic } from '@/lib/haptics';
 
 export interface ConfirmOptions {
   title: string;
@@ -156,18 +157,18 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
 
             <AlertDialogFooter className="gap-2 sm:gap-2">
               <AlertDialogCancel
-                onClick={() => settle(cancelValue)}
-                className="h-11 rounded-2xl border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50"
+                onClick={() => { haptic('tap'); settle(cancelValue); }}
+                className="press-spring h-11 rounded-2xl border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50"
               >
                 {options?.cancelText || '취소'}
               </AlertDialogCancel>
               <AlertDialogAction
                 disabled={confirmDisabled}
-                onClick={() => settle(isPrompt ? inputValue : true)}
+                onClick={() => { haptic(danger ? 'warn' : 'success'); settle(isPrompt ? inputValue : true); }}
                 className={
                   danger
-                    ? 'h-11 rounded-2xl bg-red-500 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-40'
-                    : 'h-11 rounded-2xl bg-[#0071E3] text-sm font-bold text-white hover:bg-[#0077ED] disabled:opacity-40'
+                    ? 'press-spring h-11 rounded-2xl bg-red-500 text-sm font-bold text-white hover:bg-red-600 disabled:opacity-40'
+                    : 'press-spring h-11 rounded-2xl bg-[#0071E3] text-sm font-bold text-white hover:bg-[#0077ED] disabled:opacity-40'
                 }
               >
                 {options?.confirmText || '확인'}

@@ -27,6 +27,8 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { haptic } from '@/lib/haptics';
+import { navigateWithTransition } from '@/lib/view-transition';
 
 type SubItem = { icon: LucideIcon; label: string; href: string };
 type TabGroup = {
@@ -109,8 +111,9 @@ export function AdminGlassTabBar() {
     g.href ? pathname === g.href : !!g.items?.some((i) => pathname === i.href);
 
   const handleTab = (g: TabGroup) => {
+    haptic('select');
     if (g.href) {
-      router.push(g.href);
+      navigateWithTransition(() => router.push(g.href!));
       setOpenKey(null);
     } else {
       setOpenKey((k) => (k === g.key ? null : g.key));
@@ -164,12 +167,13 @@ export function AdminGlassTabBar() {
                     key={item.href}
                     type="button"
                     onClick={() => {
-                      router.push(item.href);
+                      haptic('select');
                       setOpenKey(null);
+                      navigateWithTransition(() => router.push(item.href));
                     }}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
-                      'flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-colors active:scale-[0.97]',
+                      'press-spring flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-colors',
                       active
                         ? 'bg-[#0071E3]/12 text-[#0071E3]'
                         : 'text-slate-600 hover:bg-black/[0.04] hover:text-slate-900'
@@ -199,7 +203,7 @@ export function AdminGlassTabBar() {
               aria-current={active ? 'page' : undefined}
               aria-expanded={group.items ? open : undefined}
               className={cn(
-                'flex min-w-[58px] flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 transition-all duration-300 active:scale-[0.94]',
+                'press-spring flex min-w-[58px] flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 transition-colors duration-300',
                 active || open
                   ? 'bg-[#0071E3]/12 text-[#0071E3]'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]'
