@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import { Student, LeaveType, ProposedGoal } from '@/lib/types/student';
+import type { Student, LeaveType, ProposedGoal, ThreadMessage } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
 import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
@@ -35,6 +35,7 @@ interface InboxItem {
   date: string;
   status: string;
   statusText: '접수중' | '처리중' | '완료';
+  needsAction: boolean;
   tone: TimelineTone;
   adminReply: string;
   createdAt: string;
@@ -47,6 +48,12 @@ const CATEGORY_TABS: { value: InboxCategory; label: string }[] = [
   { value: 'counsel', label: '학습 변경 (과목/진도)' },
   { value: 'facility', label: '시설 수리 (건의사항)' },
 ];
+
+const hasStudentReplyAfter = (thread: ThreadMessage[] | undefined, cutoff?: string) => {
+  if (!cutoff || !awaitingAdminReply(thread)) return false;
+  const last = thread?.[thread.length - 1];
+  return Boolean(last?.at && last.at > cutoff);
+};
 
 export default function AdminInboxPage() {
   const confirm = useConfirm();
@@ -195,17 +202,25 @@ export default function AdminInboxPage() {
         student.leaveRequests.forEach((r) => {
           let statusText: '접수중' | '처리중' | '완료' = '접수중';
           let tone: TimelineTone = 'amber';
+          let needsAction = r.status === 'pending' && !(r.adminReply || (r as any).acknowledgedAt);
           if (r.status === 'approved' || r.status === 'rejected') {
             statusText = '완료';
             tone = 'emerald';
+            needsAction = false;
           } else if (r.status === 'pending' && (r.adminReply || (r as any).acknowledgedAt)) {
             statusText = '처리중';
             tone = 'blue';
+            needsAction = false;
           }
-          // 학생이 답변에 재답변하면(스레드 마지막=학생) 처리 대상으로 재노출
-          if (awaitingAdminReply(r.thread)) {
+          // 학생이 답변에 재답변하면 처리 대상으로 재노출한다.
+          // 단, 이미 승인/반려한 건은 처리 시각 이후에 온 새 답변일 때만 다시 띄운다.
+          if (
+            (r.status === 'pending' && awaitingAdminReply(r.thread)) ||
+            ((r.status === 'approved' || r.status === 'rejected') && hasStudentReplyAfter(r.thread, r.reviewedAt))
+          ) {
             statusText = '처리중';
             tone = 'blue';
+            needsAction = true;
           }
 
           const isReappeal = !!r.reappealedAt && r.status === 'pending';
@@ -223,6 +238,7 @@ export default function AdminInboxPage() {
             date: r.date,
             status: r.status,
             statusText,
+            needsAction,
             tone,
             adminReply: r.adminReply || '',
             createdAt: r.reappealedAt || r.createdAt || r.date,
@@ -236,16 +252,23 @@ export default function AdminInboxPage() {
       requests.forEach((r) => {
         let statusText: '접수중' | '처리중' | '완료' = '접수중';
         let tone: TimelineTone = 'amber';
+        let needsAction = (r.status || 'pending') !== 'resolved' && !(r.adminReply || (r as any).acknowledgedAt);
         if (r.status === 'resolved') {
           statusText = '완료';
           tone = 'emerald';
+          needsAction = false;
         } else if (r.status === 'pending' && (r.adminReply || (r as any).acknowledgedAt)) {
           statusText = '처리중';
           tone = 'blue';
+          needsAction = false;
         }
-        if (awaitingAdminReply(r.thread)) {
+        if (
+          (r.status !== 'resolved' && awaitingAdminReply(r.thread)) ||
+          (r.status === 'resolved' && hasStudentReplyAfter(r.thread, r.resolvedAt))
+        ) {
           statusText = '처리중';
           tone = 'blue';
+          needsAction = true;
         }
 
         const category = (r.requestType === 'halfDay' || r.requestType === 'restPass') ? 'living' : 'counsel';
@@ -262,6 +285,7 @@ export default function AdminInboxPage() {
           date: r.date,
           status: r.status || 'pending',
           statusText,
+          needsAction,
           tone,
           adminReply: r.adminReply || '',
           createdAt: r.createdAt || r.date,
@@ -274,16 +298,23 @@ export default function AdminInboxPage() {
       suggestions.forEach((r) => {
         let statusText: '접수중' | '처리중' | '완료' = '접수중';
         let tone: TimelineTone = 'amber';
+        let needsAction = (r.status || 'pending') !== 'resolved' && !(r.adminReply || (r as any).acknowledgedAt);
         if (r.status === 'resolved') {
           statusText = '완료';
           tone = 'emerald';
+          needsAction = false;
         } else if (r.status === 'pending' && (r.adminReply || (r as any).acknowledgedAt)) {
           statusText = '처리중';
           tone = 'blue';
+          needsAction = false;
         }
-        if (awaitingAdminReply(r.thread)) {
+        if (
+          (r.status !== 'resolved' && awaitingAdminReply(r.thread)) ||
+          (r.status === 'resolved' && hasStudentReplyAfter(r.thread, r.resolvedAt))
+        ) {
           statusText = '처리중';
           tone = 'blue';
+          needsAction = true;
         }
 
         items.push({
@@ -298,6 +329,7 @@ export default function AdminInboxPage() {
           date: r.date,
           status: r.status || 'pending',
           statusText,
+          needsAction,
           tone,
           adminReply: r.adminReply || '',
           createdAt: r.createdAt || r.date,
@@ -321,6 +353,7 @@ export default function AdminInboxPage() {
           date: ev?.date || (e.updatedAt || '').slice(0, 10),
           status: 'pending',
           statusText: '접수중',
+          needsAction: true,
           tone: 'amber',
           adminReply: '',
           createdAt: e.updatedAt || '',
@@ -344,6 +377,7 @@ export default function AdminInboxPage() {
           date: ev?.date || (e.updatedAt || '').slice(0, 10),
           status: 'pending',
           statusText: '접수중',
+          needsAction: true,
           tone: 'amber',
           adminReply: '',
           createdAt: e.updatedAt || '',
@@ -366,6 +400,7 @@ export default function AdminInboxPage() {
             date: (rwd.createdAt || '').slice(0, 10),
             status: 'pending',
             statusText: '접수중',
+            needsAction: true,
             tone: 'amber',
             adminReply: '',
             createdAt: rwd.createdAt || '',
@@ -384,6 +419,7 @@ export default function AdminInboxPage() {
             date: (rwd.createdAt || '').slice(0, 10),
             status: 'pending',
             statusText: '접수중',
+            needsAction: true,
             tone: 'amber',
             adminReply: '',
             createdAt: rwd.createdAt || '',
@@ -408,6 +444,7 @@ export default function AdminInboxPage() {
             date: (r.createdAt || '').slice(0, 10),
             status: 'pending',
             statusText: '접수중',
+            needsAction: true,
             tone: 'amber',
             adminReply: '',
             createdAt: r.createdAt || '',
@@ -435,6 +472,7 @@ export default function AdminInboxPage() {
         date: (app.createdAt || '').slice(0, 10),
         status: 'pending',
         statusText: '접수중',
+        needsAction: true,
         tone: 'amber',
         adminReply: '',
         createdAt: app.createdAt || '',
@@ -451,7 +489,7 @@ export default function AdminInboxPage() {
     const q = searchQuery.trim().toLowerCase();
     return inboxItems.filter((item) => {
       if (activeCategory !== 'all' && item.category !== activeCategory) return false;
-      if (hideCompleted && item.tone === 'emerald') return false;
+      if (hideCompleted && !item.needsAction) return false;
       if (q) {
         const haystack = [
           item.studentName,
@@ -929,7 +967,7 @@ export default function AdminInboxPage() {
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              처리됨 제외
+              처리 필요만
             </button>
           </div>
 
