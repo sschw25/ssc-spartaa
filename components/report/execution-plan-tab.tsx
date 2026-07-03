@@ -41,6 +41,8 @@ type DailyPlanEntry = {
 type WeeklyDailyPlan = {
   weekNumber: number;
   rangeLabel: string;
+  startDate?: string;
+  endDate?: string;
   days: Array<{
     key: string;
     label: string;
@@ -335,9 +337,10 @@ export function ExecutionPlanTab({
     }
   };
 
+  // 시각 순서는 아래 각 블록의 order-* 클래스로 제어: 헤더→주간목표→주차계획→진도재조정요청→학습요청 (DOM 이동 없이 flex order)
   return (
-    <div id="execution-plan" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'execution-plan' ? '' : 'hidden print:block'}`}>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+    <div id="execution-plan" className={`scroll-mt-24 flex flex-col gap-5 print-card ${!isStudentReport || activeTab === 'execution-plan' ? '' : 'hidden print:block'}`}>
+      <div className="order-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[#0071E3]" />
@@ -354,7 +357,7 @@ export function ExecutionPlanTab({
 
       {/* 오래 쉬고 온 학생을 위한 진도 재조정 — 학생이 직접 실행하지 않고 코멘터에게 '요청'으로 전달 (#11) */}
       {isStudentReport && (
-        <div className="no-print rounded-3xl border border-amber-300 bg-amber-50/60 p-4 md:p-5 shadow-sm space-y-3">
+        <div className="order-4 no-print rounded-3xl border border-amber-300 bg-amber-50/60 p-4 md:p-5 shadow-sm space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h4 className="text-xs font-black text-amber-800 flex items-center gap-1.5">
@@ -426,7 +429,7 @@ export function ExecutionPlanTab({
 
       {/* 학생 변경 신청 (관리자에게) — 학생 본인만 노출. 학부모는 신청 권한이 없으므로 숨김 */}
       {isStudentReport && (
-      <div id="student-request-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+      <div id="student-request-panel" className="order-5 no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
         <div>
           <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
             <MessageSquare className="w-4 h-4" /> 학습 관련 요청
@@ -734,7 +737,7 @@ export function ExecutionPlanTab({
       )}
 
       {isStudentReport && deadlinePlanEntries.length > 0 && (
-        <section className="rounded-3xl border border-[#0071E3]/10 bg-white p-4 shadow-sm break-inside-avoid">
+        <section className="order-2 rounded-3xl border border-[#0071E3]/10 bg-white p-4 shadow-sm break-inside-avoid">
           <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
@@ -757,12 +760,13 @@ export function ExecutionPlanTab({
                 : 0;
               const remaining = Math.max(0, entry.targetAmount - entry.actualAmount);
               const recommend = entry.goal ? Math.min(remaining, Math.max(0, entry.goal.todayRecommend)) : 0;
-              const nextAmount = Math.min(entry.targetAmount, entry.actualAmount + recommend);
               const isSaving = deadlineSavingId === entry.id;
               const isEditing = deadlineEditId === entry.id;
-              // 오늘까지 했어야 할 누적(expectedAmount)을 채웠으면 '오늘치 완료'로 본다 —
-              // todayRecommend는 남은량÷남은일이라 오늘 몫을 채워도 계속 양수라서 판정에 못 쓴다.
-              const metToday = !!entry.goal && entry.goal.expectedAmount > 0 && entry.actualAmount >= entry.goal.expectedAmount;
+              // 예상목표치(오늘까지 했어야 할 누적) 대비 90% 이상 채우면 '오늘 완료'로 본다.
+              // '오늘 완료' 버튼은 누적을 예상목표치까지 채운다(todayRecommend 더하기 방식 폐기).
+              const todayTarget = entry.goal ? Math.min(entry.targetAmount, Math.round(entry.goal.expectedAmount)) : 0;
+              const metToday = !!entry.goal && entry.goal.expectedAmount > 0 && entry.actualAmount >= entry.goal.expectedAmount * 0.9;
+              const fillGap = Math.max(0, todayTarget - entry.actualAmount);
               const periodLabel = `${entry.startDate.slice(5).replace('-', '.')} ~ ${entry.endDate.slice(5).replace('-', '.')}`;
               const cardTone = entry.done
                 ? 'border-emerald-100 bg-emerald-50/40'
@@ -817,7 +821,7 @@ export function ExecutionPlanTab({
                         오늘 권장 <span className={metToday ? 'text-emerald-600' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${entry.unit}` : '없음'}</span>
                       </p>
                       <p className="rounded-xl bg-white px-2.5 py-1.5">
-                        오늘까지 <span className="text-slate-900">{entry.goal.expectedAmount}{entry.unit}</span>
+                        예상목표치 <span className="text-slate-900">{entry.goal.expectedAmount}{entry.unit}</span>
                       </p>
                     </div>
                   ) : (
@@ -834,15 +838,15 @@ export function ExecutionPlanTab({
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           오늘 완료
                         </span>
-                      ) : recommend > 0 ? (
+                      ) : fillGap > 0 ? (
                         <button
                           type="button"
                           disabled={isSaving}
-                          onClick={() => saveDeadlinePlanAmount(entry, nextAmount)}
+                          onClick={() => saveDeadlinePlanAmount(entry, todayTarget)}
                           className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0071E3] px-3 py-2 text-[11px] font-black text-white transition hover:bg-[#0077ED] active:scale-[0.97] disabled:opacity-40 sm:flex-none"
                         >
                           <CheckCircle2 className="h-3.5 w-3.5" />
-                          오늘 {recommend}{entry.unit} 완료
+                          오늘 완료
                         </button>
                       ) : null}
                       <button
@@ -852,7 +856,7 @@ export function ExecutionPlanTab({
                           setDeadlineEditAmount(entry.actualAmount);
                         }}
                         className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-500 transition hover:bg-slate-50 active:scale-[0.97] ${
-                          metToday || recommend <= 0 ? 'flex-1 sm:flex-none' : ''
+                          metToday || fillGap <= 0 ? 'flex-1 sm:flex-none' : ''
                         }`}
                       >
                         {metToday ? '수정 · 추가 입력' : '직접 입력'}
@@ -899,8 +903,13 @@ export function ExecutionPlanTab({
         </section>
       )}
 
-      <div className="space-y-5">
-        {weeklyDailyPlans.map((week) => (
+      <div className="order-3 space-y-5">
+        {weeklyDailyPlans.map((week) => {
+          // 그 주 날짜범위와 겹치는 주간목표(deadline) — 요일무관이라 주 전체에 걸친 가로 배너로 표시
+          const weekGoals = deadlinePlanEntries.filter(
+            (e) => !!week.startDate && !!week.endDate && e.startDate <= week.endDate && e.endDate >= week.startDate,
+          );
+          return (
           <div key={week.weekNumber} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm break-inside-avoid">
             <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
@@ -911,6 +920,26 @@ export function ExecutionPlanTab({
                 요일별 실행 순서
               </span>
             </div>
+
+            {weekGoals.length > 0 && (
+              <div className="mb-4 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#0071E3]">
+                  <Target className="h-3.5 w-3.5" />
+                  이번 주 주간목표
+                </p>
+                <div className="flex flex-col gap-1.5">
+                  {weekGoals.map((g) => (
+                    <div key={`wk_${week.weekNumber}_${g.id}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/80 px-3 py-2">
+                      <span className="text-[11px] font-black text-slate-900">{g.subject} · {g.title}</span>
+                      <span className="text-[10px] font-bold text-slate-400">{g.rangeText}</span>
+                      <span className="ml-auto shrink-0 rounded-full bg-[#0071E3]/10 px-2 py-0.5 text-[10px] font-black text-[#0071E3] tabular-nums">
+                        {g.actualAmount}/{g.targetAmount}{g.unit}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
               {week.days.map((day) => (
@@ -1047,7 +1076,8 @@ export function ExecutionPlanTab({
               ))}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

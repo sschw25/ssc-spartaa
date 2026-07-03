@@ -1386,6 +1386,8 @@ export function useReportState() {
       return {
         weekNumber: weekOffset + 1,
         rangeLabel: `${formatShortDate(start)} ~ ${formatShortDate(end)}`,
+        startDate: formatDateKey(start),
+        endDate: formatDateKey(end),
         days,
       };
     });

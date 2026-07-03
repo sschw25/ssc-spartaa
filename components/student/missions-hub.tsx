@@ -523,7 +523,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
               {deadlineGoals.map((goal) => {
                 const done = goal.targetAmount > 0 && goal.actualAmount >= goal.targetAmount;
                 // 오늘까지 했어야 할 누적(expectedAmount)을 채웠으면 오늘치 완료로 본다.
-                const metToday = !done && goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount;
+                const metToday = !done && goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount * 0.9;
                 const saving = savingDeadlineId === goal.id;
                 return (
                   <div
@@ -558,15 +558,15 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                         <span className="tabular-nums">{goal.actualAmount}/{goal.targetAmount}{goal.unit}</span>
                       </span>
                     </span>
-                    {!done && !metToday && goal.todayRecommend > 0 && (
+                    {!done && !metToday && goal.expectedAmount > 0 && (
                       <button
                         type="button"
-                        onClick={() => saveDeadlineProgress(goal, Math.min(goal.targetAmount, goal.actualAmount + Math.max(0, goal.todayRecommend)))}
+                        onClick={() => saveDeadlineProgress(goal, Math.min(goal.targetAmount, Math.round(goal.expectedAmount)))}
                         disabled={saving}
                         className="shrink-0 inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition active:scale-95 disabled:opacity-40 break-keep"
                       >
                         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                        오늘 {goal.todayRecommend}{goal.unit} 완료
+                        오늘 완료
                       </button>
                     )}
                   </div>
@@ -606,7 +606,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                   )}
                 </div>
                 <p className="mt-1.5 text-[11px] font-semibold text-slate-600 tabular-nums">
-                  진행 {deadlineSummary.actualMinutes}분 / 오늘 기대 {deadlineSummary.expectedMinutes}분
+                  진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold break-keep">
                   {deadlineSummary.metToday && deadlineSummary.aheadDays > 0 && (
@@ -668,12 +668,12 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                       <div
                         className="absolute top-[-2px] h-3.5 w-0.5 rounded bg-slate-500"
                         style={{ left: `${Math.min(100, expectedPct)}%` }}
-                        title={`오늘 기대 ${expectedPct}%`}
+                        title={`예상목표치 ${expectedPct}%`}
                       />
                     </div>
                     <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-slate-400 tabular-nums">
                       <span>{goal.actualAmount}/{goal.targetAmount}{goal.unit} ({actualPct}%)</span>
-                      <span>오늘 기대 {expectedPct}%</span>
+                      <span>예상목표치 {expectedPct}%</span>
                     </div>
 
                     {goal.todayRecommend > 0 && !done && (
@@ -730,9 +730,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                 return (
                   <div
                     key={rec.key}
-                    className={`flex items-start gap-3 rounded-lg border px-3.5 py-3 ${
-                      celebrate ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200/70 bg-amber-50'
-                    }`}
+                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3.5 py-3"
                   >
                     <span
                       className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
