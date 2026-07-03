@@ -10,7 +10,12 @@ export type MissionId =
   | 'weekly_top_rank'    // 주간 순공 상위 N명
   | 'ot_attendance'      // OT 참여 (이벤트 기반 — 참여 처리 시 즉시 지급)
   | 'daily_pomodoro'     // 하루 뽀모도로 N세션 (일일 — 달성 즉시 지급)
-  | 'punctual_checkin';  // 지각 없이 정시 등원 (일일 — 달성 즉시 지급)
+  | 'punctual_checkin'   // 지각 없이 정시 등원 (일일 — 달성 즉시 지급)
+  | 'weekly_plan_completion' // 주간 계획 실행률
+  | 'phone_focus_week'       // 주간 휴대폰 제출/보관 루틴
+  | 'weekly_growth'          // 전주 대비 순공 성장
+  | 'deadline_zero_overdue'  // 기간 목표 지연 0건
+  | 'mock_review_complete';  // 모의고사 오답분석/보완계획 제출
 
 export type MissionPeriod = 'weekly' | 'monthly' | 'event' | 'daily';
 
@@ -24,6 +29,11 @@ export interface MissionConfig {
   topN?: number;             // weekly_top_rank: 상위 몇 명까지 지급
   pomodoroSessions?: number; // daily_pomodoro: 하루 필요 세션 수
   checkinByHour?: number;    // punctual_checkin: 등원 마감 시각(시)
+  planCompletionRate?: number; // weekly_plan_completion: 필요 실행률(%)
+  phoneFocusDays?: number;     // phone_focus_week: 필요 일수
+  growthPercent?: number;      // weekly_growth: 전주 대비 성장률(%)
+  growthMinHours?: number;     // weekly_growth: 이번 주 최소 순공 시간
+  mockReviewMinChars?: number; // mock_review_complete: 각 입력란 최소 글자 수
 }
 
 export interface MissionMeta {
@@ -92,10 +102,65 @@ export const MISSION_META: Record<MissionId, MissionMeta> = {
     describe: (c) => `지각 없이 ${c.checkinByHour ?? 11}시 이전에 등원하면 쿠폰 ${c.coupons}장을 지급합니다. (하루 1회)`,
     params: [{ key: 'checkinByHour', label: '등원 마감 시각', unit: '시', min: 6, max: 12 }],
   },
+  weekly_plan_completion: {
+    id: 'weekly_plan_completion',
+    name: '주간 계획 실행률',
+    period: 'weekly',
+    settleHint: '매주 정산하세요. 이번 주 배정된 일일 계획의 완료율로 판정합니다.',
+    describe: (c) => `이번 주 배정된 교재·인강 일일 계획을 ${c.planCompletionRate ?? 85}% 이상 완료하면 쿠폰 ${c.coupons}장을 지급합니다.`,
+    params: [{ key: 'planCompletionRate', label: '필요 실행률', unit: '%', min: 50, max: 100 }],
+  },
+  phone_focus_week: {
+    id: 'phone_focus_week',
+    name: '휴대폰 몰입 루틴',
+    period: 'weekly',
+    settleHint: '매주 정산하세요. 아침 자가 점검표의 휴대폰 제출/임시보관 기록으로 판정합니다.',
+    describe: (c) => `이번 주 휴대폰을 제출하거나 임시보관함에 맡긴 날이 ${c.phoneFocusDays ?? 5}일 이상이면 쿠폰 ${c.coupons}장을 지급합니다.`,
+    params: [{ key: 'phoneFocusDays', label: '필요 일수', unit: '일', min: 1, max: 6 }],
+  },
+  weekly_growth: {
+    id: 'weekly_growth',
+    name: '전주 대비 순공 성장',
+    period: 'weekly',
+    settleHint: '매주 정산하세요. 주간 순공 랭킹과 달리 전주 대비 성장률로 판정합니다.',
+    describe: (c) =>
+      `이번 주 순공이 ${c.growthMinHours ?? 20}시간 이상이고 지난주보다 ${c.growthPercent ?? 15}% 이상 늘면 쿠폰 ${c.coupons}장을 지급합니다.`,
+    params: [
+      { key: 'growthPercent', label: '성장률', unit: '%', min: 5, max: 100 },
+      { key: 'growthMinHours', label: '최소 순공', unit: '시간', min: 1, max: 80 },
+    ],
+  },
+  deadline_zero_overdue: {
+    id: 'deadline_zero_overdue',
+    name: '기간 목표 지연 0건',
+    period: 'weekly',
+    settleHint: '매주 정산하세요. 기간 목표가 1개 이상 있고 지연 위험이 0건이면 지급합니다.',
+    describe: (c) => `이번 주 기간 목표가 1개 이상이고 지연 위험이 0건이면 쿠폰 ${c.coupons}장을 지급합니다.`,
+    params: [],
+  },
+  mock_review_complete: {
+    id: 'mock_review_complete',
+    name: '모의고사 오답분석 제출',
+    period: 'weekly',
+    settleHint: '매주 정산하세요. 학생 미션 허브에 제출한 모의고사 오답분석/보완계획으로 판정합니다.',
+    describe: (c) =>
+      `이번 주 모의고사 오답분석과 보완계획을 각각 ${c.mockReviewMinChars ?? 10}자 이상 제출하면 쿠폰 ${c.coupons}장을 지급합니다.`,
+    params: [{ key: 'mockReviewMinChars', label: '최소 글자 수', unit: '자', min: 5, max: 100 }],
+  },
 };
 
 export const MISSION_ORDER: MissionId[] = [
-  'monthly_no_penalty', 'weekend_study', 'weekly_top_rank', 'ot_attendance', 'daily_pomodoro', 'punctual_checkin',
+  'monthly_no_penalty',
+  'weekend_study',
+  'weekly_top_rank',
+  'ot_attendance',
+  'daily_pomodoro',
+  'punctual_checkin',
+  'weekly_plan_completion',
+  'phone_focus_week',
+  'weekly_growth',
+  'deadline_zero_overdue',
+  'mock_review_complete',
 ];
 
 export const DEFAULT_MISSION_CONFIG: Record<MissionId, MissionConfig> = {
@@ -105,6 +170,11 @@ export const DEFAULT_MISSION_CONFIG: Record<MissionId, MissionConfig> = {
   ot_attendance: { id: 'ot_attendance', enabled: true, coupons: 1 },
   daily_pomodoro: { id: 'daily_pomodoro', enabled: true, coupons: 1, pomodoroSessions: 2 },
   punctual_checkin: { id: 'punctual_checkin', enabled: true, coupons: 1, checkinByHour: 11 },
+  weekly_plan_completion: { id: 'weekly_plan_completion', enabled: true, coupons: 1, planCompletionRate: 85 },
+  phone_focus_week: { id: 'phone_focus_week', enabled: true, coupons: 1, phoneFocusDays: 5 },
+  weekly_growth: { id: 'weekly_growth', enabled: true, coupons: 1, growthPercent: 15, growthMinHours: 20 },
+  deadline_zero_overdue: { id: 'deadline_zero_overdue', enabled: true, coupons: 1 },
+  mock_review_complete: { id: 'mock_review_complete', enabled: true, coupons: 1, mockReviewMinChars: 10 },
 };
 
 /** 저장된 부분 설정을 기본값과 병합해 항상 완전한 설정을 반환 (누락 키 안전) */

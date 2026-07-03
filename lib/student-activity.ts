@@ -20,6 +20,14 @@ export type SpecialNoteEnvelope = {
   pomodoro_minutes?: Record<string, number>;
   pomodoro_distractions?: Record<string, number>; // 날짜별 집중 이탈(알트탭/창전환) 횟수
   daily_checklist?: Record<string, DailyChecklistEntry>;
+  mock_reviews?: Array<{
+    id: string;
+    testName: string;
+    testDate: string;
+    wrongNotes: string;
+    actionPlan: string;
+    submittedAt: string;
+  }>;
   dismissed_notifications?: string[];
   rewards_log?: unknown[];
   [key: string]: unknown;
@@ -75,18 +83,38 @@ function copyStringArray(value: unknown): string[] | undefined {
   return output.length > 0 ? output : undefined;
 }
 
+function copyMockReviews(value: unknown): SpecialNoteEnvelope['mock_reviews'] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const output = value.flatMap((raw) => {
+    if (!raw || typeof raw !== 'object') return [];
+    const item = raw as Record<string, unknown>;
+    const review = {
+      id: typeof item.id === 'string' ? item.id : '',
+      testName: typeof item.testName === 'string' ? item.testName : '',
+      testDate: typeof item.testDate === 'string' ? item.testDate : '',
+      wrongNotes: typeof item.wrongNotes === 'string' ? item.wrongNotes : '',
+      actionPlan: typeof item.actionPlan === 'string' ? item.actionPlan : '',
+      submittedAt: typeof item.submittedAt === 'string' ? item.submittedAt : '',
+    };
+    return review.id && review.testName && review.testDate && review.submittedAt ? [review] : [];
+  });
+  return output.length > 0 ? output : undefined;
+}
+
 function buildClientNote(note: SpecialNoteEnvelope): string | undefined {
   const clientNote: SpecialNoteEnvelope = {};
   const pomodoroSessions = copyNumberRecord(note.pomodoro_sessions);
   const pomodoroMinutes = copyNumberRecord(note.pomodoro_minutes);
   const pomodoroDistractions = copyNumberRecord(note.pomodoro_distractions);
   const dailyChecklist = copyChecklistRecord(note.daily_checklist);
+  const mockReviews = copyMockReviews(note.mock_reviews);
   const dismissedNotifications = copyStringArray(note.dismissed_notifications);
 
   if (pomodoroSessions) clientNote.pomodoro_sessions = pomodoroSessions;
   if (pomodoroMinutes) clientNote.pomodoro_minutes = pomodoroMinutes;
   if (pomodoroDistractions) clientNote.pomodoro_distractions = pomodoroDistractions;
   if (dailyChecklist) clientNote.daily_checklist = dailyChecklist;
+  if (mockReviews) clientNote.mock_reviews = mockReviews;
   if (dismissedNotifications) clientNote.dismissed_notifications = dismissedNotifications;
 
   return Object.keys(clientNote).length > 0 ? JSON.stringify(clientNote) : undefined;
@@ -103,7 +131,7 @@ export function serializeClientActivityNote(specialNote?: string | null): string
 // student_state 가 비어있던 기존 학생도 손실 없이 점진 이관된다.
 type StudentLike = { specialNote?: string | null; studentState?: Record<string, unknown> | null };
 const ACTIVITY_STATE_KEYS = [
-  'pomodoro_sessions', 'pomodoro_minutes', 'daily_checklist', 'dismissed_notifications', 'rewards_log',
+  'pomodoro_sessions', 'pomodoro_minutes', 'pomodoro_distractions', 'daily_checklist', 'mock_reviews', 'dismissed_notifications', 'rewards_log',
 ];
 
 export function readActivityEnvelope(student: StudentLike): SpecialNoteEnvelope {

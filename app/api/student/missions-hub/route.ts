@@ -9,6 +9,7 @@ import { computeHealthScore, DEFAULT_HEALTH_WEIGHTS, type HealthWeights } from '
 import { buildMissionRecommendations } from '@/lib/mission-recommendations';
 import { buildUpcomingSchedule } from '@/lib/upcoming-schedule';
 import { deriveDeadlineGoals } from '@/lib/deadline-goals';
+import { getMockReviews } from '@/lib/mission-metrics';
 import type { DetailedPlan } from '@/lib/types/student';
 
 const HEALTH_WEIGHTS_KEY = 'health_score_weights';
@@ -146,9 +147,14 @@ export async function GET() {
 
   // 6) 기간 목표(모드 B) — deadline plan 을 분 정규화로 집계(자료별 위험 경보 + 오늘 요약).
   const { deadlineGoals, deadlineSummary } = deriveDeadlineGoals(student, now, todayKey);
+  const mockReviews = getMockReviews(student)
+    .slice()
+    .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
+    .slice(0, 3);
 
   return NextResponse.json({
     success: true,
+    todayKey,
     todayPlanEntries,
     checklist,
     streak,
@@ -158,5 +164,6 @@ export async function GET() {
     leaveCoupons,
     deadlineGoals,
     deadlineSummary,
+    mockReviews,
   });
 }

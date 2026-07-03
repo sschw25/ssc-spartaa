@@ -10,6 +10,13 @@ import {
   MISSION_META,
   normalizeMissionConfig,
 } from './missions';
+import {
+  addDateDays,
+  getDeadlineZeroOverdueStats,
+  getMockReviewStats,
+  getPhoneFocusStats,
+  getWeeklyPlanCompletionStats,
+} from './mission-metrics';
 import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
 
 const MISSION_CONFIG_KEY = 'mission_config';
@@ -82,6 +89,8 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   const config = await getActiveMissionConfig();
   const { todayStr, weekStart, monthStart } = getPeriodBounds(opts.now);
   const weekKey = weekStart;             // 주 시작일(YYYY-MM-DD)
+  const previousWeekStart = addDateDays(weekStart, -7);
+  const previousWeekEnd = addDateDays(weekStart, -1);
 
   // 월간 미션 평가 구간 (monthOffset 적용)
   let monthKey: string;
@@ -109,6 +118,11 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
     ot_attendance: 0,    // 이벤트 기반 — settle 에서 지급하지 않음(참여 처리 시 즉시 지급)
     daily_pomodoro: 0,   // 일일 — 뽀모도로 완료 시 즉시 지급(rewards-service)
     punctual_checkin: 0, // 일일 — 등원 시 즉시 지급(rewards-service)
+    weekly_plan_completion: 0,
+    phone_focus_week: 0,
+    weekly_growth: 0,
+    deadline_zero_overdue: 0,
+    mock_review_complete: 0,
   };
   const skipped: string[] = [];
 
@@ -117,10 +131,15 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
 
   // 세션 기반 데이터 (supabase 전용)
   let weekMin: Record<string, number> = {};
+  let previousWeekMin: Record<string, number> = {};
   const monthDailyByStudent = new Map<string, Map<string, number>>(); // studentId -> (date -> minutes)
   if (sessionsAvailable) {
     if (runWeekly && config.weekly_top_rank.enabled) {
       weekMin = await getStudyMinutesByStudent(weekStart, todayStr);
+    }
+    if (runWeekly && config.weekly_growth.enabled) {
+      if (Object.keys(weekMin).length === 0) weekMin = await getStudyMinutesByStudent(weekStart, todayStr);
+      previousWeekMin = await getStudyMinutesByStudent(previousWeekStart, previousWeekEnd);
     }
     if (runMonthly && config.weekend_study.enabled) {
       const monthSessions = await getSessionsInRange(monthRangeStart, monthRangeEnd);
@@ -134,6 +153,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   } else {
     if (runMonthly && config.weekend_study.enabled) skipped.push('주말 집중 학습: 출결(Supabase) 미설정으로 건너뜀');
     if (runWeekly && config.weekly_top_rank.enabled) skipped.push('주간 순공 랭킹: 출결(Supabase) 미설정으로 건너뜀');
+    if (runWeekly && config.weekly_growth.enabled) skipped.push('전주 대비 순공 성장: 출결(Supabase) 미설정으로 건너뜀');
   }
 
   // 지급 대상 결정 — 학생ID -> [{missionId, periodKey, coupons}]
@@ -178,6 +198,58 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
       .slice(0, topN)
       .map(([sid]) => sid);
     for (const sid of ranked) addGrant(sid, 'weekly_top_rank', weekKey, config.weekly_top_rank.coupons);
+  }
+
+  // 4) 주간 계획 실행률
+  if (runWeekly && config.weekly_plan_completion.enabled) {
+    const needRate = (config.weekly_plan_completion.planCompletionRate ?? 85) / 100;
+    for (const s of students) {
+      const stats = getWeeklyPlanCompletionStats(s, weekStart, todayStr);
+      if (stats.expected > 0 && stats.rate !== null && stats.rate >= needRate) {
+        addGrant(s.id, 'weekly_plan_completion', weekKey, config.weekly_plan_completion.coupons);
+      }
+    }
+  }
+
+  // 5) 휴대폰 제출/보관 루틴
+  if (runWeekly && config.phone_focus_week.enabled) {
+    const needDays = config.phone_focus_week.phoneFocusDays ?? 5;
+    for (const s of students) {
+      const stats = getPhoneFocusStats(s, weekStart, todayStr);
+      if (stats.count >= needDays) addGrant(s.id, 'phone_focus_week', weekKey, config.phone_focus_week.coupons);
+    }
+  }
+
+  // 6) 전주 대비 순공 성장
+  if (runWeekly && config.weekly_growth.enabled && sessionsAvailable) {
+    const needGrowth = (config.weekly_growth.growthPercent ?? 15) / 100;
+    const minCurrent = (config.weekly_growth.growthMinHours ?? 20) * 60;
+    for (const s of students) {
+      const current = weekMin[s.id] || 0;
+      const previous = previousWeekMin[s.id] || 0;
+      if (current < minCurrent || previous <= 0) continue;
+      if ((current - previous) / previous >= needGrowth) {
+        addGrant(s.id, 'weekly_growth', weekKey, config.weekly_growth.coupons);
+      }
+    }
+  }
+
+  // 7) 기간 목표 지연 0건
+  if (runWeekly && config.deadline_zero_overdue.enabled) {
+    const today = opts.now ?? new Date();
+    for (const s of students) {
+      const stats = getDeadlineZeroOverdueStats(s, today, todayStr);
+      if (stats.achieved) addGrant(s.id, 'deadline_zero_overdue', weekKey, config.deadline_zero_overdue.coupons);
+    }
+  }
+
+  // 8) 모의고사 오답분석/보완계획 제출
+  if (runWeekly && config.mock_review_complete.enabled) {
+    const minChars = config.mock_review_complete.mockReviewMinChars ?? 10;
+    for (const s of students) {
+      const stats = getMockReviewStats(s, weekStart, todayStr, minChars);
+      if (stats.count > 0) addGrant(s.id, 'mock_review_complete', weekKey, config.mock_review_complete.coupons);
+    }
   }
 
   // 지급 적용 (멱등) — 받을 게 있는 학생만, 학생별로 fresh 재조회 후 낙관적 잠금 저장.

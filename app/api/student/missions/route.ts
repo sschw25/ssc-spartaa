@@ -5,6 +5,13 @@ import { getActiveMissionConfig } from '@/lib/mission-engine';
 import { readActivityEnvelope } from '@/lib/student-activity';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { MISSION_ORDER, MISSION_META, type MissionId } from '@/lib/missions';
+import {
+  addDateDays,
+  getDeadlineZeroOverdueStats,
+  getMockReviewStats,
+  getPhoneFocusStats,
+  getWeeklyPlanCompletionStats,
+} from '@/lib/mission-metrics';
 import { COUPONS_PER_EXTRA_HALFDAY, REWARD_CATALOG } from '@/lib/leave';
 
 const weekdayOfYmd = (ymd: string) => new Date(`${ymd}T12:00:00Z`).getUTCDay(); // 0=일 6=토
@@ -31,6 +38,8 @@ export async function GET() {
 
   const { todayStr, weekStart, monthStart } = getPeriodBounds();
   const monthKey = monthStart.slice(0, 7);
+  const previousWeekStart = addDateDays(weekStart, -7);
+  const previousWeekEnd = addDateDays(weekStart, -1);
 
   // 미션별 현재 기간 키 (적립 시 사용한 date 키와 일치)
   const periodKeyOf = (id: MissionId): string | null => {
@@ -52,11 +61,16 @@ export async function GET() {
     .filter((p) => p.type === 'penalty' && (p.date || '').startsWith(monthKey))
     .reduce((sum, p) => sum + (p.points || 0), 0);
   const todayPomodoro = note.pomodoro_sessions?.[todayStr] || 0;
+  const weeklyPlanStats = getWeeklyPlanCompletionStats(student, weekStart, todayStr);
+  const phoneFocusStats = getPhoneFocusStats(student, weekStart, todayStr);
+  const deadlineStats = getDeadlineZeroOverdueStats(student, new Date(), todayStr);
+  const mockReviewStats = getMockReviewStats(student, weekStart, todayStr, config.mock_review_complete.mockReviewMinChars ?? 10);
 
   // 세션 기반 진행도 (주말 집중 / 주간 순공 랭킹) — 활성 미션일 때만 조회
   let weekendHits = 0;
   let weeklyMinutes = 0;
   let weeklyRank: number | null = null;
+  let previousWeeklyMinutes = 0;
   try {
     if (config.weekend_study.enabled) {
       const needMin = (config.weekend_study.weekendHours ?? 3) * 60;
@@ -71,12 +85,16 @@ export async function GET() {
         if ((dow === 0 || dow === 6) && min >= needMin) weekendHits++;
       }
     }
-    if (config.weekly_top_rank.enabled) {
-      const weekMin = await getStudyMinutesByStudent(weekStart);
+    if (config.weekly_top_rank.enabled || config.weekly_growth.enabled) {
+      const weekMin = await getStudyMinutesByStudent(weekStart, todayStr);
       weeklyMinutes = weekMin[studentId] || 0;
-      if (weeklyMinutes > 0) {
+      if (config.weekly_top_rank.enabled && weeklyMinutes > 0) {
         const ranked = Object.values(weekMin).filter((m) => m > 0).sort((a, b) => b - a);
         weeklyRank = ranked.indexOf(weeklyMinutes) + 1; // 동점이면 상위 등수
+      }
+      if (config.weekly_growth.enabled) {
+        const prevMin = await getStudyMinutesByStudent(previousWeekStart, previousWeekEnd);
+        previousWeeklyMinutes = prevMin[studentId] || 0;
       }
     }
   } catch { /* 세션 백엔드 미설정 등 — 진행도 생략 */ }
@@ -93,6 +111,28 @@ export async function GET() {
       case 'weekly_top_rank':
         if (weeklyMinutes <= 0) return '이번 주 순공 기록 없음';
         return `이번 주 순공 ${fmtMin(weeklyMinutes)} · 현재 ${weeklyRank}등 (상위 ${c.topN ?? 3}명 지급)`;
+      case 'weekly_plan_completion': {
+        const need = c.planCompletionRate ?? 85;
+        if (weeklyPlanStats.expected <= 0 || weeklyPlanStats.rate === null) return '이번 주 배정된 일일 계획 없음';
+        return `이번 주 계획 ${weeklyPlanStats.completed}/${weeklyPlanStats.expected}개 완료 · ${Math.round(weeklyPlanStats.rate * 100)}%/${need}%`;
+      }
+      case 'phone_focus_week':
+        return `이번 주 휴대폰 제출/보관 ${phoneFocusStats.count}/${c.phoneFocusDays ?? 5}일`;
+      case 'weekly_growth': {
+        const needHours = c.growthMinHours ?? 20;
+        const needGrowth = c.growthPercent ?? 15;
+        if (weeklyMinutes <= 0) return `이번 주 순공 기록 없음 · 최소 ${needHours}시간 필요`;
+        if (previousWeeklyMinutes <= 0) return `이번 주 ${fmtMin(weeklyMinutes)} · 지난주 기록이 있어야 성장률 계산 가능`;
+        const growth = ((weeklyMinutes - previousWeeklyMinutes) / previousWeeklyMinutes) * 100;
+        return `이번 주 ${fmtMin(weeklyMinutes)} · 전주 대비 ${Math.round(growth)}%/${needGrowth}% · 최소 ${needHours}시간`;
+      }
+      case 'deadline_zero_overdue':
+        if (deadlineStats.activeCount <= 0) return '진행 중인 기간 목표 없음';
+        return `기간 목표 ${deadlineStats.activeCount}개 중 지연 위험 ${deadlineStats.riskCount}건`;
+      case 'mock_review_complete':
+        return mockReviewStats.count > 0
+          ? `이번 주 오답분석 ${mockReviewStats.count}건 제출`
+          : `이번 주 오답분석 제출 전 · 각 항목 ${c.mockReviewMinChars ?? 10}자 이상`;
       default:
         return null;
     }
