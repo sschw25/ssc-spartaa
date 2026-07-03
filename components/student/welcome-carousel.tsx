@@ -23,7 +23,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
   const stepContent: Record<WelcomeStepId, { title: string; body: string }> = {
     welcome: { title: `${name}님, 환영해요!`, body: `${getCampusLabel(campus)} 센터${enrollStartDate ? ` · 이용 시작일 ${enrollStartDate}` : ''}. SSC스파르타와 함께 시작해요.` },
     attendance: { title: '출결은 QR로', body: '입구 QR을 본인 로그인으로 스캔해 등원/하원을 찍어요. 순공 시간이 자동 기록돼요.' },
-    report: { title: '내 리포트', body: '진도·성적·순공 시간·랭킹을 여기서 확인해요. 매주 성적도 입력해요.' },
+    report: { title: '학생 홈', body: '진도·성적·순공 시간·랭킹을 여기서 확인해요. 매주 성적도 입력해요.' },
     requests: { title: '신청과 소통', body: '휴가/반차·상담 예약을 신청하고, 메시지로 담당 코멘터와 소통해요.' },
     meal: { title: '도시락 신청', body: '주간 도시락을 미리 신청할 수 있어요. 마감 시간을 확인하세요.' },
     coupon: { title: '미션과 쿠폰', body: '미션을 달성하면 쿠폰을 받고, 반차권·상품 등으로 교환할 수 있어요.' },

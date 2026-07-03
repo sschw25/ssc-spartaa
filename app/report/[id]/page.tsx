@@ -356,7 +356,7 @@ function StudentReportInner() {
       <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] flex flex-col items-center justify-center font-sans gap-5">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-9 h-9 text-[#0071E3] animate-spin" />
-          <p className="text-xs text-[#86868B] font-medium tracking-tight">결과 리포트 카드 불러오는 중...</p>
+          <p className="text-xs text-[#86868B] font-medium tracking-tight">불러오는 중...</p>
         </div>
         <div className="w-64 space-y-2.5 mt-2">
           {[100, 80, 90].map((w, i) => (
@@ -710,7 +710,9 @@ function StudentReportInner() {
 
       {/* 하단 카피라이트 */}
       <div className="no-print text-center text-[10px] text-slate-400 pb-8">
-        이 결과 브리핑 리포트는 SSC 스파르타 관리형 학습센터의 공식 학원 관리 솔루션을 사용하여 실시간으로 보안 출력되었습니다.
+        {isStudentReport
+          ? '이 학생 홈은 SSC 스파르타 관리형 학습센터의 공식 학원 관리 솔루션으로 실시간 제공됩니다.'
+          : '이 결과 브리핑 리포트는 SSC 스파르타 관리형 학습센터의 공식 학원 관리 솔루션을 사용하여 실시간으로 보안 출력되었습니다.'}
       </div>
     </StudentLayout>
   );

@@ -280,7 +280,7 @@ export function HomeOverviewTab({
             코멘터 특별 퀘스트
           </h3>
           <span className="text-[10px] text-[#0071E3]/80 font-bold bg-[#0071E3]/5 px-2.5 py-1 rounded-full">
-            완료 체크 시 리포트에 실시간 반영
+            완료 체크 시 학생 홈에 실시간 반영
           </span>
         </div>
         <div className="space-y-3.5 pl-0.5">
@@ -943,7 +943,7 @@ export function HomeOverviewTab({
     <section id="study-stats" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'study-stats' ? '' : 'hidden print:block'}`}>
       <div className="flex items-center gap-2">
         <Award className="h-4 w-4 text-[#0071E3]" />
-        <h3 className="text-xs font-black tracking-wider text-slate-800 uppercase">순공 시간 및 랭킹 리포트</h3>
+        <h3 className="text-xs font-black tracking-wider text-slate-800 uppercase">순공 시간 및 랭킹</h3>
       </div>
       <div className={`grid grid-cols-1 gap-6 ${isStudentReport ? 'lg:grid-cols-2' : ''}`}>
         <StudyStatsCard stats={studyStats} />

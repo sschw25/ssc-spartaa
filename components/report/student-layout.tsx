@@ -403,7 +403,7 @@ export function StudentLayout({
                   className="flex h-10 items-center gap-2 rounded-2xl border-0 bg-[#0071E3] px-5 text-xs font-semibold text-white shadow-[0_4px_14px_rgba(0,113,227,0.3)] transition-all hover:bg-[#005DB9] active:scale-[0.98] outline-none"
                 >
                   <Printer className="h-4 w-4" />
-                  PDF 저장 / 리포트 출력
+                  PDF 저장 / 인쇄
                 </button>
               </div>
             </div>
