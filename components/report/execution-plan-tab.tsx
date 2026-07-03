@@ -760,6 +760,9 @@ export function ExecutionPlanTab({
               const nextAmount = Math.min(entry.targetAmount, entry.actualAmount + recommend);
               const isSaving = deadlineSavingId === entry.id;
               const isEditing = deadlineEditId === entry.id;
+              // 오늘까지 했어야 할 누적(expectedAmount)을 채웠으면 '오늘치 완료'로 본다 —
+              // todayRecommend는 남은량÷남은일이라 오늘 몫을 채워도 계속 양수라서 판정에 못 쓴다.
+              const metToday = !!entry.goal && entry.goal.expectedAmount > 0 && entry.actualAmount >= entry.goal.expectedAmount;
               const periodLabel = `${entry.startDate.slice(5).replace('-', '.')} ~ ${entry.endDate.slice(5).replace('-', '.')}`;
               const cardTone = entry.done
                 ? 'border-emerald-100 bg-emerald-50/40'
@@ -811,7 +814,7 @@ export function ExecutionPlanTab({
                   {entry.active && entry.goal ? (
                     <div className="mt-3 grid gap-1.5 text-[11px] font-black text-slate-500 sm:grid-cols-2">
                       <p className="rounded-xl bg-white px-2.5 py-1.5">
-                        오늘 권장 <span className="text-[#0071E3]">{recommend > 0 ? `${recommend}${entry.unit}` : '없음'}</span>
+                        오늘 권장 <span className={metToday ? 'text-emerald-600' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${entry.unit}` : '없음'}</span>
                       </p>
                       <p className="rounded-xl bg-white px-2.5 py-1.5">
                         오늘까지 <span className="text-slate-900">{entry.goal.expectedAmount}{entry.unit}</span>
@@ -826,7 +829,12 @@ export function ExecutionPlanTab({
 
                   {entry.active && entry.goal && !entry.done && (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {recommend > 0 && (
+                      {metToday ? (
+                        <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-black text-emerald-700">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          오늘 완료
+                        </span>
+                      ) : recommend > 0 ? (
                         <button
                           type="button"
                           disabled={isSaving}
@@ -836,7 +844,7 @@ export function ExecutionPlanTab({
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           오늘 {recommend}{entry.unit} 완료
                         </button>
-                      )}
+                      ) : null}
                       <button
                         type="button"
                         onClick={() => {
@@ -844,10 +852,10 @@ export function ExecutionPlanTab({
                           setDeadlineEditAmount(entry.actualAmount);
                         }}
                         className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-500 transition hover:bg-slate-50 active:scale-[0.97] ${
-                          recommend > 0 ? '' : 'flex-1 sm:flex-none'
+                          metToday || recommend <= 0 ? 'flex-1 sm:flex-none' : ''
                         }`}
                       >
-                        직접 입력
+                        {metToday ? '수정 · 추가 입력' : '직접 입력'}
                       </button>
                     </div>
                   )}

@@ -338,7 +338,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
               className="mb-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
-              리포트로 돌아가기
+              학생 홈으로 돌아가기
             </a>
           )}
           <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
@@ -522,7 +522,8 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
               {/* 기간 목표(요일 무관)의 오늘 몫도 '오늘 할 일'로 함께 노출 — 상세/누적입력은 아래 '기간 목표' 섹션 */}
               {deadlineGoals.map((goal) => {
                 const done = goal.targetAmount > 0 && goal.actualAmount >= goal.targetAmount;
-                const metToday = !done && goal.actualAmount >= goal.expectedAmount;
+                // 오늘까지 했어야 할 누적(expectedAmount)을 채웠으면 오늘치 완료로 본다.
+                const metToday = !done && goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount;
                 const saving = savingDeadlineId === goal.id;
                 return (
                   <div
@@ -546,16 +547,18 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                       <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
                         {done ? (
                           <span className="text-emerald-600">목표 달성</span>
+                        ) : metToday ? (
+                          <span className="text-emerald-600">오늘 완료</span>
                         ) : goal.todayRecommend > 0 ? (
                           <span className="text-[#0071E3]">오늘 권장 {goal.todayRecommend}{goal.unit}</span>
                         ) : (
-                          <span className="text-emerald-600">오늘치 채웠어요</span>
+                          <span className="text-slate-400">오늘 권장 없음</span>
                         )}
                         <span>·</span>
                         <span className="tabular-nums">{goal.actualAmount}/{goal.targetAmount}{goal.unit}</span>
                       </span>
                     </span>
-                    {!done && goal.todayRecommend > 0 && (
+                    {!done && !metToday && goal.todayRecommend > 0 && (
                       <button
                         type="button"
                         onClick={() => saveDeadlineProgress(goal, Math.min(goal.targetAmount, goal.actualAmount + Math.max(0, goal.todayRecommend)))}
