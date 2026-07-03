@@ -25,7 +25,7 @@ import { toast } from 'sonner';
 import { useConfirm, usePrompt } from '@/components/ui/confirm-dialog';
 import {
   Calendar, User,
-  BookOpen, MessageSquare, Award, Copy, Printer, Loader2, Save,
+  BookOpen, MessageSquare, Award, Printer, Loader2, Save,
   ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X,
   CalendarDays, Plus, Trash2, Send
 } from 'lucide-react';
@@ -3711,13 +3711,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     }
   };
 
-  // 6. 결과지 공유 주소 클립보드 복사
-  const handleCopyLink = () => {
-    const shareUrl = `${window.location.origin}/report/${student.id}?audience=parent`;
-    navigator.clipboard.writeText(shareUrl);
-    toast.success('부모님 전송용 결과지 공유 링크가 클립보드에 복사되었습니다.');
-  };
-
   // 성적 차트용 데이터 조립 (최신순 -> 과거순 정렬되어 있으므로 그래프를 위해 날짜순 정렬 필요)
   const chartData = getGradeChartData(student.grades);
   const gradeSubjects = getGradeSubjects(student.grades);
@@ -3937,11 +3930,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <Button
               size="sm"
               variant="outline"
-              onClick={handleCopyLink}
+              onClick={() => window.open(`/report/${student.id}?audience=student`, '_blank')}
               className="bg-transparent border-white/20 hover:bg-white/10 text-white rounded-lg text-xs h-8.5 px-3 shrink-0"
             >
-              <Copy className="w-3.5 h-3.5 mr-1" />
-              <span>결과지 링크 복사</span>
+              <User className="w-3.5 h-3.5 mr-1" />
+              <span>학생페이지 보기</span>
             </Button>
             
             <Button
@@ -3954,15 +3947,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <span>학부모용 출력</span>
             </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => window.open(`/report/${student.id}?audience=student`, '_blank')}
-              className="bg-transparent border-white/20 hover:bg-white/10 text-white rounded-lg text-xs h-8.5 px-3 shrink-0"
-            >
-              <Printer className="w-3.5 h-3.5 mr-1" />
-              <span>학생용 출력</span>
-            </Button>
           </div>
         </div>
 
