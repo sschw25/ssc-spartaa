@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { toast } from 'sonner';
-import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Target, Clock, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw } from 'lucide-react';
+import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Target, Clock, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb } from 'lucide-react';
 import { ProposedGoal, Student } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 
@@ -492,7 +492,7 @@ export function ExecutionPlanTab({
               className="space-y-2.5 rounded-2xl border border-slate-100 bg-white/70 p-3"
             >
               <div className="bg-[#0071E3]/5 rounded-xl p-2.5 text-[10px] font-bold text-[#0071E3] mb-1 leading-normal flex items-start gap-1.5 border border-[#0071E3]/10">
-                <span className="shrink-0 text-xs">💡</span>
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>선택한 템플릿에 맞추어 서식이 작성되었습니다. 어떤 과목을 어떻게 조정할지 아래 상세 항목들을 채운 뒤 [신청하기] 버튼을 눌러 완료해 주세요!</span>
               </div>
               <div className="flex flex-wrap gap-1.5">

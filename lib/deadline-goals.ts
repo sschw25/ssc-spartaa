@@ -149,7 +149,9 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
 
   const expected = Math.round(expectedMinutes);
   const actual = Math.round(actualMinutes);
-  const metToday = actual >= expected;
+  // '오늘치 완료' 배지는 per-goal '오늘 완료'(예상목표치 90% 이상 채움)와 같은 기준으로 판정한다 —
+  // 분 정규화 100% 기준으로 하면 개별 목표 행은 "오늘 완료"인데 집계는 "오늘치 미달"로 모순될 수 있다.
+  const metToday = goals.every((g) => g.expectedAmount <= 0 || g.actualAmount >= g.expectedAmount * 0.9);
   // 하루 평균 분 = 전체 목표분 ÷ 전체 예상 학습일(근사: 자료별 주수×6). 앞선/뒤처진 분을 일수로 환산.
   const totalStudyDaysApprox = goals.reduce((acc, g) => acc + Math.max(1, g.periodWeeks * 6), 0);
   const avgDailyMinutes = totalStudyDaysApprox > 0 ? sumTotalMinutes / totalStudyDaysApprox : 0;

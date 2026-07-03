@@ -482,7 +482,7 @@ export function ConsultationTab({
             <MessageSquare className="w-4 h-4" /> 건의 남기기
           </h4>
           <p className="mt-1 text-[10px] font-semibold text-slate-400">
-            시설, 운영, 학습 환경에 대한 의견을 남기면 담당 코멘터가 확인해요.
+            구체적으로 적어 주실수록 빠르게 확인하고 반영할 수 있어요.
           </p>
         </div>
         <div className="space-y-2">

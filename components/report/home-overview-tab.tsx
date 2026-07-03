@@ -448,7 +448,7 @@ export function HomeOverviewTab({
                   </span>
                 ) : (
                   <span className="text-amber-600 tabular-nums">
-                    진행 {deadlineSummary.actualMinutes}분 / 기대 {deadlineSummary.expectedMinutes}분
+                    진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
                   </span>
                 )}
                 {deadlineSummary.riskCount > 0 && (
