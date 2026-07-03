@@ -101,7 +101,7 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
         <div className="flex items-end justify-between gap-3">
           <div>
             <p className="text-[11px] font-bold text-[#86868B]">{periodLabel} 나의 순공</p>
-            <p className="text-3xl font-black text-[#1D1D1F] mt-0.5">{fmt(st.myMinutes)}</p>
+            <p className="text-2xl font-black text-[#1D1D1F] mt-0.5">{fmt(st.myMinutes)}</p>
           </div>
           {st.hasRecord && st.topPercent != null && (
             <span className="inline-flex items-center gap-1 text-sm font-black text-[#F56300] bg-[#F56300]/10 border border-[#F56300]/15 px-3 py-1.5 rounded-full">
