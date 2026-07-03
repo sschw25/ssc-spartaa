@@ -17,10 +17,10 @@ node_modules/
 .DS_Store
 .vercel
 
-# 런타임 로컬 DB (학생 PII 포함 — 커밋 금지)
+# 로컬 DB 및 민감 데이터
 data/
 
-# 로그 / 빌드 캐시 / 디버그 아티팩트
+# 로그 / 빌드 캐시 / 검증 산출물
 *.log
 tsconfig.tsbuildinfo
 test-dashboard.js
@@ -28,6 +28,11 @@ test-management-interactive.js
 dashboard_card_view.png
 dashboard_db_view.png
 login_page.png
+/REVIEW_REPORT*.md
+/screenshot_*.png
+/*.webm
+/*.mp4
+/*.mov
 .claude/
 .superpowers/
 
