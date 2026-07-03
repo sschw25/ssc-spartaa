@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
-import { Armchair, Calendar, ClipboardList, MessageSquare, Ticket, Trash2 } from 'lucide-react';
+import { Armchair, Calendar, CalendarClock, ClipboardList, MessageSquare, Ticket, Trash2 } from 'lucide-react';
 import { LeaveType, Student } from '@/lib/types/student';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
@@ -27,7 +27,7 @@ import {
 } from '@/lib/leave';
 
 type LeaveSlotValue = 'morning' | 'afternoon' | 'night' | 'fullday';
-export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion';
+export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion' | 'consultation';
 
 interface ConsultationTabProps {
   student: Student;
@@ -57,6 +57,7 @@ interface ConsultationTabProps {
   activeTab: string;
   requestSubTab: ApplicationSubTab;
   setRequestSubTab: (tab: ApplicationSubTab) => void;
+  consultationAvailable?: boolean;
   homeHalfLeft: number;
   homeFullLeft: number;
   homeLeaveCoupons: number;
@@ -85,6 +86,7 @@ export function ConsultationTab({
   activeTab,
   requestSubTab,
   setRequestSubTab,
+  consultationAvailable = false,
   homeHalfLeft,
   homeFullLeft,
   homeLeaveCoupons,
@@ -135,6 +137,7 @@ export function ConsultationTab({
 
   const applicationTabs = [
     { id: 'leave', label: '휴식/반차', meta: `반차 ${homeHalfLeft}회`, icon: Calendar },
+    { id: 'consultation', label: '상담신청', meta: consultationAvailable ? '상담 예약' : '상담 요청', icon: CalendarClock },
     { id: 'seat', label: '자리이동', meta: '좌석 변경', icon: Armchair },
     { id: 'coupon', label: '쿠폰교환', meta: `쿠폰 ${homeLeaveCoupons}장`, icon: Ticket },
     { id: 'suggestion', label: '건의사항', meta: '의견 남기기', icon: MessageSquare },
@@ -157,7 +160,7 @@ export function ConsultationTab({
             </p>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4" role="tablist" aria-label="신청 종류">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5" role="tablist" aria-label="신청 종류">
           {applicationTabs.map((tab) => {
             const Icon = tab.icon;
             const selected = requestSubTab === tab.id;
@@ -184,6 +187,13 @@ export function ConsultationTab({
           })}
         </div>
       </div>
+
+      {requestSubTab === 'consultation' && !consultationAvailable && (
+        <div className="rounded-3xl border border-slate-100 bg-white p-5 text-center shadow-sm">
+          <p className="text-sm font-semibold text-slate-900">상담 신청은 담당 코멘터에게 요청으로 남겨주세요.</p>
+          <p className="mt-1 text-[11px] font-medium text-slate-400">현재 캠퍼스는 시간 예약형 상담을 운영하지 않습니다.</p>
+        </div>
+      )}
 
       {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
       {requestSubTab === 'leave' && (() => {

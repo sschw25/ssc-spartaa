@@ -19,8 +19,27 @@ import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MissionsHub } from '@/components/student/missions-hub';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
-import { Loader2, AlertCircle, Shield, TrendingDown, TrendingUp } from 'lucide-react';
-import type { MockExam, OtEvent, CampusEvent, PenaltyRecord, SaturdayLateExcuse, Student } from '@/lib/types/student';
+import { Loader2, AlertCircle } from 'lucide-react';
+import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student } from '@/lib/types/student';
+
+type LearningSubTab = 'timetable' | 'execution-plan' | 'subject-progress' | 'grade-analysis';
+type LifeSubTab = 'attendance-status' | 'study-stats' | 'student-penalties';
+
+const LEARNING_SUB_TABS: Array<{ id: LearningSubTab; label: string; meta: string }> = [
+  { id: 'timetable', label: '오늘 계획', meta: '시간표 기준' },
+  { id: 'execution-plan', label: '학습계획', meta: '주간 계획' },
+  { id: 'subject-progress', label: '과목별 진도', meta: '교재/인강' },
+  { id: 'grade-analysis', label: '성적분석', meta: '시험 기록' },
+];
+
+const LIFE_SUB_TABS: Array<{ id: LifeSubTab; label: string; meta: string }> = [
+  { id: 'attendance-status', label: '등하원', meta: '오늘 출결' },
+  { id: 'study-stats', label: '순공/랭킹', meta: '학습 시간' },
+  { id: 'student-penalties', label: '벌점', meta: '생활 기록' },
+];
+
+const LEARNING_TAB_IDS = LEARNING_SUB_TABS.map((tab) => tab.id);
+const LIFE_TAB_IDS = LIFE_SUB_TABS.map((tab) => tab.id);
 
 function StudentReportInner() {
   const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
@@ -30,6 +49,8 @@ function StudentReportInner() {
   // 미션 탭은 첫 활성화 때 마운트(그때 API 호출) — 초기 로딩을 가볍게 유지한다.
   const [missionsTabActivated, setMissionsTabActivated] = useState(false);
   const [requestSubTab, setRequestSubTab] = useState<ApplicationSubTab>('leave');
+  const [learningSubTab, setLearningSubTab] = useState<LearningSubTab>('timetable');
+  const [lifeSubTab, setLifeSubTab] = useState<LifeSubTab>('attendance-status');
 
   useEffect(() => {
     let cancelled = false;
@@ -204,8 +225,30 @@ function StudentReportInner() {
     consultationHistory,
   } = useReportState();
 
+  // 서브탭 raw id(예: timetable, attendance-status, clinic-booking)를 컨테이너 탭으로 승격하고
+  // 해당 서브상태를 맞춘다. 처리했으면 true. effect(진입 보정)와 selectReportTab(자식 콜백) 공용.
+  const applyContainerTab = useCallback((tabId: string): boolean => {
+    if ((LEARNING_TAB_IDS as string[]).includes(tabId)) {
+      setLearningSubTab(tabId as LearningSubTab);
+      setActiveTab('learning');
+      return true;
+    }
+    if ((LIFE_TAB_IDS as string[]).includes(tabId)) {
+      setLifeSubTab(tabId as LifeSubTab);
+      setActiveTab('life');
+      return true;
+    }
+    if (tabId === 'clinic-booking') {
+      setRequestSubTab('consultation');
+      setActiveTab('student-requests');
+      return true;
+    }
+    return false;
+  }, [setActiveTab]);
+
   useEffect(() => {
     if (activeTab === 'student-missions') setMissionsTabActivated(true);
+    if (applyContainerTab(activeTab)) return;
     if (activeTab === 'coupon-exchange') {
       setRequestSubTab('coupon');
       setActiveTab('student-requests');
@@ -214,7 +257,48 @@ function StudentReportInner() {
       setRequestSubTab('suggestion');
       setActiveTab('student-requests');
     }
-  }, [activeTab, setActiveTab]);
+  }, [activeTab, setActiveTab, applyContainerTab]);
+
+  const selectReportTab = useCallback((tabId: string) => {
+    if (applyContainerTab(tabId)) return;
+    setActiveTab(tabId);
+  }, [setActiveTab, applyContainerTab]);
+
+  const learningActiveTab = activeTab === 'learning' ? learningSubTab : activeTab;
+  // 생활 컨테이너의 유효 탭. HomeOverviewTab(등하원·순공)·PenaltiesTab(벌점) 공용.
+  const lifeActiveTab = activeTab === 'life' ? lifeSubTab : activeTab;
+
+  const renderSubTabs = (
+    tabs: Array<{ id: string; label: string; meta: string }>,
+    current: string,
+    onSelect: (id: string) => void,
+    ariaLabel: string,
+  ) => (
+    <div className="no-print rounded-3xl border border-slate-100 bg-white p-2 shadow-sm">
+      <div className="grid gap-1.5 sm:grid-cols-4" role="tablist" aria-label={ariaLabel}>
+        {tabs.map((tab) => {
+          const selected = current === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => onSelect(tab.id)}
+              className={`min-h-12 rounded-2xl border px-3 py-2 text-left transition active:scale-[0.98] ${
+                selected
+                  ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_6px_16px_rgba(0,113,227,0.18)]'
+                  : 'border-transparent bg-slate-50 text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <span className="block truncate text-[12px] font-semibold">{tab.label}</span>
+              <span className={`block truncate text-[10px] font-medium ${selected ? 'text-white/75' : 'text-slate-400'}`}>{tab.meta}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   if (!mounted) return null;
 
@@ -435,6 +519,28 @@ function StudentReportInner() {
           </div>
         )}
 
+        {isStudentReport && activeTab === 'learning' && (
+          <section id="learning" className="scroll-mt-24 space-y-4">
+            {renderSubTabs(
+              LEARNING_SUB_TABS,
+              learningSubTab,
+              (tabId) => setLearningSubTab(tabId as LearningSubTab),
+              '학습 탭 종류',
+            )}
+          </section>
+        )}
+
+        {isStudentReport && activeTab === 'life' && (
+          <section id="life" className="scroll-mt-24 space-y-4">
+            {renderSubTabs(
+              LIFE_SUB_TABS,
+              lifeSubTab,
+              (tabId) => setLifeSubTab(tabId as LifeSubTab),
+              '생활 탭 종류',
+            )}
+          </section>
+        )}
+
         {/* 1. 홈 탭 (Overview) */}
         <HomeOverviewTab
           student={student}
@@ -461,7 +567,7 @@ function StudentReportInner() {
           checklistForm={checklistForm}
           setChecklistForm={setChecklistForm}
           checklistSubmitting={checklistSubmitting}
-          activeTab={activeTab}
+          activeTab={lifeActiveTab}
           studyTimeLabels={studyTimeLabels}
           studyStats={studyStats}
           completedQuests={completedQuests}
@@ -477,7 +583,7 @@ function StudentReportInner() {
           todaySubjects={todaySubjects}
           currentMinutes={currentMinutes}
           todayDayKey={todayDayKey}
-          activeTab={activeTab}
+          activeTab={learningActiveTab}
           weekDaySlots={weekDaySlots}
           studyTimeSlots={studyTimeSlots}
         />
@@ -492,6 +598,8 @@ function StudentReportInner() {
           pendingAmount={pendingAmount}
           setPendingAmount={setPendingAmount}
           updatePlanCompletion={updatePlanCompletion}
+          updateDeadlineProgress={updateDeadlineProgress}
+          deadlineGoals={deadlineGoals}
           requestForm={requestForm}
           setRequestForm={setRequestForm}
           requestSubmitting={requestSubmitting}
@@ -502,7 +610,7 @@ function StudentReportInner() {
           showRequestHistory={showRequestHistory}
           setShowRequestHistory={setShowRequestHistory}
           requestError={requestError}
-          activeTab={activeTab}
+          activeTab={learningActiveTab}
           studyTimeLabels={studyTimeLabels}
           realignStudentPlans={realignStudentPlans}
           realigningPlans={realigningPlans}
@@ -517,8 +625,8 @@ function StudentReportInner() {
           incrementBookIncorrectTag={incrementBookIncorrectTag}
           updatePlanCompletion={updatePlanCompletion}
           materialBenchmarks={materialBenchmarks}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          activeTab={learningActiveTab}
+          setActiveTab={selectReportTab}
         />
 
         {/* 5. 성적 분석 탭 */}
@@ -533,8 +641,8 @@ function StudentReportInner() {
           gradeError={gradeError}
           submitGrade={submitGrade}
           deleteGrade={deleteGrade}
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          activeTab={learningActiveTab}
+          setActiveTab={selectReportTab}
           setRequestForm={setRequestForm}
           setRequestCustomOpen={setRequestCustomOpen}
           mockExams={mockExams}
@@ -564,6 +672,7 @@ function StudentReportInner() {
           activeTab={activeTab}
           requestSubTab={requestSubTab}
           setRequestSubTab={setRequestSubTab}
+          consultationAvailable={isConsultationCampus(student.campus)}
           homeHalfLeft={homeHalfLeft}
           homeFullLeft={homeFullLeft}
           homeLeaveCoupons={homeLeaveCoupons}
@@ -573,7 +682,7 @@ function StudentReportInner() {
         {isStudentReport && isConsultationCampus(student.campus) && (
           <section
             id="clinic-booking"
-            className={`scroll-mt-24 print-card ${activeTab === 'clinic-booking' ? '' : 'hidden print:block'}`}
+            className={`scroll-mt-24 print-card ${activeTab === 'student-requests' && requestSubTab === 'consultation' ? '' : 'hidden print:block'}`}
           >
             <ConsultationBookingPanel
               studentId={student.id}
@@ -588,7 +697,7 @@ function StudentReportInner() {
         {/* 7. 벌점 탭 */}
         <PenaltiesTab
           student={student}
-          activeTab={activeTab}
+          activeTab={lifeActiveTab}
         />
       </div>
 

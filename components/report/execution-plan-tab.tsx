@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
-import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Target, Clock } from 'lucide-react';
 import { ProposedGoal, Student } from '@/lib/types/student';
+import type { DeadlineGoal } from '@/lib/deadline-goals';
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
 
@@ -48,15 +50,36 @@ type WeeklyDailyPlan = {
   }>;
 };
 
+type DeadlinePlanEntry = {
+  id: string;
+  subject: string;
+  title: string;
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  planId: string;
+  weekNumber: number;
+  startDate: string;
+  endDate: string;
+  rangeText: string;
+  targetAmount: number;
+  actualAmount: number;
+  unit: string;
+  active: boolean;
+  done: boolean;
+  goal?: DeadlineGoal;
+};
+
 interface ExecutionPlanTabProps {
   student: Student;
   isStudentReport: boolean;
   weeklyDailyPlans: WeeklyDailyPlan[];
+  deadlineGoals?: DeadlineGoal[];
   pendingPlanId: string | null;
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
+  updateDeadlineProgress: (materialType: 'book' | 'lecture', materialId: string, planId: string, amount: number) => Promise<boolean>;
   requestForm: RequestForm;
   setRequestForm: React.Dispatch<React.SetStateAction<RequestForm>>;
   requestSubmitting: boolean;
@@ -77,11 +100,13 @@ export function ExecutionPlanTab({
   student,
   isStudentReport,
   weeklyDailyPlans,
+  deadlineGoals = [],
   pendingPlanId,
   setPendingPlanId,
   pendingAmount,
   setPendingAmount,
   updatePlanCompletion,
+  updateDeadlineProgress,
   requestForm,
   setRequestForm,
   requestSubmitting,
@@ -99,6 +124,13 @@ export function ExecutionPlanTab({
 }: ExecutionPlanTabProps) {
   const [showRealignBox, setShowRealignBox] = React.useState(false);
   const [validationError, setValidationError] = React.useState('');
+  const [deadlineSavingId, setDeadlineSavingId] = React.useState<string | null>(null);
+  const [deadlineEditId, setDeadlineEditId] = React.useState<string | null>(null);
+  const [deadlineEditAmount, setDeadlineEditAmount] = React.useState(0);
+  const todayKey = React.useMemo(
+    () => new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date()),
+    [],
+  );
   // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코멘터에게 '요청'으로 전달
   const [realignRequesting, setRealignRequesting] = React.useState<null | 'keepTargetDate' | 'keepPace'>(null);
   const [realignRequested, setRealignRequested] = React.useState(false);
@@ -202,6 +234,105 @@ export function ExecutionPlanTab({
         접수중
       </span>
     );
+  };
+
+  const getDeadlineUnit = (
+    materialType: 'book' | 'lecture',
+    unit: string | undefined,
+    rangeText: string,
+  ) => {
+    if (materialType === 'lecture') return '강';
+    if (unit) return unit;
+    if (rangeText.includes('문제')) return '문제';
+    if (rangeText.includes('회')) return '회';
+    return 'p';
+  };
+
+  const deadlinePlanEntries = React.useMemo<DeadlinePlanEntry[]>(() => {
+    if (!isStudentReport) return [];
+
+    const activeGoalByKey = new Map(
+      deadlineGoals.map((goal) => [`${goal.materialType}:${goal.materialId}:${goal.planId}`, goal]),
+    );
+
+    return (student.subjects || [])
+      .flatMap((subject) => {
+        const books = (subject.books || []).flatMap((book) =>
+          (book.detailedPlans || [])
+            .filter((plan) => plan.periodType === 'deadline' && plan.endDate >= todayKey)
+            .map((plan) => {
+              const goal = activeGoalByKey.get(`book:${book.id}:${plan.id}`);
+              const targetAmount = Math.max(0, Number(plan.targetAmount || goal?.targetAmount || 0));
+              const actualAmount = goal?.actualAmount ?? Math.max(0, Number(plan.actualAmount || 0));
+              return {
+                id: `book:${book.id}:${plan.id}`,
+                subject: subject.name,
+                title: book.title,
+                materialType: 'book' as const,
+                materialId: book.id,
+                planId: plan.id,
+                weekNumber: plan.weekNumber,
+                startDate: plan.startDate,
+                endDate: plan.endDate,
+                rangeText: plan.rangeText,
+                targetAmount,
+                actualAmount,
+                unit: goal?.unit ?? getDeadlineUnit('book', book.unit, plan.rangeText),
+                active: plan.startDate <= todayKey && todayKey <= plan.endDate,
+                done: Boolean(plan.isCompleted) || (targetAmount > 0 && actualAmount >= targetAmount),
+                goal,
+              };
+            })
+        );
+
+        const lectures = (subject.lectures || []).flatMap((lecture) =>
+          (lecture.detailedPlans || [])
+            .filter((plan) => plan.periodType === 'deadline' && plan.endDate >= todayKey)
+            .map((plan) => {
+              const goal = activeGoalByKey.get(`lecture:${lecture.id}:${plan.id}`);
+              const targetAmount = Math.max(0, Number(plan.targetAmount || goal?.targetAmount || 0));
+              const actualAmount = goal?.actualAmount ?? Math.max(0, Number(plan.actualAmount || 0));
+              return {
+                id: `lecture:${lecture.id}:${plan.id}`,
+                subject: subject.name,
+                title: lecture.name,
+                materialType: 'lecture' as const,
+                materialId: lecture.id,
+                planId: plan.id,
+                weekNumber: plan.weekNumber,
+                startDate: plan.startDate,
+                endDate: plan.endDate,
+                rangeText: plan.rangeText,
+                targetAmount,
+                actualAmount,
+                unit: goal?.unit ?? getDeadlineUnit('lecture', undefined, plan.rangeText),
+                active: plan.startDate <= todayKey && todayKey <= plan.endDate,
+                done: Boolean(plan.isCompleted) || (targetAmount > 0 && actualAmount >= targetAmount),
+                goal,
+              };
+            })
+        );
+
+        return [...books, ...lectures];
+      })
+      .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.weekNumber - b.weekNumber || a.subject.localeCompare(b.subject));
+  }, [deadlineGoals, isStudentReport, student.subjects, todayKey]);
+
+  const saveDeadlinePlanAmount = async (entry: DeadlinePlanEntry, amount: number) => {
+    if (!entry.goal) return;
+    const safeAmount = Math.max(0, Math.min(entry.targetAmount, Math.round(amount)));
+    setDeadlineSavingId(entry.id);
+    try {
+      const ok = await updateDeadlineProgress(entry.materialType, entry.materialId, entry.planId, safeAmount);
+      if (ok) {
+        setDeadlineEditId(null);
+        toast.success('주간 목표 진행량을 저장했어요.');
+      } else {
+        toast.error('저장에 실패했어요. 잠시 후 다시 시도해 주세요.');
+      }
+    } finally {
+      setDeadlineSavingId(null);
+    }
   };
 
   return (
@@ -600,6 +731,164 @@ export function ExecutionPlanTab({
           );
         })()}
       </div>
+      )}
+
+      {isStudentReport && deadlinePlanEntries.length > 0 && (
+        <section className="rounded-3xl border border-[#0071E3]/10 bg-white p-4 shadow-sm break-inside-avoid">
+          <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
+                <Target className="h-4 w-4 text-[#0071E3]" />
+                주간 목표 계획
+              </h4>
+              <p className="mt-1 text-[10px] font-bold text-slate-400">
+                요일별 오늘 계획과 별도로, 이번 주와 예정된 주차 목표를 확인합니다.
+              </p>
+            </div>
+            <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
+              {deadlinePlanEntries.length}개 목표
+            </span>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {deadlinePlanEntries.map((entry) => {
+              const progressPercent = entry.targetAmount > 0
+                ? Math.min(100, Math.round((entry.actualAmount / entry.targetAmount) * 100))
+                : 0;
+              const remaining = Math.max(0, entry.targetAmount - entry.actualAmount);
+              const recommend = entry.goal ? Math.min(remaining, Math.max(0, entry.goal.todayRecommend)) : 0;
+              const nextAmount = Math.min(entry.targetAmount, entry.actualAmount + recommend);
+              const isSaving = deadlineSavingId === entry.id;
+              const isEditing = deadlineEditId === entry.id;
+              const periodLabel = `${entry.startDate.slice(5).replace('-', '.')} ~ ${entry.endDate.slice(5).replace('-', '.')}`;
+              const cardTone = entry.done
+                ? 'border-emerald-100 bg-emerald-50/40'
+                : entry.active
+                  ? 'border-[#0071E3]/20 bg-[#0071E3]/[0.03]'
+                  : 'border-slate-100 bg-slate-50/60';
+
+              return (
+                <article key={entry.id} className={`rounded-2xl border p-3 ${cardTone}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black text-slate-400">
+                        {entry.weekNumber}주차 · {periodLabel}
+                      </p>
+                      <h5 className="mt-1 truncate text-[13px] font-black text-slate-900">
+                        {entry.subject} · {entry.title}
+                      </h5>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
+                      entry.done
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : entry.active
+                          ? entry.goal?.behind
+                            ? 'bg-amber-100 text-amber-700'
+                            : 'bg-[#0071E3]/10 text-[#0071E3]'
+                          : 'bg-white text-slate-400'
+                    }`}>
+                      {entry.done ? '완료' : entry.active ? (entry.goal?.behind ? '조금 부족' : '진행 중') : '예정'}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 rounded-xl bg-white/80 px-2.5 py-2 text-[11px] font-bold text-slate-600">
+                    목표 범위: <span className="text-slate-900">{entry.rangeText}</span>
+                  </p>
+
+                  <div className="mt-3 space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-black text-slate-400">
+                      <span>누적 {entry.actualAmount}/{entry.targetAmount}{entry.unit}</span>
+                      <span>{progressPercent}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-white">
+                      <div
+                        className={`h-full rounded-full transition-all ${entry.done ? 'bg-emerald-500' : 'bg-[#0071E3]'}`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {entry.active && entry.goal ? (
+                    <div className="mt-3 grid gap-1.5 text-[11px] font-black text-slate-500 sm:grid-cols-2">
+                      <p className="rounded-xl bg-white px-2.5 py-1.5">
+                        오늘 권장 <span className="text-[#0071E3]">{recommend > 0 ? `${recommend}${entry.unit}` : '없음'}</span>
+                      </p>
+                      <p className="rounded-xl bg-white px-2.5 py-1.5">
+                        오늘까지 <span className="text-slate-900">{entry.goal.expectedAmount}{entry.unit}</span>
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-3 flex items-center gap-1.5 rounded-xl bg-white/70 px-2.5 py-2 text-[11px] font-bold text-slate-400">
+                      <Clock className="h-3.5 w-3.5" />
+                      시작일에 맞춰 오늘 권장량이 표시됩니다.
+                    </p>
+                  )}
+
+                  {entry.active && entry.goal && !entry.done && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {recommend > 0 && (
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => saveDeadlinePlanAmount(entry, nextAmount)}
+                          className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0071E3] px-3 py-2 text-[11px] font-black text-white transition hover:bg-[#0077ED] active:scale-[0.97] disabled:opacity-40 sm:flex-none"
+                        >
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          오늘 {recommend}{entry.unit} 완료
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDeadlineEditId(isEditing ? null : entry.id);
+                          setDeadlineEditAmount(entry.actualAmount);
+                        }}
+                        className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-500 transition hover:bg-slate-50 active:scale-[0.97] ${
+                          recommend > 0 ? '' : 'flex-1 sm:flex-none'
+                        }`}
+                      >
+                        직접 입력
+                      </button>
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-3">
+                      <p className="text-[11px] font-black text-slate-600">이번 주 누적 완료량</p>
+                      <div className="mt-2 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDeadlineEditAmount((value) => Math.max(0, value - 1))}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-95"
+                        >
+                          -
+                        </button>
+                        <span className="min-w-[4rem] text-center text-sm font-black text-slate-900">
+                          {deadlineEditAmount}{entry.unit}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setDeadlineEditAmount((value) => Math.min(entry.targetAmount, value + 1))}
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-95"
+                        >
+                          +
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isSaving}
+                          onClick={() => saveDeadlinePlanAmount(entry, deadlineEditAmount)}
+                          className="ml-auto rounded-full bg-slate-900 px-3 py-2 text-[11px] font-black text-white active:scale-[0.97] disabled:opacity-40"
+                        >
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </section>
       )}
 
       <div className="space-y-5">

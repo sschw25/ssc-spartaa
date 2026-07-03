@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Clock, Award, Target, Sparkles, MessageSquare, ClipboardList, CalendarClock, BookOpen, FileText, Shield, Flame } from 'lucide-react';
-import { isConsultationCampus, WEEKDAY_LABEL } from '@/lib/consultation-schedule';
+import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Flame } from 'lucide-react';
+import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
 import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
@@ -267,6 +267,8 @@ type ProgressMaterialType = 'book' | 'lecture';
 // `?tab=` 쿼리로 진입 가능한 학생 탭 id 화이트리스트 (구 /student/missions 리다이렉트 등)
 const STUDENT_TAB_IDS = [
   'report-overview',
+  'learning',
+  'life',
   'student-notifications',
   'attendance-status',
   'study-stats',
@@ -994,7 +996,7 @@ export function useReportState() {
     materialId: string,
     planId: string,
     amount: number,
-  ) => {
+  ): Promise<boolean> => {
     const safeAmount = Math.max(0, Math.round(Number(amount) || 0));
     try {
       const res = await fetch('/api/student/progress', {
@@ -1012,9 +1014,11 @@ export function useReportState() {
           Boolean(json.isCompleted),
           typeof json.value === 'number' ? json.value : undefined,
         );
+        return true;
       }
+      return false;
     } catch {
-      // noop
+      return false;
     }
   };
 
@@ -1869,20 +1873,12 @@ export function useReportState() {
   const reportNavItems = isStudentReport
     ? [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
+        { href: '#learning', label: '학습', meta: `오늘 ${todaySubjects.length}개 · 진도·성적`, icon: BookOpen },
+        { href: '#student-missions', label: '미션', meta: `보상 · 쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Flame },
+        { href: '#student-requests', label: '신청', meta: `상담 · 반차 ${homeHalfLeft}회`, icon: ClipboardList },
+        { href: '#life', label: '생활', meta: `등하원 · 벌점 ${totalPenaltyPoints}점`, icon: Shield },
         { href: '#student-notifications', label: '알림', meta: `${notificationCount}개`, icon: Bell },
-        { href: '#attendance-status', label: '등하원', meta: '실시간 출결', icon: Clock },
-        { href: '#study-stats', label: '순공/랭킹', meta: '학습 시간 비교', icon: Award },
-        { href: '#timetable', label: '오늘 계획', meta: `${todaySubjects.length}개 과목`, icon: Target },
-        { href: '#execution-plan', label: '학습계획', meta: '전체 계획표', icon: Sparkles },
         { href: '#coach-feedback', label: '코멘팅 소견', meta: '학생 피드백', icon: MessageSquare },
-        { href: '#student-requests', label: '신청', meta: `반차 ${homeHalfLeft}회 · 쿠폰 ${student.leaveCoupons ?? 0}장`, icon: ClipboardList },
-        ...(isConsultationCampus(student.campus)
-          ? [{ href: '#clinic-booking', label: '클리닉 상담', meta: '날짜·시간 예약', icon: CalendarClock }]
-          : []),
-        { href: '#student-missions', label: '미션', meta: `오늘 할 일 · 쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Flame },
-        { href: '#subject-progress', label: '과목별 진도', meta: '교재/인강', icon: BookOpen },
-        { href: '#grade-analysis', label: '성적 분석', meta: `${(student.grades || []).length}건`, icon: FileText },
-        { href: '#student-penalties', label: '벌점', meta: `누적 ${totalPenaltyPoints}점`, icon: Shield },
       ]
     : [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },

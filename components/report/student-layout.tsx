@@ -125,15 +125,17 @@ export function StudentLayout({
   const getNavItem = (id: string) => reportNavItems.find((item) => item.href === `#${id}`);
   const quickTabItems: QuickTabItem[] = [];
   const homeNavItem = getNavItem('report-overview');
+  const learningNavItem = getNavItem('learning');
   const missionsNavItem = getNavItem('student-missions');
   const requestNavItem = getNavItem('student-requests');
-  const attendanceNavItem = getNavItem('attendance-status');
+  const lifeNavItem = getNavItem('life');
   const notificationNavItem = getNavItem('student-notifications');
 
   if (homeNavItem) quickTabItems.push({ ...homeNavItem, key: 'report-overview', tabId: 'report-overview' });
-  if (missionsNavItem) quickTabItems.push({ ...missionsNavItem, label: '미션', meta: '오늘 할 일', key: 'student-missions', tabId: 'student-missions' });
-  if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '신청', meta: '반차·좌석·쿠폰', key: 'student-requests', tabId: 'student-requests' });
-  if (attendanceNavItem) quickTabItems.push({ ...attendanceNavItem, label: '등하원', meta: '순공/랭킹', key: 'attendance-status', tabId: 'attendance-status' });
+  if (learningNavItem) quickTabItems.push({ ...learningNavItem, label: '학습', meta: '오늘·진도·성적', key: 'learning', tabId: 'learning' });
+  if (missionsNavItem) quickTabItems.push({ ...missionsNavItem, label: '미션', meta: '보상', key: 'student-missions', tabId: 'student-missions' });
+  if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '신청', meta: '상담·반차', key: 'student-requests', tabId: 'student-requests' });
+  if (lifeNavItem) quickTabItems.push({ ...lifeNavItem, label: '생활', meta: '등하원·벌점', key: 'life', tabId: 'life' });
   if (notificationNavItem) quickTabItems.push({ ...notificationNavItem, key: 'student-notifications', tabId: 'student-notifications' });
   const selectedQuickItem = quickNavActiveKey
     ? quickTabItems.find((item) => item.key === quickNavActiveKey)

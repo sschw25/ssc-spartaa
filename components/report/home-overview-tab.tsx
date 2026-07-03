@@ -410,12 +410,12 @@ export function HomeOverviewTab({
           <div id="today-mission-card" className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm md:p-5">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold text-[#0071E3]">오늘 미션</p>
+                <p className="text-[11px] font-semibold text-[#0071E3]">오늘 할 일 요약</p>
                 <h2 className="mt-1 text-[17px] font-semibold leading-tight text-slate-900">
                   {todayMissionDone}/{todayMissionTotal}개 완료
                 </h2>
                 <p className="mt-1 text-[11px] font-medium text-slate-400">
-                  {/* 미션 탭의 '오늘 계획 N건'과 숫자가 달라 보이지 않게 집계 기준(계획+점검표)을 명시 */}
+                  {/* 미션/보상 탭과 혼동되지 않게 집계 기준(계획+점검표)을 명시 */}
                   오늘 계획 {todayPlanEntries.length}건 + 아침 점검표{todayDailyPlan ? ` · ${todayDailyPlan.dateLabel}` : ''}
                 </p>
               </div>
@@ -599,7 +599,7 @@ export function HomeOverviewTab({
                   <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400">
                     {todayChecklist
                       ? `수면 ${todayChecklist.sleep_hours}시간 · 휴대폰 기록 완료`
-                      : '컨디션을 기록하면 오늘 미션 진행률에 반영돼요'}
+                      : '컨디션을 기록하면 오늘 할 일 진행률에 반영돼요'}
                   </span>
                 </span>
                 <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
