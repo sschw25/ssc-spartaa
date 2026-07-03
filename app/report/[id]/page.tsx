@@ -186,6 +186,8 @@ function StudentReportInner() {
     updateProgress,
     updateBookSolvedQuestions,
     updatePlanCompletion,
+    updateDeadlineProgress,
+    deadlineGoals,
     deadlineSummary,
     incrementBookIncorrectTag,
     submitChecklist,
@@ -445,6 +447,7 @@ function StudentReportInner() {
           pendingAmount={pendingAmount}
           setPendingAmount={setPendingAmount}
           updatePlanCompletion={updatePlanCompletion}
+          updateDeadlineProgress={updateDeadlineProgress}
           homeAttend={homeAttend}
           homeTotalMin={homeTotalMin}
           currentSubjectText={currentSubjectText}
@@ -463,6 +466,7 @@ function StudentReportInner() {
           studyStats={studyStats}
           completedQuests={completedQuests}
           setCompletedQuests={setCompletedQuests}
+          deadlineGoals={deadlineGoals}
           deadlineSummary={deadlineSummary}
         />
 

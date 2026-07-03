@@ -79,6 +79,8 @@ export function BenchmarkSection({ type, subject, name, studentId, audience }: B
   const unitLabel = type === 'book' ? '교재' : '강의';
 
   if (data.eligible === false) {
+    if (audience === 'student') return null;
+
     return (
       <p className="text-[11px] font-semibold text-slate-400">
         아직 이 {unitLabel}를 공부한 학생 데이터가 충분하지 않습니다(4명 이상부터 표시).
