@@ -202,7 +202,7 @@ export function NotificationsSection({
       )}
 
       {studentNotifications.length > 0 ? (
-        <div className="grid grid-cols-1 gap-3">
+        <div className="stagger-children grid grid-cols-1 gap-3">
           {studentNotifications.map((notification) => {
             const toneClass = NOTIFICATION_TONE_CLASS[notification.tone];
             const ToneIcon = NOTIFICATION_TONE_ICON[notification.tone];

@@ -60,7 +60,7 @@ export default function EnrollmentExpiredPage() {
         const json = await res.json();
         if (json.success) setStudents(json.data || []);
       } else {
-        toast.error('학생 데이터를 가져오는 데 실패했습니다.');
+        toast.error('학생 정보를 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -97,7 +97,7 @@ export default function EnrollmentExpiredPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
-      <AdminTopNav title="만료 경고 원생 목록" onLogout={handleLogout} />
+      <AdminTopNav title="만료 경고 학생 목록" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         {/* 헤더 */}
@@ -114,10 +114,10 @@ export default function EnrollmentExpiredPage() {
             <div>
               <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
                 <XCircle className="w-5 h-5 text-red-500" />
-                만료 경고 원생
+                만료 경고 학생
               </h1>
               <p className="text-xs font-bold text-slate-400 mt-0.5">
-                등록 종료일이 이미 지난 원생입니다. 결제 여부를 확인하세요.
+                등록 종료일이 이미 지난 학생입니다. 결제 여부를 확인하세요.
               </p>
             </div>
           </div>
@@ -153,7 +153,7 @@ export default function EnrollmentExpiredPage() {
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="원생명 또는 코멘터 검색"
+              placeholder="학생명 또는 코멘터 검색"
               className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 focus:border-slate-400 focus:outline-none transition-all"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -168,12 +168,12 @@ export default function EnrollmentExpiredPage() {
           <div>
             <p className={`text-sm font-black ${filtered.length > 0 ? 'text-red-800' : 'text-slate-400'}`}>
               {filtered.length > 0
-                ? `만료 경고 원생 ${filtered.length}명 · 결제 확인 필요`
-                : '만료 경고 원생이 없습니다'}
+                ? `만료 경고 학생 ${filtered.length}명 · 결제 확인 필요`
+                : '만료 경고 학생이 없습니다'}
             </p>
             {filtered.length > 0 && (
               <p className="text-[11px] font-semibold text-red-600 mt-0.5">
-                만료일 오래된 순 정렬 · 원생 클릭 시 상세 시트 열림
+                만료일 오래된 순 정렬 · 학생 클릭 시 상세 시트 열림
               </p>
             )}
           </div>
@@ -188,14 +188,14 @@ export default function EnrollmentExpiredPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-sm font-bold text-slate-400">
-              {searchQuery ? '검색 결과가 없습니다.' : '만료 경고 원생이 없습니다'}
+              {searchQuery ? '검색 결과가 없습니다.' : '만료 경고 학생이 없습니다'}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
                 <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-4">원생</th>
+                    <th className="px-6 py-4">학생</th>
                     <th className="px-6 py-4">담당 코멘터</th>
                     <th className="px-6 py-4">등록 종료일</th>
                     <th className="px-6 py-4">만료 경과</th>

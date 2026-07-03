@@ -172,9 +172,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       setPomodoroSeconds(secs);
       window.localStorage.setItem(pomodoroSecondsKey, String(secs));
       setIsEditingPomoTime(false);
-      toast.success(`타이머가 ${mins}분으로 수정되었습니다.`);
+      toast.success(`타이머를 ${mins}분으로 바꿨어요.`);
     } else {
-      toast.error('1분에서 180분 사이의 올바른 숫자를 입력해주세요.');
+      toast.error('1~180분 사이로 입력해 주세요.');
     }
   };
 
@@ -187,7 +187,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       window.localStorage.setItem(pomodoroSecondsKey, String(next));
       return next;
     });
-    toast.success(`${diffMinutes > 0 ? '+' : ''}${diffMinutes}분 조정되었습니다.`);
+    toast.success(`${diffMinutes > 0 ? '+' : ''}${diffMinutes}분 조정했어요.`);
   };
 
   // 뽀모도로 세션 완료 시 백엔드 API 호출
@@ -219,7 +219,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
         }
       }
     } catch {
-      toast.error('뽀모도로 완료 저장 중 문제가 발생했습니다.');
+      toast.error('완료 기록을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
     }
   };
 

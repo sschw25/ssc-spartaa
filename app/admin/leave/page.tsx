@@ -47,7 +47,7 @@ export default function AdminLeavePage() {
         const json = await res.json();
         if (json.success) setStudents(json.data || []);
       } else {
-        toast.error('학생 데이터를 가져오지 못했습니다.');
+        toast.error('학생 정보를 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -243,7 +243,7 @@ export default function AdminLeavePage() {
         onLogout={handleLogout}
       />
 
-      <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-5">
+      <main className="stagger-children max-w-5xl mx-auto p-4 md:p-8 space-y-5">
         {/* 승인은 인박스에서 처리 안내 */}
         <button
           type="button"
@@ -320,7 +320,7 @@ export default function AdminLeavePage() {
           </div>
         ) : studentRows.length === 0 ? (
           <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
-            조건에 맞는 원생이 없습니다.
+            조건에 맞는 학생이 없습니다.
           </div>
         ) : (
           <div className="space-y-2.5">

@@ -851,7 +851,7 @@ export default function AdminInboxPage() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* 좌측: 카테고리 필터 및 요청 목록 */}
         <div className="lg:col-span-2 space-y-4">

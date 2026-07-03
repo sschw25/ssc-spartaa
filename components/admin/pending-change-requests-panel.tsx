@@ -44,7 +44,7 @@ export function PendingAdminTasksPanel({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="admin-fit-text text-sm font-semibold tracking-tight text-amber-900">
-                  {title || `대기중 요청 ${totalRequestCount}건`}
+                  {title || `대기 중 요청 ${totalRequestCount}건`}
                 </h4>
                 <span className="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-semibold text-white">
                   {rows.length}명

@@ -165,8 +165,8 @@ export default function MealsPage() {
     dinnerPrice?: string;
     closedDays: MealDay[];
   }) => {
-    if (!input.weekStart) { toast.error('주차(월요일)를 선택해주세요.'); return; }
-    if (input.meals.length === 0) { toast.error('점심/저녁 중 하나 이상 선택해주세요.'); return; }
+    if (!input.weekStart) { toast.error('주차(월요일)를 선택해 주세요.'); return; }
+    if (input.meals.length === 0) { toast.error('점심/저녁 중 하나 이상 선택해 주세요.'); return; }
     setAdding(true);
     try {
       const res = await fetch('/api/admin/meal-plans', {
@@ -477,7 +477,7 @@ export default function MealsPage() {
         <AdminTopNav title="도시락 신청" titleIcon={<Utensils className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
       </div>
 
-      <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
+      <main className="stagger-children mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         {/* 헤더 (화면 전용) */}
         <div className="no-print flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => router.push('/admin/dashboard')}
@@ -557,11 +557,11 @@ export default function MealsPage() {
               </label>
             )}
             <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
-              대상 센터
+              대상 캠퍼스
               <select value={newCampus} onChange={(e) => setNewCampus(e.target.value)} disabled={adminCampus !== 'all'}
-                title={adminCampus !== 'all' ? '담당 센터로 자동 지정됩니다' : '대상 센터 선택'}
+                title={adminCampus !== 'all' ? '담당 캠퍼스로 자동 지정됩니다' : '대상 캠퍼스 선택'}
                 className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
-                <option value="all">전체 센터</option>
+                <option value="all">전체 캠퍼스</option>
                 {CAMPUSES.map((c) => <option key={c} value={c}>{getCampusLabel(c)}</option>)}
               </select>
             </label>
@@ -588,7 +588,7 @@ export default function MealsPage() {
                       </span>
                       <span className="text-[11px] font-semibold text-slate-400">{plan.meals.map((m) => MEAL_KIND_LABELS[m]).join('·')}</span>
                       <span className="rounded-lg bg-slate-200/70 text-slate-600 px-1.5 py-0.5 text-[9px] font-black">
-                        {plan.campus && plan.campus !== 'all' ? getCampusLabel(plan.campus) : '전체 센터'}
+                        {plan.campus && plan.campus !== 'all' ? getCampusLabel(plan.campus) : '전체 캠퍼스'}
                       </span>
                       {plan.deadline && (
                         <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${isPastDeadline(plan) ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
@@ -623,7 +623,7 @@ export default function MealsPage() {
         <div className="no-print rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <div>
-              <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">센터별 반복 템플릿</h2>
+              <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">캠퍼스별 반복 템플릿</h2>
               <p className="text-[12px] font-medium text-slate-500 mt-0.5">생성 · 마감 · 알림 시각</p>
             </div>
             <Button onClick={runRoutinesNow} disabled={routineRunning} variant="outline"
@@ -642,11 +642,11 @@ export default function MealsPage() {
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
                 </label>
                 <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
-                  센터
+                  캠퍼스
                   <select value={routineForm.campus || 'all'} disabled={adminCampus !== 'all'}
                     onChange={(e) => setRoutineForm((f) => ({ ...f, campus: e.target.value === 'all' ? undefined : e.target.value }))}
                     className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
-                    <option value="all">전체 센터</option>
+                    <option value="all">전체 캠퍼스</option>
                     {CAMPUSES.map((c) => <option key={c} value={c}>{getCampusLabel(c)}</option>)}
                   </select>
                 </label>
@@ -803,7 +803,7 @@ export default function MealsPage() {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-xs font-black text-slate-800">{template.name}</p>
                         <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">
-                          {template.campus ? getCampusLabel(template.campus) : '전체 센터'}
+                          {template.campus ? getCampusLabel(template.campus) : '전체 캠퍼스'}
                         </span>
                         <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${template.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
                           {template.active ? '반복중' : '중지'}
@@ -886,7 +886,7 @@ export default function MealsPage() {
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                     campusFilter === c ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
                   }`}>
-                  {c === 'all' ? '전체 센터' : getCampusLabel(c)}
+                  {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
                 </button>
               ))}
               <Button onClick={() => window.print()}
@@ -1014,7 +1014,7 @@ export default function MealsPage() {
                 <table className="w-full border-collapse text-center text-xs">
                   <thead className="bg-slate-50/80 text-[10px] font-black text-slate-400">
                     <tr>
-                      <th className="px-4 py-3 text-left sticky left-0 bg-slate-50/80">원생</th>
+                      <th className="px-4 py-3 text-left sticky left-0 bg-slate-50/80">학생</th>
                       {selectedPlan.meals.map((kind) => MEAL_DAYS.map((day) => (
                         <th key={`${kind}-${day}`} className={`px-2 py-3 ${isClosedDay(selectedPlan, day) ? 'text-red-300' : ''}`}>
                           <span className={kind === 'dinner' ? 'text-[#0071E3]/70' : 'text-[#F56300]/80'}>{MEAL_KIND_LABELS[kind][0]}</span>{MEAL_DAY_LABELS[day]}
@@ -1062,7 +1062,7 @@ export default function MealsPage() {
               <div className="text-center mb-3">
                 <h2 className="text-[17px] font-semibold">{weekRangeLabel(selectedPlan.weekStart)} 주 도시락 신청표</h2>
                 <p className="text-[11px] font-semibold text-slate-500">
-                  {selectedPlan.campus && selectedPlan.campus !== 'all' ? getCampusLabel(selectedPlan.campus) : '전체 센터'}
+                  {selectedPlan.campus && selectedPlan.campus !== 'all' ? getCampusLabel(selectedPlan.campus) : '전체 캠퍼스'}
                   {' · 먹는 날엔 ○ 칸에 본인이 동그라미 표시 후 수령'}
                 </p>
               </div>
@@ -1151,7 +1151,7 @@ export default function MealsPage() {
         {!selectedPlan && !(loading && students.length === 0) && (
           <div className="no-print rounded-2xl bg-white border border-slate-100 p-12 text-center">
             <Utensils className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm font-bold text-slate-400">도시락 라운드를 먼저 등록해주세요.</p>
+            <p className="text-sm font-bold text-slate-400">도시락 라운드를 먼저 등록해 주세요.</p>
           </div>
         )}
 

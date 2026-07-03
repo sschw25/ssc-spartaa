@@ -86,7 +86,7 @@ export default function PenaltiesPage() {
     <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav title="벌점 · 상점 관리" onLogout={handleLogout} />
 
-      <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-5">
+      <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-5">
         {/* 헤더 */}
         <div className="flex items-center gap-3">
           <Button
@@ -103,7 +103,7 @@ export default function PenaltiesPage() {
               벌점 · 상점 관리
             </h1>
             <p className="text-xs font-bold text-slate-400 mt-0.5">
-              원생 클릭 시 벌점/상점 부여 및 내역 확인
+              학생 클릭 시 벌점/상점 부여 및 내역 확인
             </p>
           </div>
           <Button
@@ -121,7 +121,7 @@ export default function PenaltiesPage() {
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
             <p className="text-[18px] leading-none font-semibold tracking-tight text-red-600">{withPenalty.length}</p>
-            <p className="text-[12px] font-medium text-slate-500 mt-2">벌점 보유 원생</p>
+            <p className="text-[12px] font-medium text-slate-500 mt-2">벌점 보유 학생</p>
           </div>
           <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
             <p className="text-[18px] leading-none font-semibold tracking-tight text-slate-900">
@@ -183,14 +183,14 @@ export default function PenaltiesPage() {
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
               <Shield className="w-9 h-9 text-slate-200 mx-auto mb-3" />
-              <p className="text-sm font-bold text-slate-400">해당하는 원생이 없습니다.</p>
+              <p className="text-sm font-bold text-slate-400">해당하는 학생이 없습니다.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
                 <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
-                    <th className="px-5 py-4">원생</th>
+                    <th className="px-5 py-4">학생</th>
                     <th className="px-5 py-4">담당 코멘터</th>
                     <th className="px-5 py-4">누적 벌점</th>
                     <th className="px-5 py-4">내역</th>

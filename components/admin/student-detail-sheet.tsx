@@ -1114,7 +1114,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         });
         setWeeklyPlanRanges(nextRanges);
       }
-      toast.success('원생의 모든 변경 사항이 성공적으로 저장되었습니다.');
+      toast.success('학생의 모든 변경 사항을 저장했습니다.');
     }
     setLoading(false);
     return success;
@@ -1122,7 +1122,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const handleSaveLifeComment = async () => {
     if (!lifeComment.trim() && !studentLifeComment.trim()) {
-      toast.error('저장할 코멘트 내용을 입력해주세요.');
+      toast.error('저장할 코멘트 내용을 입력해 주세요.');
       return;
     }
 
@@ -1187,7 +1187,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
     const success = await saveStudentData(updatedStudent);
     if (success) {
-      toast.success('원생 기본 정보가 수정되었습니다.');
+      toast.success('학생 기본 정보를 수정했습니다.');
     }
     setLoading(false);
   };
@@ -1353,7 +1353,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   // 2. 과목 추가
   const handleAddSubject = () => {
     if (!newSubjectName.trim()) {
-      toast.error('과목명을 입력해주세요.');
+      toast.error('과목명을 입력해 주세요.');
       return;
     }
 
@@ -1738,7 +1738,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       : clampProgressValue(progressDrafts[materialId] ?? (targetMaterial as LectureProgress).completedLectures, totalAmount);
 
     if (goalValue <= 0 && currentAmount < totalAmount) {
-      toast.error('올바른 목표 값을 입력해주세요.');
+      toast.error('올바른 목표 값을 입력해 주세요.');
       return;
     }
 
@@ -1898,8 +1898,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const title = newMaterialTitle.trim();
     const total = Number(newMaterialTotal);
 
-    if (!subjectName) return toast.error('과목명을 입력하거나 선택해주세요.');
-    if (!title) return toast.error(newMaterialType === 'book' ? '교재명을 입력해주세요.' : '인강 강좌명을 입력해주세요.');
+    if (!subjectName) return toast.error('과목명을 입력하거나 선택해 주세요.');
+    if (!title) return toast.error(newMaterialType === 'book' ? '교재명을 입력해 주세요.' : '인강 강좌명을 입력해 주세요.');
     if (!total || total <= 0) return toast.error(newMaterialType === 'book' ? '올바른 총 페이지를 지정해주세요.' : '올바른 총 강의 수를 지정해주세요.');
 
     // 공유 DB 등록 API
@@ -2017,7 +2017,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const handleAddBook = async (subjectId: string, subjectName: string) => {
     const title = newBookTitle[subjectId];
     const total = newBookTotal[subjectId];
-    if (!title || !title.trim()) return toast.error('교재명을 입력해주세요.');
+    if (!title || !title.trim()) return toast.error('교재명을 입력해 주세요.');
     if (!total || total <= 0) return toast.error('올바른 총 페이지를 지정해주세요.');
 
     const category = selectedAddCategoryBook[subjectId] || '기본';
@@ -2044,7 +2044,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const handleAddLecture = async (subjectId: string, subjectName: string) => {
     const title = newLectureName[subjectId];
     const total = newLectureTotal[subjectId];
-    if (!title || !title.trim()) return toast.error('인강 강좌명을 입력해주세요.');
+    if (!title || !title.trim()) return toast.error('인강 강좌명을 입력해 주세요.');
     if (!total || total <= 0) return toast.error('올바른 총 강의 수를 지정해주세요.');
 
     const category = selectedAddCategoryLecture[subjectId] || '기본';
@@ -2720,7 +2720,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         }
         if (payload.status === 'approved') toast.success('승인했습니다.');
         else if (payload.status === 'rejected') toast.success('반려했습니다.');
-        else if (payload.status === 'pending') toast.success('대기중으로 되돌렸습니다.');
+        else if (payload.status === 'pending') toast.success('대기 중으로 되돌렸습니다.');
         else if (payload.reply !== undefined) toast.success('답변을 보냈습니다.');
       } else {
         toast.error(json.message || '처리에 실패했습니다.');
@@ -3682,7 +3682,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   const handleDeleteStudent = async () => {
     if (!(await confirm({
-      title: `${name} 원생을 정말 삭제할까요?`,
+      title: `${name} 학생을 정말 삭제할까요?`,
       description: '모든 시트에서 관련 데이터가 복구 불가능하게 지워집니다.',
       tone: 'danger',
       confirmText: '삭제',
@@ -3698,11 +3698,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       });
 
       if (res.ok) {
-        toast.success('원생이 안전하게 삭제되었습니다.');
+        toast.success('학생을 안전하게 삭제했습니다.');
         onDelete(student.id);
         onClose();
       } else {
-        toast.error('원생 삭제에 실패했습니다.');
+        toast.error('학생 삭제에 실패했습니다.');
       }
     } catch (err) {
       toast.error('네트워크 에러');
@@ -3849,8 +3849,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
         <div className="admin-fluid-ui w-full h-full overflow-y-auto flex flex-col">
           <SheetHeader className="sr-only">
-            <SheetTitle>원생 상세 정보</SheetTitle>
-            <SheetDescription>원생 상세 프로필 및 학습 진도를 관리하는 화면입니다.</SheetDescription>
+            <SheetTitle>학생 상세 정보</SheetTitle>
+            <SheetDescription>학생 상세 프로필 및 학습 진도를 관리하는 화면입니다.</SheetDescription>
           </SheetHeader>
 
         {/* Header (Notion Page Title Banner) */}
@@ -3955,7 +3955,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">{pendingRequests.length}</span>
-                <h4 className="text-xs font-semibold text-amber-800">학생 변경 신청 (대기중)</h4>
+                <h4 className="text-xs font-semibold text-amber-800">학생 변경 신청 (대기 중)</h4>
               </div>
               <div className="space-y-2">
                 {pendingRequests.map(req => (
@@ -4069,7 +4069,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">{pendingSuggestions.length}</span>
-                <h4 className="text-xs font-semibold text-amber-800">건의사항 (대기중)</h4>
+                <h4 className="text-xs font-semibold text-amber-800">건의사항 (대기 중)</h4>
               </div>
               <div className="space-y-2">
                 {pendingSuggestions.map(req => (

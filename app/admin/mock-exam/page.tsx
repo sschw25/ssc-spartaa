@@ -119,7 +119,7 @@ export default function MockExamPage() {
   }, [router, loadAll]);
 
   const addExam = async () => {
-    if (!newName.trim() || !newDate) { toast.error('시험명과 날짜를 입력해주세요.'); return; }
+    if (!newName.trim() || !newDate) { toast.error('시험명과 날짜를 입력해 주세요.'); return; }
     setAdding(true);
     try {
       const res = await fetch('/api/admin/mock-exams', {
@@ -219,7 +219,7 @@ export default function MockExamPage() {
     if (!selectedExamId) return;
     const absentStudents = scopedStudents.filter((s) => getStatus(s) === 'absent');
     if (absentStudents.length === 0) { toast.error('불참 학생이 없습니다.'); return; }
-    if (!notifyMsg.trim()) { toast.error('발송할 메시지를 입력해주세요.'); return; }
+    if (!notifyMsg.trim()) { toast.error('발송할 메시지를 입력해 주세요.'); return; }
 
     setNotifying(true);
     try {
@@ -287,7 +287,7 @@ export default function MockExamPage() {
     <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav title="모의고사 참여 체크" onLogout={handleLogout} />
 
-      <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
+      <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         {/* 헤더 */}
         <div className="flex items-center gap-3">
           <Button
@@ -359,7 +359,7 @@ export default function MockExamPage() {
           {uniqueExamTypes.length > 0 && (
             <div className="space-y-1.5">
               <p className="text-[11px] font-black text-slate-500">
-                알림 대상 (선택 안 하면 전체 원생)
+                알림 대상 (선택 안 하면 전체 학생)
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {uniqueExamTypes.map((t) => (
@@ -383,7 +383,7 @@ export default function MockExamPage() {
               </div>
               {newTargetTypes.length > 0 && (
                 <p className="text-[10px] text-[#0071E3] font-semibold">
-                  선택: {newTargetTypes.join(', ')} 목표 원생에게만 알림 발송
+                  선택: {newTargetTypes.join(', ')} 목표 학생에게만 알림 발송
                 </p>
               )}
             </div>
@@ -525,8 +525,8 @@ export default function MockExamPage() {
                   <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
                     <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                       <tr>
-                        <th className="px-5 py-4">원생</th>
-                        <th className="px-4 py-4">목표시험</th>
+                        <th className="px-5 py-4">학생</th>
+                        <th className="px-4 py-4">목표 시험</th>
                         <th className="px-4 py-4">참여여부</th>
                         <th className="px-4 py-4">점수 (학생 입력)</th>
                       </tr>
@@ -636,7 +636,7 @@ export default function MockExamPage() {
         {!selectedExam && !(loading && students.length === 0) && (
           <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center">
             <ClipboardCheck className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm font-bold text-slate-400">모의고사 일정을 먼저 등록해주세요.</p>
+            <p className="text-sm font-bold text-slate-400">모의고사 일정을 먼저 등록해 주세요.</p>
           </div>
         )}
       </main>

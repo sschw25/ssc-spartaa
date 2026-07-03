@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { Student } from '@/lib/types/student';
 import { StudentNotification, StudentNotificationTone } from './notifications-section';
@@ -191,17 +192,23 @@ export function StudentLayout({
           {/* 2. 상단 컨트롤러 (인쇄 제외) */}
           {isStudentReport ? (
             <>
-              {(mobileMenuOpen || notificationPanelOpen) && (
-                <button
-                  type="button"
-                  aria-label="열린 메뉴 닫기"
-                  className="no-print fixed inset-0 z-[45] cursor-default bg-transparent"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    setNotificationPanelOpen(false);
-                  }}
-                />
-              )}
+              <AnimatePresence>
+                {(mobileMenuOpen || notificationPanelOpen) && (
+                  <motion.button
+                    type="button"
+                    aria-label="열린 메뉴 닫기"
+                    className="no-print fixed inset-0 z-[45] cursor-default bg-transparent"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18 }}
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      setNotificationPanelOpen(false);
+                    }}
+                  />
+                )}
+              </AnimatePresence>
 
               <div className="no-print fixed left-4 top-4 z-50">
                 <button
@@ -214,8 +221,16 @@ export function StudentLayout({
                   <Menu className="h-5 w-5" />
                 </button>
 
+                <AnimatePresence>
                 {mobileMenuOpen && (
-                  <div className="mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                  <motion.div
+                    className="mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                    style={{ transformOrigin: 'top left' }}
+                    initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <div className="mb-2 flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 pb-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Menu</p>
@@ -259,8 +274,9 @@ export function StudentLayout({
                         );
                       })}
                     </div>
-                  </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
 
               <div className="no-print fixed right-4 top-4 z-50 flex flex-col items-end">
@@ -279,8 +295,16 @@ export function StudentLayout({
                   )}
                 </button>
 
+                <AnimatePresence>
                 {notificationPanelOpen && (
-                  <div className="mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl">
+                  <motion.div
+                    className="mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                    style={{ transformOrigin: 'top right' }}
+                    initial={{ opacity: 0, scale: 0.96, y: -8 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, y: -8 }}
+                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+                  >
                     <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Notifications</p>
@@ -298,7 +322,7 @@ export function StudentLayout({
 
                     {notificationPreview.length > 0 ? (
                       <div className="space-y-2">
-                        {notificationPreview.map((notification) => {
+                        {notificationPreview.map((notification, i) => {
                           const toneClass = NOTIFICATION_TONE_CLASS[notification.tone];
                           const ToneIcon = NOTIFICATION_TONE_ICON[notification.tone];
                           return (
@@ -306,7 +330,8 @@ export function StudentLayout({
                               key={notification.id}
                               type="button"
                               onClick={openNotificationTab}
-                              className={`w-full rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${toneClass.item}`}
+                              style={{ animationDelay: `${i * 45}ms` }}
+                              className={`animate-stagger-in w-full rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${toneClass.item}`}
                             >
                               <div className="flex items-start gap-2.5">
                                 <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-xl ${toneClass.icon}`}>
@@ -339,8 +364,9 @@ export function StudentLayout({
                     >
                       전체 알림 보기
                     </button>
-                  </div>
+                  </motion.div>
                 )}
+                </AnimatePresence>
               </div>
 
               <nav

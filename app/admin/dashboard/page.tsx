@@ -143,7 +143,7 @@ export default function AdminDashboardPage() {
         }
       } else if (res.status !== 401) {
         // 401은 인증 확인(verifyAuth)이 로그인 화면으로 보내는 중 — 토스트 소음 없이 넘어간다.
-        toast.error('학생 데이터를 가져오는 데 실패했습니다.');
+        toast.error('학생 정보를 불러오지 못했습니다.');
       }
     } catch (err) {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch('/api/admin/auth/logout', { method: 'POST' });
       if (res.ok) {
-        toast.success('로그아웃 되었습니다.');
+        toast.success('로그아웃했습니다.');
         router.replace('/admin');
       }
     } catch (err) {
@@ -650,7 +650,7 @@ export default function AdminDashboardPage() {
     <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans selection:bg-black/10">
 
       <AdminTopNav
-        title="학습 및 진도 체계적 관리 대시보드"
+        title="학습·진도 관리"
         campusOptions={CAMPUS_FILTERS.map((c) => ({ value: c, label: c === 'all' ? '전체' : getCampusLabel(c) }))}
         campusValue={campusFilter}
         onCampusChange={handleCampusFilterChange}
@@ -693,7 +693,7 @@ export default function AdminDashboardPage() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 pb-28 md:pb-28 space-y-8">
+      <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 pb-28 md:pb-28 space-y-8">
 
         {/* ── 섹션 1: 알림 현황 (iOS 26 — 차분한 흰 카드 + 의미색은 숫자에만) ── */}
         <div className="space-y-4">

@@ -100,7 +100,7 @@ export async function DELETE(
   try {
     const success = await deleteAdminAccount(id);
     if (success) {
-      return NextResponse.json({ success: true, message: '계정이 성공적으로 삭제되었습니다.' });
+      return NextResponse.json({ success: true, message: '계정을 삭제했습니다.' });
     }
     return NextResponse.json({ success: false, message: '삭제할 계정을 찾을 수 없습니다.' }, { status: 404 });
   } catch (error: any) {

@@ -61,7 +61,7 @@ export default function EnrollmentWarningPage() {
         const json = await res.json();
         if (json.success) setStudents(json.data || []);
       } else {
-        toast.error('학생 데이터를 가져오는 데 실패했습니다.');
+        toast.error('학생 정보를 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -98,7 +98,7 @@ export default function EnrollmentWarningPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
-      <AdminTopNav title="재등록 임박 원생 목록" onLogout={handleLogout} />
+      <AdminTopNav title="재등록 임박 학생 목록" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         {/* 헤더 */}
@@ -115,10 +115,10 @@ export default function EnrollmentWarningPage() {
             <div>
               <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
                 <Clock className="w-5 h-5 text-amber-500" />
-                재등록 임박 원생
+                재등록 임박 학생
               </h1>
               <p className="text-xs font-bold text-slate-400 mt-0.5">
-                {RENEWAL_WARN_DAYS}일 이내 등록이 종료되는 원생입니다. 재등록 안내가 필요합니다.
+                {RENEWAL_WARN_DAYS}일 이내 등록이 종료되는 학생입니다. 재등록 안내가 필요합니다.
               </p>
             </div>
           </div>
@@ -154,7 +154,7 @@ export default function EnrollmentWarningPage() {
             <input
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="원생명 또는 코멘터 검색"
+              placeholder="학생명 또는 코멘터 검색"
               className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 focus:border-slate-400 focus:outline-none transition-all"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -169,12 +169,12 @@ export default function EnrollmentWarningPage() {
           <div>
             <p className={`text-sm font-black ${filtered.length > 0 ? 'text-amber-800' : 'text-slate-400'}`}>
               {filtered.length > 0
-                ? `재등록 임박 원생 ${filtered.length}명 · ${RENEWAL_WARN_DAYS}일 이내 종료`
-                : '재등록 임박 원생이 없습니다'}
+                ? `재등록 임박 학생 ${filtered.length}명 · ${RENEWAL_WARN_DAYS}일 이내 종료`
+                : '재등록 임박 학생이 없습니다'}
             </p>
             {filtered.length > 0 && (
               <p className="text-[11px] font-semibold text-amber-600 mt-0.5">
-                마감 임박 순 정렬 · 원생 클릭 시 상세 시트 열림
+                마감 임박 순 정렬 · 학생 클릭 시 상세 시트 열림
               </p>
             )}
           </div>
@@ -189,14 +189,14 @@ export default function EnrollmentWarningPage() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-20 text-center text-sm font-bold text-slate-400">
-              {searchQuery ? '검색 결과가 없습니다.' : '재등록 임박 원생이 없습니다'}
+              {searchQuery ? '검색 결과가 없습니다.' : '재등록 임박 학생이 없습니다'}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
                 <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
-                    <th className="px-6 py-4">원생</th>
+                    <th className="px-6 py-4">학생</th>
                     <th className="px-6 py-4">담당 코멘터</th>
                     <th className="px-6 py-4">등록 종료일</th>
                     <th className="px-6 py-4">남은 기간</th>

@@ -1353,7 +1353,7 @@ export default function SeatBoardPage() {
         }
       />
 
-      <main className="px-4 pt-4 pb-10">
+      <main className="stagger-children px-4 pt-4 pb-10">
         {/* ── 캠퍼스 선택 + 통계 ── */}
         <div className="flex items-center gap-6 mb-4 flex-wrap">
           <div className="flex bg-white border border-black/[0.05] rounded-2xl p-1 gap-1 shadow-sm">

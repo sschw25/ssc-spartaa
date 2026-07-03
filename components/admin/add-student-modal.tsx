@@ -299,12 +299,12 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   // ── 개별 등록 ───────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) { toast.error('원생 이름을 입력해 주세요.'); return; }
+    if (!name.trim()) { toast.error('학생 이름을 입력해 주세요.'); return; }
     if (password.trim() && password.trim().length < 4) { toast.error('비밀번호는 4자 이상이어야 합니다.'); return; }
     if (seatConflicts.length > 0) {
       const ok = await confirm({
         title: `그래도 ${parsedSeat}번 좌석으로 등록할까요?`,
-        description: `이 센터에 이미 ${parsedSeat}번 좌석을 쓰는 원생이 있습니다.\n대상: ${seatConflicts.map((s) => s.name).join(', ')}`,
+        description: `이 캠퍼스에 이미 ${parsedSeat}번 좌석을 쓰는 학생이 있습니다.\n대상: ${seatConflicts.map((s) => s.name).join(', ')}`,
         confirmText: '등록',
       });
       if (!ok) return;
@@ -350,7 +350,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
             toast.error('학생은 등록됐지만 비밀번호 설정에 실패했습니다. 학생 정보에서 다시 설정해 주세요.');
           }
         }
-        toast.success(`${name} 원생이 성공적으로 등록되었습니다.`);
+        toast.success(`${name} 학생을 등록했습니다.`);
         onSuccess(data.data);
         resetAll();
         onClose();
@@ -384,7 +384,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
   // ── 일괄 등록: 순차 제출 ────────────────────────────────────────
   const handleBulkSubmit = async () => {
-    if (bulkRows.length === 0) { toast.error('등록할 원생이 없습니다.'); return; }
+    if (bulkRows.length === 0) { toast.error('등록할 학생이 없습니다.'); return; }
     const seatConflictRows = bulkRows
       .map((row, i) => ({ row, conflicts: bulkSeatConflict(i) }))
       .filter((item) => item.conflicts.length > 0);
@@ -394,7 +394,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
         .join('\n');
       const ok = await confirm({
         title: '좌석번호가 겹치지만 그래도 등록할까요?',
-        description: `같은 센터에 좌석번호가 겹치는 원생이 있습니다.\n${detail}`,
+        description: `같은 캠퍼스에 좌석번호가 겹치는 학생이 있습니다.\n${detail}`,
         confirmText: '등록',
       });
       if (!ok) return;
@@ -409,7 +409,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
       const names = Array.from(new Set(duplicateAwayNames.map((row) => row.name.trim()))).join(', ');
       const ok = await confirm({
         title: '동명이인 여부를 확인한 뒤 등록할까요?',
-        description: `빠지는 요일이 있는 동명이인 또는 기존 원생 이름이 있습니다.\n대상: ${names}\n0번 좌석/동명이인 여부를 확인해 주세요.`,
+        description: `빠지는 요일이 있는 동명이인 또는 기존 학생 이름이 있습니다.\n대상: ${names}\n0번 좌석/동명이인 여부를 확인해 주세요.`,
         confirmText: '등록',
       });
       if (!ok) return;
@@ -479,7 +479,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     if (successCount > 0) {
       toast.success(passwordFailCount > 0
         ? `${successCount}명 등록 완료, ${passwordFailCount}명은 비밀번호 설정을 다시 확인해 주세요.`
-        : `${successCount}명 원생 등록이 완료되었습니다.`);
+        : `${successCount}명 학생 등록을 완료했습니다.`);
       if (lastStudent) onSuccess(lastStudent);
       resetAll();
       onClose();
@@ -513,7 +513,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border-black/[0.05] bg-white p-6 sm:max-w-3xl">
         <DialogHeader className="pb-3 pr-8">
-          <DialogTitle className="text-lg font-bold text-slate-900">신규 원생 등록</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">신규 학생 등록</DialogTitle>
           <DialogDescription className="text-xs text-slate-500">
             학생 정보 탭에서 관리하는 핵심 프로필을 등록 시점에 함께 입력합니다.
           </DialogDescription>
@@ -588,7 +588,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   </datalist>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-contact" className="text-xs font-semibold text-slate-900">목표시험</Label>
+                  <Label htmlFor="new-contact" className="text-xs font-semibold text-slate-900">목표 시험</Label>
                   <Input
                     id="new-contact"
                     placeholder="예: 수능, 9급 공무원, 임용"
@@ -864,7 +864,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 <Label htmlFor="new-special-note" className="text-xs font-semibold text-slate-900">특이사항</Label>
                 <Textarea
                   id="new-special-note"
-                  placeholder="해당 원생의 특이사항만 적어주세요. 예: 어디가 아프다 / 집이 멀다 / 기존 학습량 등"
+                  placeholder="해당 학생의 특이사항만 적어 주세요. 예: 어디가 아프다 / 집이 멀다 / 기존 학습량 등"
                   value={specialNote}
                   onChange={(e) => setSpecialNote(e.target.value)}
                   className="min-h-[88px] rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs"
@@ -879,7 +879,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 취소
               </Button>
               <Button type="submit" disabled={loading} className="rounded-xl text-xs bg-slate-900 hover:bg-[#323236] text-white py-4">
-                {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />등록 중...</> : '원생 등록'}
+                {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />등록 중...</> : '학생 등록'}
               </Button>
             </DialogFooter>
           </form>
@@ -914,7 +914,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-900">목표시험</Label>
+                <Label className="text-xs font-semibold text-slate-900">목표 시험</Label>
                 <Input
                   placeholder="수능, 공무원…"
                   value={bulkContact}

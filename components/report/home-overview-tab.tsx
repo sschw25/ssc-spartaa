@@ -316,7 +316,7 @@ export function HomeOverviewTab({
     <>
     <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
       {isStudentReport ? (
-        <div className="w-full space-y-5">
+        <div className="stagger-children w-full space-y-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 space-y-3">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/[0.07] px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
@@ -426,8 +426,8 @@ export function HomeOverviewTab({
 
             <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-[#0071E3] transition-[width] duration-500"
-                style={{ width: `${todayMissionPercent}%` }}
+                className="h-full w-full origin-left rounded-full bg-[#0071E3] transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                style={{ transform: `scaleX(${Math.max(0, Math.min(100, todayMissionPercent)) / 100})` }}
               />
             </div>
 
@@ -714,7 +714,7 @@ export function HomeOverviewTab({
                 })
               ) : (
                 <p className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center text-xs font-medium text-slate-500">
-                  오늘 배정된 실행 항목이 없습니다. 자율 학습 계획을 확인해 주세요.
+                  오늘 배정된 항목이 없어요. 자율 학습 계획을 확인해 보세요.
                 </p>
               )}
             </div>
@@ -816,20 +816,20 @@ export function HomeOverviewTab({
 
               let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800';
               let BannerIcon = CheckCircle2;
-              let bannerTitle = '쾌조의 스타트! 아침 공부를 시작해 봅시다.';
-              let bannerTips = '어젯밤 잠도 충분히 잤고 스마트폰 방해요인도 완벽하게 차단되었습니다. 오늘 플래너 달성률 100%에 도전해보세요!';
+              let bannerTitle = '기분 좋은 출발이에요! 아침 공부를 시작해 볼까요?';
+              let bannerTips = '어젯밤 잠도 충분히 잤고 스마트폰도 깔끔하게 정리했네요. 오늘 계획 100% 달성에 도전해 봐요!';
 
               if (isSleepShort || isPhoneNotSubmitted) {
                 bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900';
                 BannerIcon = AlertTriangle;
-                bannerTitle = '오전 효율 저하 요인이 감지되었습니다.';
+                bannerTitle = '오전 집중을 방해할 요인이 있어요.';
 
                 if (isSleepShort && isPhoneNotSubmitted) {
-                  bannerTips = '수면이 부족(6시간 미만)하고 스마트폰이 주변에 있어 쉽게 산만해질 수 있습니다. 가벼운 스트레칭 후 스마트폰은 즉시 제출하여 방해요인을 최소화하세요!';
+                  bannerTips = '잠도 부족한데(6시간 미만) 스마트폰까지 옆에 있으면 쉽게 산만해져요. 가볍게 스트레칭하고 스마트폰부터 제출해 볼까요?';
                 } else if (isSleepShort) {
-                  bannerTips = '어젯밤 수면 시간이 6시간 미만으로 조사되었습니다. 수면 부족 시 플래너 달성률이 25% 가량 하락하기 쉬우니, 주기적으로 찬물 세수를 하며 잠을 깨보세요!';
+                  bannerTips = '어젯밤 6시간도 못 잤네요. 잠이 부족하면 계획 달성률이 25%쯤 떨어지기 쉬워요. 가끔 찬물로 세수하며 잠을 깨워 봐요!';
                 } else {
-                  bannerTips = '스마트폰을 아직 수납함에 제출하지 않으셨습니다. 알림 하나가 몰입의 흐름을 통째로 깨뜨리니, 지금 바로 자습실 밖 수집함에 휴대폰을 제출해보세요!';
+                  bannerTips = '스마트폰을 아직 제출하지 않았어요. 알림 하나가 몰입을 통째로 깨뜨려요. 지금 자습실 밖 수납함에 넣어 볼까요?';
                 }
               }
 

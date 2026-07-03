@@ -223,7 +223,7 @@ function ConsultationContent() {
           setStudents(json.data || []);
         }
       } else {
-        toast.error('학생 데이터를 가져오는 데 실패했습니다.');
+        toast.error('학생 정보를 불러오지 못했습니다.');
       }
     } catch (err) {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -315,10 +315,10 @@ function ConsultationContent() {
       if (json.data) {
         setStudents((prev) => prev.map((item) => item.id === student.id ? json.data : item));
       }
-      toast.success('원생 정보가 저장되었습니다.');
+      toast.success('학생 정보를 저장했습니다.');
     } catch (error) {
       setStudents((prev) => prev.map((item) => item.id === student.id ? previous : item));
-      toast.error(error instanceof Error ? error.message : '원생 정보 저장에 실패했습니다.');
+      toast.error(error instanceof Error ? error.message : '학생 정보 저장에 실패했습니다.');
     }
   };
 
@@ -693,7 +693,7 @@ function ConsultationContent() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 pb-28 space-y-6">
+      <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 pb-28 space-y-6">
 
         {/* 필터 및 검색 바 */}
         <div className="admin-fit-box flex flex-col gap-3.5 bg-white p-5 rounded-3xl border border-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
@@ -714,7 +714,7 @@ function ConsultationContent() {
               className="admin-fit-button rounded-xl bg-slate-900 hover:bg-[#323236] text-white text-xs h-10 px-4 md:px-5 font-bold shadow-sm flex items-center justify-center shrink-0"
             >
               <Plus className="w-4 h-4 mr-1.5" />
-              신규 원생 등록
+              신규 학생 등록
             </Button>
           </div>
 
@@ -834,8 +834,8 @@ function ConsultationContent() {
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-slate-900 data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
                 >
                   <Users className="w-4 h-4 mr-1.5" />
-                  <span className="hidden sm:inline">원생별 학습 관리</span>
-                  <span className="sm:hidden">원생</span>
+                  <span className="hidden sm:inline">학생별 학습 관리</span>
+                  <span className="sm:hidden">학생</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="db"
@@ -913,7 +913,7 @@ function ConsultationContent() {
 
               {filteredStudents.length === 0 ? (
                 <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
-                  검색 조건에 맞는 원생이 없습니다.
+                  검색 조건에 맞는 학생이 없습니다.
                 </div>
               ) : viewMode === 'grid' ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -1045,7 +1045,7 @@ function ConsultationContent() {
                             onClick={() => handleSortStudents('name')}
                           >
                             <div className="flex items-center gap-1">
-                              원생명 {studentSortField === 'name' && (studentSortOrder === 'asc' ? '▲' : '▼')}
+                              학생명 {studentSortField === 'name' && (studentSortOrder === 'asc' ? '▲' : '▼')}
                             </div>
                           </th>
                           <th
@@ -1065,7 +1065,7 @@ function ConsultationContent() {
                             </div>
                           </th>
                           <th className="p-3.5 text-center">좌석</th>
-                          <th className="p-3.5">목표시험</th>
+                          <th className="p-3.5">목표 시험</th>
                           <th className="p-3.5">연락처</th>
                           <th className="p-3.5">진행 중인 학습 (과목별 현황)</th>
                           <th className="p-3.5 text-center">다음 상담일</th>
@@ -1131,7 +1131,7 @@ function ConsultationContent() {
                               <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   defaultValue={student.contact || ''}
-                                  placeholder="목표시험"
+                                  placeholder="목표 시험"
                                   onBlur={(event) => handleInlineStudentUpdate(student, { contact: event.currentTarget.value.trim() })}
                                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
                                   className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"

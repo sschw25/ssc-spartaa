@@ -12,7 +12,7 @@ import type { DailyChecklistEntry } from '@/lib/student-activity';
 function leaveStatusChip(status: LeaveRequest['status']) {
   if (status === 'approved') return <span className="shrink-0 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">승인</span>;
   if (status === 'rejected') return <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[9px] font-semibold text-red-600">반려</span>;
-  return <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">대기중</span>;
+  return <span className="shrink-0 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700">대기 중</span>;
 }
 
 interface ConsultTabProps {
@@ -311,7 +311,7 @@ export function ConsultTab({
                           onClick={() => onLeaveAction(req.id, { status: 'pending' })}
                           className="rounded-lg border border-black/[0.08] bg-[#F5F5F7] px-2.5 py-1 text-[10px] font-bold text-slate-500 hover:bg-slate-200 disabled:opacity-50"
                         >
-                          대기중으로
+                          대기 중으로
                         </button>
                       )}
                     </div>

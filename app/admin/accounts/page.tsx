@@ -93,7 +93,7 @@ export default function AdminAccountsPage() {
         if (json.success) {
           setAccounts(json.data);
         } else {
-          toast.error(json.message || '목록을 불러오는 데 실패했습니다.');
+          toast.error(json.message || '목록을 불러오지 못했습니다.');
         }
       }
     } catch (err) {
@@ -155,7 +155,7 @@ export default function AdminAccountsPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success(isEditMode ? '계정이 수정되었습니다.' : '계정이 생성되었습니다.');
+        toast.success(isEditMode ? '계정을 수정했습니다.' : '계정을 만들었습니다.');
         setIsOpen(false);
         fetchAccounts();
       } else {
@@ -181,7 +181,7 @@ export default function AdminAccountsPage() {
       const res = await fetch(`/api/admin/accounts/${id}`, { method: 'DELETE' });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success('성공적으로 삭제되었습니다.');
+        toast.success('삭제했습니다.');
         fetchAccounts();
       } else {
         toast.error(data.message || '삭제에 실패했습니다.');

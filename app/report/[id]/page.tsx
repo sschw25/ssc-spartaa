@@ -353,15 +353,21 @@ function StudentReportInner() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] flex flex-col items-center justify-center font-sans gap-5">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-9 h-9 text-[#0071E3] animate-spin" />
-          <p className="text-xs text-slate-500 font-medium tracking-tight">불러오는 중...</p>
-        </div>
-        <div className="w-64 space-y-2.5 mt-2">
-          {[100, 80, 90].map((w, i) => (
-            <div key={i} className="h-3 rounded-full bg-slate-200/80 animate-pulse" style={{ width: `${w}%` }} />
-          ))}
+      <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] font-sans">
+        <div className="mx-auto w-full max-w-[680px] px-4 py-8 sm:px-5">
+          {/* 브리핑 헤더 자리 */}
+          <div className="space-y-3">
+            <div className="skeleton h-6 w-28 rounded-full" />
+            <div className="skeleton h-9 w-4/5" />
+            <div className="skeleton h-9 w-3/5" />
+            <div className="skeleton h-4 w-2/3 rounded-md" />
+          </div>
+          {/* 카드 자리 */}
+          <div className="mt-8 space-y-4">
+            <div className="skeleton h-28 w-full rounded-3xl" />
+            <div className="skeleton h-40 w-full rounded-3xl" />
+            <div className="skeleton h-32 w-full rounded-3xl" />
+          </div>
         </div>
       </div>
     );

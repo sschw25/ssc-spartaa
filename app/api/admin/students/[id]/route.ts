@@ -132,7 +132,7 @@ export async function DELETE(
           console.warn('상담 예약 정리 실패(무시):', e),
         );
       }
-      return NextResponse.json({ success: true, message: '원생이 삭제되었습니다.' });
+      return NextResponse.json({ success: true, message: '학생을 삭제했습니다.' });
     }
     return NextResponse.json({ success: false, message: '삭제할 원생을 찾을 수 없습니다.' }, { status: 404 });
   } catch (error) {

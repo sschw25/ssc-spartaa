@@ -106,7 +106,7 @@ export default function AdminApplicationsPage() {
           });
         }
       } else {
-        toast.error('가입신청 목록을 가져오지 못했습니다.');
+        toast.error('가입신청 목록을 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -125,7 +125,7 @@ export default function AdminApplicationsPage() {
           setPwRequests(json.data || []);
         }
       } else {
-        toast.error('출결번호 변경 신청 목록을 가져오지 못했습니다.');
+        toast.error('출결번호 변경 신청 목록을 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -271,7 +271,7 @@ export default function AdminApplicationsPage() {
         onLogout={handleLogout}
       />
 
-      <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-5">
+      <main className="stagger-children max-w-5xl mx-auto p-4 md:p-8 space-y-5">
         <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-4 text-[11px] font-semibold text-[#0071E3]">
           학생이 직접 신청한 가입 건을 검토하고, 승인 정보(캠퍼스·담당자·좌석 등)를 입력해 원생으로 전환합니다. 반려 시 신청 내역은 삭제됩니다.
         </div>
@@ -392,7 +392,7 @@ export default function AdminApplicationsPage() {
                     )}
                     {app.contact && (
                       <span className="flex items-center gap-1.5">
-                        <Target className="w-3 h-3" /> 목표시험 <b className="text-slate-900">{app.contact}</b>
+                        <Target className="w-3 h-3" /> 목표 시험 <b className="text-slate-900">{app.contact}</b>
                       </span>
                     )}
                   </div>

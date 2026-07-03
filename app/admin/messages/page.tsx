@@ -80,7 +80,7 @@ export default function MessagesPage() {
         const json = await res.json();
         if (json.success) setStudents(json.data || []);
       } else {
-        toast.error('학생 데이터를 가져오는 데 실패했습니다.');
+        toast.error('학생 정보를 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -174,9 +174,9 @@ export default function MessagesPage() {
   };
 
   const sendMessages = async () => {
-    if (selectedIds.size === 0) { toast.error('발송 대상을 선택해주세요.'); return; }
-    if (!message.trim()) { toast.error('메시지 내용을 입력해주세요.'); return; }
-    if (targets.length === 0) { toast.error('발송 대상(학부모/학생)을 선택해주세요.'); return; }
+    if (selectedIds.size === 0) { toast.error('발송 대상을 선택해 주세요.'); return; }
+    if (!message.trim()) { toast.error('메시지 내용을 입력해 주세요.'); return; }
+    if (targets.length === 0) { toast.error('발송 대상(학부모/학생)을 선택해 주세요.'); return; }
 
     setSending(true);
     try {
@@ -217,7 +217,7 @@ export default function MessagesPage() {
     <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} />
 
-      <main className="mx-auto max-w-4xl px-4 pt-6 pb-40 sm:px-6 space-y-6">
+      <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-40 sm:px-6 space-y-6">
         {/* 헤더 */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
@@ -235,7 +235,7 @@ export default function MessagesPage() {
                 학생 메시지 발송
               </h1>
               <p className="text-xs font-bold text-slate-400 mt-0.5">
-                ① 발송할 원생을 먼저 선택하고 ② 아래에서 메시지를 작성해 발송합니다.
+                ① 발송할 학생을 먼저 선택하고 ② 아래에서 메시지를 작성해 발송합니다.
               </p>
             </div>
           </div>
@@ -299,7 +299,7 @@ export default function MessagesPage() {
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="원생명 또는 코멘터 검색"
+              placeholder="학생명 또는 코멘터 검색"
               className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 focus:border-slate-400 focus:outline-none transition-all"
             />
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -314,7 +314,7 @@ export default function MessagesPage() {
               </div>
             ) : filteredStudents.length === 0 ? (
               <div className="py-20 text-center text-sm font-bold text-slate-400">
-                해당 조건의 원생이 없습니다.
+                해당 조건의 학생이 없습니다.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -328,7 +328,7 @@ export default function MessagesPage() {
                             : <Square className="w-4 h-4 text-slate-300" />}
                         </button>
                       </th>
-                      <th className="px-4 py-4">원생</th>
+                      <th className="px-4 py-4">학생</th>
                       <th className="px-4 py-4">담당 코멘터</th>
                       <th className="px-4 py-4">연락처</th>
                       <th className="px-4 py-4">비고</th>
@@ -405,7 +405,7 @@ export default function MessagesPage() {
           {selectedIds.size === 0 ? (
             <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center">
               <Users className="w-7 h-7 text-slate-300 mx-auto mb-2" />
-              <p className="text-xs font-bold text-slate-400">위에서 발송할 원생을 먼저 선택하세요.</p>
+              <p className="text-xs font-bold text-slate-400">위에서 발송할 학생을 먼저 선택하세요.</p>
             </div>
           ) : (
             <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-4">

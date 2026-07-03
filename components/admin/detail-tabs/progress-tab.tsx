@@ -953,8 +953,8 @@ export function ProgressTab() {
                                           <Button
                                             size="sm"
                                             onClick={async () => {
-                                              if (!editingMaterialTitle.trim()) return toast.error('교재명을 입력해주세요.');
-                                              if (editingMaterialTotal <= 0) return toast.error('올바른 총 분량을 입력해주세요.');
+                                              if (!editingMaterialTitle.trim()) return toast.error('교재명을 입력해 주세요.');
+                                              if (editingMaterialTotal <= 0) return toast.error('올바른 총 분량을 입력해 주세요.');
                                               await updateProgress(sub.id, 'book', book.id, 'edit', {
                                                 title: editingMaterialTitle,
                                                 total: editingMaterialTotal,
@@ -1187,7 +1187,7 @@ export function ProgressTab() {
                                         <Label className="text-[10px] font-bold text-slate-700">주간 학습 계획표 (학습 요일 기준)</Label>
 
                                         {!hasDetailedPlans ? (
-                                          <p className="text-[9px] text-slate-500 py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>
+                                          <p className="text-[9px] text-slate-500 py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러 주세요.</p>
                                         ) : (
                                           <div className="overflow-x-auto rounded-lg border border-black/[0.04]">
                                             <table className="min-w-full text-[10px] bg-white">
@@ -1355,8 +1355,8 @@ export function ProgressTab() {
                                           <Button
                                             size="sm"
                                             onClick={async () => {
-                                              if (!editingMaterialTitle.trim()) return toast.error('강좌명을 입력해주세요.');
-                                              if (editingMaterialTotal <= 0) return toast.error('올바른 총 강의 수를 입력해주세요.');
+                                              if (!editingMaterialTitle.trim()) return toast.error('강좌명을 입력해 주세요.');
+                                              if (editingMaterialTotal <= 0) return toast.error('올바른 총 강의 수를 입력해 주세요.');
                                               await updateProgress(sub.id, 'lecture', lec.id, 'edit', {
                                                 title: editingMaterialTitle,
                                                 total: editingMaterialTotal,
@@ -1631,7 +1631,7 @@ export function ProgressTab() {
                                         <Label className="text-[10px] font-bold text-slate-700">주간 학습 계획표 (학습 요일 기준)</Label>
 
                                         {!hasDetailedPlans ? (
-                                          <p className="text-[9px] text-slate-500 py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러주세요.</p>
+                                          <p className="text-[9px] text-slate-500 py-1">위 목표 설정 완료 후 계획 생성 버튼을 눌러 주세요.</p>
                                         ) : (
                                           <div className="overflow-x-auto rounded-lg border border-black/[0.04]">
                                             <table className="min-w-full text-[10px] bg-white">

@@ -131,7 +131,7 @@ export default function AdminConsultationBookingsPage() {
           setToday(json.today || '');
         }
       } else {
-        toast.error('상담 예약 데이터를 가져오지 못했습니다.');
+        toast.error('상담 예약 정보를 불러오지 못했습니다.');
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
@@ -436,7 +436,7 @@ export default function AdminConsultationBookingsPage() {
         }
       />
 
-      <main className="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
+      <main className="stagger-children max-w-5xl mx-auto p-4 md:p-8 space-y-6">
         {/* 추가/긴급 신청 */}
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">

@@ -98,7 +98,7 @@ export async function POST(
       throw removeError;
     }
 
-    return NextResponse.json({ success: true, data: saved, message: `${application.name} 원생이 승인되었습니다.` });
+    return NextResponse.json({ success: true, data: saved, message: `${application.name} 학생을 승인했습니다.` });
   } catch (error) {
     console.error('approve application error:', error);
     return NextResponse.json({ success: false, message: '승인 처리 중 오류가 발생했습니다.' }, { status: 500 });

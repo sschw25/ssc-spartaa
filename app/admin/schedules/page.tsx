@@ -48,7 +48,7 @@ export default function SchedulesPage() {
         onLogout={handleLogout}
       />
 
-      <main className="mx-auto max-w-3xl px-4 pt-6 pb-20 sm:px-6 space-y-5">
+      <main className="stagger-children mx-auto max-w-3xl px-4 pt-6 pb-20 sm:px-6 space-y-5">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => router.push('/admin/dashboard')}
             className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shrink-0">

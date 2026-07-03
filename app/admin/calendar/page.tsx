@@ -488,7 +488,7 @@ export default function AdminCalendarPage() {
         }
       />
 
-      <main className="max-w-7xl mx-auto p-4 md:p-8 space-y-6">
+      <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 space-y-6">
         {/* 상단 컨트롤 */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
           <div className="flex items-center gap-3">

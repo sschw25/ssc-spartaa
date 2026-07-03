@@ -288,7 +288,7 @@ export function InfoTab({
 
         <div className="space-y-1.5">
           <Label htmlFor="edit-contact" className="text-xs font-semibold text-slate-900">
-            목표시험
+            목표 시험
           </Label>
           <Input
             id="edit-contact"
@@ -322,7 +322,7 @@ export function InfoTab({
           />
           {seatConflictNames.length > 0 && (
             <p className="text-[10px] font-semibold text-red-500">
-              이 센터에 같은 좌석을 쓰는 원생이 있습니다: {seatConflictNames.join(', ')}
+              이 캠퍼스에 같은 좌석을 쓰는 학생이 있습니다: {seatConflictNames.join(', ')}
             </p>
           )}
         </div>
@@ -373,7 +373,7 @@ export function InfoTab({
             모의고사 성적 입력
           </span>
           <span className="mt-0.5 block text-[10px] font-normal leading-relaxed text-slate-500">
-            모의고사 일정 생성 시 목표시험 유형으로 대상을 선택하면 해당 원생에게 알림이 발송되고, 학생이 직접 성적을 입력합니다.
+            모의고사 일정 생성 시 목표 시험 유형으로 대상을 선택하면 해당 학생에게 알림이 발송되고, 학생이 직접 성적을 입력합니다.
           </span>
         </div>
 
@@ -696,7 +696,7 @@ export function InfoTab({
           className="rounded-lg text-xs py-4 px-4 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold"
         >
           <Trash2 className="w-3.5 h-3.5 mr-1" />
-          원생 영구 삭제
+          학생 영구 삭제
         </Button>
 
         <Button
@@ -710,7 +710,7 @@ export function InfoTab({
               저장 중...
             </>
           ) : (
-            '원생 정보 저장'
+            '학생 정보 저장'
           )}
         </Button>
         </div>

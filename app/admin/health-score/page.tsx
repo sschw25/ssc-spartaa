@@ -257,7 +257,7 @@ export default function HealthScorePage() {
         onLogout={handleLogout}
       />
 
-      <main className="mx-auto max-w-6xl space-y-5 px-4 pb-20 pt-6 sm:px-6">
+      <main className="stagger-children mx-auto max-w-6xl space-y-5 px-4 pb-20 pt-6 sm:px-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-3">
             <Button

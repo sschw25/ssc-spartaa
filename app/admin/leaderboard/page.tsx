@@ -151,7 +151,7 @@ export default function WeeklyLeaderboardPage() {
         }
       />
 
-      <main className="max-w-6xl mx-auto p-4 md:p-8 pb-28 space-y-6">
+      <main className="stagger-children max-w-6xl mx-auto p-4 md:p-8 pb-28 space-y-6">
         {/* KPI 메트릭 요약 카드 — iOS 26 (앱아이콘 타일 + semibold 숫자) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
@@ -164,7 +164,7 @@ export default function WeeklyLeaderboardPage() {
               <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
             <p className="text-[13px] font-medium text-slate-900 mt-2">누적 학습 인원</p>
-            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">이번 주 순공 시간이 기록된 원생 수</p>
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">이번 주 순공 시간이 기록된 학생 수</p>
           </Card>
 
           <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
@@ -176,7 +176,7 @@ export default function WeeklyLeaderboardPage() {
               <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
             <p className="text-[13px] font-medium text-slate-900 mt-2">미학습 인원</p>
-            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">누적 순공 시간이 0분인 원생 수</p>
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">누적 순공 시간이 0분인 학생 수</p>
           </Card>
 
           <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
@@ -238,7 +238,7 @@ export default function WeeklyLeaderboardPage() {
           <CardHeader className="p-6 pb-4 border-b border-black/[0.03] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <CardTitle className="text-sm font-black text-slate-900">주간 순공 상세 순위표</CardTitle>
-              <CardDescription className="text-xs text-slate-500 font-semibold mt-1">캠퍼스별 원생들의 누적 순공 시간 랭킹입니다.</CardDescription>
+              <CardDescription className="text-xs text-slate-500 font-semibold mt-1">캠퍼스별 학생들의 누적 순공 시간 랭킹입니다.</CardDescription>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative w-full sm:w-60">
@@ -262,7 +262,7 @@ export default function WeeklyLeaderboardPage() {
                 <thead>
                   <tr className="bg-black/[0.02] text-slate-500 font-extrabold border-b border-black/[0.04]">
                     <th className="px-6 py-3.5 w-16 text-center">순위</th>
-                    <th className="px-6 py-3.5">원생 정보</th>
+                    <th className="px-6 py-3.5">학생 정보</th>
                     <th className="px-6 py-3.5">캠퍼스</th>
                     <th className="px-6 py-3.5">실시간 상태</th>
                     <th className="px-6 py-3.5">오늘 학습 시간</th>

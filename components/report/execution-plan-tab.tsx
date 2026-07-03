@@ -493,7 +493,7 @@ export function ExecutionPlanTab({
             >
               <div className="bg-[#0071E3]/5 rounded-xl p-2.5 text-[10px] font-bold text-[#0071E3] mb-1 leading-normal flex items-start gap-1.5 border border-[#0071E3]/10">
                 <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <span>선택한 템플릿에 맞추어 서식이 작성되었습니다. 어떤 과목을 어떻게 조정할지 아래 상세 항목들을 채운 뒤 [신청하기] 버튼을 눌러 완료해 주세요!</span>
+                <span>템플릿에 맞춰 내용을 채워 뒀어요. 아래에서 과목과 조정 내용을 고른 뒤 [신청하기]를 눌러 주세요.</span>
               </div>
               <div className="flex flex-wrap gap-1.5">
                 {Object.entries(REQUEST_TYPE_LABEL).map(([v, label]) => (
@@ -510,7 +510,7 @@ export function ExecutionPlanTab({
 
               {(requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && (
                 <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-2.5 my-1 text-left">
-                  <p className="text-[10px] font-black text-slate-400">변경할 계획 세부 지정 (자동 반영용)</p>
+                  <p className="text-[10px] font-black text-slate-400">바꿀 계획 상세 (신청에 자동 첨부돼요)</p>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-500">대상 학습자료 선택</label>
                     <select

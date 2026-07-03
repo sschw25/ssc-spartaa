@@ -285,7 +285,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
       {detailsOpen && (
         <div className="mt-3 max-h-72 overflow-y-auto custom-scrollbar border-t border-black/[0.05] px-1 pt-3">
           {openSection === 'present' && (
-            present.length === 0 ? <Empty text="현재 등원 중인 원생이 없습니다." /> :
+            present.length === 0 ? <Empty text="현재 등원 중인 학생이 없습니다." /> :
             present.map((r) => (
               <AttendanceRow key={r.id} id={r.id} onSelect={onSelectStudentId}>
                 <Name name={r.name} campus={r.campus} />
@@ -299,7 +299,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
             ))
           )}
           {openSection === 'left' && (
-            left.length === 0 ? <Empty text="오늘 하원한 원생이 없습니다." /> :
+            left.length === 0 ? <Empty text="오늘 하원한 학생이 없습니다." /> :
             left.map((r) => (
               <AttendanceRow key={r.id} id={r.id} onSelect={onSelectStudentId}>
                 <Name name={r.name} campus={r.campus} />
@@ -315,7 +315,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
             ))
           )}
           {openSection === 'absent' && (
-            absent.length === 0 ? <Empty text="미등원 원생이 없습니다. 전원 출석!" /> :
+            absent.length === 0 ? <Empty text="미등원 학생이 없습니다. 전원 출석!" /> :
             absent.map((r) => (
               <AttendanceRow key={r.id} id={r.id} onSelect={onSelectStudentId}>
                 <Name name={r.name} campus={r.campus} />

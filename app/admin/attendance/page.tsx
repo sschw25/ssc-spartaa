@@ -535,7 +535,7 @@ function AdminAttendanceContent() {
         }
       />
 
-      <main className="max-w-6xl mx-auto p-4 md:p-8 pb-28 space-y-5">
+      <main className="stagger-children max-w-6xl mx-auto p-4 md:p-8 pb-28 space-y-5">
         <div className="bg-white border border-black/[0.05] rounded-3xl shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] p-4 space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex items-center gap-2 flex-wrap">

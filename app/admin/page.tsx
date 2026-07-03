@@ -99,7 +99,7 @@ export default function AdminLoginPage() {
           <CardHeader className="space-y-1 pb-6">
             <CardTitle className="text-xl font-bold text-center">관리자 로그인</CardTitle>
             <CardDescription className="text-center text-slate-500 text-xs">
-              원생 관리 및 진도 조절을 위한 대시보드에 로그인합니다.
+              학생 관리 및 진도 조절을 위한 대시보드에 로그인합니다.
             </CardDescription>
           </CardHeader>
 

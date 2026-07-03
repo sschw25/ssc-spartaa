@@ -128,7 +128,7 @@ export function AttendanceStatusCard() {
               한 번 스캔할 때마다 등원 ↔ 하원이 전환됩니다.
             </p>
             <p className="text-[11px] text-[#F56300] font-semibold pt-1.5 border-t border-[#0071E3]/10">
-              ※ 하원하려면 QR을 재스캔하거나, 출결태블릿에서 출결번호를 누른 뒤 [하원]을 눌러주세요.
+              ※ 하원하려면 QR을 다시 스캔하거나, 출결 태블릿에서 출결번호를 누른 뒤 [하원]을 눌러 주세요.
             </p>
           </div>
         </div>

@@ -95,9 +95,9 @@ export function AdminMenuList({
     },
     {
       key: 'students',
-      title: '원생 관리',
+      title: '학생 관리',
       items: [
-        { key: 'consultation', icon: BookOpen, label: '원생 종합 관리', href: '/admin/consultation' },
+        { key: 'consultation', icon: BookOpen, label: '학생 종합 관리', href: '/admin/consultation' },
         { key: 'consultation-bookings', icon: CalendarClock, label: '상담 예약', href: '/admin/consultation-bookings' },
         { key: 'applications', icon: UserPlus, label: '가입신청', href: '/admin/applications' },
         { key: 'search', icon: Search, label: '학생 검색', action: onSearchStudent },

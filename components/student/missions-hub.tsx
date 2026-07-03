@@ -965,7 +965,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
   );
 
   if (embedded) {
-    return <div className="flex w-full flex-col gap-5">{inner}</div>;
+    return <div className="stagger-children flex w-full flex-col gap-5">{inner}</div>;
   }
 
   return (

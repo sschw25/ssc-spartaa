@@ -81,7 +81,7 @@ export default function OtEventsPage() {
   }, [router, loadAll]);
 
   const addEvent = async () => {
-    if (!newName.trim() || !newDate) { toast.error('OT명과 날짜를 입력해주세요.'); return; }
+    if (!newName.trim() || !newDate) { toast.error('OT명과 날짜를 입력해 주세요.'); return; }
     setAdding(true);
     try {
       const res = await fetch('/api/admin/ot-events', {
@@ -171,7 +171,7 @@ export default function OtEventsPage() {
     <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav title="OT 참여 관리" titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
 
-      <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
+      <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => router.push('/admin/dashboard')}
             className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shrink-0">
@@ -208,9 +208,9 @@ export default function OtEventsPage() {
               value={newCampus}
               onChange={(e) => setNewCampus(e.target.value)}
               disabled={adminCampus !== 'all'}
-              title={adminCampus !== 'all' ? '담당 센터로 자동 지정됩니다' : '대상 센터 선택'}
+              title={adminCampus !== 'all' ? '담당 캠퍼스로 자동 지정됩니다' : '대상 캠퍼스 선택'}
               className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
-              <option value="all">전체 센터</option>
+              <option value="all">전체 캠퍼스</option>
               <option value="wonju">원주</option>
               <option value="chuncheon">춘천</option>
               <option value="chungju">충주</option>
@@ -229,7 +229,7 @@ export default function OtEventsPage() {
           />
           <p className="text-[11px] font-semibold text-slate-400 flex items-start gap-1">
             <Lightbulb className="w-3 h-3 shrink-0 mt-0.5" />
-            <span>센터별로 날짜가 다르면 같은 OT명으로 센터를 바꿔 각각 등록하세요. 학생에게는 <b>OT 날짜 3일 전부터 자동</b>으로 알림이 뜹니다. (즉시 보내려면 ‘학생 알림’)</span>
+            <span>캠퍼스별로 날짜가 다르면 같은 OT명으로 캠퍼스를 바꿔 각각 등록하세요. 학생에게는 <b>OT 날짜 3일 전부터 자동</b>으로 알림이 뜹니다. (즉시 보내려면 ‘학생 알림’)</span>
           </p>
 
           {events.length > 0 && (
@@ -244,7 +244,7 @@ export default function OtEventsPage() {
                         <span className={`text-xs font-black ${selectedEventId === event.id ? 'text-[#0071E3]' : 'text-slate-700'}`}>{event.name}</span>
                         <span className="text-[11px] font-semibold text-slate-400">{event.date}</span>
                         <span className="rounded-lg bg-slate-200/70 text-slate-600 px-1.5 py-0.5 text-[9px] font-black">
-                          {event.campus && event.campus !== 'all' ? getCampusLabel(event.campus) : '전체 센터'}
+                          {event.campus && event.campus !== 'all' ? getCampusLabel(event.campus) : '전체 캠퍼스'}
                         </span>
                         {event.notifiedAt && (
                           <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
@@ -303,7 +303,7 @@ export default function OtEventsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
                   <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                    <tr><th className="px-5 py-4">원생</th><th className="px-4 py-4">참여여부</th></tr>
+                    <tr><th className="px-5 py-4">학생</th><th className="px-4 py-4">참여여부</th></tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100/60">
                     {scopedStudents.map((s) => {
@@ -371,7 +371,7 @@ export default function OtEventsPage() {
         {!selectedEvent && !loading && (
           <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center">
             <CalendarClock className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-            <p className="text-sm font-bold text-slate-400">OT 일정을 먼저 등록해주세요.</p>
+            <p className="text-sm font-bold text-slate-400">OT 일정을 먼저 등록해 주세요.</p>
           </div>
         )}
       </main>

@@ -32,7 +32,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!reason.trim()) { toast.error('사유를 입력해주세요.'); return; }
+    if (!reason.trim()) { toast.error('사유를 입력해 주세요.'); return; }
     setSaving(true);
     try {
       const res = await fetch(`/api/admin/students/${student.id}/penalty`, {
