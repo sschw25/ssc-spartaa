@@ -9,7 +9,7 @@ import type { Student } from '@/lib/types/student';
 // 조회창: 일요일(휴무일) 제외 시 ~340일 스트릭까지 커버 — 1년 이상 재원하는 개근생 대비.
 export const STREAK_WINDOW_DAYS = 400;
 // 쿠폰 "스트릭 잇기" 비용(쿠폰 개수)과 복구 가능 기간(결손일이 오늘로부터 며칠 이내인지)
-export const STREAK_REPAIR_COST = 1;
+export const STREAK_REPAIR_COST = 10;
 export const STREAK_REPAIR_WINDOW_DAYS = 7;
 
 export interface StreakRepairEntry { date: string; usedAt: string }

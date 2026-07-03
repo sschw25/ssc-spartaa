@@ -2,7 +2,7 @@
 // 관리자 미션 설정 페이지(/admin/missions), 미션 엔진(lib/mission-engine.ts),
 // 학생 리포트 미션 카드가 모두 이 모듈을 사용한다.
 //
-// 쿠폰 경제: 쿠폰 3장 = 반차 추가권 1회 (lib/leave.ts COUPONS_PER_EXTRA_HALFDAY).
+// 쿠폰 경제: 쿠폰 5장 = 반차 추가권 1회 (lib/leave.ts COUPONS_PER_EXTRA_HALFDAY).
 
 export type MissionId =
   | 'monthly_no_penalty' // 한 달 벌점 0점

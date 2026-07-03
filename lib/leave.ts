@@ -60,16 +60,16 @@ export function formatLeaveLabel(type?: string, slot?: string): string {
 // 월 한도: 반차 2개 / 휴식권 1개. 병가는 한도 미차감(영수증 증빙으로 별도 처리).
 export const MONTHLY_HALFDAY_QUOTA = 2;
 export const MONTHLY_FULLDAY_QUOTA = 1;
-// 반차 1회 추가 신청에 필요한 쿠폰 수
-export const COUPONS_PER_EXTRA_HALFDAY = 3;
+// 반차 1회 추가 신청에 필요한 쿠폰 수 (반차권 교환가와 동일하게 유지)
+export const COUPONS_PER_EXTRA_HALFDAY = 5;
 
-// 쿠폰 리워드 교환 카탈로그 (3장=반차권, 6장=휴식권, 9장=상품권/플래너)
+// 쿠폰 리워드 교환 카탈로그 (5장=반차권, 10장=휴식권, 20장=상품권, 10장=플래너)
 import type { RewardType } from '@/lib/types/student';
 export const REWARD_CATALOG: { type: RewardType; label: string; cost: number; physical: boolean }[] = [
-  { type: 'halfday', label: '반차권', cost: 3, physical: false },
-  { type: 'restpass', label: '휴식권', cost: 6, physical: false },
-  { type: 'voucher', label: '상품권', cost: 9, physical: true },
-  { type: 'planner', label: '플래너', cost: 9, physical: true },
+  { type: 'halfday', label: '반차권', cost: 5, physical: false },
+  { type: 'restpass', label: '휴식권', cost: 10, physical: false },
+  { type: 'voucher', label: '상품권', cost: 20, physical: true },
+  { type: 'planner', label: '플래너', cost: 10, physical: true },
 ];
 
 export function getRewardMeta(type: RewardType) {
