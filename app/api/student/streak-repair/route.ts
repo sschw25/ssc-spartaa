@@ -45,14 +45,14 @@ export async function POST(req: NextRequest) {
   });
   if (!gap) {
     return NextResponse.json(
-      { success: false, message: '지금은 이을 수 있는 스트릭 결손이 없어요.' },
+      { success: false, message: '지금은 이을 수 있는 연속출석 결손이 없어요.' },
       { status: 400 },
     );
   }
   // 클라이언트가 날짜를 보냈다면 서버 판정과 일치해야 함(화면이 낡은 상태로 결제되는 것 방지)
   if (typeof body.date === 'string' && body.date !== gap.date) {
     return NextResponse.json(
-      { success: false, message: '스트릭 상태가 바뀌었어요. 화면을 새로고침해 주세요.' },
+      { success: false, message: '연속출석 상태가 바뀌었어요. 화면을 새로고침해 주세요.' },
       { status: 409 },
     );
   }
