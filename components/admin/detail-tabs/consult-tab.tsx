@@ -142,7 +142,7 @@ export function ConsultTab({
             <p className="mt-1 text-sm font-semibold text-[#0071E3]">
               {todayPomodoroStats.sessions}세션 · {fmtMin(todayPomodoroStats.minutes)}
             </p>
-            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">학생 결과지에서 완료한 집중 기록</p>
+            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">학생 홈에서 완료한 집중 기록</p>
           </div>
 
           <div className="rounded-lg bg-[#F5F5F7] px-3 py-3">

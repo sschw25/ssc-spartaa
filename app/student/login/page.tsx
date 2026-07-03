@@ -50,7 +50,7 @@ function StudentLoginForm() {
         return;
       }
 
-      // 로그인 성공 시 next 파라미터가 있으면 그곳으로 이동, 없으면 결과지 URL로 이동
+      // 로그인 성공 시 next 파라미터가 있으면 그곳으로 이동, 없으면 학생 홈 URL로 이동
       if (next) {
         router.replace(next);
       } else {

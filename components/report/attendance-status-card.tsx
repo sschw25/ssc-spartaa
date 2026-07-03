@@ -30,7 +30,7 @@ function fmtMin(min: number): string {
   return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
 }
 
-// 학생 본인 결과지에서만 사용: 현재 등원 상태(라이브) + 오늘 등하원 타임라인 + QR 안내.
+// 학생 본인 홈에서만 사용: 현재 등원 상태(라이브) + 오늘 등하원 타임라인 + QR 안내.
 export function AttendanceStatusCard() {
   const [status, setStatus] = useState<Status>({ loading: true, checkedIn: false, since: null, sinceToday: false, todayMinutes: 0, todaySessions: [] });
   const [now, setNow] = useState(0); // 라이브 경과 시간 틱 (마운트 후에만 동작 → SSR 불일치 없음)

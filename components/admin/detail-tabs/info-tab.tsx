@@ -554,7 +554,7 @@ export function InfoTab({
           <h4 className="text-xs font-bold text-[#1D1D1F]">출결 알림 문자</h4>
         </div>
         <p className="text-[10px] text-[#86868B]">
-          등/하원 시 아래 번호로 자동 발송됩니다. (PII — 결과지엔 노출되지 않음)
+          등/하원 시 아래 번호로 자동 발송됩니다. (PII — 학생 홈엔 노출되지 않음)
         </p>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">

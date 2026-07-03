@@ -691,7 +691,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 <h4 className="text-xs font-bold text-[#1D1D1F]">출결 알림 문자</h4>
               </div>
               <p className="text-[10px] text-[#86868B]">
-                등/하원 시 아래 번호로 자동 발송됩니다. 결과지에는 노출되지 않습니다.
+                등/하원 시 아래 번호로 자동 발송됩니다. 학생 홈에는 노출되지 않습니다.
               </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
