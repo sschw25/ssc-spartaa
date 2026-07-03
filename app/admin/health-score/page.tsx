@@ -105,10 +105,10 @@ function SummaryCard({
         </div>
       </div>
       <div className="mt-3 flex items-baseline gap-1">
-        <span className="text-[18px] font-semibold leading-none tabular-nums text-[#1D1D1F]">{value}</span>
+        <span className="text-[18px] font-semibold leading-none tabular-nums text-slate-900">{value}</span>
       </div>
-      <p className="mt-2 text-[13px] font-medium text-[#1D1D1F]">{label}</p>
-      <p className="mt-0.5 text-[12px] leading-snug text-[#86868B]">{detail}</p>
+      <p className="mt-2 text-[13px] font-medium text-slate-900">{label}</p>
+      <p className="mt-0.5 text-[12px] leading-snug text-slate-500">{detail}</p>
     </div>
   );
 }
@@ -119,10 +119,10 @@ function EmptyState({ hasRows }: { hasRows: boolean }) {
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10">
         <CheckCircle2 className="h-6 w-6 text-emerald-600" />
       </div>
-      <p className="mt-4 text-[15px] font-semibold text-[#1D1D1F]">
+      <p className="mt-4 text-[15px] font-semibold text-slate-900">
         {hasRows ? '조건에 맞는 학생이 없습니다' : '케어 지수 데이터가 없습니다'}
       </p>
-      <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-[#86868B]">
+      <p className="mt-1 max-w-sm text-[13px] leading-relaxed text-slate-500">
         {hasRows
           ? '필터나 검색어를 바꾸면 다른 학생을 확인할 수 있습니다.'
           : '출결, 학습 계획, 상담 기록이 쌓이면 이 화면에서 학생별 케어 신호를 볼 수 있습니다.'}
@@ -250,7 +250,7 @@ export default function HealthScorePage() {
   }
 
   return (
-    <div className="ios-app-bg min-h-screen font-sans text-[#1D1D1F]">
+    <div className="ios-app-bg min-h-screen font-sans text-slate-900">
       <AdminTopNav
         title="케어 지수"
         titleIcon={<HeartPulse className="h-4 w-4 text-red-500" />}
@@ -269,11 +269,11 @@ export default function HealthScorePage() {
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="flex items-center gap-2 text-[20px] font-semibold tracking-tight text-[#1D1D1F]">
+              <h1 className="flex items-center gap-2 text-[20px] font-semibold tracking-tight text-slate-900">
                 <HeartPulse className="h-5 w-5 text-red-500" />
                 학생 케어 지수
               </h1>
-              <p className="mt-0.5 text-[12px] font-medium leading-relaxed text-[#86868B]">
+              <p className="mt-0.5 text-[12px] font-medium leading-relaxed text-slate-500">
                 최근 {days}일 기준으로 결석, 이탈, 계획 이행률, 상담 공백을 합산한 관리 우선순위입니다.
               </p>
             </div>
@@ -336,8 +336,8 @@ export default function HealthScorePage() {
                       }}
                       className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                         campusFilter === option.value
-                          ? 'bg-white text-[#1D1D1F] shadow-sm'
-                          : 'text-[#86868B] hover:text-[#1D1D1F]'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-900'
                       }`}
                     >
                       {option.label}
@@ -354,8 +354,8 @@ export default function HealthScorePage() {
                     onClick={() => setBandFilter(option.value)}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                       bandFilter === option.value
-                        ? 'bg-white text-[#1D1D1F] shadow-sm'
-                        : 'text-[#86868B] hover:text-[#1D1D1F]'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900'
                     }`}
                   >
                     {option.label}
@@ -374,8 +374,8 @@ export default function HealthScorePage() {
                     }}
                     className={`rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                       days === option
-                        ? 'bg-white text-[#1D1D1F] shadow-sm'
-                        : 'text-[#86868B] hover:text-[#1D1D1F]'
+                        ? 'bg-white text-slate-900 shadow-sm'
+                        : 'text-slate-500 hover:text-slate-900'
                     }`}
                   >
                     {option}일
@@ -385,12 +385,12 @@ export default function HealthScorePage() {
             </div>
 
             <div className="relative w-full lg:w-64">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#86868B]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-500" />
               <input
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 placeholder="학생명·센터·요인 검색"
-                className="h-9 w-full rounded-full border border-black/[0.06] bg-[#F8F9FA] pl-8 pr-3 text-[12px] font-medium text-[#1D1D1F] outline-none transition focus:border-[#0071E3]/40 focus:bg-white focus:ring-2 focus:ring-[#0071E3]/10"
+                className="h-9 w-full rounded-full border border-black/[0.06] bg-[#F8F9FA] pl-8 pr-3 text-[12px] font-medium text-slate-900 outline-none transition focus:border-[#0071E3]/40 focus:bg-white focus:ring-2 focus:ring-[#0071E3]/10"
               />
             </div>
           </div>
@@ -406,16 +406,16 @@ export default function HealthScorePage() {
           <section className="overflow-hidden rounded-3xl border border-black/[0.05] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
             <div className="flex items-center justify-between gap-3 border-b border-black/[0.05] px-5 py-4">
               <div>
-                <h2 className="text-[15px] font-semibold text-[#1D1D1F]">학생별 케어 점수</h2>
-                <p className="mt-0.5 text-[12px] text-[#86868B]">
+                <h2 className="text-[15px] font-semibold text-slate-900">학생별 케어 점수</h2>
+                <p className="mt-0.5 text-[12px] text-slate-500">
                   {loading ? '계산 중' : `${filteredRows.length}명 표시 · 점수 높은 순`}
                 </p>
               </div>
-              <SlidersHorizontal className="h-4 w-4 text-[#86868B]" />
+              <SlidersHorizontal className="h-4 w-4 text-slate-500" />
             </div>
 
             {loading && rows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 px-5 py-20 text-[13px] font-semibold text-[#86868B]">
+              <div className="flex flex-col items-center justify-center gap-3 px-5 py-20 text-[13px] font-semibold text-slate-500">
                 <Loader2 className="h-6 w-6 animate-spin text-[#0071E3]" />
                 케어 지수 계산 중...
               </div>
@@ -441,8 +441,8 @@ export default function HealthScorePage() {
 
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <span className="text-[15px] font-semibold text-[#1D1D1F]">{row.name}</span>
-                            <span className="rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] font-medium text-[#86868B]">
+                            <span className="text-[15px] font-semibold text-slate-900">{row.name}</span>
+                            <span className="rounded-full bg-black/[0.04] px-2 py-0.5 text-[11px] font-medium text-slate-500">
                               {getCampusLabel(row.campus)}
                             </span>
                             <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${band.tone}`}>
@@ -484,7 +484,7 @@ export default function HealthScorePage() {
 
           <aside className="space-y-5">
             <section className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
-              <h2 className="text-[15px] font-semibold text-[#1D1D1F]">밴드 기준</h2>
+              <h2 className="text-[15px] font-semibold text-slate-900">밴드 기준</h2>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-red-500/10 p-3">
                   <p className="text-[13px] font-semibold text-red-700">위험 · 60점 이상</p>
@@ -502,9 +502,9 @@ export default function HealthScorePage() {
             </section>
 
             <section className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
-              <h2 className="text-[15px] font-semibold text-[#1D1D1F]">주요 위험 요인</h2>
+              <h2 className="text-[15px] font-semibold text-slate-900">주요 위험 요인</h2>
               {factorSummary.length === 0 ? (
-                <p className="mt-4 rounded-2xl bg-[#F8F9FA] px-3 py-6 text-center text-[12px] font-medium text-[#86868B]">
+                <p className="mt-4 rounded-2xl bg-[#F8F9FA] px-3 py-6 text-center text-[12px] font-medium text-slate-500">
                   집계된 위험 요인이 없습니다.
                 </p>
               ) : (
@@ -515,7 +515,7 @@ export default function HealthScorePage() {
                       <div key={factor.label}>
                         <div className="mb-1.5 flex items-center justify-between gap-3">
                           <span className="text-[12px] font-medium text-[#4A4A4F]">{factor.label}</span>
-                          <span className="text-[12px] font-semibold tabular-nums text-[#1D1D1F]">{factor.value}</span>
+                          <span className="text-[12px] font-semibold tabular-nums text-slate-900">{factor.value}</span>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-black/[0.04]">
                           <div

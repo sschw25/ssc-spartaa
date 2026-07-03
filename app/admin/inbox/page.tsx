@@ -796,7 +796,7 @@ export default function AdminInboxPage() {
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans transition-all">
+    <div className="ios-app-bg min-h-screen text-slate-900 font-sans transition-all">
       <AdminTopNav
         title="통합 신청 & 건의 인박스"
         onLogout={handleLogout}
@@ -852,7 +852,7 @@ export default function AdminInboxPage() {
                 className={`flex-1 rounded-xl py-2 px-3 text-xs font-bold transition-all text-center whitespace-nowrap ${
                   activeCategory === tab.value
                     ? 'bg-white text-black shadow-sm'
-                    : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-white/40'
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/40'
                 }`}
               >
                 {tab.label}
@@ -876,7 +876,7 @@ export default function AdminInboxPage() {
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
                   inboxSortField === 'status'
                     ? 'bg-white text-black shadow-sm'
-                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 미처리순 {inboxSortField === 'status' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
@@ -894,7 +894,7 @@ export default function AdminInboxPage() {
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
                   inboxSortField === 'date'
                     ? 'bg-white text-black shadow-sm'
-                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 신청일순 {inboxSortField === 'date' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
@@ -912,7 +912,7 @@ export default function AdminInboxPage() {
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
                   inboxSortField === 'name'
                     ? 'bg-white text-black shadow-sm'
-                    : 'text-[#86868B] hover:text-[#1D1D1F]'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 이름순 {inboxSortField === 'name' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
@@ -998,7 +998,7 @@ export default function AdminInboxPage() {
                           />
                         )}
                         <span className="font-black text-sm text-slate-800">{item.studentName}</span>
-                        <Badge className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-[#86868B]">
+                        <Badge className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
                           {getCampusLabel(item.campus)}
                         </Badge>
                         <span className="text-[10px] font-semibold text-slate-400">{item.date}</span>

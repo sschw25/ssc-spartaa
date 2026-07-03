@@ -3811,7 +3811,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     <Sheet open={isOpen} onOpenChange={(open) => {
       if (!open) requestClose();
     }}>
-      <SheetContent className="w-full sm:max-w-2xl bg-white border-l border-black/[0.05] p-0 font-sans text-[#1D1D1F]">
+      <SheetContent className="w-full sm:max-w-2xl bg-white border-l border-black/[0.05] p-0 font-sans text-slate-900">
         
         {/* 상시 플로팅 마스터 저장 버튼 & 동기화 뱃지 (X 버튼 바로 왼쪽 옆에 배치) */}
         <div className="absolute top-3 right-12 z-50 flex items-center gap-2">
@@ -3854,7 +3854,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           </SheetHeader>
         
         {/* Header (Notion Page Title Banner) */}
-        <div className="bg-[#1D1D1F] text-white p-6 md:p-8 relative flex flex-col gap-5">
+        <div className="bg-slate-900 text-white p-6 md:p-8 relative flex flex-col gap-5">
           {/* Top Row: Title, Metadata, Status */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
             <div className="min-w-0 w-full">
@@ -3873,12 +3873,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 </div>
               )}
               <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                <span className="text-[9px] font-bold tracking-[0.2em] text-[#86868B] uppercase block">
+                <span className="text-[9px] font-bold tracking-[0.2em] text-slate-500 uppercase block">
                   Student Profile Detail
                 </span>
               </div>
               <h2 className="text-[17px] font-semibold tracking-tight">{student.name}</h2>
-              <p className="text-xs text-[#86868B] mt-1">
+              <p className="text-xs text-slate-500 mt-1">
                 {student.campus === 'wonju' ? '원주 캠퍼스' : student.campus === 'chuncheon' ? '춘천 캠퍼스' : student.campus === 'chungju' ? '충주 캠퍼스' : '기타/퇴원'} · {student.manager || '담당 관리자'}
               </p>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
@@ -4483,7 +4483,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               <div className="rounded-2xl border border-black/[0.06] bg-white shadow-sm overflow-hidden">
                 <div className="px-5 py-4 border-b border-black/[0.04] flex items-center gap-2 bg-[#FAFAFA]">
                   <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-                  <h3 className="text-xs font-semibold text-[#1D1D1F]">D-Day 목록</h3>
+                  <h3 className="text-xs font-semibold text-slate-900">D-Day 목록</h3>
                 </div>
 
                 {/* 현황 */}
@@ -4505,7 +4505,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                               diff === 0 ? 'text-emerald-600' : isPast ? 'text-slate-400' : 'text-[#0071E3]'
                             }`}>{label}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-[#1D1D1F] truncate">{d.title}</p>
+                              <p className="text-xs font-bold text-slate-900 truncate">{d.title}</p>
                               <p className="text-[10px] font-semibold text-slate-400">{d.date}</p>
                             </div>
                             <button
@@ -4537,13 +4537,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                       value={ddayAdminTitle}
                       onChange={(e) => setDdayAdminTitle(e.target.value)}
                       placeholder="이름 (예: 수능, 기말고사)"
-                      className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                      className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
                     />
                     <input
                       type="date"
                       value={ddayAdminDate}
                       onChange={(e) => setDdayAdminDate(e.target.value)}
-                      className="rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                      className="rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
                     />
                   </div>
                   <button
@@ -4642,8 +4642,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     >
       <AlertDialogContent className="bg-white">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base text-[#1D1D1F]">변경사항을 저장할까요?</AlertDialogTitle>
-          <AlertDialogDescription className="text-xs leading-5 text-[#6E6E73]">
+          <AlertDialogTitle className="text-base text-slate-900">변경사항을 저장할까요?</AlertDialogTitle>
+          <AlertDialogDescription className="text-xs leading-5 text-slate-600">
             저장하지 않고 닫으면 지금 입력한 상담 기록과 변경사항이 저장되지 않습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -4653,7 +4653,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             variant="outline"
             onClick={handleDiscardAndClose}
             disabled={loading}
-            className="rounded-lg border-black/[0.08] bg-white text-xs font-bold text-[#1D1D1F]"
+            className="rounded-lg border-black/[0.08] bg-white text-xs font-bold text-slate-900"
           >
             끝내기
           </Button>

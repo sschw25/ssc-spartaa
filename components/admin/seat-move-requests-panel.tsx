@@ -110,7 +110,7 @@ export function SeatMoveRequestsPanel({
       <div className="flex flex-wrap gap-2">
         {pending.map((r) => (
           <div key={r.id} className="flex items-center gap-2 rounded-xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
-            <span className="text-xs font-black text-[#1D1D1F]">{r.studentName}</span>
+            <span className="text-xs font-black text-slate-900">{r.studentName}</span>
             <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500">
               {r.fromSeat != null ? `${r.fromSeat}번` : '미배정'}
               <ArrowRight className="h-3 w-3" />

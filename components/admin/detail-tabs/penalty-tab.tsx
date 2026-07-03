@@ -106,7 +106,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
 
       {/* 등록 폼 */}
       <form onSubmit={handleAdd} className="rounded-2xl border border-black/[0.05] bg-[#F5F5F7] p-4 space-y-3">
-        <p className="text-xs font-semibold text-[#1D1D1F]">벌점 · 상점 부여</p>
+        <p className="text-xs font-semibold text-slate-900">벌점 · 상점 부여</p>
         <div className="flex gap-2">
           <button
             type="button"
@@ -177,7 +177,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
       {/* 내역 */}
       <div className="rounded-2xl border border-black/[0.05] bg-white overflow-hidden">
         <div className="px-4 py-3 border-b border-black/[0.04] bg-[#F5F5F7]">
-          <p className="text-xs font-semibold text-[#1D1D1F]">내역 ({penalties.length}건)</p>
+          <p className="text-xs font-semibold text-slate-900">내역 ({penalties.length}건)</p>
         </div>
         {penalties.length === 0 ? (
           <div className="py-10 text-center text-xs font-bold text-slate-400">
@@ -193,7 +193,7 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
                   {p.type === 'penalty' ? '+' : '-'}{p.points}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[#1D1D1F] truncate">{p.reason}</p>
+                  <p className="text-xs font-semibold text-slate-900 truncate">{p.reason}</p>
                   <p className="text-[10px] font-bold text-slate-400 mt-0.5">
                     {p.date} · {p.awardedBy}
                   </p>

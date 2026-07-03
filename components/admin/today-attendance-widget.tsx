@@ -78,7 +78,7 @@ function Tile({
       <div className="flex items-center gap-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${section === 'present' ? 'animate-pulse' : ''}`} />
         <span className={`text-[13px] font-medium transition-colors duration-300 ${
-          isActive ? 'text-[#1D1D1F]' : 'text-[#86868B]'
+          isActive ? 'text-slate-900' : 'text-slate-500'
         }`}>
           {label}
         </span>
@@ -86,12 +86,12 @@ function Tile({
 
       <div className="mt-2.5 flex items-baseline gap-1">
         <span className={`text-[18px] leading-none font-semibold tracking-tight transition-colors duration-300 ${
-          isActive ? 'text-[#1D1D1F]' : 'text-[#1D1D1F]'
+          isActive ? 'text-slate-900' : 'text-slate-900'
         }`}>
           {count}
         </span>
         <span className={`text-[14px] font-medium transition-colors duration-300 ${
-          isActive ? 'text-[#1D1D1F]/70' : 'text-[#86868B]'
+          isActive ? 'text-slate-900/70' : 'text-slate-500'
         }`}>
           명
         </span>
@@ -123,15 +123,15 @@ function AttendanceRow({
 function Name({ name, campus }: { name: string; campus: string }) {
   return (
     <span className="flex items-center gap-2 min-w-0">
-      <span className="text-xs font-semibold text-[#1D1D1F] truncate">{name}</span>
-      <span className="text-[9px] font-semibold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(campus)}</span>
+      <span className="text-xs font-semibold text-slate-900 truncate">{name}</span>
+      <span className="text-[9px] font-semibold text-slate-500 bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(campus)}</span>
     </span>
   );
 }
 
 function WeekPace({ min }: { min: number }) {
   return (
-    <span className="flex items-center gap-1 text-[10px] font-bold text-[#86868B] shrink-0">
+    <span className="flex items-center gap-1 text-[10px] font-bold text-slate-500 shrink-0">
       <Flame className="w-3 h-3 text-[#F56300]" /> 주 {fmtMin(min)}
     </span>
   );
@@ -180,7 +180,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
     return (
       <div className={`${wrap} flex flex-col items-center justify-center py-12`}>
         <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mb-2" />
-        <span className="text-xs text-[#86868B] font-semibold">오늘 출결 현황 불러오는 중...</span>
+        <span className="text-xs text-slate-500 font-semibold">오늘 출결 현황 불러오는 중...</span>
       </div>
     );
   }
@@ -197,8 +197,8 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
   if (data && data.configured === false) {
     return (
       <div className={`${wrap} flex items-center gap-3 py-6`}>
-        <Clock className="w-5 h-5 text-[#86868B] shrink-0" />
-        <p className="text-xs text-[#86868B] font-semibold leading-relaxed">
+        <Clock className="w-5 h-5 text-slate-500 shrink-0" />
+        <p className="text-xs text-slate-500 font-semibold leading-relaxed">
           출결 연동(Supabase)이 설정되지 않아 실시간 출결을 표시할 수 없습니다.
         </p>
       </div>
@@ -210,8 +210,8 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
       <div className="mb-4 flex items-center justify-between">
         <div className="flex min-w-0 items-center gap-2 text-left">
           <UserCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-          <h3 className="admin-fit-text text-[15px] font-semibold text-[#1D1D1F] tracking-tight">오늘 출결 현황</h3>
-          {data?.today && <span className="text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.02]">{data.today}</span>}
+          <h3 className="admin-fit-text text-[15px] font-semibold text-slate-900 tracking-tight">오늘 출결 현황</h3>
+          {data?.today && <span className="text-[10px] font-bold text-slate-500 bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.02]">{data.today}</span>}
           {campusFilter !== 'all' && (
             <span className="text-[10px] font-semibold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
           )}
@@ -219,11 +219,11 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
         <div className="flex items-center gap-1.5">
           <button
             onClick={() => router.push('/admin/attendance')}
-            className="text-[11px] font-bold text-[#86868B] hover:text-[#1D1D1F] transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F5F7]"
+            className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F5F7]"
           >
             자세히
           </button>
-          <button onClick={load} disabled={loading} className="text-[#86868B] hover:text-[#1D1D1F] transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7]" title="출결 새로고침">
+          <button onClick={load} disabled={loading} className="text-slate-500 hover:text-slate-900 transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7]" title="출결 새로고침">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
@@ -330,5 +330,5 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="text-[11px] text-[#86868B] font-semibold text-center py-4">{text}</p>;
+  return <p className="text-[11px] text-slate-500 font-semibold text-center py-4">{text}</p>;
 }

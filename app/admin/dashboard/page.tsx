@@ -641,13 +641,13 @@ export default function AdminDashboardPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B]">세션 권한 확인 중...</p>
+        <p className="text-sm text-slate-500">세션 권한 확인 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans selection:bg-black/10">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans selection:bg-black/10">
 
       <AdminTopNav
         title="학습 및 진도 체계적 관리 대시보드"
@@ -666,7 +666,7 @@ export default function AdminDashboardPage() {
               className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
               title="검색"
             >
-              <Search className="w-4 h-4 md:mr-1.5 text-[#86868B]" />
+              <Search className="w-4 h-4 md:mr-1.5 text-slate-500" />
               <span className="hidden md:inline font-bold">검색</span>
             </Button>
             <Button
@@ -751,16 +751,16 @@ export default function AdminDashboardPage() {
             <Card onClick={() => router.push('/admin/enrollment-expired')} className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${expiredStudents.length > 0 ? 'bg-red-500/12' : 'bg-black/[0.04]'}`}>
-                  <XCircle className={`w-[18px] h-[18px] ${expiredStudents.length > 0 ? 'text-red-500' : 'text-[#86868B]'}`} />
+                  <XCircle className={`w-[18px] h-[18px] ${expiredStudents.length > 0 ? 'text-red-500' : 'text-slate-500'}`} />
                 </div>
                 {expiredStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
                 <AnimatedNumber value={expiredStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${expiredStudents.length > 0 ? 'text-red-600' : 'text-[#1d1d1f]'}`} />
-                <span className="text-[15px] font-medium text-[#86868B]">명</span>
+                <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
               <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">만료 경고</p>
-              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
+              <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">등록 만료일이 지난 원생 · 결제 확인 필요</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {expiredStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
@@ -772,16 +772,16 @@ export default function AdminDashboardPage() {
             <Card onClick={() => router.push('/admin/enrollment-warning')} className="admin-fit-box group border border-black/[0.05] rounded-3xl bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${renewalWarnStudents.length > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04]'}`}>
-                  <Clock className={`w-[18px] h-[18px] ${renewalWarnStudents.length > 0 ? 'text-amber-500' : 'text-[#86868B]'}`} />
+                  <Clock className={`w-[18px] h-[18px] ${renewalWarnStudents.length > 0 ? 'text-amber-500' : 'text-slate-500'}`} />
                 </div>
                 {renewalWarnStudents.length > 0 && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
                 <AnimatedNumber value={renewalWarnStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${renewalWarnStudents.length > 0 ? 'text-amber-600' : 'text-[#1d1d1f]'}`} />
-                <span className="text-[15px] font-medium text-[#86868B]">명</span>
+                <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
               <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">재등록 임박</p>
-              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
+              <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">{RENEWAL_WARN_DAYS}일 이내 등록 종료 예정 원생</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {renewalWarnStudents.length > 0 ? '대상 원생 보기' : '해당 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
@@ -796,16 +796,16 @@ export default function AdminDashboardPage() {
             >
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${pendingConsultationStudents.length > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04]'}`}>
-                  <Calendar className={`w-[18px] h-[18px] ${pendingConsultationStudents.length > 0 ? 'text-amber-500' : 'text-[#86868B]'}`} />
+                  <Calendar className={`w-[18px] h-[18px] ${pendingConsultationStudents.length > 0 ? 'text-amber-500' : 'text-slate-500'}`} />
                 </div>
                 {shouldShowDot('consultation', lastConsultationUpdate) && <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
                 <AnimatedNumber value={pendingConsultationStudents.length} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingConsultationStudents.length > 0 ? 'text-amber-600' : 'text-[#1d1d1f]'}`} />
-                <span className="text-[15px] font-medium text-[#86868B]">명</span>
+                <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
               <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">상담 도래</p>
-              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">{selectedCampusLabel} 기준 상담 일지 미작성 대상자</p>
+              <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">{selectedCampusLabel} 기준 상담 일지 미작성 대상자</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">대상 원생 보기 <ChevronRight className="w-3.5 h-3.5" /></div>
             </Card>
             </motion.div>
@@ -818,16 +818,16 @@ export default function AdminDashboardPage() {
             >
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${behindStudentsCount > 0 ? 'bg-orange-500/12' : 'bg-black/[0.04]'}`}>
-                  <AlertTriangle className={`w-[18px] h-[18px] ${behindStudentsCount > 0 ? 'text-orange-500' : 'text-[#86868B]'}`} />
+                  <AlertTriangle className={`w-[18px] h-[18px] ${behindStudentsCount > 0 ? 'text-orange-500' : 'text-slate-500'}`} />
                 </div>
                 {behindStudentsCount > 0 && <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse mt-1" />}
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
                 <AnimatedNumber value={behindStudentsCount} className={`text-[18px] leading-none font-semibold tracking-tight ${behindStudentsCount > 0 ? 'text-orange-600' : 'text-[#1d1d1f]'}`} />
-                <span className="text-[15px] font-medium text-[#86868B]">명</span>
+                <span className="text-[15px] font-medium text-slate-500">명</span>
               </div>
               <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">진도 지연</p>
-              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">목표 대비 진도가 뒤처진 원생</p>
+              <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">목표 대비 진도가 뒤처진 원생</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {behindStudentsCount > 0 ? '지연 원생 보기' : '지연 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
@@ -842,7 +842,7 @@ export default function AdminDashboardPage() {
             >
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${pendingRequestsTotal > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04]'}`}>
-                  <ClipboardList className={`w-[18px] h-[18px] ${pendingRequestsTotal > 0 ? 'text-amber-500' : 'text-[#86868B]'}`} />
+                  <ClipboardList className={`w-[18px] h-[18px] ${pendingRequestsTotal > 0 ? 'text-amber-500' : 'text-slate-500'}`} />
                 </div>
                 {pendingStudentCount > 0 && (
                   <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[11px] font-semibold text-amber-700">{pendingStudentCount}명</span>
@@ -850,10 +850,10 @@ export default function AdminDashboardPage() {
               </div>
               <div className="mt-3.5 flex items-baseline gap-1">
                 <AnimatedNumber value={pendingRequestsTotal} className={`text-[18px] leading-none font-semibold tracking-tight ${pendingRequestsTotal > 0 ? 'text-amber-700' : 'text-[#1d1d1f]'}`} />
-                <span className="text-[15px] font-medium text-[#86868B]">건</span>
+                <span className="text-[15px] font-medium text-slate-500">건</span>
               </div>
               <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">대기 요청</p>
-              <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">변경 {pendingChangeCount} · 휴가 {pendingLeaveCount} · 건의 {pendingSuggestionCount}</p>
+              <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">변경 {pendingChangeCount} · 휴가 {pendingLeaveCount} · 건의 {pendingSuggestionCount}</p>
               <div className="mt-3 text-[13px] font-medium text-[#0071E3] flex items-center gap-0.5">
                 {pendingRequestsTotal > 0 ? '인박스 열기' : '대기 없음'} <ChevronRight className="w-3.5 h-3.5" />
               </div>
@@ -927,12 +927,12 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 공부 중인 과목 (교재)</CardTitle>
+              <CardTitle className="text-xs font-semibold text-slate-900">많이 공부 중인 과목 (교재)</CardTitle>
               <BookOpen className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
               {popularSubjectRanks.length === 0 ? (
-                <p className="text-[11px] font-semibold text-[#86868B] py-6 text-center">표시할 과목 데이터가 없습니다.</p>
+                <p className="text-[11px] font-semibold text-slate-500 py-6 text-center">표시할 과목 데이터가 없습니다.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {popularSubjectRanks.map((rank, index) => (
@@ -944,17 +944,17 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        'bg-black/[0.03] border-transparent text-[#86868B]'
+                        'bg-black/[0.03] border-transparent text-slate-500'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-slate-900">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
                           <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
-                        <p className="text-[9px] font-bold text-[#86868B] mt-0.5">항목 {rank.itemCount}개</p>
+                        <p className="text-[9px] font-bold text-slate-500 mt-0.5">항목 {rank.itemCount}개</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -966,12 +966,12 @@ export default function AdminDashboardPage() {
 
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 공부 중인 책</CardTitle>
+              <CardTitle className="text-xs font-semibold text-slate-900">많이 공부 중인 책</CardTitle>
               <ClipboardList className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
               {popularBookRanks.length === 0 ? (
-                <p className="text-[11px] font-semibold text-[#86868B] py-6 text-center">표시할 책 데이터가 없습니다.</p>
+                <p className="text-[11px] font-semibold text-slate-500 py-6 text-center">표시할 책 데이터가 없습니다.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {popularBookRanks.map((rank, index) => (
@@ -983,17 +983,17 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        'bg-black/[0.03] border-transparent text-[#86868B]'
+                        'bg-black/[0.03] border-transparent text-slate-500'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-slate-900">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
                           <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
-                        <p className="truncate text-[9px] font-bold text-[#86868B] mt-0.5">{rank.meta || '기타'}</p>
+                        <p className="truncate text-[9px] font-bold text-slate-500 mt-0.5">{rank.meta || '기타'}</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -1005,12 +1005,12 @@ export default function AdminDashboardPage() {
 
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 듣고 있는 과목 (인강)</CardTitle>
+              <CardTitle className="text-xs font-semibold text-slate-900">많이 듣고 있는 과목 (인강)</CardTitle>
               <Play className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
               {popularLectureSubjectRanks.length === 0 ? (
-                <p className="text-[11px] font-semibold text-[#86868B] py-6 text-center">표시할 과목 데이터가 없습니다.</p>
+                <p className="text-[11px] font-semibold text-slate-500 py-6 text-center">표시할 과목 데이터가 없습니다.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {popularLectureSubjectRanks.map((rank, index) => (
@@ -1022,17 +1022,17 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        'bg-black/[0.03] border-transparent text-[#86868B]'
+                        'bg-black/[0.03] border-transparent text-slate-500'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-slate-900">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
                           <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
-                        <p className="text-[9px] font-bold text-[#86868B] mt-0.5">항목 {rank.itemCount}개</p>
+                        <p className="text-[9px] font-bold text-slate-500 mt-0.5">항목 {rank.itemCount}개</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -1044,12 +1044,12 @@ export default function AdminDashboardPage() {
 
           <Card className="admin-fit-box gap-2 border border-black/[0.05] rounded-2xl bg-gradient-to-br from-white to-[#F5F8FF] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.05)] transition-shadow duration-200 xl:col-span-2 text-left">
             <CardHeader className="flex flex-row items-center justify-between px-1 pb-2">
-              <CardTitle className="text-xs font-semibold text-[#1D1D1F]">많이 듣고 있는 강의</CardTitle>
+              <CardTitle className="text-xs font-semibold text-slate-900">많이 듣고 있는 강의</CardTitle>
               <Play className="w-4 h-4 text-[#0071E3]" />
             </CardHeader>
             <CardContent className="px-1">
               {popularLectureRanks.length === 0 ? (
-                <p className="text-[11px] font-semibold text-[#86868B] py-6 text-center">표시할 강의 데이터가 없습니다.</p>
+                <p className="text-[11px] font-semibold text-slate-500 py-6 text-center">표시할 강의 데이터가 없습니다.</p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {popularLectureRanks.map((rank, index) => (
@@ -1061,17 +1061,17 @@ export default function AdminDashboardPage() {
                       <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-semibold shrink-0 border ${
                         index === 0 ? 'bg-orange-50 border-orange-200/50 text-[#F56300]' :
                         index === 1 ? 'bg-blue-50 border-blue-200/50 text-[#0071E3]' :
-                        'bg-black/[0.03] border-transparent text-[#86868B]'
+                        'bg-black/[0.03] border-transparent text-slate-500'
                       }`}>{index + 1}</span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-[#1D1D1F]">{rank.label}</p>
+                        <p className="truncate text-xs font-semibold text-slate-900">{rank.label}</p>
                         <div className="flex items-center gap-1.5 mt-1">
                           <div className="flex-1 h-[3px] rounded-full bg-black/[0.06] overflow-hidden">
                             <div className="h-full rounded-full bg-[#0071E3] animate-bar-grow" style={{ width: `${rank.averageProgress}%` }} />
                           </div>
                           <span className="text-[9px] font-semibold text-[#0071E3] shrink-0 w-7 text-right">{rank.averageProgress}%</span>
                         </div>
-                        <p className="truncate text-[9px] font-bold text-[#86868B] mt-0.5">{rank.meta || '기타'}</p>
+                        <p className="truncate text-[9px] font-bold text-slate-500 mt-0.5">{rank.meta || '기타'}</p>
                       </div>
                       <span className="shrink-0 rounded-full bg-white/90 border border-black/[0.04] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] shadow-[0_1px_3px_rgba(0,0,0,0.02)]">{rank.studentCount}명</span>
                     </div>
@@ -1100,16 +1100,16 @@ export default function AdminDashboardPage() {
             {/* 모달 헤더 */}
             <div className="flex items-center justify-between border-b border-black/[0.04] p-5 shrink-0 bg-white/50">
               <div>
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[#86868B]">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                   {analysisData.type === 'subject' ? '과목 분석' : '교재/강의 분석'}
                 </span>
-                <h2 className="text-[17px] font-semibold text-[#1D1D1F] tracking-tight mt-0.5">{analysisData.name}</h2>
+                <h2 className="text-[17px] font-semibold text-slate-900 tracking-tight mt-0.5">{analysisData.name}</h2>
               </div>
               <button
                 onClick={() => setAnalysisTarget(null)}
                 className="rounded-full bg-[#F5F5F7] hover:bg-[#EAEAEA] active:scale-95 p-2 transition-all"
               >
-                <X className="w-4 h-4 text-[#86868B]" />
+                <X className="w-4 h-4 text-slate-500" />
               </button>
             </div>
 
@@ -1119,16 +1119,16 @@ export default function AdminDashboardPage() {
               {/* 요약 KPI 카드 */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-2xl bg-black/[0.02] border border-black/[0.04] p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-semibold text-[#86868B] uppercase">학습 학생 수</span>
-                  <div className="text-xl font-semibold text-[#1D1D1F] mt-2">{analysisData.studentCount}명</div>
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase">학습 학생 수</span>
+                  <div className="text-xl font-semibold text-slate-900 mt-2">{analysisData.studentCount}명</div>
                 </div>
                 <div className="rounded-2xl bg-gradient-to-br from-blue-500/[0.02] to-blue-500/[0.06] border border-blue-500/10 p-4 flex flex-col justify-between min-h-[90px]">
                   <span className="text-[10px] font-semibold text-[#0071E3] uppercase">평균 진도율</span>
                   <div className="text-xl font-semibold text-[#0071E3] mt-2">{analysisData.avgProgress}%</div>
                 </div>
                 <div className="rounded-2xl bg-black/[0.02] border border-black/[0.04] p-4 flex flex-col justify-between min-h-[90px]">
-                  <span className="text-[10px] font-semibold text-[#86868B] uppercase">평균 학습 소요</span>
-                  <div className="text-xl font-semibold text-[#1D1D1F] mt-2">
+                  <span className="text-[10px] font-semibold text-slate-500 uppercase">평균 학습 소요</span>
+                  <div className="text-xl font-semibold text-slate-900 mt-2">
                     {analysisData.avgDays > 0 ? `${analysisData.avgDays}일` : '-'}
                   </div>
                 </div>
@@ -1144,11 +1144,11 @@ export default function AdminDashboardPage() {
 
               {/* 학생별 상세 현황 */}
               <div className="space-y-2">
-                <h3 className="text-xs font-semibold text-[#1D1D1F]">학생별 진도 상세</h3>
+                <h3 className="text-xs font-semibold text-slate-900">학생별 진도 상세</h3>
                 <div className="border border-black/[0.04] rounded-2xl overflow-hidden bg-white">
                   <table className="w-full text-left border-collapse text-xs">
                     <thead>
-                      <tr className="bg-black/[0.02] text-[#86868B] font-semibold border-b border-black/[0.04]">
+                      <tr className="bg-black/[0.02] text-slate-500 font-semibold border-b border-black/[0.04]">
                         <th className="px-4 py-2.5">이름</th>
                         <th className="px-4 py-2.5">캠퍼스</th>
                         {analysisData.type === 'subject' && <th className="px-4 py-2.5">학습 교재/강의</th>}
@@ -1160,12 +1160,12 @@ export default function AdminDashboardPage() {
                     <tbody>
                       {analysisData.studentList.map((student) => (
                         <tr key={student.id + student.title} className="border-b border-black/[0.02] hover:bg-black/[0.015]">
-                          <td className="px-4 py-2.5 font-bold text-[#1D1D1F]">{student.name}</td>
-                          <td className="px-4 py-2.5 text-[#86868B]">{getCampusLabel(student.campus)}</td>
-                          {analysisData.type === 'subject' && <td className="px-4 py-2.5 text-[#1D1D1F] truncate max-w-[200px]">{student.title}</td>}
+                          <td className="px-4 py-2.5 font-bold text-slate-900">{student.name}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{getCampusLabel(student.campus)}</td>
+                          {analysisData.type === 'subject' && <td className="px-4 py-2.5 text-slate-900 truncate max-w-[200px]">{student.title}</td>}
                           <td className="px-4 py-2.5 font-semibold text-[#0071E3]">{student.progress}%</td>
-                          <td className="px-4 py-2.5 text-[#86868B]">{student.current} / {student.total}</td>
-                          <td className="px-4 py-2.5 text-[#86868B]">{student.targetDate || '-'}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{student.current} / {student.total}</td>
+                          <td className="px-4 py-2.5 text-slate-500">{student.targetDate || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1178,15 +1178,15 @@ export default function AdminDashboardPage() {
                 
                 {/* 학습 목표 목록 */}
                 <div className="space-y-2 flex flex-col">
-                  <h3 className="text-xs font-semibold text-[#1D1D1F]">학생 설정 목표</h3>
+                  <h3 className="text-xs font-semibold text-slate-900">학생 설정 목표</h3>
                   <div className="border border-black/[0.04] rounded-2xl p-4 bg-white space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[250px]">
                     {analysisData.goals.length === 0 ? (
-                      <p className="text-[11px] font-semibold text-[#86868B] py-8 text-center">등록된 학습 목표가 없습니다.</p>
+                      <p className="text-[11px] font-semibold text-slate-500 py-8 text-center">등록된 학습 목표가 없습니다.</p>
                     ) : (
                       analysisData.goals.map((g, i) => (
                         <div key={i} className="text-xs leading-relaxed border-b border-black/[0.01] pb-2 last:border-0 last:pb-0">
                           <span className="font-semibold text-[#0071E3] mr-1.5">{g.studentName}</span>
-                          <span className="text-[#1D1D1F]">{g.text}</span>
+                          <span className="text-slate-900">{g.text}</span>
                         </div>
                       ))
                     )}
@@ -1195,18 +1195,18 @@ export default function AdminDashboardPage() {
 
                 {/* 피드백(상담 기록) 목록 */}
                 <div className="space-y-2 flex flex-col">
-                  <h3 className="text-xs font-semibold text-[#1D1D1F]">관련 피드백 (상담 기록)</h3>
+                  <h3 className="text-xs font-semibold text-slate-900">관련 피드백 (상담 기록)</h3>
                   <div className="border border-black/[0.04] rounded-2xl p-4 bg-white space-y-3 flex-1 overflow-y-auto custom-scrollbar max-h-[250px]">
                     {analysisData.feedbacks.length === 0 ? (
-                      <p className="text-[11px] font-semibold text-[#86868B] py-8 text-center">상담 기록 중 언급된 피드백이 없습니다.</p>
+                      <p className="text-[11px] font-semibold text-slate-500 py-8 text-center">상담 기록 중 언급된 피드백이 없습니다.</p>
                     ) : (
                       analysisData.feedbacks.map((f, i) => (
                         <div key={i} className="text-xs border-b border-black/[0.02] pb-2.5 last:border-0 last:pb-0">
-                          <div className="flex items-center justify-between text-[10px] text-[#86868B] mb-1 font-semibold">
+                          <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1 font-semibold">
                             <span>{f.studentName} · {f.date}</span>
                             <span>{f.manager} 코멘터</span>
                           </div>
-                          <p className="text-[#1D1D1F] leading-relaxed whitespace-pre-wrap">{f.content}</p>
+                          <p className="text-slate-900 leading-relaxed whitespace-pre-wrap">{f.content}</p>
                         </div>
                       ))
                     )}

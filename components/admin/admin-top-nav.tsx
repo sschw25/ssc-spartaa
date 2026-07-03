@@ -126,11 +126,11 @@ export function AdminTopNav({
           <button
             type="button"
             onClick={() => router.push('/admin/dashboard')}
-            className="shrink-0 whitespace-nowrap font-semibold text-sm tracking-tight text-white bg-[#1D1D1F] px-3.5 py-1.5 rounded-2xl mr-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.15)] hover:scale-[1.03] active:scale-[0.98] transition-all"
+            className="shrink-0 whitespace-nowrap font-semibold text-sm tracking-tight text-white bg-slate-900 px-3.5 py-1.5 rounded-2xl mr-1.5 shadow-[0_2px_6px_rgba(0,0,0,0.15)] hover:scale-[1.03] active:scale-[0.98] transition-all"
           >
             SSC
           </button>
-          <h1 className="admin-fit-text text-[15px] sm:text-[17px] font-semibold tracking-tight text-[#1D1D1F] flex items-center gap-1.5 min-w-0">
+          <h1 className="admin-fit-text text-[15px] sm:text-[17px] font-semibold tracking-tight text-slate-900 flex items-center gap-1.5 min-w-0">
             {titleIcon}
             <span className="truncate">{title}</span>
           </h1>
@@ -138,7 +138,7 @@ export function AdminTopNav({
 
         {campusOptions && campusValue && onCampusChange && (
           <div className="glass-capsule flex items-center gap-2 rounded-full p-0.5 shrink-0">
-            <span className="hidden sm:inline pl-3.5 pr-1 text-[11px] font-semibold text-[#86868B] uppercase tracking-wider">센터</span>
+            <span className="hidden sm:inline pl-3.5 pr-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">센터</span>
             <div className="flex min-w-0 overflow-hidden gap-0.5">
               {campusOptions
                 .filter((option) => {
@@ -157,7 +157,7 @@ export function AdminTopNav({
                       'admin-fit-button h-7 rounded-full px-3 text-[11px] transition-premium',
                       campusValue === option.value
                         ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-semibold border border-black/[0.02]'
-                        : 'text-[#86868B] hover:bg-white/60 hover:text-black'
+                        : 'text-slate-500 hover:bg-white/60 hover:text-black'
                     )}
                   >
                     {option.label}

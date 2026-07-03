@@ -128,7 +128,7 @@ export default function StudentSignupPage() {
   };
 
   return (
-    <main className="flex min-h-[calc(100vh-4rem)] flex-col justify-center bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] px-4 py-10 text-[#1D1D1F] md:min-h-[calc(100vh-5rem)] md:py-16">
+    <main className="flex min-h-[calc(100vh-4rem)] flex-col justify-center bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] px-4 py-10 text-slate-900 md:min-h-[calc(100vh-5rem)] md:py-16">
       <section className="mx-auto grid w-full max-w-5xl items-center gap-8 md:grid-cols-[1fr_460px]">
         <div className="hidden space-y-5 md:block">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0071E3] text-white shadow-lg">
@@ -136,7 +136,7 @@ export default function StudentSignupPage() {
           </div>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Report</p>
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#1D1D1F] md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               학생 가입신청
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">
@@ -302,7 +302,7 @@ export default function StudentSignupPage() {
                     <div className="flex flex-wrap gap-4 pt-1">
                       <label
                         htmlFor="sms-parent"
-                        className="flex cursor-pointer items-center gap-2 text-sm text-[#1D1D1F]"
+                        className="flex cursor-pointer items-center gap-2 text-sm text-slate-900"
                       >
                         <Checkbox
                           id="sms-parent"
@@ -313,7 +313,7 @@ export default function StudentSignupPage() {
                       </label>
                       <label
                         htmlFor="sms-student"
-                        className="flex cursor-pointer items-center gap-2 text-sm text-[#1D1D1F]"
+                        className="flex cursor-pointer items-center gap-2 text-sm text-slate-900"
                       >
                         <Checkbox
                           id="sms-student"

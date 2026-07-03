@@ -414,7 +414,7 @@ export function ExecutionPlanTab({
                 type="button"
                 disabled={!!realignRequesting}
                 onClick={() => requestRealign('keepPace')}
-                className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition shadow-sm hover:border-[#86868B]/40 disabled:opacity-50"
+                className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition shadow-sm hover:border-slate-500/40 disabled:opacity-50"
               >
                 <div className="flex items-center gap-1 text-[11px] font-black text-slate-800">
                   <Turtle className="w-3.5 h-3.5" /> 학습 페이스 유지 요청 {realignRequesting === 'keepPace' && <span className="text-[9px] text-slate-400">(전송 중)</span>}
@@ -975,7 +975,7 @@ export function ExecutionPlanTab({
                             }`}
                           >
                             <div className="mb-1 flex items-center gap-1.5">
-                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-[#1D1D1F]'}`}>
+                              <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-slate-900'}`}>
                                 {index + 1}
                               </span>
                               <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-500">

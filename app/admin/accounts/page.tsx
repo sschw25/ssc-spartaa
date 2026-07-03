@@ -215,20 +215,20 @@ export default function AdminAccountsPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-[#86868B] text-sm">인증 확인 중...</p>
+        <p className="text-slate-500 text-sm">인증 확인 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="ios-app-bg min-h-screen font-sans text-[#1D1D1F]">
+    <div className="ios-app-bg min-h-screen font-sans text-slate-900">
       <AdminTopNav title="관리자 계정 관리" titleIcon={<Shield className="w-4 h-4 text-[#0071E3]" />} />
 
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-[17px] font-semibold tracking-tight">센터별 관리자 계정</h2>
-            <p className="text-xs text-[#86868B] mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               어드민 권한을 분할하여 특정 센터 정보만 조회할 수 있는 계정을 관리합니다.
             </p>
           </div>
@@ -244,10 +244,10 @@ export default function AdminAccountsPage() {
         <Card className="border border-black/[0.05] shadow-md rounded-2xl bg-white overflow-hidden">
           <CardHeader className="border-b border-black/[0.03] bg-white pb-4">
             <CardTitle className="text-sm font-bold flex items-center gap-2">
-              <User className="w-4 h-4 text-[#86868B]" />
+              <User className="w-4 h-4 text-slate-500" />
               등록된 관리자 목록
             </CardTitle>
-            <CardDescription className="text-[11px] text-[#86868B]">
+            <CardDescription className="text-[11px] text-slate-500">
               현재 시스템에 생성된 센터별 관리자 권한 목록입니다.
             </CardDescription>
           </CardHeader>
@@ -256,27 +256,27 @@ export default function AdminAccountsPage() {
             {loading && accounts.length === 0 ? (
               <div className="py-12 flex flex-col items-center justify-center">
                 <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mb-2" />
-                <span className="text-xs text-[#86868B]">데이터 로딩 중...</span>
+                <span className="text-xs text-slate-500">데이터 로딩 중...</span>
               </div>
             ) : accounts.length === 0 ? (
-              <div className="py-16 text-center text-xs text-[#86868B]">
+              <div className="py-16 text-center text-xs text-slate-500">
                 등록된 센터별 관리자 계정이 없습니다. 계정 추가를 통해 생성해 주세요.
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow className="bg-[#F5F5F7]/30 hover:bg-[#F5F5F7]/30 border-b border-black/[0.03]">
-                    <TableHead className="text-xs font-bold text-[#86868B] w-[20%] pl-6">아이디</TableHead>
-                    <TableHead className="text-xs font-bold text-[#86868B] w-[20%]">담당 센터</TableHead>
-                    <TableHead className="text-xs font-bold text-[#86868B] w-[20%]">권한 등급</TableHead>
-                    <TableHead className="text-xs font-bold text-[#86868B] w-[20%]">생성일</TableHead>
-                    <TableHead className="text-xs font-bold text-[#86868B] w-[20%] text-right pr-6">관리</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-500 w-[20%] pl-6">아이디</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-500 w-[20%]">담당 센터</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-500 w-[20%]">권한 등급</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-500 w-[20%]">생성일</TableHead>
+                    <TableHead className="text-xs font-bold text-slate-500 w-[20%] text-right pr-6">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {accounts.map((account) => (
                     <TableRow key={account.id} className="border-b border-black/[0.02] hover:bg-[#F5F5F7]/20 transition-colors">
-                      <TableCell className="font-semibold text-xs text-[#1D1D1F] pl-6 py-4">
+                      <TableCell className="font-semibold text-xs text-slate-900 pl-6 py-4">
                         {account.username}
                         {currentSession?.id === account.id && (
                           <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-[#0071E3] border border-[#0071E3]/10">
@@ -286,8 +286,8 @@ export default function AdminAccountsPage() {
                       </TableCell>
                       <TableCell className="py-4">
                         {/* AGENTS.md 규칙: 캠퍼스는 중립 회색 뱃지로 통일하고 텍스트로 식별 */}
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-[#F5F5F7] text-[#1D1D1F] border border-black/[0.03] gap-1">
-                          <Landmark className="w-3 h-3 text-[#86868B]" />
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-[#F5F5F7] text-slate-900 border border-black/[0.03] gap-1">
+                          <Landmark className="w-3 h-3 text-slate-500" />
                           {getCampusLabel(account.campus)}
                         </span>
                       </TableCell>
@@ -296,13 +296,13 @@ export default function AdminAccountsPage() {
                           "inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold gap-1",
                           account.role === 'super' 
                             ? "bg-emerald-50 text-[#34C759] border border-emerald-500/10" 
-                            : "bg-[#F5F5F7] text-[#86868B]"
+                            : "bg-[#F5F5F7] text-slate-500"
                         )}>
                           <Shield className="w-3 h-3" />
                           {getRoleLabel(account.role)}
                         </span>
                       </TableCell>
-                      <TableCell className="text-xs text-[#86868B] py-4">
+                      <TableCell className="text-xs text-slate-500 py-4">
                         {new Date(account.createdAt).toLocaleDateString('ko-KR', {
                           year: 'numeric',
                           month: 'long',
@@ -315,7 +315,7 @@ export default function AdminAccountsPage() {
                             size="icon"
                             variant="ghost"
                             onClick={() => handleOpenEdit(account)}
-                            className="h-8 w-8 rounded-lg hover:bg-[#F5F5F7] text-[#86868B] hover:text-[#1D1D1F] transition-colors"
+                            className="h-8 w-8 rounded-lg hover:bg-[#F5F5F7] text-slate-500 hover:text-slate-900 transition-colors"
                             title="수정"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -326,7 +326,7 @@ export default function AdminAccountsPage() {
                             disabled={currentSession?.id === account.id}
                             onClick={() => handleDelete(account.id, account.username)}
                             className={cn(
-                              "h-8 w-8 rounded-lg hover:bg-red-50 text-[#86868B] hover:text-red-600 transition-colors",
+                              "h-8 w-8 rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors",
                               currentSession?.id === account.id && "opacity-30 cursor-not-allowed"
                             )}
                             title="삭제"
@@ -348,11 +348,11 @@ export default function AdminAccountsPage() {
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-md bg-white border border-black/[0.05] rounded-2xl shadow-xl p-6 font-sans">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-[#1D1D1F] flex items-center gap-2">
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
               <Shield className="w-4 h-4 text-[#0071E3]" />
               {isEditMode ? '관리자 계정 정보 수정' : '신규 관리자 계정 추가'}
             </DialogTitle>
-            <DialogDescription className="text-xs text-[#86868B]">
+            <DialogDescription className="text-xs text-slate-500">
               {isEditMode 
                 ? '관리자의 소속 센터나 권한을 수정합니다. 비밀번호를 변경하려면 값을 입력하고, 변경하지 않으려면 비워두세요.'
                 : '신규로 추가할 관리자의 정보와 담당 센터 및 권한을 설정해 주세요.'}
@@ -361,7 +361,7 @@ export default function AdminAccountsPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="dlg-username" className="text-xs font-bold text-[#1D1D1F]">
+              <Label htmlFor="dlg-username" className="text-xs font-bold text-slate-900">
                 아이디
               </Label>
               <Input
@@ -377,7 +377,7 @@ export default function AdminAccountsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="dlg-password" className="text-xs font-bold text-[#1D1D1F]">
+              <Label htmlFor="dlg-password" className="text-xs font-bold text-slate-900">
                 비밀번호 {isEditMode && '(변경 시에만 입력)'}
               </Label>
               <Input
@@ -393,7 +393,7 @@ export default function AdminAccountsPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="dlg-campus" className="text-xs font-bold text-[#1D1D1F]">
+                <Label htmlFor="dlg-campus" className="text-xs font-bold text-slate-900">
                   담당 센터
                 </Label>
                 <Select value={campusInput} onValueChange={setCampusInput}>
@@ -410,7 +410,7 @@ export default function AdminAccountsPage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="dlg-role" className="text-xs font-bold text-[#1D1D1F]">
+                <Label htmlFor="dlg-role" className="text-xs font-bold text-slate-900">
                   권한 등급
                 </Label>
                 <Select value={roleInput} onValueChange={setRoleInput}>
@@ -443,7 +443,7 @@ export default function AdminAccountsPage() {
               </Button>
               <Button
                 type="submit"
-                className="rounded-xl bg-[#1D1D1F] hover:bg-[#323236] text-white text-xs font-bold px-4 py-2.5 h-auto transition-premium"
+                className="rounded-xl bg-slate-900 hover:bg-[#323236] text-white text-xs font-bold px-4 py-2.5 h-auto transition-premium"
               >
                 {isEditMode ? '저장' : '생성'}
               </Button>

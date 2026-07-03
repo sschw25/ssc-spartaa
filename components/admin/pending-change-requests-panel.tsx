@@ -77,8 +77,8 @@ export function PendingAdminTasksPanel({
               >
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-semibold text-[#1D1D1F]">{row.student.name}</span>
-                    <Badge className="rounded-md border border-black/[0.06] bg-[#F5F5F7] px-1.5 py-0.5 text-[9px] font-bold text-[#86868B]">
+                    <span className="font-semibold text-slate-900">{row.student.name}</span>
+                    <Badge className="rounded-md border border-black/[0.06] bg-[#F5F5F7] px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
                       {getCampusLabel(row.student.campus)}
                     </Badge>
                     <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">

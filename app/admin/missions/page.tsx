@@ -141,7 +141,7 @@ export default function MissionsPage() {
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav
         title="쿠폰 미션 설정"
         titleIcon={<Trophy className="w-4 h-4 text-[#0071E3]" />}

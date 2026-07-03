@@ -69,7 +69,7 @@ function EventCard({ event, onResponded }: { event: OtEvent; onResponded: (id: s
           <CalendarClock className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-[#1D1D1F]">
+          <p className="text-xs font-black text-slate-900">
             {event.name} · {event.date} 참여 여부를 알려주세요
           </p>
           <p className="text-[11px] font-semibold text-slate-500 mt-0.5">

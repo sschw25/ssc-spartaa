@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Maximize2, Minimize2, Edit2, Target, Coffee, Check, X, CheckCircle2 } from 'lucide-react';
+import { Maximize2, Minimize2, Edit2, Target, Coffee, Check, X, CheckCircle2, Pause, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 
@@ -468,7 +468,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                     : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.35)]'
               }`}
             >
-              {pomodoroActive ? '⏸ 일시 정지' : isFocus ? '▶ 집중 시작' : '▶ 휴식 시작'}
+              {pomodoroActive
+                ? (<><Pause className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />일시 정지</>)
+                : (<><Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />{isFocus ? '집중 시작' : '휴식 시작'}</>)}
             </button>
             {isFocus && pomodoroSeconds < 3000 ? (
               <>
@@ -669,7 +671,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                       : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_8px_24px_rgba(16,185,129,0.4)]'
                 }`}
               >
-                {pomodoroActive ? '⏸ 일시 정지' : isFocus ? '▶ 집중 시작' : '▶ 휴식 시작'}
+                {pomodoroActive
+                ? (<><Pause className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />일시 정지</>)
+                : (<><Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />{isFocus ? '집중 시작' : '휴식 시작'}</>)}
               </button>
 
               {isFocus && pomodoroSeconds < 3000 ? (

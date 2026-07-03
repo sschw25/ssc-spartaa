@@ -117,7 +117,7 @@ export function ConsultTab({
       {/* 오늘 실시간 루틴 현황 */}
       <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-1.5">
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
             <Clock className="w-4 h-4 text-[#0071E3]" />
             오늘 등원정보·생활 루틴
           </h3>
@@ -170,7 +170,7 @@ export function ConsultTab({
       {/* 출결·순공 현황 */}
       {studyStats && (
         <div className="space-y-2">
-          <h3 className="text-sm font-bold text-[#1D1D1F] flex items-center gap-1.5">
+          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
             <span className="inline-block w-2 h-2 rounded-full bg-[#0071E3]" />
             출결·순공 현황
           </h3>
@@ -181,7 +181,7 @@ export function ConsultTab({
       {/* 휴가·반차·휴식권 신청 내역 */}
       <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
         <div className="flex items-center justify-between gap-2 flex-wrap">
-          <h4 className="text-xs font-bold text-[#1D1D1F] flex items-center gap-1.5">
+          <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
             <Calendar className="w-3.5 h-3.5 text-[#0071E3]" />
             휴가·반차 신청 내역
           </h4>
@@ -220,7 +220,7 @@ export function ConsultTab({
         </div>
 
         {leaveRequests.length === 0 ? (
-          <p className="text-center py-4 text-[11px] text-[#86868B]">신청 내역이 없습니다.</p>
+          <p className="text-center py-4 text-[11px] text-slate-500">신청 내역이 없습니다.</p>
         ) : (
           <div className="space-y-2.5">
             {leaveRequests.map(req => {
@@ -326,8 +326,8 @@ export function ConsultTab({
       <div className="space-y-3.5 p-4 rounded-xl border border-black/[0.05] bg-white">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h4 className="text-xs font-bold text-[#1D1D1F]">학부모 공유용 생활 코멘트</h4>
-            <p className="text-[10px] text-[#86868B] mt-0.5">
+            <h4 className="text-xs font-bold text-slate-900">학부모 공유용 생활 코멘트</h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">
               학부모용 결과지에 그대로 표시되는 담임 생활 관리 피드백입니다.
             </p>
           </div>
@@ -343,8 +343,8 @@ export function ConsultTab({
       <div className="space-y-3.5 p-4 rounded-xl border border-black/[0.05] bg-white">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h4 className="text-xs font-bold text-[#1D1D1F]">학생 공유용 생활 코멘트</h4>
-            <p className="text-[10px] text-[#86868B] mt-0.5">
+            <h4 className="text-xs font-bold text-slate-900">학생 공유용 생활 코멘트</h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">
               학생 본인이 확인할 생활 습관, 자습 태도, 다음 행동 피드백입니다.
             </p>
           </div>
@@ -359,23 +359,23 @@ export function ConsultTab({
 
       <div id="life-consultation-logs" className="space-y-4">
         <h3 className="text-sm font-bold border-b border-black/[0.05] pb-2 flex items-center">
-          <Calendar className="w-4 h-4 mr-2 text-[#86868B]" />
+          <Calendar className="w-4 h-4 mr-2 text-slate-500" />
           누적 생활 면담 기록 ({lifeLogs.length}건)
         </h3>
 
         {lifeLogs.length === 0 ? (
-          <div className="text-center py-8 text-xs text-[#86868B]">
+          <div className="text-center py-8 text-xs text-slate-500">
             등록된 생활 면담 기록이 없습니다.
           </div>
         ) : (
           <div className="relative border-l border-black/[0.08] pl-5 ml-2.5 space-y-5">
             {lifeLogs.map((log) => (
               <div key={log.id} className="relative group">
-                <div className="absolute -left-[27px] top-1 w-3.5 h-3.5 rounded-full border-2 border-[#1D1D1F] bg-white group-hover:bg-[#0071E3] transition-colors" />
+                <div className="absolute -left-[27px] top-1 w-3.5 h-3.5 rounded-full border-2 border-slate-900 bg-white group-hover:bg-[#0071E3] transition-colors" />
                 <div className="p-4 rounded-xl border border-black/[0.05] bg-white space-y-2 shadow-sm">
                   <div className="flex justify-between items-center text-xs">
-                    <span className="font-bold text-[#1D1D1F]">{log.date}</span>
-                    <span className="text-[10px] px-2 py-0.5 bg-[#F5F5F7] rounded-full text-[#86868B] font-semibold">
+                    <span className="font-bold text-slate-900">{log.date}</span>
+                    <span className="text-[10px] px-2 py-0.5 bg-[#F5F5F7] rounded-full text-slate-500 font-semibold">
                       면담자: {log.manager}
                     </span>
                   </div>

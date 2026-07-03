@@ -50,7 +50,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
     <div className="min-h-screen flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm rounded-3xl bg-white/80 backdrop-blur p-6 shadow-sm">
         <div className="flex justify-end">
-          <button onClick={finish} className="text-xs text-[#86868B]" disabled={busy}>건너뛰기</button>
+          <button onClick={finish} className="text-xs text-slate-500" disabled={busy}>건너뛰기</button>
         </div>
         <h2 className="text-xl font-semibold mt-2">{current.title}</h2>
         <p className="text-sm text-[#1d1d1f]/80 mt-3 leading-relaxed">{current.body}</p>

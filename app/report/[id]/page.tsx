@@ -313,8 +313,8 @@ function StudentReportInner() {
                 <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
             </div>
-            <h1 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F]">리포트 비밀번호</h1>
-            <p className="text-[11px] text-[#86868B] leading-relaxed">
+            <h1 className="text-[17px] font-semibold tracking-tight text-slate-900">리포트 비밀번호</h1>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
               담당 코멘터에게 받은 6자리 비밀번호를 입력해 주세요.
             </p>
           </div>
@@ -356,7 +356,7 @@ function StudentReportInner() {
       <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] flex flex-col items-center justify-center font-sans gap-5">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-9 h-9 text-[#0071E3] animate-spin" />
-          <p className="text-xs text-[#86868B] font-medium tracking-tight">불러오는 중...</p>
+          <p className="text-xs text-slate-500 font-medium tracking-tight">불러오는 중...</p>
         </div>
         <div className="w-64 space-y-2.5 mt-2">
           {[100, 80, 90].map((w, i) => (
@@ -372,8 +372,8 @@ function StudentReportInner() {
       <div className="min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] flex flex-col items-center justify-center font-sans px-4">
         <div className="text-center space-y-4 max-w-md p-8 bg-white rounded-3xl border border-black/[0.04] shadow-md">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto" />
-          <h2 className="text-lg font-bold tracking-tight text-[#1D1D1F]">리포트를 불러올 수 없습니다.</h2>
-          <p className="text-xs text-[#86868B] leading-relaxed">
+          <h2 className="text-lg font-bold tracking-tight text-slate-900">리포트를 불러올 수 없습니다.</h2>
+          <p className="text-xs text-slate-500 leading-relaxed">
             리포트 공유 주소가 올바르지 않거나, 삭제된 학생일 수 있습니다. 학원 관리자에게 다시 문의해 주시기 바랍니다.
           </p>
           <button
@@ -704,7 +704,7 @@ function StudentReportInner() {
       {/* 사용법 다시보기 (학생 전용) */}
       {isStudentReport && (
         <div className="no-print text-center pb-2">
-          <a href="/student/welcome?replay=1" className="text-xs text-[#86868B] underline">사용법 다시보기</a>
+          <a href="/student/welcome?replay=1" className="text-xs text-slate-500 underline">사용법 다시보기</a>
         </div>
       )}
 

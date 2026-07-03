@@ -65,11 +65,11 @@ export function MissionSummaryWidget() {
   return (
     <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-[#1D1D1F]">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
           <Trophy className="w-4 h-4 text-amber-500" /> 쿠폰 미션 현황
         </h3>
         <div className="flex items-center gap-1">
-          <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-[#86868B] hover:bg-[#F5F5F7] transition">
+          <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-slate-500 hover:bg-[#F5F5F7] transition">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
           <button onClick={() => router.push('/admin/missions')} className="flex items-center gap-0.5 rounded-lg px-2 py-1 text-[13px] font-medium text-[#0071E3] hover:bg-blue-50 transition">
@@ -89,12 +89,12 @@ export function MissionSummaryWidget() {
               ['오늘', data?.today, 'bg-emerald-500/10 text-emerald-600'],
             ] as [string, Bucket | undefined, string][]).map(([label, b, cls]) => (
               <div key={label} className={`rounded-2xl px-3 py-3 ${cls}`}>
-                <p className="text-[11px] font-medium text-[#86868B]">{label} 지급</p>
+                <p className="text-[11px] font-medium text-slate-500">{label} 지급</p>
                 <p className="mt-1 flex items-baseline gap-0.5">
                   <span className="text-[18px] leading-none font-semibold tracking-tight">{b?.coupons ?? 0}</span>
-                  <span className="text-[11px] font-medium text-[#86868B]">장</span>
+                  <span className="text-[11px] font-medium text-slate-500">장</span>
                 </p>
-                <p className="text-[11px] text-[#86868B]">{b?.students ?? 0}명 수령</p>
+                <p className="text-[11px] text-slate-500">{b?.students ?? 0}명 수령</p>
               </div>
             ))}
           </div>
@@ -115,12 +115,12 @@ export function MissionSummaryWidget() {
           <button
             onClick={settleNow}
             disabled={settling}
-            className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-xl bg-[#1D1D1F] hover:bg-black text-white text-xs font-bold py-2.5 transition active:scale-[0.99] disabled:opacity-50"
+            className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold py-2.5 transition active:scale-[0.99] disabled:opacity-50"
           >
             {settling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
             지금 정산 (이번 달·주)
           </button>
-          <p className="mt-1.5 text-[10px] font-semibold text-[#86868B] text-center">
+          <p className="mt-1.5 text-[10px] font-semibold text-slate-500 text-center">
             자동 정산: 주간 일요일 밤 · 월간 매월 1일(지난달 기준)
           </p>
         </>

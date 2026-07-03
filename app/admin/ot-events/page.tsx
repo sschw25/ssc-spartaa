@@ -168,7 +168,7 @@ export default function OtEventsPage() {
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav title="OT 참여 관리" titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
 
       <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">

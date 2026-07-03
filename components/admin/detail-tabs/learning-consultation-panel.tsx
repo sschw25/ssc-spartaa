@@ -88,14 +88,14 @@ export function LearningConsultationPanel() {
         <button
           type="button"
           onClick={() => setConsultMode('learning')}
-          className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${consultMode === 'learning' ? 'bg-white text-[#0071E3] shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+          className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${consultMode === 'learning' ? 'bg-white text-[#0071E3] shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
         >
           학습상담
         </button>
         <button
           type="button"
           onClick={() => setConsultMode('life')}
-          className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${consultMode === 'life' ? 'bg-white text-[#0071E3] shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+          className={`flex-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${consultMode === 'life' ? 'bg-white text-[#0071E3] shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
         >
           생활상담
         </button>
@@ -104,11 +104,11 @@ export function LearningConsultationPanel() {
       {consultMode === 'life' ? (
         <div className="space-y-3">
           <div>
-            <h4 className="text-xs font-bold text-[#1D1D1F]">생활 상담 기록 작성</h4>
-            <p className="text-[10px] text-[#86868B] mt-0.5">생활 면담 내용을 정리하면 면담 이력으로 누적됩니다.</p>
+            <h4 className="text-xs font-bold text-slate-900">생활 상담 기록 작성</h4>
+            <p className="text-[10px] text-slate-500 mt-0.5">생활 면담 내용을 정리하면 면담 이력으로 누적됩니다.</p>
           </div>
           <div className="space-y-1">
-            <Label className="text-[10px] font-semibold text-[#86868B]">생활 코멘트 (학부모 공유)</Label>
+            <Label className="text-[10px] font-semibold text-slate-500">생활 코멘트 (학부모 공유)</Label>
             <Textarea
               placeholder="생활 태도, 출결, 면담 내용 등 학부모와 공유할 코멘트를 입력하세요."
               value={lifeComment}
@@ -117,7 +117,7 @@ export function LearningConsultationPanel() {
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-[10px] font-semibold text-[#86868B]">학생 공유 코멘트</Label>
+            <Label className="text-[10px] font-semibold text-slate-500">학생 공유 코멘트</Label>
             <Textarea
               placeholder="학생 본인에게 전달할 격려/조언을 입력하세요."
               value={studentLifeComment}
@@ -138,8 +138,8 @@ export function LearningConsultationPanel() {
       <>
       <div className="admin-fit-row flex items-center justify-between gap-3">
         <div>
-          <h4 className="text-xs font-bold text-[#1D1D1F]">학습 상담 기록 작성</h4>
-          <p className="text-[10px] text-[#86868B] mt-0.5">현재 진도를 상담 코멘트로 정리하고 다음 조치를 남깁니다.</p>
+          <h4 className="text-xs font-bold text-slate-900">학습 상담 기록 작성</h4>
+          <p className="text-[10px] text-slate-500 mt-0.5">현재 진도를 상담 코멘트로 정리하고 다음 조치를 남깁니다.</p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
           <Button
@@ -172,30 +172,30 @@ export function LearningConsultationPanel() {
       )}
 
       <div className="rounded-lg border border-black/[0.04] bg-white p-3 text-[10px] text-[#434345]">
-        <div className="font-bold text-[#1D1D1F] mb-1">현재 학습상황 요약</div>
+        <div className="font-bold text-slate-900 mb-1">현재 학습상황 요약</div>
         <div className="space-y-1">
           {subjectsState.length === 0 ? (
-            <p className="text-[#86868B]">등록된 과목이 없습니다.</p>
+            <p className="text-slate-500">등록된 과목이 없습니다.</p>
           ) : (
             subjectsState.slice(0, 3).map((subject: { id: string; name: string; books?: unknown[]; lectures?: unknown[] }) => {
               const materials = getMaterialSummary(subject);
               return (
                 <p key={subject.id} className="truncate">
                   <span className="font-bold">{subject.name}</span>
-                  <span className="text-[#86868B]"> · {materials.length > 0 ? materials.join(' / ') : '등록된 교재·강의 없음'}</span>
+                  <span className="text-slate-500"> · {materials.length > 0 ? materials.join(' / ') : '등록된 교재·강의 없음'}</span>
                 </p>
               );
             })
           )}
           {subjectsState.length > 3 && (
-            <p className="text-[#86868B]">외 {subjectsState.length - 3}개 과목</p>
+            <p className="text-slate-500">외 {subjectsState.length - 3}개 과목</p>
           )}
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold text-[#86868B]">상담일자</Label>
+          <Label className="text-[10px] font-semibold text-slate-500">상담일자</Label>
           <Input
             type="date"
             value={cslDate}
@@ -205,7 +205,7 @@ export function LearningConsultationPanel() {
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold text-[#86868B]">상담자</Label>
+          <Label className="text-[10px] font-semibold text-slate-500">상담자</Label>
           <Input
             placeholder="예: 원주센터장"
             value={cslManager}
@@ -217,7 +217,7 @@ export function LearningConsultationPanel() {
       </div>
 
       <div className="space-y-1">
-        <Label className="text-[10px] font-semibold text-[#86868B]">학습 상담 및 목표 계획 내용</Label>
+        <Label className="text-[10px] font-semibold text-slate-500">학습 상담 및 목표 계획 내용</Label>
         <ConsultationContentEditor
           placeholder="학습 상담 내용, 목표 조정, 다음 주 계획을 입력하세요."
           value={cslContent}
@@ -247,7 +247,7 @@ export function LearningConsultationPanel() {
       </div>
 
       <div className="space-y-1">
-        <Label className="text-[10px] font-semibold text-[#86868B]">다음 상담 예정일 (선택)</Label>
+        <Label className="text-[10px] font-semibold text-slate-500">다음 상담 예정일 (선택)</Label>
         <Input
           type="date"
           value={cslNextDate}
@@ -259,8 +259,8 @@ export function LearningConsultationPanel() {
       <div className="rounded-xl border border-black/[0.05] bg-white p-3 space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
-            <div className="text-xs font-bold text-[#1D1D1F]">변경사항 미리보기</div>
-            <p className="text-[10px] text-[#86868B] mt-0.5">현재 진도 기준으로 학생별 학습계획을 재계산합니다.</p>
+            <div className="text-xs font-bold text-slate-900">변경사항 미리보기</div>
+            <p className="text-[10px] text-slate-500 mt-0.5">현재 진도 기준으로 학생별 학습계획을 재계산합니다.</p>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Button
@@ -285,10 +285,10 @@ export function LearningConsultationPanel() {
         </div>
 
         {consultationPlanPreview.length === 0 ? (
-          <div className="text-[10px] text-[#86868B] py-2">재조정할 교재/강의 계획이 없습니다.</div>
+          <div className="text-[10px] text-slate-500 py-2">재조정할 교재/강의 계획이 없습니다.</div>
         ) : (
           <>
-            <div className="text-[10px] font-bold text-[#86868B]">
+            <div className="text-[10px] font-bold text-slate-500">
               선택된 계획 {selectedPlanCount}/{consultationPlanPreview.length}개 반영
             </div>
             <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
@@ -327,8 +327,8 @@ export function LearningConsultationPanel() {
                         className="mt-0.5 shrink-0"
                       />
                       <div className="min-w-0">
-                        <div className="font-bold text-[#1D1D1F] truncate">{item.subjectName} · {item.title}</div>
-                        <div className="text-[#86868B] mt-0.5">
+                        <div className="font-bold text-slate-900 truncate">{item.subjectName} · {item.title}</div>
+                        <div className="text-slate-500 mt-0.5">
                           현재 {item.current}/{item.total}{item.unit} · {item.status}
                         </div>
                       </div>
@@ -339,15 +339,15 @@ export function LearningConsultationPanel() {
                   </div>
                   <div className="mt-2 grid grid-cols-2 gap-2 text-[#434345]">
                     <div>
-                      <span className="text-[#86868B]">기존</span> {item.oldGoalLabel} · {item.oldTargetDate}
+                      <span className="text-slate-500">기존</span> {item.oldGoalLabel} · {item.oldTargetDate}
                     </div>
                     <div>
-                      <span className="text-[#86868B]">변경</span> {item.newGoalLabel} · {item.newTargetDate}
+                      <span className="text-slate-500">변경</span> {item.newGoalLabel} · {item.newTargetDate}
                     </div>
                   </div>
-                  <div className="mt-1.5 text-[#86868B]">첫 주 계획: {item.firstPlanText}</div>
+                  <div className="mt-1.5 text-slate-500">첫 주 계획: {item.firstPlanText}</div>
                   <div className="mt-2 flex flex-wrap items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                    <span className="mr-0.5 text-[9px] font-bold text-[#86868B]">계획 수정</span>
+                    <span className="mr-0.5 text-[9px] font-bold text-slate-500">계획 수정</span>
                     <Button
                       type="button"
                       variant={item.planMode === 'keepTargetDate' ? 'default' : 'outline'}
@@ -361,7 +361,7 @@ export function LearningConsultationPanel() {
                       className={`h-6 rounded-md px-2 text-[9px] font-bold ${
                         item.planMode === 'keepTargetDate'
                           ? 'bg-[#0071E3] text-white hover:bg-[#0077ED]'
-                          : 'border-black/[0.08] bg-white text-[#1D1D1F] hover:bg-[#F5F5F7]'
+                          : 'border-black/[0.08] bg-white text-slate-900 hover:bg-[#F5F5F7]'
                       }`}
                     >
                       마감일 기준
@@ -378,8 +378,8 @@ export function LearningConsultationPanel() {
                       }}
                       className={`h-6 rounded-md px-2 text-[9px] font-bold ${
                         item.planMode === 'keepPace'
-                          ? 'bg-[#1D1D1F] text-white hover:bg-[#323236]'
-                          : 'border-black/[0.08] bg-white text-[#1D1D1F] hover:bg-[#F5F5F7]'
+                          ? 'bg-slate-900 text-white hover:bg-[#323236]'
+                          : 'border-black/[0.08] bg-white text-slate-900 hover:bg-[#F5F5F7]'
                       }`}
                     >
                       하루 목표 기준

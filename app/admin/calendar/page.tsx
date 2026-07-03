@@ -464,7 +464,7 @@ export default function AdminCalendarPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B]">캘린더 로드 중...</p>
+        <p className="text-sm text-slate-500">캘린더 로드 중...</p>
       </div>
     );
   }
@@ -472,7 +472,7 @@ export default function AdminCalendarPage() {
   const totalSelected = selectedDateEvents.length + selectedCampusEvents.length + selectedMockExams.length + selectedOtEvents.length + selectedDateConsultations.length + selectedDatePenalties.length;
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav
         title="학원 캘린더"
         titleIcon={<CalendarIcon className="w-4 h-4 text-[#0071E3]" />}
@@ -499,11 +499,11 @@ export default function AdminCalendarPage() {
 
           <div className="flex items-center gap-2">
             <div className="hidden md:flex items-center gap-2">
-              <span className="text-xs font-extrabold text-[#86868B] shrink-0">휴가</span>
+              <span className="text-xs font-extrabold text-slate-500 shrink-0">휴가</span>
               <div className="flex items-center bg-[#F5F5F7] p-1 rounded-xl border border-black/[0.04]">
                 {([['all', '전체'], ['pending', '대기'], ['approved', '승인'], ['rejected', '반려']] as [StatusFilter, string][]).map(([v, label]) => (
                   <Button key={v} size="sm" variant={statusFilter === v ? 'default' : 'ghost'} onClick={() => setStatusFilter(v)}
-                    className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold ${statusFilter === v ? 'bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-black'}`}>
+                    className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold ${statusFilter === v ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-black'}`}>
                     {label}
                   </Button>
                 ))}
@@ -518,7 +518,7 @@ export default function AdminCalendarPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* 달력 */}
           <div className="lg:col-span-2 bg-white rounded-3xl border border-black/[0.05] p-5 shadow-sm space-y-4">
-            <div className="grid grid-cols-7 text-center text-xs font-black text-[#86868B] pb-2 border-b border-black/[0.04]">
+            <div className="grid grid-cols-7 text-center text-xs font-black text-slate-500 pb-2 border-b border-black/[0.04]">
               <div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div className="text-blue-600">토</div><div className="text-red-500">일</div>
             </div>
 
@@ -526,7 +526,7 @@ export default function AdminCalendarPage() {
               {loading && students.length === 0 ? (
                 <div className="col-span-7 py-32 flex flex-col items-center justify-center">
                   <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-                  <p className="text-xs text-[#86868B]">불러오는 중...</p>
+                  <p className="text-xs text-slate-500">불러오는 중...</p>
                 </div>
               ) : (
                 calendarDays.map(({ date, isCurrentMonth }, idx) => {
@@ -544,18 +544,18 @@ export default function AdminCalendarPage() {
                         isSelected ? 'border-[#0071E3] bg-[#0071E3]/[0.02] shadow-[inset_0_0_0_1px_#0071E3]' : 'border-black/[0.03] hover:bg-[#F5F5F7]/40'
                       }`}>
                       <span className={`text-[10px] font-black h-5 w-5 flex items-center justify-center rounded-full mb-1 ${
-                        !isCurrentMonth ? 'text-slate-300' : date.getDay() === 0 ? 'text-red-500' : date.getDay() === 6 ? 'text-blue-600' : 'text-[#1D1D1F]'
+                        !isCurrentMonth ? 'text-slate-300' : date.getDay() === 0 ? 'text-red-500' : date.getDay() === 6 ? 'text-blue-600' : 'text-slate-900'
                       } ${isToday ? 'bg-[#0071E3] text-white font-extrabold' : ''}`}>{date.getDate()}</span>
 
                       {act && (
                         <div className="flex-1 w-full flex flex-col gap-0.5 overflow-hidden mt-0.5">
                           {act.missions > 0 && <Pill cls="bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/15" icon={<Gift className="w-2.5 h-2.5 shrink-0" />} text={`미션 ${act.missions}`} />}
                           {act.events > 0 && <Pill cls="bg-slate-100 text-slate-600 border-slate-200/60" icon={<Pin className="w-2.5 h-2.5 shrink-0" />} text={`일정 ${act.events}`} />}
-                          {act.exams > 0 && <Pill cls="bg-violet-50 text-violet-700 border-violet-100/60" icon={<PenLine className="w-2.5 h-2.5 shrink-0" />} text={`모고 ${act.exams}`} />}
-                          {act.ot > 0 && <Pill cls="bg-teal-50 text-teal-700 border-teal-100/60" icon={<GraduationCap className="w-2.5 h-2.5 shrink-0" />} text={`OT ${act.ot}`} />}
+                          {act.exams > 0 && <Pill cls="bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/20" icon={<PenLine className="w-2.5 h-2.5 shrink-0" />} text={`모고 ${act.exams}`} />}
+                          {act.ot > 0 && <Pill cls="bg-[#F56300]/10 text-[#F56300] border-[#F56300]/20" icon={<GraduationCap className="w-2.5 h-2.5 shrink-0" />} text={`OT ${act.ot}`} />}
                           {act.leaves > 0 && <Pill cls="bg-sky-50 text-sky-700 border-sky-100/60" icon={<Ticket className="w-2.5 h-2.5 shrink-0" />} text={`휴가 ${act.leaves}`} />}
                           {act.consultations > 0 && <Pill cls="bg-emerald-50 text-emerald-700 border-emerald-100/50" icon={<MessageCircle className="w-2.5 h-2.5 shrink-0" />} text={`상담 ${act.consultations}`} />}
-                          {act.penalties > 0 && <Pill cls="bg-amber-50 text-amber-700 border-amber-100/50" icon={<TriangleAlert className="w-2.5 h-2.5 shrink-0" />} text={`벌점 ${act.penalties}`} />}
+                          {act.penalties > 0 && <Pill cls="bg-red-50 text-red-600 border-red-100/60" icon={<TriangleAlert className="w-2.5 h-2.5 shrink-0" />} text={`벌점 ${act.penalties}`} />}
                         </div>
                       )}
                     </button>
@@ -570,8 +570,8 @@ export default function AdminCalendarPage() {
             <div className="px-5 py-4 border-b border-black/[0.04] bg-[#FAFAFA] flex items-center gap-2">
               <CalendarIcon className="w-4 h-4 text-[#0071E3] shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-black text-[#1D1D1F] leading-tight">{selectedDate}</p>
-                <p className="text-[10px] text-[#86868B] font-semibold mt-0.5">
+                <p className="text-sm font-black text-slate-900 leading-tight">{selectedDate}</p>
+                <p className="text-[10px] text-slate-500 font-semibold mt-0.5">
                   {totalSelected === 0 ? '기록 없음'
                     : `일정 ${selectedCampusEvents.length} · 모고 ${selectedMockExams.length} · OT ${selectedOtEvents.length} · 휴가 ${selectedDateEvents.length}`}
                 </p>
@@ -585,7 +585,7 @@ export default function AdminCalendarPage() {
               {totalSelected === 0 && (
                 <div className="flex flex-col items-center justify-center py-20 gap-2">
                   <CalendarIcon className="w-8 h-8 text-slate-200" />
-                  <p className="text-xs font-semibold text-[#86868B]">이 날짜에 등록된 일정이 없습니다.</p>
+                  <p className="text-xs font-semibold text-slate-500">이 날짜에 등록된 일정이 없습니다.</p>
                   <button onClick={openEventModal} className="mt-1 text-[11px] font-bold text-[#0071E3]">+ 일정 등록하기</button>
                 </div>
               )}
@@ -605,13 +605,13 @@ export default function AdminCalendarPage() {
                             <div className="flex items-start gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <span className="font-extrabold text-[13px] text-[#1D1D1F]">{ev.title}</span>
+                                  <span className="font-extrabold text-[13px] text-slate-900">{ev.title}</span>
                                   {ev.isMission
                                     ? <span className="rounded bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 text-[9px] font-black">참여 미션</span>
                                     : <span className="rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[9px] font-black">일정</span>}
                                   <span className="rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[9px] font-black">{campusLabel(ev.campus || 'all')}</span>
                                 </div>
-                                <p className="text-[10px] text-[#86868B] font-medium mt-0.5">
+                                <p className="text-[10px] text-slate-500 font-medium mt-0.5">
                                   {ev.endDate && ev.endDate !== ev.date ? `${ev.date} ~ ${ev.endDate}` : ev.date}
                                   {ev.startTime ? ` · ${ev.startTime}${ev.endTime ? `~${ev.endTime}` : ''}` : ''}
                                 </p>
@@ -691,12 +691,12 @@ export default function AdminCalendarPage() {
               {/* 2. 모의고사 */}
               {selectedMockExams.length > 0 && (
                 <div className="py-3">
-                  <SectionHeader color="bg-violet-500" icon={<ClipboardCheck className="w-3.5 h-3.5 text-violet-600" />} title="모의고사" count={selectedMockExams.length} chip="bg-violet-50 text-violet-700 border-violet-200/60" />
+                  <SectionHeader color="bg-[#0071E3]" icon={<ClipboardCheck className="w-3.5 h-3.5 text-[#0071E3]" />} title="모의고사" count={selectedMockExams.length} chip="bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/25" />
                   <div className="px-3 pt-2 space-y-1.5">
                     {selectedMockExams.map((ex) => (
                       <button key={ex.id} onClick={() => router.push('/admin/mock-exam')}
-                        className="w-full text-left rounded-xl border border-black/[0.05] border-l-[3px] border-l-violet-500 bg-white shadow-sm hover:bg-[#F8F9FA] transition p-3 flex items-center gap-2">
-                        <span className="font-extrabold text-[13px] text-[#1D1D1F] flex-1">{ex.name}</span>
+                        className="w-full text-left rounded-xl border border-black/[0.05] border-l-[3px] border-l-[#0071E3] bg-white shadow-sm hover:bg-[#F8F9FA] transition p-3 flex items-center gap-2">
+                        <span className="font-extrabold text-[13px] text-slate-900 flex-1">{ex.name}</span>
                         <span className="rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[9px] font-black">{campusLabel(ex.campus || 'all')}</span>
                         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
                       </button>
@@ -708,12 +708,12 @@ export default function AdminCalendarPage() {
               {/* 3. OT */}
               {selectedOtEvents.length > 0 && (
                 <div className="py-3">
-                  <SectionHeader color="bg-teal-500" icon={<CalendarClock className="w-3.5 h-3.5 text-teal-600" />} title="OT 특별 세션" count={selectedOtEvents.length} chip="bg-teal-50 text-teal-700 border-teal-200/60" />
+                  <SectionHeader color="bg-[#F56300]" icon={<CalendarClock className="w-3.5 h-3.5 text-[#F56300]" />} title="OT 특별 세션" count={selectedOtEvents.length} chip="bg-[#F56300]/10 text-[#F56300] border-[#F56300]/25" />
                   <div className="px-3 pt-2 space-y-1.5">
                     {selectedOtEvents.map((ot) => (
                       <button key={ot.id} onClick={() => router.push('/admin/ot-events')}
-                        className="w-full text-left rounded-xl border border-black/[0.05] border-l-[3px] border-l-teal-500 bg-white shadow-sm hover:bg-[#F8F9FA] transition p-3 flex items-center gap-2">
-                        <span className="font-extrabold text-[13px] text-[#1D1D1F] flex-1">{ot.name}</span>
+                        className="w-full text-left rounded-xl border border-black/[0.05] border-l-[3px] border-l-[#F56300] bg-white shadow-sm hover:bg-[#F8F9FA] transition p-3 flex items-center gap-2">
+                        <span className="font-extrabold text-[13px] text-slate-900 flex-1">{ot.name}</span>
                         <span className="rounded bg-slate-100 text-slate-500 px-1.5 py-0.5 text-[9px] font-black">{campusLabel(ot.campus || 'all')}</span>
                         <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
                       </button>
@@ -728,7 +728,7 @@ export default function AdminCalendarPage() {
                   <div className="flex items-center justify-between px-5 py-3 bg-[#FAFAFA] border-b border-black/[0.02]">
                     <div className="flex items-center gap-2">
                       <span className="w-1.5 h-5 rounded-full shrink-0 bg-sky-500" />
-                      <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5"><Ticket className="w-3.5 h-3.5 text-sky-600" /><span>휴식반차 신청</span></span>
+                      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5"><Ticket className="w-3.5 h-3.5 text-sky-600" /><span>휴식반차 신청</span></span>
                       <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-sky-50 text-sky-700 border-sky-200/60">{selectedDateEvents.length}건</span>
                     </div>
                     <button onClick={openAddModal} className="flex items-center gap-1 text-[11px] font-extrabold text-[#0071E3] hover:bg-[#0071E3]/[0.08] rounded-lg px-2 py-1">
@@ -761,8 +761,8 @@ export default function AdminCalendarPage() {
                               <div key={ev.request.id} className={`rounded-xl border border-black/[0.05] border-l-[3px] overflow-hidden bg-white shadow-sm ${statusBar}`}>
                                 <button type="button" onClick={() => setExpandedRequestId(isExpanded ? null : ev.request.id)} className="w-full text-left flex items-center gap-3 px-3.5 py-2.5 hover:bg-[#F8F9FA] transition-colors">
                                   <div className="flex-1 min-w-0">
-                                    <span className="font-extrabold text-[13px] text-[#1D1D1F] truncate block">{ev.student.name}</span>
-                                    <span className="text-[10px] text-[#86868B] font-medium">{campusLabel(ev.student.campus)} · {ev.student.manager || '담당 없음'}</span>
+                                    <span className="font-extrabold text-[13px] text-slate-900 truncate block">{ev.student.name}</span>
+                                    <span className="text-[10px] text-slate-500 font-medium">{campusLabel(ev.student.campus)} · {ev.student.manager || '담당 없음'}</span>
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">{statusLabel}<ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></div>
                                 </button>
@@ -770,14 +770,14 @@ export default function AdminCalendarPage() {
                                   <div className="border-t border-black/[0.04] bg-[#F8F9FA] px-3.5 pb-3.5 pt-2.5 space-y-3">
                                     {ev.request.reason && (
                                       <div className="rounded-xl bg-white border border-black/[0.05] px-3 py-2.5">
-                                        <p className="text-[9px] font-extrabold text-[#86868B] uppercase tracking-wide mb-1">신청 사유</p>
-                                        <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-all">{ev.request.reason}</p>
+                                        <p className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wide mb-1">신청 사유</p>
+                                        <p className="text-[11px] font-semibold text-slate-900 leading-relaxed break-all">{ev.request.reason}</p>
                                       </div>
                                     )}
                                     {ev.request.adminReply && (
                                       <div className="rounded-xl bg-[#0071E3]/[0.04] border border-[#0071E3]/15 px-3 py-2.5">
                                         <p className="text-[9px] font-extrabold text-[#0071E3] uppercase tracking-wide mb-1">답변</p>
-                                        <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed">{ev.request.adminReply}</p>
+                                        <p className="text-[11px] font-semibold text-slate-900 leading-relaxed">{ev.request.adminReply}</p>
                                       </div>
                                     )}
                                     {ev.request.status === 'pending' && (
@@ -791,7 +791,7 @@ export default function AdminCalendarPage() {
                                       </div>
                                     )}
                                     <div className="flex items-center justify-between rounded-xl bg-white border border-black/[0.05] px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                                      <span className="flex items-center gap-1.5 text-[11px] font-bold text-[#1D1D1F]"><Ticket className="w-3 h-3 text-[#86868B]" />쿠폰 <b className="text-[#0071E3]">{ev.student.leaveCoupons ?? 0}</b>개</span>
+                                      <span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-900"><Ticket className="w-3 h-3 text-slate-500" />쿠폰 <b className="text-[#0071E3]">{ev.student.leaveCoupons ?? 0}</b>개</span>
                                       <div className="flex items-center gap-1">
                                         <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, -1)} className="h-7 w-7 rounded-lg border-black/[0.08]"><Minus className="w-3 h-3" /></Button>
                                         <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(ev.student, 1)} className="h-7 w-7 rounded-lg border-black/[0.08]"><Plus className="w-3 h-3" /></Button>
@@ -818,7 +818,7 @@ export default function AdminCalendarPage() {
                     {selectedDateConsultations.map(({ student, log }) => (
                       <div key={log.id} onClick={() => openStudentSheet(student)} className="rounded-xl border border-black/[0.05] border-l-[3px] border-l-emerald-500 bg-white shadow-sm hover:bg-[#F8F9FA] transition cursor-pointer p-3.5 space-y-2">
                         <div className="flex justify-between items-start">
-                          <div><span className="font-extrabold text-[13px] text-[#1D1D1F]">{student.name}</span><span className="text-[10px] text-[#86868B] font-medium ml-2">{campusLabel(student.campus)} · 코멘터 {student.manager || '없음'}</span></div>
+                          <div><span className="font-extrabold text-[13px] text-slate-900">{student.name}</span><span className="text-[10px] text-slate-500 font-medium ml-2">{campusLabel(student.campus)} · 코멘터 {student.manager || '없음'}</span></div>
                           <span className="text-[9px] font-black text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">코멘터 {log.manager}</span>
                         </div>
                         <div className="rounded-lg bg-emerald-50/[0.2] border border-emerald-100/30 p-2.5"><p className="text-[11px] font-semibold text-slate-700 leading-relaxed whitespace-pre-wrap break-all">{log.content}</p></div>
@@ -838,10 +838,10 @@ export default function AdminCalendarPage() {
                       return (
                         <div key={record.id} onClick={() => openStudentSheet(student)} className={`rounded-xl border border-black/[0.05] border-l-[3px] bg-white shadow-sm hover:bg-[#F8F9FA] transition cursor-pointer p-3.5 space-y-2 ${isPenalty ? 'border-l-red-500' : 'border-l-emerald-500'}`}>
                           <div className="flex justify-between items-center">
-                            <div><span className="font-extrabold text-[13px] text-[#1D1D1F]">{student.name}</span><span className="text-[10px] text-[#86868B] font-medium ml-2">{campusLabel(student.campus)}</span></div>
+                            <div><span className="font-extrabold text-[13px] text-slate-900">{student.name}</span><span className="text-[10px] text-slate-500 font-medium ml-2">{campusLabel(student.campus)}</span></div>
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${isPenalty ? 'bg-red-50 text-red-700 border-red-100/50' : 'bg-emerald-50 text-emerald-700 border-emerald-100/50'}`}>{isPenalty ? '벌점' : '상점'} {record.points}점</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5"><p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-all">{record.reason}</p></div>
+                          <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5"><p className="text-[11px] font-semibold text-slate-900 leading-relaxed break-all">{record.reason}</p></div>
                         </div>
                       );
                     })}
@@ -861,39 +861,39 @@ export default function AdminCalendarPage() {
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">일정 이름</Label>
+              <Label className="text-xs font-extrabold text-slate-900">일정 이름</Label>
               <input value={evForm.title} onChange={(e) => setEvForm((f) => ({ ...f, title: e.target.value }))} placeholder="예: 클린데이, 개원기념 휴무"
                 className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]" />
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-extrabold text-[#1D1D1F]">시작일</Label>
+                <Label className="text-xs font-extrabold text-slate-900">시작일</Label>
                 <input type="date" value={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-extrabold text-[#1D1D1F]">종료일 <span className="text-[#86868B] font-medium">(선택)</span></Label>
+                <Label className="text-xs font-extrabold text-slate-900">종료일 <span className="text-slate-500 font-medium">(선택)</span></Label>
                 <input type="date" value={evForm.endDate} min={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, endDate: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label className="text-xs font-extrabold text-[#1D1D1F]">시작 시각 <span className="text-[#86868B] font-medium">(선택)</span></Label>
+                <Label className="text-xs font-extrabold text-slate-900">시작 시각 <span className="text-slate-500 font-medium">(선택)</span></Label>
                 <input type="time" value={evForm.startTime} onChange={(e) => setEvForm((f) => ({ ...f, startTime: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]" />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-extrabold text-[#1D1D1F]">종료 시각 <span className="text-[#86868B] font-medium">(선택)</span></Label>
+                <Label className="text-xs font-extrabold text-slate-900">종료 시각 <span className="text-slate-500 font-medium">(선택)</span></Label>
                 <input type="time" value={evForm.endTime} onChange={(e) => setEvForm((f) => ({ ...f, endTime: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">대상 센터</Label>
+              <Label className="text-xs font-extrabold text-slate-900">대상 센터</Label>
               <select value={evForm.campus} onChange={(e) => setEvForm((f) => ({ ...f, campus: e.target.value }))} disabled={adminCampus !== 'all'}
                 className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3] disabled:opacity-70">
                 <option value="all">전체 센터</option><option value="wonju">원주</option><option value="chuncheon">춘천</option><option value="chungju">충주</option>
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">안내 메모 <span className="text-[#86868B] font-medium">(선택, 학생 알림에 노출)</span></Label>
+              <Label className="text-xs font-extrabold text-slate-900">안내 메모 <span className="text-slate-500 font-medium">(선택, 학생 알림에 노출)</span></Label>
               <textarea value={evForm.memo} onChange={(e) => setEvForm((f) => ({ ...f, memo: e.target.value }))} rows={2} placeholder="예: 오후 2시 강의실 청소 봉사"
                 className="w-full rounded-xl border border-black/[0.08] text-sm bg-white px-3 py-2 focus:outline-none focus:border-[#0071E3] resize-none" />
             </div>
@@ -902,12 +902,12 @@ export default function AdminCalendarPage() {
             <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-3.5 space-y-3">
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" checked={evForm.isMission} onChange={(e) => setEvForm((f) => ({ ...f, isMission: e.target.checked }))} className="w-4 h-4 accent-[#0071E3]" />
-                <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5"><Gift className="w-3.5 h-3.5 text-[#0071E3]" /> 참여 미션으로 만들기 (쿠폰 지급)</span>
+                <span className="text-xs font-black text-slate-900 flex items-center gap-1.5"><Gift className="w-3.5 h-3.5 text-[#0071E3]" /> 참여 미션으로 만들기 (쿠폰 지급)</span>
               </label>
               {evForm.isMission && (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center gap-2">
-                    <Label className="text-[11px] font-extrabold text-[#1D1D1F] shrink-0">지급 쿠폰</Label>
+                    <Label className="text-[11px] font-extrabold text-slate-900 shrink-0">지급 쿠폰</Label>
                     <div className="flex items-center gap-1">
                       <Button size="icon" variant="outline" onClick={() => setEvForm((f) => ({ ...f, couponReward: Math.max(0, f.couponReward - 1) }))} className="h-7 w-7 rounded-lg border-black/[0.08]"><Minus className="w-3 h-3" /></Button>
                       <span className="w-9 text-center text-sm font-black text-[#0071E3]">{evForm.couponReward}</span>
@@ -916,18 +916,18 @@ export default function AdminCalendarPage() {
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-[11px] font-extrabold text-[#1D1D1F]">대상 선정</Label>
+                    <Label className="text-[11px] font-extrabold text-slate-900">대상 선정</Label>
                     <div className="flex gap-1.5">
                       {([['campus', '센터 전체'], ['students', '특정 인원']] as const).map(([v, l]) => (
                         <button key={v} type="button" onClick={() => setEvForm((f) => ({ ...f, targetMode: v }))}
-                          className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition ${evForm.targetMode === v ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-[#1D1D1F] border-black/[0.08] hover:bg-[#F5F5F7]'}`}>{l}</button>
+                          className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition ${evForm.targetMode === v ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-slate-900 border-black/[0.08] hover:bg-[#F5F5F7]'}`}>{l}</button>
                       ))}
                     </div>
                   </div>
                   {evForm.targetMode === 'students' && (
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <Label className="text-[11px] font-extrabold text-[#1D1D1F]">대상 학생 ({evForm.targetStudentIds.length}명)</Label>
+                        <Label className="text-[11px] font-extrabold text-slate-900">대상 학생 ({evForm.targetStudentIds.length}명)</Label>
                         <button type="button" onClick={() => setEvForm((f) => ({ ...f, targetStudentIds: [] }))} className="text-[10px] font-bold text-slate-400 hover:text-slate-600">전체 해제</button>
                       </div>
                       <div className="relative">
@@ -959,7 +959,7 @@ export default function AdminCalendarPage() {
               )}
             </div>
 
-            <Button onClick={handleEventSubmit} disabled={evBusy || !evForm.title.trim()} className="w-full h-11 rounded-xl bg-[#1D1D1F] hover:bg-[#323236] text-white font-extrabold text-sm">
+            <Button onClick={handleEventSubmit} disabled={evBusy || !evForm.title.trim()} className="w-full h-11 rounded-xl bg-slate-900 hover:bg-[#323236] text-white font-extrabold text-sm">
               {evBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : '등록하기'}
             </Button>
           </div>
@@ -974,43 +974,43 @@ export default function AdminCalendarPage() {
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">학생</Label>
+              <Label className="text-xs font-extrabold text-slate-900">학생</Label>
               <select value={addForm.studentId} onChange={(e) => setAddForm((f) => ({ ...f, studentId: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]">
                 <option value="">-- 학생 선택 --</option>
                 {[...students].sort((a, b) => a.name.localeCompare(b.name, 'ko')).map((s) => (<option key={s.id} value={s.id}>{s.name} ({campusLabel(s.campus)})</option>))}
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">유형</Label>
+              <Label className="text-xs font-extrabold text-slate-900">유형</Label>
               <div className="grid grid-cols-3 gap-1.5">
                 {(Object.entries(LEAVE_TYPES) as [LeaveType, typeof LEAVE_TYPES[LeaveType]][]).map(([key, info]) => (
                   <button key={key} type="button" onClick={() => setAddForm((f) => ({ ...f, type: key }))}
-                    className={`rounded-xl border px-2 py-2 text-[11px] font-extrabold flex flex-col items-center gap-0.5 transition ${addForm.type === key ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-[#1D1D1F] border-black/[0.08] hover:bg-[#F5F5F7]'}`}>
+                    className={`rounded-xl border px-2 py-2 text-[11px] font-extrabold flex flex-col items-center gap-0.5 transition ${addForm.type === key ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white text-slate-900 border-black/[0.08] hover:bg-[#F5F5F7]'}`}>
                     <span>{info.icon}</span><span>{info.label}</span>
                   </button>
                 ))}
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">날짜</Label>
+              <Label className="text-xs font-extrabold text-slate-900">날짜</Label>
               <input type="date" value={addForm.date} onChange={(e) => setAddForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] text-sm h-10 bg-white px-3 focus:outline-none focus:border-[#0071E3]" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">사유 <span className="text-[#86868B] font-medium">(선택)</span></Label>
+              <Label className="text-xs font-extrabold text-slate-900">사유 <span className="text-slate-500 font-medium">(선택)</span></Label>
               <textarea value={addForm.reason} onChange={(e) => setAddForm((f) => ({ ...f, reason: e.target.value }))} placeholder="관리자 수기 등록" rows={2} className="w-full rounded-xl border border-black/[0.08] text-sm bg-white px-3 py-2 focus:outline-none focus:border-[#0071E3] resize-none" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-extrabold text-[#1D1D1F]">등록 상태</Label>
+              <Label className="text-xs font-extrabold text-slate-900">등록 상태</Label>
               <div className="flex gap-2">
                 {([['approved', '바로 승인'], ['pending', '대기 중']] as const).map(([val, label]) => (
                   <button key={val} type="button" onClick={() => setAddForm((f) => ({ ...f, status: val }))}
-                    className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition inline-flex items-center justify-center gap-1 ${addForm.status === val ? (val === 'approved' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-amber-500 text-white border-amber-500') : 'bg-white text-[#1D1D1F] border-black/[0.08] hover:bg-[#F5F5F7]'}`}>
+                    className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition inline-flex items-center justify-center gap-1 ${addForm.status === val ? (val === 'approved' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-amber-500 text-white border-amber-500') : 'bg-white text-slate-900 border-black/[0.08] hover:bg-[#F5F5F7]'}`}>
                     {val === 'approved' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Clock className="w-3.5 h-3.5" />}{label}
                   </button>
                 ))}
               </div>
             </div>
-            <Button onClick={handleAddSubmit} disabled={addBusy || !addForm.studentId} className="w-full h-11 rounded-xl bg-[#1D1D1F] hover:bg-[#323236] text-white font-extrabold text-sm">
+            <Button onClick={handleAddSubmit} disabled={addBusy || !addForm.studentId} className="w-full h-11 rounded-xl bg-slate-900 hover:bg-[#323236] text-white font-extrabold text-sm">
               {addBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : '등록하기'}
             </Button>
           </div>
@@ -1032,7 +1032,7 @@ function SectionHeader({ color, icon, title, count, chip }: { color: string; ico
   return (
     <div className="px-5 py-3 flex items-center gap-2 bg-[#FAFAFA] border-b border-black/[0.02]">
       <span className={`w-1.5 h-5 rounded-full shrink-0 ${color}`} />
-      <span className="text-xs font-black text-[#1D1D1F] flex items-center gap-1.5">{icon}<span>{title}</span></span>
+      <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">{icon}<span>{title}</span></span>
       <span className={`ml-auto text-[10px] font-extrabold px-2 py-0.5 rounded-full border ${chip}`}>{count}건</span>
     </div>
   );

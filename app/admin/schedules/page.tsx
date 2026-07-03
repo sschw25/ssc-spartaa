@@ -41,7 +41,7 @@ export default function SchedulesPage() {
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav
         title="예약 스케줄"
         titleIcon={<AlarmClock className="w-4 h-4 text-[#0071E3]" />}

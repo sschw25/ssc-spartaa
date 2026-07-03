@@ -85,7 +85,7 @@ export default function WeeklyLeaderboardPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B] font-bold">주간 순공 랭킹 불러오는 중...</p>
+        <p className="text-sm text-slate-500 font-bold">주간 순공 랭킹 불러오는 중...</p>
       </div>
     );
   }
@@ -94,7 +94,7 @@ export default function WeeklyLeaderboardPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans p-4 text-center">
         <p className="text-sm text-red-600 font-bold mb-4">{error}</p>
-        <Button onClick={load} className="rounded-xl font-bold bg-[#1D1D1F] text-white">다시 시도</Button>
+        <Button onClick={load} className="rounded-xl font-bold bg-slate-900 text-white">다시 시도</Button>
       </div>
     );
   }
@@ -116,7 +116,7 @@ export default function WeeklyLeaderboardPage() {
   const liveCount = scopedRows.filter((r) => r.isOpen).length;
 
   const getRankBadgeStyle = (rank: number, hasMinutes: boolean) => {
-    if (!hasMinutes) return 'bg-[#F5F5F7] text-[#86868B] border border-black/[0.03]';
+    if (!hasMinutes) return 'bg-[#F5F5F7] text-slate-500 border border-black/[0.03]';
     switch (rank) {
       case 1:
         return 'bg-amber-100/80 text-amber-800 border border-amber-200/50 font-black shadow-sm';
@@ -130,7 +130,7 @@ export default function WeeklyLeaderboardPage() {
   };
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans selection:bg-black/10">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans selection:bg-black/10">
       <AdminTopNav
         title="주간 순공 시간 상세 분석"
         titleIcon={<Trophy className="w-4 h-4 text-[#F56300]" />}
@@ -161,10 +161,10 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <div className="mt-3.5 flex items-baseline gap-1">
               <span className="text-[18px] leading-none font-semibold tracking-tight text-emerald-600">{studiedCount}</span>
-              <span className="text-[15px] font-medium text-[#86868B]">명</span>
+              <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
             <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">누적 학습 인원</p>
-            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">이번 주 순공 시간이 기록된 원생 수</p>
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">이번 주 순공 시간이 기록된 원생 수</p>
           </Card>
 
           <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
@@ -173,10 +173,10 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <div className="mt-3.5 flex items-baseline gap-1">
               <span className="text-[18px] leading-none font-semibold tracking-tight text-amber-600">{notStudiedCount}</span>
-              <span className="text-[15px] font-medium text-[#86868B]">명</span>
+              <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
             <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">미학습 인원</p>
-            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">누적 순공 시간이 0분인 원생 수</p>
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">누적 순공 시간이 0분인 원생 수</p>
           </Card>
 
           <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
@@ -185,10 +185,10 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <div className="mt-3.5 flex items-baseline gap-1">
               <span className="text-[18px] leading-none font-semibold tracking-tight text-blue-600">{Math.floor(avgWeekMin / 60)}</span>
-              <span className="text-[15px] font-medium text-[#86868B]">시간 {avgWeekMin % 60}분</span>
+              <span className="text-[15px] font-medium text-slate-500">시간 {avgWeekMin % 60}분</span>
             </div>
             <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">평균 학습 시간</p>
-            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">전체 수강생의 주간 평균 순공 시간</p>
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">전체 수강생의 주간 평균 순공 시간</p>
           </Card>
 
           <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
@@ -198,10 +198,10 @@ export default function WeeklyLeaderboardPage() {
             </div>
             <div className="mt-3.5 flex items-baseline gap-1">
               <span className="text-[18px] leading-none font-semibold tracking-tight text-blue-600">{liveCount}</span>
-              <span className="text-[15px] font-medium text-[#86868B]">명</span>
+              <span className="text-[15px] font-medium text-slate-500">명</span>
             </div>
             <p className="text-[13px] font-medium text-[#1d1d1f] mt-2">실시간 몰입 인원</p>
-            <p className="text-[12px] text-[#86868B] mt-0.5 leading-snug">현재 등원 중인 실시간 학습자 수</p>
+            <p className="text-[12px] text-slate-500 mt-0.5 leading-snug">현재 등원 중인 실시간 학습자 수</p>
           </Card>
         </div>
 
@@ -215,7 +215,7 @@ export default function WeeklyLeaderboardPage() {
           ];
           return (
             <Card className="rounded-3xl border border-black/[0.05] bg-white gap-0 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] text-left">
-              <p className="text-[15px] font-semibold text-[#1D1D1F] mb-5">학습 현황 한눈에</p>
+              <p className="text-[15px] font-semibold text-slate-900 mb-5">학습 현황 한눈에</p>
               <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] items-center gap-7">
                 <div className="flex flex-col items-center gap-4 mx-auto">
                   <Donut segments={studySegs} centerTop={`${studyRate}%`} centerBottom="학습 참여" />
@@ -224,7 +224,7 @@ export default function WeeklyLeaderboardPage() {
                 <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
                   <CompareBar label="학습 참여율" value={studyRate} color="#34C759" />
                   <CompareBar label="실시간 몰입" value={liveCount} max={total} color="#0071E3" suffix="명" />
-                  <p className="text-[13px] text-[#86868B] leading-relaxed">
+                  <p className="text-[13px] text-slate-500 leading-relaxed">
                     전체 {total}명 중 <b className="font-semibold text-[#34C759]">{studiedCount}명</b>이 이번 주 순공 시간을 기록했고, <b className="font-semibold text-[#FF9500]">{notStudiedCount}명</b>은 아직 미학습입니다.
                   </p>
                 </div>
@@ -237,12 +237,12 @@ export default function WeeklyLeaderboardPage() {
         <Card className="border border-black/[0.04] rounded-3xl bg-white shadow-sm overflow-hidden text-left">
           <CardHeader className="p-6 pb-4 border-b border-black/[0.03] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <CardTitle className="text-sm font-black text-[#1D1D1F]">주간 순공 상세 순위표</CardTitle>
-              <CardDescription className="text-xs text-[#86868B] font-semibold mt-1">캠퍼스별 원생들의 누적 순공 시간 랭킹입니다.</CardDescription>
+              <CardTitle className="text-sm font-black text-slate-900">주간 순공 상세 순위표</CardTitle>
+              <CardDescription className="text-xs text-slate-500 font-semibold mt-1">캠퍼스별 원생들의 누적 순공 시간 랭킹입니다.</CardDescription>
             </div>
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative w-full sm:w-60">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#86868B]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
                 <Input
                   type="text"
                   placeholder="이름으로 검색..."
@@ -260,7 +260,7 @@ export default function WeeklyLeaderboardPage() {
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-black/[0.02] text-[#86868B] font-extrabold border-b border-black/[0.04]">
+                  <tr className="bg-black/[0.02] text-slate-500 font-extrabold border-b border-black/[0.04]">
                     <th className="px-6 py-3.5 w-16 text-center">순위</th>
                     <th className="px-6 py-3.5">원생 정보</th>
                     <th className="px-6 py-3.5">캠퍼스</th>
@@ -272,7 +272,7 @@ export default function WeeklyLeaderboardPage() {
                 <tbody>
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="text-[11px] text-[#86868B] font-semibold text-center py-12">
+                      <td colSpan={6} className="text-[11px] text-slate-500 font-semibold text-center py-12">
                         표시할 랭킹 정보가 없습니다.
                       </td>
                     </tr>
@@ -292,8 +292,8 @@ export default function WeeklyLeaderboardPage() {
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 font-bold text-[#1D1D1F]">{student.name}</td>
-                        <td className="px-6 py-4 text-[#86868B]">{campusLabel(student.campus)}</td>
+                        <td className="px-6 py-4 font-bold text-slate-900">{student.name}</td>
+                        <td className="px-6 py-4 text-slate-500">{campusLabel(student.campus)}</td>
                         <td className="px-6 py-4">
                           {student.isOpen ? (
                             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
@@ -301,12 +301,12 @@ export default function WeeklyLeaderboardPage() {
                               학습중
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] border border-black/[0.03] px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-500 bg-[#F5F5F7] border border-black/[0.03] px-2 py-0.5 rounded-full">
                               외출/하원
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 text-[#86868B]">
+                        <td className="px-6 py-4 text-slate-500">
                           {student.dayMinutes > 0 ? fmt(student.dayMinutes) : '-'}
                         </td>
                         <td className="px-6 py-4 font-black text-slate-800">

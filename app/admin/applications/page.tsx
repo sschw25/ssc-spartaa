@@ -258,13 +258,13 @@ export default function AdminApplicationsPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B]">가입신청 정보 로드 중...</p>
+        <p className="text-sm text-slate-500">가입신청 정보 로드 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav
         title="가입신청 승인"
         titleIcon={<UserPlus className="w-4 h-4 text-[#0071E3]" />}
@@ -279,10 +279,10 @@ export default function AdminApplicationsPage() {
         {/* 출결번호 변경 신청 */}
         <section className="space-y-3">
           <div>
-            <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-[#1D1D1F]">
+            <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-slate-900">
               <KeyRound className="w-4 h-4 text-[#0071E3]" /> 출결번호 변경 신청
             </h2>
-            <p className="mt-1 text-[11px] font-semibold text-[#86868B]">
+            <p className="mt-1 text-[11px] font-semibold text-slate-500">
               승인하면 학생이 신청한 새 출결번호로 즉시 변경됩니다.
             </p>
           </div>
@@ -290,10 +290,10 @@ export default function AdminApplicationsPage() {
           {pwLoading ? (
             <div className="text-center py-12 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
               <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin mb-3" />
-              <p className="text-xs text-[#86868B]">불러오는 중...</p>
+              <p className="text-xs text-slate-500">불러오는 중...</p>
             </div>
           ) : pwRequests.length === 0 ? (
-            <div className="text-center py-12 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
+            <div className="text-center py-12 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
               대기 중인 출결번호 변경 신청이 없습니다.
             </div>
           ) : (
@@ -303,14 +303,14 @@ export default function AdminApplicationsPage() {
                 return (
                   <div key={req.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-semibold text-base text-[#1D1D1F]">{req.name}</span>
-                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
+                      <span className="font-semibold text-base text-slate-900">{req.name}</span>
+                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">
                         ID {req.loginId}
                       </Badge>
                       <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
                         <Building2 className="w-3 h-3" /> {campusLabel(req.campus)}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-[#86868B]">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
                         <Clock className="w-3 h-3" /> {formatDateTime(req.requestedAt)}
                       </span>
                     </div>
@@ -342,17 +342,17 @@ export default function AdminApplicationsPage() {
         </section>
 
         {/* 가입신청 */}
-        <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-[#1D1D1F] pt-2">
+        <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-slate-900 pt-2">
           <UserPlus className="w-4 h-4 text-[#0071E3]" /> 가입신청
         </h2>
 
         {loading && applications.length === 0 ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-            <p className="text-xs text-[#86868B]">불러오는 중...</p>
+            <p className="text-xs text-slate-500">불러오는 중...</p>
           </div>
         ) : applications.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
+          <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
             대기 중인 가입신청이 없습니다.
           </div>
         ) : (
@@ -366,43 +366,43 @@ export default function AdminApplicationsPage() {
                   {/* 신청 정보 */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-semibold text-base text-[#1D1D1F]">{app.name}</span>
-                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">
+                      <span className="font-semibold text-base text-slate-900">{app.name}</span>
+                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">
                         ID {app.loginId}
                       </Badge>
                       <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
                         <Building2 className="w-3 h-3" /> 희망 {campusLabel(app.campus)}
                       </span>
                     </div>
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-[#86868B]">
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
                       <Clock className="w-3 h-3" /> {formatDateTime(app.createdAt)}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-semibold text-[#86868B]">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-semibold text-slate-500">
                     {app.studentPhone && (
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3 h-3" /> 본인 <b className="text-[#1D1D1F]">{app.studentPhone}</b>
+                        <Phone className="w-3 h-3" /> 본인 <b className="text-slate-900">{app.studentPhone}</b>
                       </span>
                     )}
                     {app.parentPhone && (
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3 h-3" /> 학부모 <b className="text-[#1D1D1F]">{app.parentPhone}</b>
+                        <Phone className="w-3 h-3" /> 학부모 <b className="text-slate-900">{app.parentPhone}</b>
                       </span>
                     )}
                     {app.contact && (
                       <span className="flex items-center gap-1.5">
-                        <Target className="w-3 h-3" /> 목표시험 <b className="text-[#1D1D1F]">{app.contact}</b>
+                        <Target className="w-3 h-3" /> 목표시험 <b className="text-slate-900">{app.contact}</b>
                       </span>
                     )}
                   </div>
 
                   {/* 승인 정보 입력 */}
                   <div className="rounded-xl border border-black/[0.06] bg-[#F9F9FB] p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-[#1D1D1F]">승인 정보</h4>
+                    <h4 className="text-xs font-semibold text-slate-900">승인 정보</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-[#1D1D1F]">캠퍼스</Label>
+                        <Label className="text-xs font-semibold text-slate-900">캠퍼스</Label>
                         <Select value={draft.campus} onValueChange={(v) => updateDraft(app.id, { campus: v })}>
                           <SelectTrigger className="rounded-xl border-black/[0.08] text-xs h-9 bg-white">
                             <SelectValue placeholder="캠퍼스 선택" />
@@ -415,7 +415,7 @@ export default function AdminApplicationsPage() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-[#1D1D1F]">담당 상담자</Label>
+                        <Label className="text-xs font-semibold text-slate-900">담당 상담자</Label>
                         <Input
                           placeholder="원주센터장"
                           value={draft.manager}
@@ -424,7 +424,7 @@ export default function AdminApplicationsPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-[#1D1D1F]">좌석 번호</Label>
+                        <Label className="text-xs font-semibold text-slate-900">좌석 번호</Label>
                         <Input
                           type="number"
                           min={1}
@@ -435,17 +435,17 @@ export default function AdminApplicationsPage() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-[#1D1D1F]">이용 시작일</Label>
+                        <Label className="text-xs font-semibold text-slate-900">이용 시작일</Label>
                         <Input
                           type="date"
                           value={draft.enrollStartDate}
                           onChange={(e) => updateDraft(app.id, { enrollStartDate: e.target.value })}
                           className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                         />
-                        <p className="text-[11px] text-[#86868B]">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
+                        <p className="text-[11px] text-slate-500">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-[#1D1D1F]">등록 종료일</Label>
+                        <Label className="text-xs font-semibold text-slate-900">등록 종료일</Label>
                         <Input
                           type="date"
                           value={draft.enrollmentEndDate}
@@ -454,7 +454,7 @@ export default function AdminApplicationsPage() {
                         />
                       </div>
                     </div>
-                    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-[#1D1D1F]">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-900">
                       <input
                         type="checkbox"
                         checked={draft.weeklyGradeCheck}

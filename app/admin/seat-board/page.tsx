@@ -510,7 +510,7 @@ function PeriodCell({
   // 정기 외출 시작 시각은 미래 교시라도 엑셀처럼 즉시 표시한다.
   if (awayTime?.includes(':')) {
     return (
-      <div data-period-label={label} data-away-time={awayTime} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]`}>
+      <div data-period-label={label} data-away-time={awayTime} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-slate-900/[0.06] border-slate-900/[0.12]`}>
         <TimeHM hm={awayTime} cls="text-amber-500" />
       </div>
     );
@@ -531,10 +531,10 @@ function PeriodCell({
     if (awayTime?.includes(':'))      inner = <TimeHM hm={awayTime} cls="text-amber-500" />;
     else if (checkOutTime?.includes(':')) inner = <TimeHM hm={checkOutTime} cls="text-[#0071E3]" />;
     else if (checkInTime?.includes(':'))  inner = <TimeHM hm={checkInTime} cls="text-emerald-600" />;
-    else inner = <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-[#1D1D1F]/70'}`}>/</span>;
+    else inner = <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-slate-900/70'}`}>/</span>;
 
     return (
-      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-[#1D1D1F]/[0.06] border-[#1D1D1F]/[0.12]'}`}>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-slate-900/[0.06] border-slate-900/[0.12]'}`}>
         {inner}
       </div>
     );
@@ -679,7 +679,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
                 onNameClick();
               }
             }}
-            className="text-[11px] font-black text-[#1D1D1F] leading-tight truncate shrink-0 max-w-[50px] hover:underline decoration-[#1D1D1F]/50 decoration-1"
+            className="text-[11px] font-black text-slate-900 leading-tight truncate shrink-0 max-w-[50px] hover:underline decoration-slate-900/50 decoration-1"
           >
             {student.name}
           </p>
@@ -1331,7 +1331,7 @@ export default function SeatBoardPage() {
   const hasOverrides = periodOverrides.size > 0;
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F]">
+    <div className="ios-app-bg min-h-screen text-slate-900">
       <AdminTopNav
         title="출결판"
         titleIcon={<LayoutGrid className="w-4 h-4" />}
@@ -1363,8 +1363,8 @@ export default function SeatBoardPage() {
                 onClick={() => handleCampusChange(k)}
                 className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
                   campus === k
-                    ? 'bg-[#1D1D1F] text-white shadow-sm'
-                    : 'text-slate-500 hover:text-[#1D1D1F]'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-900'
                 }`}
               >
                 {CAMPUS_LABELS[k]}
@@ -1382,7 +1382,7 @@ export default function SeatBoardPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value || kstToday)}
-                className="h-8 rounded-xl border-black/[0.06] bg-[#F5F5F7] px-2 text-xs font-semibold text-[#1D1D1F]"
+                className="h-8 rounded-xl border-black/[0.06] bg-[#F5F5F7] px-2 text-xs font-semibold text-slate-900"
               />
               {!isSelectedToday && (
                 <button
@@ -1428,7 +1428,7 @@ export default function SeatBoardPage() {
               type="button"
               disabled={!isSelectedToday}
               onClick={() => notifyAbsentForPeriod(idx)}
-              className="h-7 min-w-[28px] rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-2 text-[11px] font-bold text-[#1D1D1F] transition hover:bg-[#0071E3]/10 hover:text-[#0071E3] disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-7 min-w-[28px] rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-2 text-[11px] font-bold text-slate-900 transition hover:bg-[#0071E3]/10 hover:text-[#0071E3] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {p.label}
             </button>
@@ -1444,8 +1444,8 @@ export default function SeatBoardPage() {
               onClick={() => setPageIdx(i)}
               className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
                 pageIdx === i
-                  ? 'bg-[#1D1D1F] text-white border-transparent'
-                  : 'bg-white text-slate-500 border-black/[0.06] hover:text-[#1D1D1F]'
+                  ? 'bg-slate-900 text-white border-transparent'
+                  : 'bg-white text-slate-500 border-black/[0.06] hover:text-slate-900'
               }`}
             >
               {p.label}
@@ -1460,8 +1460,8 @@ export default function SeatBoardPage() {
               title="추가 도구"
               className={`ml-2 px-2.5 py-1.5 rounded-xl text-xs font-black border transition-all ${
                 showResetTool
-                  ? 'border-[#1D1D1F]/15 bg-[#1D1D1F]/[0.04] text-[#1D1D1F]'
-                  : 'border-black/[0.06] bg-white text-slate-400 hover:text-[#1D1D1F]'
+                  ? 'border-slate-900/15 bg-slate-900/[0.04] text-slate-900'
+                  : 'border-black/[0.06] bg-white text-slate-400 hover:text-slate-900'
               }`}
             >
               ⋯

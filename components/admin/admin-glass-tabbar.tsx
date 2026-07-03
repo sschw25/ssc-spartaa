@@ -48,7 +48,7 @@ export function AdminGlassTabBar() {
                 'flex min-w-[58px] flex-col items-center justify-center gap-0.5 rounded-full px-3.5 py-2 transition-all duration-300 active:scale-[0.94]',
                 active
                   ? 'bg-[#0071E3]/12 text-[#0071E3]'
-                  : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-black/[0.04]'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]'
               )}
             >
               <Icon className="h-5 w-5" />

@@ -40,7 +40,7 @@ function NameChips({
   renderSuffix?: (e: any) => React.ReactNode;
 }) {
   if (entries.length === 0) {
-    return <p className="text-[11px] font-semibold text-[#86868B] py-2">해당 없음</p>;
+    return <p className="text-[11px] font-semibold text-slate-500 py-2">해당 없음</p>;
   }
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -101,13 +101,13 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
   return (
     <div className="rounded-3xl border border-black/[0.05] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-[#1D1D1F]">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
           <Sparkles className="w-4 h-4 text-[#0071E3]" /> 오늘의 브리핑
           {data?.generatedDate && (
-            <span className="text-[11px] font-medium text-[#86868B]">({data.generatedDate} 기준)</span>
+            <span className="text-[11px] font-medium text-slate-500">({data.generatedDate} 기준)</span>
           )}
         </h3>
-        <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-[#86868B] hover:bg-[#F5F5F7] transition">
+        <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-slate-500 hover:bg-[#F5F5F7] transition">
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
         </button>
       </div>
@@ -115,13 +115,13 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
       {loading ? (
         <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-[#0071E3]" /></div>
       ) : isEmpty ? (
-        <p className="text-[12px] font-semibold text-[#86868B] py-6 text-center">오늘 특이사항 없음</p>
+        <p className="text-[12px] font-semibold text-slate-500 py-6 text-center">오늘 특이사항 없음</p>
       ) : (
         <div className="mt-4 space-y-4">
           {/* 카운트 요약 칩 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <div className="rounded-2xl bg-black/[0.03] px-3 py-2.5">
-              <p className="text-[11px] font-medium text-[#86868B] flex items-center gap-1"><UserX className="w-3 h-3" /> 어제 결석</p>
+              <p className="text-[11px] font-medium text-slate-500 flex items-center gap-1"><UserX className="w-3 h-3" /> 어제 결석</p>
               <p className="mt-1 text-[16px] font-semibold text-[#1d1d1f]">{totals.yesterdayAbsences}명</p>
             </div>
             <div className="rounded-2xl bg-amber-500/[0.08] px-3 py-2.5">
@@ -176,7 +176,7 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
                 entries={allYesterday}
                 onSelectStudentId={onSelectStudentId}
                 renderSuffix={(e: DigestStudentEntry) => (
-                  <span className="text-[#86868B]">· {getCampusLabel(e.campus)}</span>
+                  <span className="text-slate-500">· {getCampusLabel(e.campus)}</span>
                 )}
               />
             </div>

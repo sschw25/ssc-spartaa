@@ -89,13 +89,13 @@ export function AttendanceStatusCard() {
             {status.loading ? <Loader2 className="size-5 animate-spin" /> : checkedIn ? <LogIn className="size-5" /> : <LogOut className="size-5" />}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-[#86868B]">현재 등하원 상태</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">현재 등하원 상태</p>
             {status.loading ? (
               <p className="mt-0.5 text-lg font-black text-slate-400">확인 중…</p>
             ) : checkedIn ? (
               <div className="mt-0.5 space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-lg font-black text-[#1D1D1F]">등원 중</span>
+                  <span className="text-lg font-black text-slate-900">등원 중</span>
                   {status.since && (
                     <span className="text-xs font-bold text-[#0071E3] whitespace-nowrap">
                       {timeKST(status.since)}부터
@@ -112,7 +112,7 @@ export function AttendanceStatusCard() {
                 )}
               </div>
             ) : (
-              <p className="mt-0.5 text-lg font-black text-[#1D1D1F]">하원 상태</p>
+              <p className="mt-0.5 text-lg font-black text-slate-900">하원 상태</p>
             )}
           </div>
         </div>
@@ -138,7 +138,7 @@ export function AttendanceStatusCard() {
       {!status.loading && (
         <div className="rounded-2xl bg-[#F5F5F7] p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-[#86868B]">오늘 학습 시간</span>
+            <span className="text-[11px] font-bold text-slate-500">오늘 학습 시간</span>
             <span className="text-sm font-black text-[#0071E3]">{fmtMin(status.todayMinutes)}</span>
           </div>
           {status.todaySessions.length > 0 ? (

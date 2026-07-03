@@ -229,7 +229,7 @@ export function GradeAnalysisTab({
                       type="monotone"
                       dataKey="추세선"
                       name="5회 가중평균 추세 (전체)"
-                      stroke="#86868B"
+                      stroke="#64748B"
                       strokeWidth={2.5}
                       strokeDasharray="5 5"
                       dot={false}
@@ -240,8 +240,8 @@ export function GradeAnalysisTab({
                         { stroke: '#0071E3' },
                         { stroke: '#475569', strokeDasharray: '6 3' },
                         { stroke: '#0071E3', strokeDasharray: '2 3' },
-                        { stroke: '#86868B', strokeDasharray: '8 4' },
-                        { stroke: '#1D1D1F', strokeDasharray: '3 5' },
+                        { stroke: '#64748B', strokeDasharray: '8 4' },
+                        { stroke: '#0F172A', strokeDasharray: '3 5' },
                       ];
                       const lineStyle = lineStyles[idx % lineStyles.length];
                       return (
@@ -441,7 +441,7 @@ export function GradeAnalysisTab({
                         dataKey="value"
                       >
                         {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#86868B'} />
+                          <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#64748B'} />
                         ))}
                       </Pie>
                     </PieChart>

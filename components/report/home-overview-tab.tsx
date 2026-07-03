@@ -815,13 +815,13 @@ export function HomeOverviewTab({
               const isPhoneNotSubmitted = checklist.phone_status ? checklist.phone_status !== 'submitted' : !checklist.phone_submitted;
               
               let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800';
-              let bannerEmoji = '✅';
+              let BannerIcon = CheckCircle2;
               let bannerTitle = '쾌조의 스타트! 아침 공부를 시작해 봅시다.';
               let bannerTips = '어젯밤 잠도 충분히 잤고 스마트폰 방해요인도 완벽하게 차단되었습니다. 오늘 플래너 달성률 100%에 도전해보세요!';
 
               if (isSleepShort || isPhoneNotSubmitted) {
                 bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900';
-                bannerEmoji = '⚠️';
+                BannerIcon = AlertTriangle;
                 bannerTitle = '오전 효율 저하 요인이 감지되었습니다.';
                 
                 if (isSleepShort && isPhoneNotSubmitted) {
@@ -843,7 +843,7 @@ export function HomeOverviewTab({
                     
                     <div className="space-y-1 mt-2">
                       <h4 className="text-xs font-black flex items-center gap-1">
-                        <span>{bannerEmoji}</span> {bannerTitle}
+                        <BannerIcon className="h-4 w-4 shrink-0" /> {bannerTitle}
                       </h4>
                       <p className="text-[10px] font-bold leading-relaxed opacity-90">{bannerTips}</p>
                     </div>
@@ -952,7 +952,7 @@ export function HomeOverviewTab({
     </section>
 
     <section id="coach-feedback" className={`scroll-mt-24 space-y-4 print-card ${!isStudentReport || activeTab === 'coach-feedback' ? '' : 'hidden print:block'}`}>
-      <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
+      <h3 className="text-xs font-black text-slate-900 tracking-widest uppercase flex items-center gap-2">
         <MessageSquare className="w-4 h-4 text-[#0071E3]" />
         코멘팅 소견 및 생활 관리 피드백
       </h3>
@@ -997,7 +997,7 @@ export function HomeOverviewTab({
               <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.06] bg-[#FAFAFA]">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-                  <h3 className="text-sm font-black text-[#1D1D1F]">D-Day 관리</h3>
+                  <h3 className="text-sm font-black text-slate-900">D-Day 관리</h3>
                 </div>
                 <button onClick={() => setDdayOpen(false)} className="text-slate-400 hover:text-slate-700 transition-colors">
                   <X className="w-4 h-4" />
@@ -1020,7 +1020,7 @@ export function HomeOverviewTab({
                             diff === 'D-Day' ? 'text-emerald-600' : isPast ? 'text-slate-400' : 'text-[#0071E3]'
                           }`}>{diff}</span>
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold text-[#1D1D1F] truncate">{d.title}</p>
+                            <p className="text-xs font-bold text-slate-900 truncate">{d.title}</p>
                             <p className="text-[10px] font-semibold text-slate-400">{d.date}</p>
                           </div>
                           <button
@@ -1044,13 +1044,13 @@ export function HomeOverviewTab({
                   value={ddayTitle}
                   onChange={(e) => setDdayTitle(e.target.value)}
                   placeholder="이름 (예: 수능, 중간고사)"
-                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
                 />
                 <input
                   type="date"
                   value={ddayDate}
                   onChange={(e) => setDdayDate(e.target.value)}
-                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-[#1D1D1F] focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                  className="w-full rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
                 />
                 <button
                   onClick={handleAddDday}

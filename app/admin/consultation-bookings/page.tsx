@@ -413,7 +413,7 @@ export default function AdminConsultationBookingsPage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B]">상담 예약 정보 로드 중...</p>
+        <p className="text-sm text-slate-500">상담 예약 정보 로드 중...</p>
       </div>
     );
   }
@@ -421,7 +421,7 @@ export default function AdminConsultationBookingsPage() {
   const campusOptions = allowedCampuses.map((c) => ({ value: c, label: campusLabel(c) }));
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav
         title="상담 예약"
         titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />}
@@ -441,11 +441,11 @@ export default function AdminConsultationBookingsPage() {
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-[17px] font-semibold text-[#1D1D1F]">추가 · 긴급 상담 신청</h2>
-            <span className="text-[11px] font-bold text-[#86868B]">{extraRequests.length}건 대기</span>
+            <h2 className="text-[17px] font-semibold text-slate-900">추가 · 긴급 상담 신청</h2>
+            <span className="text-[11px] font-bold text-slate-500">{extraRequests.length}건 대기</span>
           </div>
           {extraRequests.length === 0 ? (
-            <p className="text-[11px] text-[#86868B] py-2">대기 중인 추가·긴급 신청이 없습니다.</p>
+            <p className="text-[11px] text-slate-500 py-2">대기 중인 추가·긴급 신청이 없습니다.</p>
           ) : (
             <div className="space-y-2">
               {extraRequests.map((b) => (
@@ -454,9 +454,9 @@ export default function AdminConsultationBookingsPage() {
                     <button type="button" onClick={() => openStudentSheet(b.studentId)} className="text-[13px] font-extrabold text-[#0071E3] hover:underline">
                       {b.studentName}
                     </button>
-                    <span className="text-[10px] font-bold text-[#86868B]">{new Date(b.createdAt).toLocaleDateString('ko-KR')}</span>
+                    <span className="text-[10px] font-bold text-slate-500">{new Date(b.createdAt).toLocaleDateString('ko-KR')}</span>
                   </div>
-                  {b.reason && <p className="text-[11px] font-semibold text-[#1D1D1F] leading-relaxed break-words">{b.reason}</p>}
+                  {b.reason && <p className="text-[11px] font-semibold text-slate-900 leading-relaxed break-words">{b.reason}</p>}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Button size="sm" disabled={busy[`done_${b.id}`]} onClick={() => markDone(b)} className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3">
                       {busy[`done_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}처리완료
@@ -478,8 +478,8 @@ export default function AdminConsultationBookingsPage() {
           <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
             <div className="flex items-center gap-2">
               <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-              <h2 className="text-[17px] font-semibold text-[#1D1D1F]">상담 시간 변경</h2>
-              <span className="text-[11px] font-bold text-[#86868B]">{rescheduleRequests.length}건</span>
+              <h2 className="text-[17px] font-semibold text-slate-900">상담 시간 변경</h2>
+              <span className="text-[11px] font-bold text-slate-500">{rescheduleRequests.length}건</span>
             </div>
             <div className="space-y-2">
               {rescheduleRequests.map((b) => {
@@ -502,12 +502,12 @@ export default function AdminConsultationBookingsPage() {
                         {fromAdmin ? '학생 승인 대기' : '학생 변경 요청'}
                       </span>
                     </div>
-                    <p className="text-[11px] font-semibold text-[#1D1D1F]">
+                    <p className="text-[11px] font-semibold text-slate-900">
                       {dateLabel(b.date, b.weekday)} {b.slot}
-                      <span className="mx-1 text-[#86868B]">→</span>
+                      <span className="mx-1 text-slate-500">→</span>
                       <span className="font-black text-[#0071E3]">{dateLabel(rs.date, rs.weekday)} {rs.slot}</span>
                     </p>
-                    {rs.reason && <p className="text-[11px] font-semibold text-[#86868B] break-words">사유: {rs.reason}</p>}
+                    {rs.reason && <p className="text-[11px] font-semibold text-slate-500 break-words">사유: {rs.reason}</p>}
                     <div className="flex flex-wrap items-center gap-2 pt-0.5">
                       {fromAdmin ? (
                         <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => cancelRescheduleProposal(b)} className="h-8 rounded-lg border-black/[0.08] text-[11px] font-bold px-3">
@@ -535,12 +535,12 @@ export default function AdminConsultationBookingsPage() {
         <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4 text-[#0071E3]" />
-            <h2 className="text-[17px] font-semibold text-[#1D1D1F]">관리자 직접 예약</h2>
+            <h2 className="text-[17px] font-semibold text-slate-900">관리자 직접 예약</h2>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2 space-y-1.5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B]" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 <Input placeholder="학생 이름 검색" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
                   className="pl-9 rounded-xl border-black/[0.08] text-xs h-9 bg-[#F5F5F7]" />
               </div>
@@ -553,7 +553,7 @@ export default function AdminConsultationBookingsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <span className="text-[11px] font-extrabold text-[#86868B]">날짜</span>
+              <span className="text-[11px] font-extrabold text-slate-500">날짜</span>
               <select value={assignDate} onChange={(e) => { setAssignDate(e.target.value); setAssignSlot(''); }}
                 className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold">
                 <option value="">운영일 선택</option>
@@ -563,7 +563,7 @@ export default function AdminConsultationBookingsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <span className="text-[11px] font-extrabold text-[#86868B]">시간</span>
+              <span className="text-[11px] font-extrabold text-slate-500">시간</span>
               <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value)} disabled={!assignDate}
                 className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold disabled:opacity-50">
                 <option value="">빈 슬롯 선택</option>
@@ -585,9 +585,9 @@ export default function AdminConsultationBookingsPage() {
             return (
               <div className="flex items-center gap-2 px-1 flex-wrap">
                 <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-                <h2 className="text-[17px] font-semibold text-[#1D1D1F]">{campusLabel(campus)} 상담 타임테이블</h2>
-                <span className="text-[11px] font-bold text-[#86868B]">앞 요일부터 채워집니다</span>
-                <span className="ml-auto text-[11px] font-bold text-[#86868B]">
+                <h2 className="text-[17px] font-semibold text-slate-900">{campusLabel(campus)} 상담 타임테이블</h2>
+                <span className="text-[11px] font-bold text-slate-500">앞 요일부터 채워집니다</span>
+                <span className="ml-auto text-[11px] font-bold text-slate-500">
                   신청 {s.total} · 완료 {s.done} · 노쇼 {s.noshow} (노쇼율 {s.noshowRate}%)
                 </span>
               </div>
@@ -598,10 +598,10 @@ export default function AdminConsultationBookingsPage() {
           {loading && !today ? (
             <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
               <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-              <p className="text-xs text-[#86868B]">불러오는 중...</p>
+              <p className="text-xs text-slate-500">불러오는 중...</p>
             </div>
           ) : grid.length === 0 ? (
-            <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
+            <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
               예정된 운영일이 없습니다.
             </div>
           ) : (
@@ -609,7 +609,7 @@ export default function AdminConsultationBookingsPage() {
               <table className="w-full border-collapse text-center text-[11px]">
                 <thead>
                   <tr className="bg-[#F5F5F7]">
-                    <th className="sticky left-0 z-10 bg-[#F5F5F7] px-3 py-2 text-left font-extrabold text-[#86868B] border-b border-black/[0.05]">시간</th>
+                    <th className="sticky left-0 z-10 bg-[#F5F5F7] px-3 py-2 text-left font-extrabold text-slate-500 border-b border-black/[0.05]">시간</th>
                     {grid.map((d) => {
                       const full = d.slots.every((s) => s.booking);
                       const isToday = d.date === today;
@@ -617,15 +617,15 @@ export default function AdminConsultationBookingsPage() {
                       const bo = campusBlackouts.find((b) => b.date === d.date);
                       const isFulldayBlocked = bo?.scope === 'fullday';
                       return (
-                        <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-[#1D1D1F]'}`}>
+                        <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-slate-900'}`}>
                           <div>{dateLabel(d.date, d.weekday)}</div>
-                          <div className="text-[10px] font-bold text-[#86868B]">{d.counselor}</div>
+                          <div className="text-[10px] font-bold text-slate-500">{d.counselor}</div>
                           {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 px-1.5 text-[9px] font-black text-red-600">만석</span>}
                           <button
                             type="button"
                             onClick={() => toggleFullday(campus, d.date, campusBlackouts)}
                             title={isFulldayBlocked ? '휴무 해제' : '종일 휴무 설정'}
-                            className={`mt-1 inline-block rounded-full px-1.5 text-[9px] font-black transition-colors ${isFulldayBlocked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-[#F5F5F7] text-[#86868B] hover:bg-amber-50 hover:text-amber-600'}`}
+                            className={`mt-1 inline-block rounded-full px-1.5 text-[9px] font-black transition-colors ${isFulldayBlocked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-[#F5F5F7] text-slate-500 hover:bg-amber-50 hover:text-amber-600'}`}
                           >
                             {isFulldayBlocked ? '휴무중' : '휴무'}
                           </button>
@@ -639,7 +639,7 @@ export default function AdminConsultationBookingsPage() {
                     const nowHHMM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
                     return CONSULTATION_SLOT_TIMES.map((slot) => (
                       <tr key={slot} className="border-b border-black/[0.03] last:border-0">
-                        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-[#86868B] border-r border-black/[0.04]">{slot}</td>
+                        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-slate-500 border-r border-black/[0.04]">{slot}</td>
                         {grid.map((d) => {
                           const cell = d.slots.find((s) => s.slot === slot);
                           const bk = cell?.booking || null;
@@ -711,7 +711,7 @@ export default function AdminConsultationBookingsPage() {
                                         type="button"
                                         onClick={() => openReschedule(bk)}
                                         title="시간 변경 제안"
-                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-[#0071E3]/10 hover:text-[#0071E3] transition-colors"
+                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-[#0071E3]/10 hover:text-[#0071E3] transition-colors"
                                       >
                                         변경
                                       </button>
@@ -719,7 +719,7 @@ export default function AdminConsultationBookingsPage() {
                                         type="button"
                                         onClick={() => cancelBooking(bk)}
                                         title="클릭하여 예약 취소"
-                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-[#86868B] hover:bg-red-50 hover:text-red-600 transition-colors"
+                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
                                       >
                                         취소
                                       </button>
@@ -756,21 +756,21 @@ export default function AdminConsultationBookingsPage() {
               WebkitBackdropFilter: 'blur(28px) saturate(180%)',
             }}
           >
-            <h3 className="text-sm font-black text-[#1D1D1F] leading-snug">
+            <h3 className="text-sm font-black text-slate-900 leading-snug">
               {completeTarget.studentName} · {completeTarget.date} {completeTarget.slot} 상담 완료
             </h3>
             <textarea
               value={noteDraft}
               onChange={(e) => setNoteDraft(e.target.value)}
               rows={6}
-              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-[#1D1D1F] leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-slate-900 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
               placeholder="상담 내용을 작성하세요"
             />
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => { setCompleteTarget(null); setNoteDraft(''); }}
-                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-[#1D1D1F] hover:bg-[#E5E5EA] transition-colors"
+                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-slate-900 hover:bg-[#E5E5EA] transition-colors"
               >
                 닫기
               </button>
@@ -795,15 +795,15 @@ export default function AdminConsultationBookingsPage() {
             className="w-full max-w-md rounded-3xl border border-white/20 shadow-2xl p-6 space-y-4"
             style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)' }}
           >
-            <h3 className="text-sm font-black text-[#1D1D1F] leading-snug">
+            <h3 className="text-sm font-black text-slate-900 leading-snug">
               {rsTarget.studentName} · 시간 변경 제안
             </h3>
-            <p className="text-[12px] font-bold text-[#86868B]">
+            <p className="text-[12px] font-bold text-slate-500">
               현재 {dateLabel(rsTarget.date, rsTarget.weekday)} {rsTarget.slot} → 새 시간을 제안하면 학생 승인 후 확정됩니다.
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <span className="text-[11px] font-extrabold text-[#86868B]">날짜</span>
+                <span className="text-[11px] font-extrabold text-slate-500">날짜</span>
                 <select value={rsDate} onChange={(e) => { setRsDate(e.target.value); setRsSlot(''); }}
                   className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold">
                   <option value="">운영일 선택</option>
@@ -811,7 +811,7 @@ export default function AdminConsultationBookingsPage() {
                 </select>
               </div>
               <div className="space-y-1">
-                <span className="text-[11px] font-extrabold text-[#86868B]">시간</span>
+                <span className="text-[11px] font-extrabold text-slate-500">시간</span>
                 <select value={rsSlot} onChange={(e) => setRsSlot(e.target.value)} disabled={!rsDate}
                   className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold disabled:opacity-50">
                   <option value="">빈 슬롯 선택</option>
@@ -825,11 +825,11 @@ export default function AdminConsultationBookingsPage() {
               rows={2}
               maxLength={300}
               placeholder="변경 사유(선택) — 예) 담당자 일정 조정"
-              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-[#1D1D1F] leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-slate-900 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
             />
             <div className="flex gap-2 justify-end">
               <button type="button" onClick={() => setRsTarget(null)}
-                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-[#1D1D1F] hover:bg-[#E5E5EA] transition-colors">
+                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-slate-900 hover:bg-[#E5E5EA] transition-colors">
                 닫기
               </button>
               <button type="button" disabled={busy[`rs_${rsTarget.id}`] || !rsDate || !rsSlot} onClick={submitReschedule}

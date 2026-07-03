@@ -148,7 +148,7 @@ export function SubjectProgressTab({
       case '진도 정체':
         return 'bg-red-50 text-red-700 border-red-200';
       case '목표 미설정':
-        return 'bg-[#F5F5F7] text-[#86868B] border-black/[0.06] break-keep';
+        return 'bg-[#F5F5F7] text-slate-500 border-black/[0.06] break-keep';
       default:
         return 'bg-slate-50 text-slate-500 border-slate-200';
     }
@@ -156,7 +156,7 @@ export function SubjectProgressTab({
 
   return (
     <div id="subject-progress" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'subject-progress' ? '' : 'hidden print:block'}`}>
-      <h3 className="text-xs font-black text-[#1D1D1F] tracking-widest uppercase flex items-center gap-2">
+      <h3 className="text-xs font-black text-slate-900 tracking-widest uppercase flex items-center gap-2">
         <FileText className="w-4 h-4 text-[#0071E3]" />
         {isStudentReport ? '과목별 상세 학습 목표 및 주간 달성 스케줄러' : '과목별 학습 진도율 요약'}
       </h3>

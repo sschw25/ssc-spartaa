@@ -170,7 +170,7 @@ export function AdminMenuList({
 
   const menuButtonClass = (active: boolean) =>
     cn(
-      'flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-[#1D1D1F]',
+      'flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-slate-900',
       active ? 'bg-[#F5F5F7]' : 'hover:bg-[#F5F5F7]'
     );
 
@@ -178,11 +178,11 @@ export function AdminMenuList({
     <div className="flex h-full flex-col">
       <div className="flex items-start justify-between gap-2 border-b border-black/[0.05] p-5">
         <div className="min-w-0 text-left">
-          <div className="flex items-center gap-2 text-base font-semibold text-[#1D1D1F]">
-            <span className="rounded-lg bg-[#1D1D1F] px-2.5 py-1.5 text-sm font-semibold text-white">SSC</span>
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <span className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-sm font-semibold text-white">SSC</span>
             관리자 메뉴
           </div>
-          <p className="mt-1 text-xs font-semibold text-[#86868B]">자주 쓰는 관리자 화면으로 이동합니다.</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500">자주 쓰는 관리자 화면으로 이동합니다.</p>
         </div>
         <button
           type="button"
@@ -193,7 +193,7 @@ export function AdminMenuList({
             'hidden lg:flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-semibold transition-premium',
             pinned
               ? 'bg-[#0071E3]/12 text-[#0071E3] hover:bg-[#0071E3]/18'
-              : 'text-[#86868B] hover:bg-[#F5F5F7] hover:text-[#1D1D1F]'
+              : 'text-slate-500 hover:bg-[#F5F5F7] hover:text-slate-900'
           )}
         >
           {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -210,7 +210,7 @@ export function AdminMenuList({
                 type="button"
                 onClick={() => toggleSection(section.key)}
                 aria-expanded={!isCollapsed}
-                className="group mt-3 flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#86868B] transition-premium hover:bg-[#F5F5F7] hover:text-[#1D1D1F] first:mt-1"
+                className="group mt-3 flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 transition-premium hover:bg-[#F5F5F7] hover:text-slate-900 first:mt-1"
               >
                 <span>{section.title}</span>
                 <ChevronDown

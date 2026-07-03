@@ -165,8 +165,8 @@ export function StudentLayout({
               <XCircle className="w-8 h-8 text-red-500" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-[#1D1D1F] tracking-tight">등록 기간이 만료되었습니다</h2>
-              <p className="text-sm text-[#86868B] leading-relaxed mt-2">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">등록 기간이 만료되었습니다</h2>
+              <p className="text-sm text-slate-500 leading-relaxed mt-2">
                 결제가 완료되면 기능이 자동으로 복구됩니다.<br />
                 학원 데스크 또는 담당 코멘터에게 문의해 주세요.
               </p>
@@ -362,7 +362,7 @@ export function StudentLayout({
                         className={`relative flex min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 transition-all duration-300 active:scale-[0.94] sm:min-w-[64px] sm:px-3.5 ${
                           active
                             ? 'bg-[#0071E3]/12 text-[#0071E3]'
-                            : 'text-[#86868B] hover:bg-black/[0.04] hover:text-[#1D1D1F]'
+                            : 'text-slate-500 hover:bg-black/[0.04] hover:text-slate-900'
                         }`}
                       >
                         <Icon className="h-[18px] w-[18px]" />

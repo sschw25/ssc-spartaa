@@ -284,7 +284,7 @@ export default function MockExamPage() {
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav title="모의고사 참여 체크" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
@@ -604,7 +604,7 @@ export default function MockExamPage() {
                               {status === 'attending' ? (
                                 <div className="space-y-0.5">
                                   {score != null ? (
-                                    <span className="text-sm font-black text-[#1D1D1F]">{score}점</span>
+                                    <span className="text-sm font-black text-slate-900">{score}점</span>
                                   ) : (
                                     <span className="text-[11px] font-semibold text-slate-300">미입력</span>
                                   )}

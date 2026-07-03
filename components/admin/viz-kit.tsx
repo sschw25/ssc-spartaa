@@ -11,8 +11,8 @@ import { motion } from 'framer-motion';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 const TRACK = '#ECECEF';
-const INK = '#1D1D1F';
-const MUTE = '#86868B';
+const INK = '#0F172A';
+const MUTE = '#64748B';
 
 export type VizSegment = { label: string; value: number; color: string };
 
@@ -57,7 +57,7 @@ export function Gauge({
           {centerLabel ?? `${Math.round(clamped)}%`}
         </text>
       </svg>
-      {caption && <p className="-mt-2 text-[13px] font-medium text-[#1D1D1F] tracking-tight">{caption}</p>}
+      {caption && <p className="-mt-2 text-[13px] font-medium text-slate-900 tracking-tight">{caption}</p>}
     </div>
   );
 }

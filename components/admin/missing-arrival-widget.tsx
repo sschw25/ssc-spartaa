@@ -58,9 +58,9 @@ export function MissingArrivalWidget({
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2 text-left">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-          <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-[15px] font-semibold tracking-tight text-[#1D1D1F]">
+          <h3 className="flex min-w-0 flex-wrap items-baseline gap-x-1 text-[15px] font-semibold tracking-tight text-slate-900">
             <span>미등원 알림</span>
-            {checkpoint && <span className="text-[11px] font-medium text-[#86868B]">({checkpoint} 기준)</span>}
+            {checkpoint && <span className="text-[11px] font-medium text-slate-500">({checkpoint} 기준)</span>}
           </h3>
         </div>
         <div className="flex items-center gap-1.5">
@@ -70,7 +70,7 @@ export function MissingArrivalWidget({
           <button
             type="button"
             onClick={() => setCollapsed((value) => !value)}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
             title={collapsed ? '펼치기' : '접기'}
             aria-label={collapsed ? '미등원 알림 펼치기' : '미등원 알림 접기'}
           >
@@ -78,7 +78,7 @@ export function MissingArrivalWidget({
           </button>
           <button
             onClick={load}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-[#86868B] transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-black/[0.04] hover:text-[#0071E3]"
             title="새로고침"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -87,7 +87,7 @@ export function MissingArrivalWidget({
       </div>
       {!collapsed && (
         <>
-          <p className="mt-2 text-[12px] font-medium leading-relaxed text-[#86868B]">
+          <p className="mt-2 text-[12px] font-medium leading-relaxed text-slate-500">
             등원 마감 시각이 지났는데 아직 등원하지 않은 학생입니다. (09시 이후 수동 시각 포함)
           </p>
           {filtered.length === 0 ? (
@@ -104,7 +104,7 @@ export function MissingArrivalWidget({
                   className="flex min-h-9 items-center gap-1.5 rounded-full border border-amber-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-amber-700 transition-colors hover:border-amber-400 hover:bg-amber-50"
                 >
                   {r.name}
-                  <span className="text-[11px] font-semibold text-[#86868B]">{CAMPUS_LABEL[r.campus] || r.campus} · {r.expectedArrival}</span>
+                  <span className="text-[11px] font-semibold text-slate-500">{CAMPUS_LABEL[r.campus] || r.campus} · {r.expectedArrival}</span>
                 </button>
               ))}
             </div>

@@ -472,7 +472,7 @@ export default function MealsPage() {
   const past = selectedPlan ? isPastDeadline(selectedPlan) : false;
 
   return (
-    <div className="ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
       <div className="no-print">
         <AdminTopNav title="도시락 신청" titleIcon={<Utensils className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
       </div>
@@ -623,8 +623,8 @@ export default function MealsPage() {
         <div className="no-print rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <div>
-              <h2 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F]">센터별 반복 템플릿</h2>
-              <p className="text-[12px] font-medium text-[#86868B] mt-0.5">생성 · 마감 · 알림 시각</p>
+              <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">센터별 반복 템플릿</h2>
+              <p className="text-[12px] font-medium text-slate-500 mt-0.5">생성 · 마감 · 알림 시각</p>
             </div>
             <Button onClick={runRoutinesNow} disabled={routineRunning} variant="outline"
               className="ml-auto rounded-xl border-slate-200 bg-white text-xs font-black h-9">
@@ -842,7 +842,7 @@ export default function MealsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className={`text-xs font-black ${isNext ? 'text-amber-700' : 'text-[#0071E3]'}`}>{summary.label}</p>
-                    <h2 className="mt-1 text-[17px] font-semibold tracking-tight text-[#1D1D1F]">
+                    <h2 className="mt-1 text-[17px] font-semibold tracking-tight text-slate-900">
                       {weekRangeLabel(summary.weekStart)} 주
                     </h2>
                   </div>
@@ -856,20 +856,20 @@ export default function MealsPage() {
                 </div>
                 <div className="mt-4 grid grid-cols-4 gap-2 text-center">
                   <div className="rounded-xl bg-white px-2 py-2">
-                    <p className="text-[18px] font-semibold tabular-nums text-[#1D1D1F]">{summary.responded}</p>
-                    <p className="text-[11px] font-medium text-[#86868B]">응답</p>
+                    <p className="text-[18px] font-semibold tabular-nums text-slate-900">{summary.responded}</p>
+                    <p className="text-[11px] font-medium text-slate-500">응답</p>
                   </div>
                   <div className="rounded-xl bg-white px-2 py-2">
                     <p className="text-[18px] font-semibold tabular-nums text-orange-600">{summary.missing}</p>
-                    <p className="text-[11px] font-medium text-[#86868B]">미응답</p>
+                    <p className="text-[11px] font-medium text-slate-500">미응답</p>
                   </div>
                   <div className="rounded-xl bg-white px-2 py-2">
-                    <p className="text-[18px] font-semibold tabular-nums text-amber-700">{summary.lunch}</p>
-                    <p className="text-[11px] font-medium text-[#86868B]">점심</p>
+                    <p className="text-[18px] font-semibold tabular-nums text-[#F56300]">{summary.lunch}</p>
+                    <p className="text-[11px] font-medium text-slate-500">점심</p>
                   </div>
                   <div className="rounded-xl bg-white px-2 py-2">
-                    <p className="text-[18px] font-semibold tabular-nums text-indigo-600">{summary.dinner}</p>
-                    <p className="text-[11px] font-medium text-[#86868B]">저녁</p>
+                    <p className="text-[18px] font-semibold tabular-nums text-[#0071E3]">{summary.dinner}</p>
+                    <p className="text-[11px] font-medium text-slate-500">저녁</p>
                   </div>
                 </div>
               </div>
@@ -918,15 +918,15 @@ export default function MealsPage() {
             {settlement && (
               <div className="no-print grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {selectedPlan.meals.includes('lunch') && (
-                  <div className="rounded-2xl border border-amber-200/70 bg-amber-50 px-4 py-3">
-                    <p className="text-[18px] font-semibold tracking-tight text-amber-800">{settlement.lunch}<span className="text-xs font-bold ml-0.5">끼</span></p>
-                    <p className="text-[11px] font-bold text-amber-700/80 mt-0.5">점심 · {settlement.lunchAmt.toLocaleString()}원</p>
+                  <div className="rounded-2xl border border-[#F56300]/25 bg-[#F56300]/[0.07] px-4 py-3">
+                    <p className="text-[18px] font-semibold tracking-tight text-[#F56300]">{settlement.lunch}<span className="text-xs font-bold ml-0.5">끼</span></p>
+                    <p className="text-[11px] font-bold text-[#F56300]/80 mt-0.5">점심 · {settlement.lunchAmt.toLocaleString()}원</p>
                   </div>
                 )}
                 {selectedPlan.meals.includes('dinner') && (
-                  <div className="rounded-2xl border border-indigo-200/70 bg-indigo-50 px-4 py-3">
-                    <p className="text-[18px] font-semibold tracking-tight text-indigo-800">{settlement.dinner}<span className="text-xs font-bold ml-0.5">끼</span></p>
-                    <p className="text-[11px] font-bold text-indigo-700/80 mt-0.5">저녁 · {settlement.dinnerAmt.toLocaleString()}원</p>
+                  <div className="rounded-2xl border border-[#0071E3]/25 bg-[#0071E3]/[0.06] px-4 py-3">
+                    <p className="text-[18px] font-semibold tracking-tight text-[#0071E3]">{settlement.dinner}<span className="text-xs font-bold ml-0.5">끼</span></p>
+                    <p className="text-[11px] font-bold text-[#0071E3]/80 mt-0.5">저녁 · {settlement.dinnerAmt.toLocaleString()}원</p>
                   </div>
                 )}
                 <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50 px-4 py-3">
@@ -1017,7 +1017,7 @@ export default function MealsPage() {
                       <th className="px-4 py-3 text-left sticky left-0 bg-slate-50/80">원생</th>
                       {selectedPlan.meals.map((kind) => MEAL_DAYS.map((day) => (
                         <th key={`${kind}-${day}`} className={`px-2 py-3 ${isClosedDay(selectedPlan, day) ? 'text-red-300' : ''}`}>
-                          <span className={kind === 'dinner' ? 'text-indigo-400' : 'text-amber-500'}>{MEAL_KIND_LABELS[kind][0]}</span>{MEAL_DAY_LABELS[day]}
+                          <span className={kind === 'dinner' ? 'text-[#0071E3]/70' : 'text-[#F56300]/80'}>{MEAL_KIND_LABELS[kind][0]}</span>{MEAL_DAY_LABELS[day]}
                         </th>
                       )))}
                     </tr>
@@ -1042,7 +1042,7 @@ export default function MealsPage() {
                               <td key={key} className="px-1 py-1.5">
                                 <button type="button" disabled={updating === key} onClick={() => toggleCell(s, day, kind)}
                                   className={`h-7 w-7 rounded-lg text-[11px] font-black transition active:scale-90 ${
-                                    on ? (kind === 'dinner' ? 'bg-indigo-500 text-white' : 'bg-amber-400 text-white') : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                    on ? (kind === 'dinner' ? 'bg-[#0071E3] text-white' : 'bg-[#F56300] text-white') : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
                                   }`}>
                                   {updating === key ? '·' : on ? '○' : ''}
                                 </button>
@@ -1060,7 +1060,7 @@ export default function MealsPage() {
             {/* ───────── 인쇄 전용 A4 게시 표 ───────── */}
             <div className="hidden print:block">
               <div className="text-center mb-3">
-                <h2 className="text-base font-black">{weekRangeLabel(selectedPlan.weekStart)} 주 도시락 신청표</h2>
+                <h2 className="text-[17px] font-semibold">{weekRangeLabel(selectedPlan.weekStart)} 주 도시락 신청표</h2>
                 <p className="text-[11px] font-semibold text-slate-500">
                   {selectedPlan.campus && selectedPlan.campus !== 'all' ? getCampusLabel(selectedPlan.campus) : '전체 센터'}
                   {' · 먹는 날엔 ○ 칸에 본인이 동그라미 표시 후 수령'}
@@ -1111,7 +1111,7 @@ export default function MealsPage() {
               {settlement && settlement.rows.length > 0 && (settlement.lp > 0 || settlement.dp > 0) && (
                 <div style={{ breakBefore: 'page' }} className="mt-6">
                   <div className="text-center mb-3">
-                    <h2 className="text-base font-black">{weekRangeLabel(selectedPlan.weekStart)} 주 도시락 정산표</h2>
+                    <h2 className="text-[17px] font-semibold">{weekRangeLabel(selectedPlan.weekStart)} 주 도시락 정산표</h2>
                     <p className="text-[11px] font-semibold text-slate-500">
                       점심 {settlement.lp.toLocaleString()}원 · 저녁 {settlement.dp.toLocaleString()}원
                     </p>

@@ -66,20 +66,20 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
             onClick={prevMonth}
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/[0.06] transition-colors"
           >
-            <ChevronLeft className="w-4 h-4 text-[#86868B]" />
+            <ChevronLeft className="w-4 h-4 text-slate-500" />
           </button>
-          <span className="text-sm font-semibold text-[#1D1D1F] min-w-[90px] text-center">
+          <span className="text-sm font-semibold text-slate-900 min-w-[90px] text-center">
             {viewYear}년 {viewMonth + 1}월
           </span>
           <button
             onClick={nextMonth}
             className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/[0.06] transition-colors"
           >
-            <ChevronRight className="w-4 h-4 text-[#86868B]" />
+            <ChevronRight className="w-4 h-4 text-slate-500" />
           </button>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-semibold">
-          <span className="text-[#86868B]">이달 상담 <span className="text-[#1D1D1F]">{thisMonthStudents.length}명</span></span>
+          <span className="text-slate-500">이달 상담 <span className="text-slate-900">{thisMonthStudents.length}명</span></span>
           {overdueCount > 0 && (
             <span className="flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200/60 rounded-full px-2.5 py-1">
               <AlertTriangle className="w-3 h-3" />
@@ -95,7 +95,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
           <div
             key={d}
             className={`py-2 text-center text-[10px] font-semibold tracking-wider ${
-              i === 5 ? 'text-blue-500' : i === 6 ? 'text-red-500' : 'text-[#86868B]'
+              i === 5 ? 'text-blue-500' : i === 6 ? 'text-red-500' : 'text-slate-500'
             }`}
           >
             {d}
@@ -132,7 +132,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                         ? 'text-blue-500'
                         : dow === 6
                         ? 'text-red-500'
-                        : 'text-[#1D1D1F]'
+                        : 'text-slate-900'
                     }`}
                   >
                     {day}
@@ -153,7 +153,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                       </button>
                     ))}
                     {scheduled.length > 3 && (
-                      <span className="text-[9px] font-semibold text-[#86868B] pl-1">
+                      <span className="text-[9px] font-semibold text-slate-500 pl-1">
                         +{scheduled.length - 3}
                       </span>
                     )}

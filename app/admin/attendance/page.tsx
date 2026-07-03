@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
   CalendarDays,
+  Check,
   ChevronDown,
   ChevronUp,
   ChevronsUpDown,
@@ -501,7 +502,7 @@ function AdminAttendanceContent() {
 
   const renderTh = (k: SortKey, label: string, className = '') => (
     <th className={`px-4 py-3 ${className}`}>
-      <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 font-bold text-[#1D1D1F] hover:text-[#0071E3]">
+      <button onClick={() => toggleSort(k)} className="inline-flex items-center gap-1 font-bold text-slate-900 hover:text-[#0071E3]">
         {label} {renderSortIcon(k)}
       </button>
     </th>
@@ -514,7 +515,7 @@ function AdminAttendanceContent() {
   const s = data?.summary;
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen font-sans text-[#1D1D1F]">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen font-sans text-slate-900">
       <AdminTopNav
         title="출결 상세 표"
         campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}
@@ -540,25 +541,25 @@ function AdminAttendanceContent() {
             <div className="flex items-center gap-2 flex-wrap">
               <div className="glass-capsule inline-flex p-0.5 rounded-full">
                 {([['daily', '일별'], ['weekly', '주간 지각'], ['saturday-late', '토요 지각 증빙']] as const).map(([k, label]) => (
-                  <button key={k} onClick={() => setMode(k)} className={`px-3.5 py-1.5 rounded-full text-[13px] transition-all ${mode === k ? 'bg-white text-[#1D1D1F] shadow-sm font-semibold' : 'text-[#86868B] font-medium'}`}>{label}</button>
+                  <button key={k} onClick={() => setMode(k)} className={`px-3.5 py-1.5 rounded-full text-[13px] transition-all ${mode === k ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-500 font-medium'}`}>{label}</button>
                 ))}
               </div>
               {mode === 'daily' && (
                 <>
                   <button onClick={() => setDate((d) => shiftDate(d, -1))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">이전</button>
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
-                    <CalendarDays className="w-3.5 h-3.5 text-[#86868B]" />
+                    <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
                     <input type="date" value={date} max={todayKST()} onChange={(e) => e.target.value && setDate(e.target.value)} className="bg-transparent text-xs font-bold outline-none" />
                   </div>
                   <button onClick={() => setDate((d) => shiftDate(d, 1))} disabled={date >= todayKST()} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7] disabled:opacity-40">다음</button>
-                  <button onClick={() => setDate(todayKST())} className="px-2.5 py-1.5 rounded-lg bg-[#1D1D1F] text-white text-xs font-bold">오늘</button>
+                  <button onClick={() => setDate(todayKST())} className="px-2.5 py-1.5 rounded-lg bg-slate-900 text-white text-xs font-bold">오늘</button>
                 </>
               )}
               {mode === 'saturday-late' && (
                 <>
                   <button onClick={() => setSatDate((d) => shiftDate(d, -7))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">이전 주</button>
                   <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05]">
-                    <CalendarDays className="w-3.5 h-3.5 text-[#86868B]" />
+                    <CalendarDays className="w-3.5 h-3.5 text-slate-500" />
                     <input type="date" value={satDate} onChange={(e) => e.target.value && setSatDate(e.target.value)} className="bg-transparent text-xs font-bold outline-none" />
                   </div>
                   <button onClick={() => setSatDate((d) => shiftDate(d, 7))} className="px-2.5 py-1.5 rounded-lg border border-black/[0.08] text-xs font-bold hover:bg-[#F5F5F7]">다음 주</button>
@@ -574,14 +575,14 @@ function AdminAttendanceContent() {
                   <button
                     key={option.key}
                     onClick={() => setStatusFilter(option.key)}
-                    className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${statusFilter === option.key ? 'bg-[#1D1D1F] text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
+                    className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${statusFilter === option.key ? 'bg-slate-900 text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
                   >
                     {option.label}
                   </button>
                 ))}
               </div>
               <label className="flex min-w-0 items-center gap-2 rounded-2xl bg-black/[0.04] px-3.5 py-2.5 lg:w-72">
-                <Search className="h-4 w-4 shrink-0 text-[#86868B]" />
+                <Search className="h-4 w-4 shrink-0 text-slate-500" />
                 <input
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
@@ -600,7 +601,7 @@ function AdminAttendanceContent() {
               <button
                 key={k}
                 onClick={() => setTab(k)}
-                className={`px-3.5 py-1.5 rounded-full text-[13px] transition-all ${tab === k ? 'bg-white text-[#1D1D1F] shadow-sm font-semibold' : 'text-[#86868B] font-medium'}`}
+                className={`px-3.5 py-1.5 rounded-full text-[13px] transition-all ${tab === k ? 'bg-white text-slate-900 shadow-sm font-semibold' : 'text-slate-500 font-medium'}`}
               >
                 {label}
               </button>
@@ -613,7 +614,7 @@ function AdminAttendanceContent() {
         ) : mode === 'saturday-late' ? (
           <div className="space-y-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-xs font-bold text-[#86868B]">
+              <span className="text-xs font-bold text-slate-500">
                 토요 지각 증빙 대상자: 총 {satData.length}명 (결석 상태 & 반차/휴가 미승인 학생)
               </span>
               <button
@@ -629,10 +630,10 @@ function AdminAttendanceContent() {
               {satLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" />
-                  <span className="text-xs text-[#86868B]">불러오는 중...</span>
+                  <span className="text-xs text-slate-500">불러오는 중...</span>
                 </div>
               ) : satData.length === 0 ? (
-                <div className="py-16 text-center text-sm text-[#86868B]">
+                <div className="py-16 text-center text-sm text-slate-500">
                   해당 토요일에 증빙 대상 학생이 없습니다.
                 </div>
               ) : (
@@ -684,9 +685,9 @@ function AdminAttendanceContent() {
                             onClick={() => handleOpenStudentInfo(r.studentId)}
                             className="px-4 py-3 whitespace-nowrap cursor-pointer hover:bg-black/[0.02] transition-colors"
                           >
-                            <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
+                            <span className="font-bold text-slate-900 hover:text-[#0071E3] transition-colors">{r.name}</span>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap font-bold text-[#86868B]">{campusLabel(r.campus)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap font-bold text-slate-500">{campusLabel(r.campus)}</td>
                           <td className="px-4 py-3 whitespace-nowrap text-slate-500 font-semibold">{r.manager || '-'}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             {r.status === 'not_requested' && (
@@ -732,7 +733,7 @@ function AdminAttendanceContent() {
                             {r.status === 'pending' && (
                               <button
                                 onClick={() => handleRequestSatExcuse([r.studentId])}
-                                className="rounded-lg border border-black/[0.08] px-2.5 py-1 text-[10px] font-bold text-[#1D1D1F] hover:bg-[#F5F5F7] transition"
+                                className="rounded-lg border border-black/[0.08] px-2.5 py-1 text-[10px] font-bold text-slate-900 hover:bg-[#F5F5F7] transition"
                               >
                                 재요청
                               </button>
@@ -764,7 +765,7 @@ function AdminAttendanceContent() {
                     <button
                       key={p}
                       onClick={() => setPeriod(p)}
-                      className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${period === p ? 'bg-[#1D1D1F] text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
+                      className={`rounded-full px-3.5 py-1.5 text-[13px] transition-all ${period === p ? 'bg-slate-900 text-white font-semibold' : 'bg-black/[0.04] text-[#6e6e73] font-medium hover:bg-black/[0.07]'}`}
                     >
                       {p === 'week' ? '이번주' : p === 'month' ? '이번달' : '지난 30일'}
                     </button>
@@ -772,7 +773,7 @@ function AdminAttendanceContent() {
                   {rankingLoading && <Loader2 className="w-4 h-4 text-[#0071E3] animate-spin self-center" />}
                 </div>
                 {/* 요약 */}
-                <div className="text-sm text-[#86868B] font-medium">
+                <div className="text-sm text-slate-500 font-medium">
                   대상 {ranking.length}명 · 총 결석 <span className="text-red-600 font-semibold">{ranking.reduce((s, r) => s + r.absentDays, 0)}</span>일 · 총 이탈 <span className="text-amber-600 font-semibold">{ranking.reduce((s, r) => s + r.leftDays, 0)}</span>일
                 </div>
                 {/* 표 */}
@@ -780,12 +781,12 @@ function AdminAttendanceContent() {
                   <table className="w-full text-xs">
                     <thead className="bg-[#F5F5F7] text-left border-b border-black/[0.05]">
                       <tr>
-                        <th className="px-4 py-3 font-bold text-[#1D1D1F] w-10">#</th>
-                        <th className="px-4 py-3 font-bold text-[#1D1D1F]">학생</th>
+                        <th className="px-4 py-3 font-bold text-slate-900 w-10">#</th>
+                        <th className="px-4 py-3 font-bold text-slate-900">학생</th>
                         <th className="px-4 py-3 font-bold text-red-600">결석일</th>
                         <th className="px-4 py-3 font-bold text-amber-600">이탈일</th>
-                        <th className="px-4 py-3 font-bold text-[#1D1D1F]">총X</th>
-                        <th className="px-4 py-3 font-bold text-[#1D1D1F]">최근</th>
+                        <th className="px-4 py-3 font-bold text-slate-900">총X</th>
+                        <th className="px-4 py-3 font-bold text-slate-900">최근</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -795,20 +796,20 @@ function AdminAttendanceContent() {
                           onClick={() => handleOpenStudentInfo(r.studentId)}
                           className="border-b border-black/[0.04] hover:bg-[#F5F5F7]/60 cursor-pointer"
                         >
-                          <td className="px-4 py-3 text-[#86868B] font-semibold">{i + 1}</td>
+                          <td className="px-4 py-3 text-slate-500 font-semibold">{i + 1}</td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
-                            <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
+                            <span className="font-bold text-slate-900 hover:text-[#0071E3] transition-colors">{r.name}</span>
+                            <span className="ml-2 text-[9px] font-bold text-slate-500 bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
                           </td>
                           <td className="px-4 py-3 text-red-600 font-semibold">{r.absentDays}</td>
                           <td className="px-4 py-3 text-amber-600 font-semibold">{r.leftDays}</td>
-                          <td className="px-4 py-3 text-[#1D1D1F] font-medium">{r.totalMarks}</td>
-                          <td className="px-4 py-3 text-[#86868B]">{r.lastDate || '-'}</td>
+                          <td className="px-4 py-3 text-slate-900 font-medium">{r.totalMarks}</td>
+                          <td className="px-4 py-3 text-slate-500">{r.lastDate || '-'}</td>
                         </tr>
                       ))}
                       {!rankingLoading && ranking.length === 0 && (
                         <tr>
-                          <td colSpan={6} className="text-center text-[#86868B] py-10 text-sm">해당 기간 기록 없음</td>
+                          <td colSpan={6} className="text-center text-slate-500 py-10 text-sm">해당 기간 기록 없음</td>
                         </tr>
                       )}
                     </tbody>
@@ -831,18 +832,18 @@ function AdminAttendanceContent() {
             {phoneSubmissions.length > 0 && (
               <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-4 py-3 border-b border-black/[0.05] flex items-center justify-between">
-                  <span className="text-xs font-black text-[#1D1D1F]">휴대폰 제출 방식 신청<span className="text-[#86868B] font-bold">({phoneSubmissions.filter(s => s.status === 'pending').length}건 검토 대기)</span></span>
-                  {phoneLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-[#86868B]" />}
+                  <span className="text-xs font-black text-slate-900">휴대폰 제출 방식 신청<span className="text-slate-500 font-bold">({phoneSubmissions.filter(s => s.status === 'pending').length}건 검토 대기)</span></span>
+                  {phoneLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-500" />}
                 </div>
                 <div className="divide-y divide-black/[0.04]">
                   {phoneSubmissions.map((sub) => (
                     <div key={sub.id} className="flex items-center gap-3 px-4 py-3 flex-wrap">
-                      <span className="text-xs font-bold text-[#1D1D1F] min-w-[80px]">{sub.studentName}</span>
-                      <span className="text-[10px] font-bold text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-full">{campusLabel(sub.campus)}</span>
+                      <span className="text-xs font-bold text-slate-900 min-w-[80px]">{sub.studentName}</span>
+                      <span className="text-[10px] font-bold text-slate-500 bg-[#F5F5F7] px-2 py-0.5 rounded-full">{campusLabel(sub.campus)}</span>
                       <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ${sub.type === 'keep' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-blue-50 border-blue-100 text-blue-700'}`}>
                         {sub.type === 'keep' ? '소지' : '임시보관함'}
                       </span>
-                      {sub.reason && <span className="text-[10px] text-[#86868B] truncate max-w-[180px]">사유: {sub.reason}</span>}
+                      {sub.reason && <span className="text-[10px] text-slate-500 truncate max-w-[180px]">사유: {sub.reason}</span>}
                       <span className={`text-[10px] font-black px-2.5 py-0.5 rounded-full border ml-auto ${
                         sub.status === 'approved' ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
                         : sub.status === 'rejected' ? 'bg-red-50 border-red-100 text-red-700'
@@ -876,11 +877,11 @@ function AdminAttendanceContent() {
 
             <div className="bg-white border border-black/[0.05] rounded-2xl shadow-sm overflow-x-auto">
               {loading && !data ? (
-                <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" /><span className="text-xs text-[#86868B]">불러오는 중...</span></div>
+                <div className="flex items-center justify-center py-16"><Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mr-2" /><span className="text-xs text-slate-500">불러오는 중...</span></div>
               ) : error ? (
                 <div className="py-16 text-center text-sm text-red-600 font-semibold">{error}</div>
               ) : rows.length === 0 ? (
-                <div className="py-16 text-center text-sm text-[#86868B]">조건에 맞는 출결 기록이 없습니다.</div>
+                <div className="py-16 text-center text-sm text-slate-500">조건에 맞는 출결 기록이 없습니다.</div>
               ) : (
                 <table className="w-full text-xs">
                   <thead className="bg-[#F5F5F7] text-left border-b border-black/[0.05]">
@@ -891,8 +892,8 @@ function AdminAttendanceContent() {
                       {renderTh('minutes', '체류', 'hidden sm:table-cell')}
                       {renderTh('arrival', '지각기준')}
                       {renderTh('late', '상태')}
-                      <th className="px-4 py-3 text-center font-bold text-[#1D1D1F]" title="휴대폰 미제출(임시보관함/소지) 신청 시 자동 체크">휴대폰</th>
-                      <th className="px-4 py-3 text-left font-bold text-[#1D1D1F]">수정</th>
+                      <th className="px-4 py-3 text-center font-bold text-slate-900" title="휴대폰 미제출(임시보관함/소지) 신청 시 자동 체크">휴대폰</th>
+                      <th className="px-4 py-3 text-left font-bold text-slate-900">수정</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -904,8 +905,8 @@ function AdminAttendanceContent() {
                             onClick={() => handleOpenStudentInfo(r.id)}
                             className="px-4 py-3 whitespace-nowrap cursor-pointer hover:bg-black/[0.02] transition-colors"
                           >
-                            <span className="font-bold text-[#1D1D1F] hover:text-[#0071E3] transition-colors">{r.name}</span>
-                            <span className="ml-2 text-[9px] font-bold text-[#86868B] bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
+                            <span className="font-bold text-slate-900 hover:text-[#0071E3] transition-colors">{r.name}</span>
+                            <span className="ml-2 text-[9px] font-bold text-slate-500 bg-[#F5F5F7] px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <input
@@ -923,7 +924,7 @@ function AdminAttendanceContent() {
                               className="w-28 rounded-lg border border-black/[0.08] bg-white px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
                             />
                           </td>
-                          <td className="px-4 py-3 text-[#86868B] hidden sm:table-cell whitespace-nowrap">{r.isAbsent ? '-' : fmtMin(r.minutes)}</td>
+                          <td className="px-4 py-3 text-slate-500 hidden sm:table-cell whitespace-nowrap">{r.isAbsent ? '-' : fmtMin(r.minutes)}</td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
                               {['08:20', '09:00'].map((preset) => (
@@ -934,7 +935,7 @@ function AdminAttendanceContent() {
                                   className={`text-[10px] font-bold rounded-md px-1.5 py-1 border transition-colors ${
                                     r.expectedArrival === preset
                                       ? 'bg-[#0071E3] text-white border-[#0071E3]'
-                                      : 'bg-white text-[#86868B] border-black/[0.1] hover:border-[#0071E3]'
+                                      : 'bg-white text-slate-500 border-black/[0.1] hover:border-[#0071E3]'
                                   }`}
                                 >
                                   {preset}
@@ -975,7 +976,7 @@ function AdminAttendanceContent() {
                                   className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700"
                                   title={`${phoneTypeLabel(sub.type)}${sub.reason ? ` · ${sub.reason}` : ''}`}
                                 >
-                                  ✓ {phoneTypeLabel(sub.type)}
+                                  <Check className="h-3 w-3 shrink-0" /> {phoneTypeLabel(sub.type)}
                                 </span>
                               );
                             })()}
@@ -1007,7 +1008,7 @@ function AdminAttendanceContent() {
                 </table>
               )}
             </div>
-            <p className="text-[10px] text-[#86868B] text-center">
+            <p className="text-[10px] text-slate-500 text-center">
               이름 검색, 상태 필터, 등·하원 시간 수정, 결석 처리를 한 화면에서 처리할 수 있습니다.
             </p>
             </>
@@ -1023,14 +1024,14 @@ function AdminAttendanceContent() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
             <div className="w-full max-w-sm rounded-3xl border border-black/[0.05] bg-white p-6 shadow-2xl space-y-4">
               <div>
-                <h3 className="text-base font-black text-[#1D1D1F]">지각 벌점 부여</h3>
-                <p className="text-xs text-[#86868B] mt-0.5">
+                <h3 className="text-base font-black text-slate-900">지각 벌점 부여</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
                   <b>{demeritModal.name}</b> 학생의 증빙 사유를 기각하고 단순 지각 벌점을 부여합니다.
                 </p>
               </div>
               
               <div className="space-y-1.5">
-                <label className="text-[11px] font-black text-[#86868B]">벌점 점수</label>
+                <label className="text-[11px] font-black text-slate-500">벌점 점수</label>
                 <input
                   type="number"
                   min={1}
@@ -1047,7 +1048,7 @@ function AdminAttendanceContent() {
                     setDemeritModal(null);
                     setDemeritPoints(1);
                   }}
-                  className="flex-1 rounded-xl border border-black/[0.08] py-2.5 text-xs font-bold text-[#86868B] hover:bg-[#F5F5F7] transition"
+                  className="flex-1 rounded-xl border border-black/[0.08] py-2.5 text-xs font-bold text-slate-500 hover:bg-[#F5F5F7] transition"
                 >
                   취소
                 </button>

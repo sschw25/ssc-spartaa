@@ -64,7 +64,7 @@ function EventCard({ event, onResponded }: { event: CampusEvent; onResponded: (i
           <CalendarHeart className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-[#1D1D1F]">
+          <p className="text-xs font-black text-slate-900">
             {event.title} · {dateLabel}{timeLabel} 참여하실래요?
           </p>
           {event.memo && (

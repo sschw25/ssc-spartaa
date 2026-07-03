@@ -64,7 +64,7 @@ function StudentLoginForm() {
   };
 
   return (
-    <main className="flex min-h-[calc(100vh-4rem)] flex-col justify-center bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] px-4 py-10 text-[#1D1D1F] md:min-h-[calc(100vh-5rem)] md:py-16">
+    <main className="flex min-h-[calc(100vh-4rem)] flex-col justify-center bg-gradient-to-b from-[#F8FAFC] to-[#EEF2FF] px-4 py-10 text-slate-900 md:min-h-[calc(100vh-5rem)] md:py-16">
       <section className="mx-auto grid w-full max-w-5xl items-center gap-8 md:grid-cols-[1fr_420px]">
         <div className="hidden space-y-5 md:block">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-[#0071E3] text-white shadow-lg">
@@ -72,7 +72,7 @@ function StudentLoginForm() {
           </div>
           <div className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#64748B]">SSC Student Home</p>
-            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-[#1D1D1F] md:text-5xl">
+            <h1 className="max-w-xl text-3xl font-semibold tracking-tight text-slate-900 md:text-5xl">
               학생 홈 로그인
             </h1>
             <p className="max-w-lg text-sm leading-7 text-[#64748B] md:text-base">

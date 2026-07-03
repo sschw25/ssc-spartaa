@@ -227,13 +227,13 @@ export default function AdminLeavePage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-[#86868B]">휴가 쿠폰 정보 로드 중...</p>
+        <p className="text-sm text-slate-500">휴가 쿠폰 정보 로드 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-[#1D1D1F] font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
       <AdminTopNav
         title="휴가 쿠폰 관리"
         titleIcon={<Ticket className="w-4 h-4 text-[#0071E3]" />}
@@ -255,14 +255,14 @@ export default function AdminLeavePage() {
           }`}
         >
           <span className="flex items-center gap-3 min-w-0">
-            <span className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${pendingCount > 0 ? 'bg-amber-500 text-white' : 'bg-[#F5F5F7] text-[#86868B]'}`}>
+            <span className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${pendingCount > 0 ? 'bg-amber-500 text-white' : 'bg-[#F5F5F7] text-slate-500'}`}>
               <Inbox className="w-4 h-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-black text-[#1D1D1F]">
+              <span className="block text-sm font-black text-slate-900">
                 {pendingCount > 0 ? `대기 중인 휴가·반차 신청 ${pendingCount}건` : '휴가·반차 신청 승인'}
               </span>
-              <span className="block text-[11px] font-semibold text-[#86868B]">
+              <span className="block text-[11px] font-semibold text-slate-500">
                 신청 승인·반려는 통합 인박스에서 처리합니다. 이 화면은 쿠폰(반차 추가권) 관리 전용입니다.
               </span>
             </span>
@@ -277,14 +277,14 @@ export default function AdminLeavePage() {
           <button
             type="button"
             onClick={() => setActiveTab('coupons')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'coupons' ? 'bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'coupons' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
           >
             쿠폰 관리
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('rewards')}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'rewards' ? 'bg-white text-black shadow-sm' : 'text-[#86868B] hover:text-[#1D1D1F]'}`}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'rewards' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
           >
             <Gift className="w-3.5 h-3.5" /> 리워드 지급내역
             {pendingRewardCount > 0 && (
@@ -302,7 +302,7 @@ export default function AdminLeavePage() {
         {/* 검색 */}
         <div className="bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
           <div className="relative max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#86868B]" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
               placeholder="학생 이름 검색"
               value={search}
@@ -316,10 +316,10 @@ export default function AdminLeavePage() {
         {loading && students.length === 0 ? (
           <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-            <p className="text-xs text-[#86868B]">불러오는 중...</p>
+            <p className="text-xs text-slate-500">불러오는 중...</p>
           </div>
         ) : studentRows.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
+          <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
             조건에 맞는 원생이 없습니다.
           </div>
         ) : (
@@ -329,18 +329,18 @@ export default function AdminLeavePage() {
               return (
                 <div key={student.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-black text-sm text-[#1D1D1F]">{student.name}</span>
-                    <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">{campusLabel(student.campus)}</Badge>
-                    <span className="text-[10px] text-[#86868B] font-semibold">{student.manager || '담당 코멘터'}</span>
+                    <span className="font-black text-sm text-slate-900">{student.name}</span>
+                    <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">{campusLabel(student.campus)}</Badge>
+                    <span className="text-[10px] text-slate-500 font-semibold">{student.manager || '담당 코멘터'}</span>
                     {pending > 0 && (
                       <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">대기 {pending}건</span>
                     )}
-                    <span className="text-[10px] text-[#86868B] font-semibold">이번 달 사용 {approvedThisMonth}회</span>
+                    <span className="text-[10px] text-slate-500 font-semibold">이번 달 사용 {approvedThisMonth}회</span>
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-[#86868B]">
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
                         <Ticket className="w-3.5 h-3.5" /> 쿠폰
                       </span>
                       <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(student, -1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="쿠폰 차감">
@@ -358,7 +358,7 @@ export default function AdminLeavePage() {
                         }}
                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                         disabled={busy[cpKey]}
-                        className="h-7 w-14 rounded-lg border border-black/[0.08] bg-white text-center text-sm font-black text-[#1D1D1F] focus:border-[#0071E3] focus:outline-none"
+                        className="h-7 w-14 rounded-lg border border-black/[0.08] bg-white text-center text-sm font-black text-slate-900 focus:border-[#0071E3] focus:outline-none"
                         title="쿠폰 수 직접 입력 (Enter 또는 포커스 해제 시 저장)"
                       />
                       <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(student, 1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="쿠폰 지급">
@@ -378,10 +378,10 @@ export default function AdminLeavePage() {
           loading && students.length === 0 ? (
             <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
               <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-              <p className="text-xs text-[#86868B]">불러오는 중...</p>
+              <p className="text-xs text-slate-500">불러오는 중...</p>
             </div>
           ) : redemptionRows.length === 0 ? (
-            <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-[#86868B]">
+            <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
               리워드 교환 내역이 없습니다.
             </div>
           ) : (
@@ -396,12 +396,12 @@ export default function AdminLeavePage() {
                   <div key={r.id} className={`bg-white border rounded-2xl p-4 md:p-5 shadow-sm space-y-3 ${actionable ? 'border-amber-200/70' : 'border-black/[0.05]'}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-black text-sm text-[#1D1D1F]">{student.name}</span>
-                        <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-[#86868B] border-black/[0.06]">{campusLabel(student.campus)}</Badge>
+                        <span className="font-black text-sm text-slate-900">{student.name}</span>
+                        <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">{campusLabel(student.campus)}</Badge>
                         <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-black">
-                          <Gift className="w-3 h-3" /> {getRewardLabel(r.type)} <span className="text-[#86868B] font-bold">(쿠폰 {r.cost})</span>
+                          <Gift className="w-3 h-3" /> {getRewardLabel(r.type)} <span className="text-slate-500 font-bold">(쿠폰 {r.cost})</span>
                         </span>
-                        <span className="text-[10px] text-[#86868B] font-semibold">{(r.createdAt || '').slice(0, 10)}</span>
+                        <span className="text-[10px] text-slate-500 font-semibold">{(r.createdAt || '').slice(0, 10)}</span>
                       </div>
                       {isRequested ? (
                         <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700"><Clock className="w-3 h-3" /> 승인 대기</span>
@@ -475,15 +475,15 @@ export default function AdminLeavePage() {
                             <X className="w-3.5 h-3.5 mr-1" /> 반려
                           </Button>
                         </div>
-                        <p className="text-[10px] font-semibold text-[#86868B]">쿠폰 번호를 입력하고 지급 완료를 누르면 학생 화면에 번호가 표시됩니다.</p>
+                        <p className="text-[10px] font-semibold text-slate-500">쿠폰 번호를 입력하고 지급 완료를 누르면 학생 화면에 번호가 표시됩니다.</p>
                       </div>
                     )}
 
                     {/* 지급 완료/반려된 실물 — 번호·메모 표시 */}
                     {meta?.physical && !isRequested && !isPending && (
-                      <div className="text-[11px] font-semibold text-[#86868B] flex flex-wrap gap-x-4 gap-y-1">
-                        {r.voucherCode && <span>상품권 번호: <b className="text-[#1D1D1F]">{r.voucherCode}</b></span>}
-                        {r.note && <span>메모: <b className="text-[#1D1D1F]">{r.note}</b></span>}
+                      <div className="text-[11px] font-semibold text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
+                        {r.voucherCode && <span>상품권 번호: <b className="text-slate-900">{r.voucherCode}</b></span>}
+                        {r.note && <span>메모: <b className="text-slate-900">{r.note}</b></span>}
                         {r.fulfilledAt && <span>지급: {(r.fulfilledAt || '').slice(0, 10)}</span>}
                         {r.handledBy && <span>처리: {r.handledBy}</span>}
                       </div>

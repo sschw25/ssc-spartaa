@@ -46,7 +46,7 @@ export function GradesTab({
       {/* 성적 추이 그래프 */}
       <div className="admin-fit-box p-4 rounded-xl border border-black/[0.05] bg-[#F5F5F7]">
         <div className="admin-fit-row flex justify-between items-center mb-4 gap-2 admin-mobile-wrap">
-          <h4 className="admin-fit-text admin-fit-label font-bold text-[#1D1D1F]">성적 향상도 추이</h4>
+          <h4 className="admin-fit-text admin-fit-label font-bold text-slate-900">성적 향상도 추이</h4>
           <div className="flex gap-1.5 min-w-0 overflow-hidden">
             {['전체', '국어', '영어', '수학', '한국사'].map((sub) => (
               <Button
@@ -63,7 +63,7 @@ export function GradesTab({
         </div>
 
         {student.grades.length === 0 ? (
-          <div className="text-center py-8 text-xs text-[#86868B]">
+          <div className="text-center py-8 text-xs text-slate-500">
             그래프를 표시할 성적 데이터가 없습니다.
           </div>
         ) : (
@@ -80,7 +80,7 @@ export function GradesTab({
                     type="monotone"
                     dataKey="추세선"
                     name="5회 가중평균 추세 (전체)"
-                    stroke="#86868B"
+                    stroke="#64748B"
                     strokeWidth={2}
                     strokeDasharray="5 5"
                     dot={false}
@@ -127,7 +127,7 @@ export function GradesTab({
       {/* 성적 등록 폼 */}
       <form onSubmit={onAddGrade} className="admin-fit-box p-3.5 rounded-xl border border-black/[0.05] bg-white grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold text-[#86868B]">시험명</Label>
+          <Label className="text-[10px] font-semibold text-slate-500">시험명</Label>
           <Input
             placeholder="예: 6월 모의고사"
             value={gradeTestName}
@@ -137,7 +137,7 @@ export function GradesTab({
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold text-[#86868B]">과목</Label>
+          <Label className="text-[10px] font-semibold text-slate-500">과목</Label>
           <Select value={gradeSubject} onValueChange={setGradeSubject}>
             <SelectTrigger className="rounded-lg border-black/[0.08] text-xs h-9 bg-white">
               <SelectValue placeholder="과목 선택" />
@@ -148,7 +148,7 @@ export function GradesTab({
           </Select>
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold text-[#86868B]">점수</Label>
+          <Label className="text-[10px] font-semibold text-slate-500">점수</Label>
           <Input
             type="number"
             min="0"
@@ -160,7 +160,7 @@ export function GradesTab({
           />
         </div>
         <div className="space-y-1">
-          <Label className="text-[10px] font-semibold text-[#86868B]">시험일</Label>
+          <Label className="text-[10px] font-semibold text-slate-500">시험일</Label>
           <Input
             type="date"
             value={gradeDate}
@@ -171,7 +171,7 @@ export function GradesTab({
         </div>
         <Button
           type="submit"
-          className="admin-fit-button rounded-lg text-xs h-9 bg-[#1D1D1F] hover:bg-[#323236] text-white font-bold"
+          className="admin-fit-button rounded-lg text-xs h-9 bg-slate-900 hover:bg-[#323236] text-white font-bold"
         >
           <Plus className="w-3.5 h-3.5 mr-1" />
           기록 추가
@@ -180,17 +180,17 @@ export function GradesTab({
 
       {/* 성적 내역 리스트 */}
       <div className="space-y-3">
-        <h4 className="text-xs font-bold text-[#1D1D1F] border-b border-black/[0.05] pb-2">기록된 성적 내역</h4>
+        <h4 className="text-xs font-bold text-slate-900 border-b border-black/[0.05] pb-2">기록된 성적 내역</h4>
         {student.grades.length === 0 ? (
-          <div className="text-center py-4 text-xs text-[#86868B]">기록된 성적이 없습니다.</div>
+          <div className="text-center py-4 text-xs text-slate-500">기록된 성적이 없습니다.</div>
         ) : (
           <div className="space-y-2">
             {[...student.grades].reverse().map((g) => (
               <div key={g.id} className="admin-fit-box flex justify-between items-center gap-3 p-3 rounded-lg border border-black/[0.04] bg-white text-xs">
                 <div className="admin-fit-row min-w-0">
                   <span className="font-bold mr-2">{g.subject}</span>
-                  <span className="admin-fit-text text-[#86868B] inline-block align-bottom max-w-[10rem]">{g.testName}</span>
-                  <span className="admin-fit-caption text-[#86868B] ml-2">({g.date})</span>
+                  <span className="admin-fit-text text-slate-500 inline-block align-bottom max-w-[10rem]">{g.testName}</span>
+                  <span className="admin-fit-caption text-slate-500 ml-2">({g.date})</span>
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span className="font-bold text-[#0071E3]">{g.score}점</span>

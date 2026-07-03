@@ -24,7 +24,7 @@ export function PenaltiesTab({ student, activeTab }: PenaltiesTabProps) {
         <div className="px-5 py-4 border-b border-black/[0.04] flex items-center justify-between gap-2 bg-[#FAFAFA]">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-slate-400" />
-            <h3 className="text-xs font-black text-[#1D1D1F] tracking-wider uppercase">벌점 · 상점 내역</h3>
+            <h3 className="text-xs font-black text-slate-900 tracking-wider uppercase">벌점 · 상점 내역</h3>
           </div>
           <span className={`text-xs font-black ${
             total > 0 ? 'text-red-500' : total < 0 ? 'text-emerald-500' : 'text-slate-400'
@@ -49,7 +49,7 @@ export function PenaltiesTab({ student, activeTab }: PenaltiesTabProps) {
                     {p.type === 'penalty' ? '+' : '-'}{p.points}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-[#1D1D1F]">{p.reason}</p>
+                    <p className="text-xs font-bold text-slate-900">{p.reason}</p>
                     <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{p.date}</p>
                   </div>
                   {p.type === 'penalty'

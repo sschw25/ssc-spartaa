@@ -776,7 +776,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                   >
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                        urgent ? 'bg-amber-100 text-amber-600' : 'bg-blue-50 text-[#0071E3]'
+                        urgent ? 'bg-amber-100 text-amber-600' : 'bg-[#0071E3]/10 text-[#0071E3]'
                       }`}
                     >
                       <KindIcon className="h-4 w-4" />
@@ -797,7 +797,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                     </span>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
-                        urgent ? 'bg-amber-500 text-white' : 'bg-blue-50 text-[#0071E3]'
+                        urgent ? 'bg-amber-500 text-white' : 'bg-[#0071E3]/10 text-[#0071E3]'
                       }`}
                     >
                       {item.dday === 0 ? 'D-Day' : `D-${item.dday}`}

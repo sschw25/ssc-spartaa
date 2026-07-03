@@ -52,7 +52,7 @@ export function LectureReviewRecommender({
         <div className="mt-2 space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <label className="space-y-0.5">
-              <span className="block text-[#86868B] font-semibold">복습 시간 (분/강)</span>
+              <span className="block text-slate-500 font-semibold">복습 시간 (분/강)</span>
               <input
                 type="number"
                 min={0}
@@ -62,7 +62,7 @@ export function LectureReviewRecommender({
               />
             </label>
             <label className="space-y-0.5">
-              <span className="block text-[#86868B] font-semibold">세션 시간 (분)</span>
+              <span className="block text-slate-500 font-semibold">세션 시간 (분)</span>
               <input
                 type="number"
                 min={1}
@@ -82,7 +82,7 @@ export function LectureReviewRecommender({
                 className={`rounded-full border px-2 py-0.5 font-bold transition-colors ${
                   sessionMin === p.value
                     ? 'border-[#0071E3] bg-[#0071E3] text-white'
-                    : 'border-black/[0.08] bg-white text-[#86868B] hover:border-[#0071E3]/40'
+                    : 'border-black/[0.08] bg-white text-slate-500 hover:border-[#0071E3]/40'
                 }`}
               >
                 {p.label} {p.value}
@@ -92,14 +92,14 @@ export function LectureReviewRecommender({
 
           <div className="rounded-md border border-black/[0.05] bg-white p-2 space-y-1 text-[#434345]">
             <p>
-              <span className="font-bold text-[#1D1D1F]">강의 {lectureMin}분 · {speed}배속</span>
+              <span className="font-bold text-slate-900">강의 {lectureMin}분 · {speed}배속</span>
               {' '}→ 시청 {Math.round(watchMin)}분 + 복습 {reviewMin}분 = <span className="font-bold">{Math.round(perLecture)}분/강</span>
             </p>
             <p className="font-bold text-[#0071E3]">
               {sessionMin}분 세션 → 약 {recommendedCount}강 추천 (사용 {usedMin}분 · 여유 {leftover}분)
             </p>
             {leftover > 0 && recommendedCount > 0 && (
-              <p className="text-[#86868B]">
+              <p className="text-slate-500">
                 남는 {leftover}분은 강당 복습 +{Math.floor(leftover / recommendedCount)}분으로 활용 가능
               </p>
             )}
