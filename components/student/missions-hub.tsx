@@ -483,7 +483,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
               </span>
             )}
           </div>
-          {entries.length === 0 ? (
+          {entries.length === 0 && deadlineGoals.length === 0 ? (
             <p className="mt-3 text-xs font-semibold text-slate-400">오늘 배정된 진도 항목이 없어요.</p>
           ) : (
             <div className="mt-3 flex flex-col gap-2">
@@ -518,6 +518,57 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                   </span>
                 </button>
               ))}
+
+              {/* 기간 목표(요일 무관)의 오늘 몫도 '오늘 할 일'로 함께 노출 — 상세/누적입력은 아래 '기간 목표' 섹션 */}
+              {deadlineGoals.map((goal) => {
+                const done = goal.targetAmount > 0 && goal.actualAmount >= goal.targetAmount;
+                const metToday = !done && goal.actualAmount >= goal.expectedAmount;
+                const saving = savingDeadlineId === goal.id;
+                return (
+                  <div
+                    key={`dl_${goal.id}`}
+                    className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 ${
+                      done || metToday ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
+                    }`}
+                  >
+                    <span className="shrink-0">
+                      {done || metToday ? (
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                      ) : (
+                        <Target className="h-5 w-5 text-[#0071E3]" />
+                      )}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <span className="truncate text-xs font-semibold text-slate-900">{goal.subject} · {goal.title}</span>
+                        <span className="rounded-full bg-[#0071E3]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#0071E3] break-keep">기간목표</span>
+                      </span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
+                        {done ? (
+                          <span className="text-emerald-600">목표 달성</span>
+                        ) : goal.todayRecommend > 0 ? (
+                          <span className="text-[#0071E3]">오늘 권장 {goal.todayRecommend}{goal.unit}</span>
+                        ) : (
+                          <span className="text-emerald-600">오늘치 채웠어요</span>
+                        )}
+                        <span>·</span>
+                        <span className="tabular-nums">{goal.actualAmount}/{goal.targetAmount}{goal.unit}</span>
+                      </span>
+                    </span>
+                    {!done && goal.todayRecommend > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => saveDeadlineProgress(goal, Math.min(goal.targetAmount, goal.actualAmount + Math.max(0, goal.todayRecommend)))}
+                        disabled={saving}
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition active:scale-95 disabled:opacity-40 break-keep"
+                      >
+                        {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                        오늘 {goal.todayRecommend}{goal.unit} 완료
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </section>
