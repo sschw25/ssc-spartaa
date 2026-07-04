@@ -28,10 +28,10 @@ function InputHeatmap({ inputLog, studyDays, leaveDates }: { inputLog?: string[]
   }
   return (
     <div className="mt-3">
-      <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-400">
+      <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-400">
         진도 입력 최근 5주
         <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-[#0071E3]" /> 입력</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-slate-100" /> 미입력</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-slate-100 dark:bg-white/10" /> 미입력</span>
       </p>
       <div className="flex flex-wrap gap-[3px]" aria-label="진도 입력 히트맵">
         {cells.map((c) => (
@@ -42,8 +42,8 @@ function InputHeatmap({ inputLog, studyDays, leaveDates }: { inputLog?: string[]
               c.state === 'done'
                 ? 'h-3 w-3 rounded-[3px] bg-[#0071E3]'
                 : c.state === 'miss'
-                ? 'h-3 w-3 rounded-[3px] bg-slate-100'
-                : 'h-3 w-3 rounded-[3px] bg-transparent ring-1 ring-inset ring-slate-100'
+                ? 'h-3 w-3 rounded-[3px] bg-slate-100 dark:bg-white/10'
+                : 'h-3 w-3 rounded-[3px] bg-transparent ring-1 ring-inset ring-slate-100 dark:ring-white/10'
             }
           />
         ))}
@@ -181,24 +181,24 @@ export function SubjectProgressTab({
   const getStatusBadgeClass = (status: string) => {
     switch (status) {
       case '계획보다 빠름':
-        return 'bg-[#0071E3]/10 text-[#0071E3] border-[#0071E3]/20';
+        return 'bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/20 dark:border-white/10';
       case '계획대로 진행중':
       case '계획대로 진행':
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:border-white/10';
       case '계획보다 느림':
-        return 'bg-amber-50 text-amber-700 border-amber-200';
+        return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 border-amber-200 dark:border-white/10';
       case '진도 정체':
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-red-50 dark:bg-red-500/10 text-red-700 border-red-200 dark:border-white/10';
       case '목표 미설정':
-        return 'bg-[#F5F5F7] text-slate-500 border-black/[0.06] break-keep';
+        return 'bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10 break-keep';
       default:
-        return 'bg-slate-50 text-slate-500 border-slate-200';
+        return 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10';
     }
   };
 
   return (
     <div id="subject-progress" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'subject-progress' ? '' : 'hidden print:block'}`}>
-      <h3 className="text-xs font-black text-slate-900 tracking-widest uppercase flex items-center gap-2">
+      <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 tracking-widest uppercase flex items-center gap-2">
         <FileText className="w-4 h-4 text-[#0071E3]" />
         {isStudentReport ? '과목별 상세 학습 목표 및 주간 달성 스케줄러' : '과목별 학습 진도율 요약'}
       </h3>
@@ -227,7 +227,7 @@ export function SubjectProgressTab({
 
         return (
           <div className="space-y-4">
-            <div className="rounded-3xl border border-slate-100 bg-slate-50/70 p-5 md:p-6 shadow-sm space-y-3">
+            <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 p-5 md:p-6 shadow-sm space-y-3">
               <div className="flex items-end justify-between gap-3">
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">전체 학습 진도</p>
@@ -235,7 +235,7 @@ export function SubjectProgressTab({
                 </div>
                 <p className="text-[10px] font-bold text-slate-400">교재·인강 {total}개 중 <span className="font-black text-emerald-600">{done}개</span> 완료</p>
               </div>
-              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200">
+              <div className="h-2.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
                 <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${overall}%` }} />
               </div>
             </div>
@@ -249,7 +249,7 @@ export function SubjectProgressTab({
                 const DR = 40; const DC = 2 * Math.PI * DR;
                 const bookDash = bookPct * DC;
                 return (
-                  <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col gap-3">
+                  <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-sm flex flex-col gap-3">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">교재 vs 인강 비중</p>
                       <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">학습 포트폴리오 내 자료 비율</p>
@@ -262,20 +262,20 @@ export function SubjectProgressTab({
                             strokeLinecap="round" strokeDasharray={`${bookDash - 3} ${DC}`} />
                         </svg>
                         <div className="absolute inset-0 flex flex-col items-center justify-center">
-                          <p className="text-[11px] font-black text-slate-700 leading-tight">{allBooksCount}:{allLecturesCount}</p>
+                          <p className="text-[11px] font-black text-slate-700 dark:text-slate-300 leading-tight">{allBooksCount}:{allLecturesCount}</p>
                           <p className="text-[8px] font-bold text-slate-400">비중</p>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 flex-1">
-                        <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2">
-                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                        <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 rounded-2xl px-3 py-2">
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 dark:text-slate-400">
                             <span className="w-2.5 h-2.5 rounded-full bg-[#0071E3] shrink-0" />
                             교재
                           </span>
                           <span className="text-[10px] font-black text-[#0071E3]">{allBooksCount}개</span>
                         </div>
-                        <div className="flex items-center justify-between bg-slate-50 rounded-2xl px-3 py-2">
-                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600">
+                        <div className="flex items-center justify-between bg-slate-50 dark:bg-white/5 rounded-2xl px-3 py-2">
+                          <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-600 dark:text-slate-400">
                             <span className="w-2.5 h-2.5 rounded-full bg-[#0071E3] shrink-0" />
                             인강
                           </span>
@@ -297,7 +297,7 @@ export function SubjectProgressTab({
                 const PR = 40; const PC = 2 * Math.PI * PR;
                 const paceDash = Math.max(0, (selfStudyPct / 100)) * PC;
                 return (
-                  <div className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm flex flex-col gap-3">
+                  <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-sm flex flex-col gap-3">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">교재 문제풀이 진행</p>
                       <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">지금 교재 풀이가 이만큼 진행됐어요</p>
@@ -317,8 +317,8 @@ export function SubjectProgressTab({
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 flex-1">
-                        <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center">
-                          <p className="text-[11px] font-black text-slate-700">교재 {currentPages.toLocaleString()}p 진행</p>
+                        <div className="rounded-2xl bg-slate-50 dark:bg-white/5 px-3 py-2 text-center">
+                          <p className="text-[11px] font-black text-slate-700 dark:text-slate-300">교재 {currentPages.toLocaleString()}p 진행</p>
                         </div>
                         <p className="text-[9px] font-bold text-slate-400 leading-relaxed text-center px-1">
                           기본강의 수강 시기엔 자습 비중이 낮은 게 자연스러워요. 강의·자습 비율은 과목 특성에 따라 달라요.
@@ -351,7 +351,7 @@ export function SubjectProgressTab({
                 setActiveTab('execution-plan');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="w-full rounded-2xl border border-amber-200 bg-white px-4 py-2.5 text-xs font-black text-amber-900 shadow-sm transition hover:bg-amber-50 sm:w-auto"
+              className="w-full rounded-2xl border border-amber-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-2.5 text-xs font-black text-amber-900 dark:text-amber-300 shadow-sm transition hover:bg-amber-50 dark:hover:bg-white/5 sm:w-auto"
             >
               변경 신청 바로가기
             </button>
@@ -361,14 +361,14 @@ export function SubjectProgressTab({
 
       {!student.subjects || student.subjects.length === 0 ? (
         (student.books.length === 0 && student.lectures.length === 0 ? (
-          <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
-            <FileText className="w-7 h-7 text-slate-300" />
+          <div className="p-8 text-center bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center gap-2.5">
+            <FileText className="w-7 h-7 text-slate-300 dark:text-slate-600" />
             <p className="text-xs font-bold text-slate-400">현재 학습을 위해 등록된 교재/인강 정보가 없습니다.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4.5 p-6 rounded-3xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md">
-              <h4 className="text-xs font-black text-slate-700 flex items-center border-b border-slate-100 pb-3">
+            <div className="space-y-4.5 p-6 rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm transition-all hover:shadow-md">
+              <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center border-b border-slate-100 dark:border-white/10 pb-3">
                 <BookOpen className="w-4 h-4 mr-2 text-[#0071E3]" />
                 교재 / 도서 진도 현황
               </h4>
@@ -379,7 +379,7 @@ export function SubjectProgressTab({
                   return (
                     <div key={b.id} className="space-y-2">
                       <div className="flex justify-between text-[11px] font-bold items-center">
-                        <span className="truncate max-w-[190px] text-slate-600 flex items-center gap-1.5">
+                        <span className="truncate max-w-[190px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
                           {b.title}
                           {status && (
                             <span className={`text-[10px] font-bold border px-1.5 py-0.5 rounded ${getStatusBadgeClass(status)}`}>
@@ -390,13 +390,13 @@ export function SubjectProgressTab({
                         <span className="text-[#0071E3] font-extrabold">{b.currentPage} / {b.totalPages}p</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+                        <div className="flex-1 bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                           <div
                             className="h-full rounded-full bg-[#0071E3] transition-all duration-500"
                             style={{ width: `${percent}%` }}
                           />
                         </div>
-                        <span className="text-[10px] font-black shrink-0 w-8 text-right text-slate-800">{percent}%</span>
+                        <span className="text-[10px] font-black shrink-0 w-8 text-right text-slate-800 dark:text-slate-200">{percent}%</span>
                       </div>
                     </div>
                   );
@@ -404,8 +404,8 @@ export function SubjectProgressTab({
               </div>
             </div>
 
-            <div className="space-y-4.5 p-6 rounded-3xl border border-slate-100 bg-white shadow-sm transition-all hover:shadow-md">
-              <h4 className="text-xs font-black text-slate-700 flex items-center border-b border-slate-100 pb-3">
+            <div className="space-y-4.5 p-6 rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm transition-all hover:shadow-md">
+              <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center border-b border-slate-100 dark:border-white/10 pb-3">
                 <Tv className="w-4 h-4 mr-2 text-[#0071E3]" />
                 인터넷 강의 수강 현황
               </h4>
@@ -416,7 +416,7 @@ export function SubjectProgressTab({
                   return (
                     <div key={l.id} className="space-y-2">
                       <div className="flex justify-between text-[11px] font-bold items-center">
-                        <span className="truncate max-w-[190px] text-slate-600 flex items-center gap-1.5">
+                        <span className="truncate max-w-[190px] text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
                           {l.name}
                           {status && (
                             <span className={`text-[10px] font-bold border px-1.5 py-0.5 rounded ${getStatusBadgeClass(status)}`}>
@@ -427,13 +427,13 @@ export function SubjectProgressTab({
                         <span className="text-[#0071E3] font-extrabold">{l.completedLectures} / {l.totalLectures}강</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
+                        <div className="flex-1 bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
                           <div
                             className="h-full rounded-full bg-[#0071E3] transition-all duration-500"
                             style={{ width: `${percent}%` }}
                           />
                         </div>
-                        <span className="text-[10px] font-black shrink-0 w-8 text-right text-slate-800">{percent}%</span>
+                        <span className="text-[10px] font-black shrink-0 w-8 text-right text-slate-800 dark:text-slate-200">{percent}%</span>
                       </div>
                     </div>
                   );
@@ -445,13 +445,13 @@ export function SubjectProgressTab({
       ) : (
         <div className="space-y-6">
           {student.subjects.map(sub => (
-            <div key={sub.id} className="p-6 md:p-8 rounded-[24px] border border-slate-100 bg-white space-y-6 shadow-sm hover:shadow-md transition-all break-inside-avoid">
-              <div className="border-b border-slate-100 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                <span className="text-xs font-black text-slate-800 px-3.5 py-2 bg-slate-50 border border-slate-100 rounded-2xl inline-block self-start shadow-sm tracking-wider">
+            <div key={sub.id} className="p-6 md:p-8 rounded-[24px] border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] space-y-6 shadow-sm hover:shadow-md transition-all break-inside-avoid">
+              <div className="border-b border-slate-100 dark:border-white/10 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                <span className="text-xs font-black text-slate-800 dark:text-slate-200 px-3.5 py-2 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl inline-block self-start shadow-sm tracking-wider">
                   {sub.name} 과목 학습 스케줄러
                 </span>
                 {isStudentReport && sub.learningGoal && (
-                  <span className="text-[11px] font-bold text-slate-500 bg-slate-50 border border-slate-100/60 px-3.5 py-1.5 rounded-xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]">
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 border border-slate-100/60 dark:border-white/10 px-3.5 py-1.5 rounded-xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]">
                     과목 목표: {sub.learningGoal}
                   </span>
                 )}
@@ -459,7 +459,7 @@ export function SubjectProgressTab({
 
               {sub.books.length > 0 && (
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black text-slate-700 flex items-center">
+                  <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center">
                     <BookOpen className="w-4 h-4 mr-2 text-[#0071E3]" />
                     {isStudentReport ? '교재별 진도 관리 및 세부 학습 목표' : '교재 진도 현황'}
                   </h4>
@@ -478,17 +478,17 @@ export function SubjectProgressTab({
                       );
 
                       return (
-                        <div key={b.id} className="p-5 rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50/50 to-white space-y-4 shadow-sm">
+                        <div key={b.id} className="p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
                           <div className="flex justify-between items-start flex-wrap gap-2">
                             <div>
-                              <h5 className="text-xs font-black text-slate-700">{b.title}</h5>
+                              <h5 className="text-xs font-black text-slate-700 dark:text-slate-300">{b.title}</h5>
                               {b.goalDescription && (
                                 <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
                                   완독 목표: {b.goalDescription}
                                 </p>
                               )}
                               {isStudentReport && paceComparison && (
-                                <p className="text-[10px] text-slate-500 font-bold mt-1.5">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1.5">
                                   {paceComparison}
                                 </p>
                               )}
@@ -501,7 +501,7 @@ export function SubjectProgressTab({
                               )}
                               {isStudentReport ? (
                                 <div className="flex flex-col items-end gap-1.5">
-                                  <span className="flex items-center gap-1 text-xs font-bold text-slate-500 group relative">
+                                  <span className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 group relative">
                                     <div className="relative flex items-center">
                                       <input
                                         key={b.currentPage}
@@ -512,12 +512,12 @@ export function SubjectProgressTab({
                                         defaultValue={b.currentPage}
                                         onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                         onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== b.currentPage) updateProgress('book', b.id, v); }}
-                                        className="w-14 rounded-lg border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                        className="w-14 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                                         aria-label="현재 페이지 입력"
                                       />
                                       <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
                                     </div>
-                                    <span className="font-normal text-slate-300">/</span> {b.totalPages}p
+                                    <span className="font-normal text-slate-300 dark:text-slate-600">/</span> {b.totalPages}p
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
                                       숫자를 수정하여 직접 진도를 기록하세요
                                     </span>
@@ -532,7 +532,7 @@ export function SubjectProgressTab({
                                       defaultValue={b.solvedQuestions || 0}
                                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                       onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== (b.solvedQuestions || 0)) updateBookSolvedQuestions(b.id, v); }}
-                                      className="w-12 rounded-lg border border-dashed border-slate-300 bg-white px-1 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                      className="w-12 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                                       aria-label="푼 문항 수 입력"
                                     />
                                     <span>문항</span>
@@ -555,7 +555,7 @@ export function SubjectProgressTab({
                                             key={tag.key}
                                             type="button"
                                             onClick={() => incrementBookIncorrectTag(b.id, tag.key, b.incorrectTags)}
-                                            className="px-1 py-0.5 rounded bg-slate-100 hover:bg-red-50 hover:text-red-600 transition-all text-[8px] font-black text-slate-500 active:scale-95"
+                                            className="px-1 py-0.5 rounded bg-slate-100 dark:bg-white/10 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 transition-all text-[8px] font-black text-slate-500 dark:text-slate-400 active:scale-95"
                                           >
                                             {tag.label} +1
                                           </button>
@@ -564,17 +564,17 @@ export function SubjectProgressTab({
                                     </div>
                                     {b.incorrectTags && Object.values(b.incorrectTags).some(v => Number(v) > 0) && (
                                       <div className="flex flex-wrap gap-1 mt-1 text-[7px] font-black justify-end">
-                                        {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-0.2 bg-red-50 text-red-600 rounded">연산:{b.incorrectTags.calculation_error}</span>}
-                                        {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-0.2 bg-amber-50 text-amber-600 rounded">시간:{b.incorrectTags.time_limit}</span>}
-                                        {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-0.2 bg-orange-50 text-orange-600 rounded">오독:{b.incorrectTags.misread_condition}</span>}
-                                        {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-0.2 bg-blue-50 text-[#0071E3] rounded">개념:{b.incorrectTags.concept_leak}</span>}
+                                        {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-0.2 bg-red-50 dark:bg-red-500/10 text-red-600 rounded">연산:{b.incorrectTags.calculation_error}</span>}
+                                        {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-0.2 bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded">시간:{b.incorrectTags.time_limit}</span>}
+                                        {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-0.2 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded">오독:{b.incorrectTags.misread_condition}</span>}
+                                        {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-0.2 bg-blue-50 dark:bg-[#0071E3]/15 text-[#0071E3] rounded">개념:{b.incorrectTags.concept_leak}</span>}
                                       </div>
                                     )}
                                   </div>
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-end gap-0.5">
-                                  <span className="text-xs font-bold text-slate-500">{b.currentPage} / {b.totalPages}p</span>
+                                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{b.currentPage} / {b.totalPages}p</span>
                                   {(b.solvedQuestions || 0) > 0 && <span className="text-[9px] font-extrabold text-[#0071E3]">해결: {b.solvedQuestions}문항</span>}
                                 </div>
                               )}
@@ -582,15 +582,15 @@ export function SubjectProgressTab({
                             </div>
                           </div>
 
-                          <div className="bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
+                          <div className="bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
                             <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
                           </div>
 
                           {isStudentReport && oneMonthPlans.length > 0 && (
-                            <div className="pt-4 border-t border-slate-100 space-y-3">
+                            <div className="pt-4 border-t border-slate-100 dark:border-white/10 space-y-3">
                               <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
                                 <span>최근 1개월 주간 학습 스케줄 ({completedPlans}/{totalPlans}주 완료)</span>
-                                <span className="text-emerald-600 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50">{planPercent}% 달성률</span>
+                                <span className="text-emerald-600 font-extrabold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-100/50 dark:border-white/10">{planPercent}% 달성률</span>
                               </div>
 
                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
@@ -608,10 +608,10 @@ export function SubjectProgressTab({
                                      key={plan.id}
                                      className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
                                        displayCompleted
-                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                         ? 'border-emerald-200 dark:border-white/10 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
                                          : isPending
-                                         ? 'border-amber-200 bg-amber-50 text-amber-800'
-                                         : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
+                                         ? 'border-amber-200 dark:border-white/10 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                                         : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-600 dark:text-slate-400 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15'
                                      }`}
                                    >
                                      <div className="flex justify-between items-center font-bold">
@@ -623,16 +623,16 @@ export function SubjectProgressTab({
                                       )}
                                     </div>
                                      <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
-                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
+                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 dark:text-slate-300 truncate">{plan.rangeText}</span>
                                      <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
                                      {isPending ? (
-                                       <div className="mt-1 space-y-2 rounded-lg border border-amber-200 bg-white/80 p-2">
+                                       <div className="mt-1 space-y-2 rounded-lg border border-amber-200 dark:border-white/10 bg-white/80 dark:bg-white/5 p-2">
                                          <p className="text-[8px] font-bold text-amber-700">오늘 실제 학습량</p>
                                          <div className="flex items-center gap-1.5">
                                            <button
                                              type="button"
                                              onClick={() => setPendingAmount((value) => Math.max(0, value - 1))}
-                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[12px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
                                            >
                                              -
                                            </button>
@@ -648,14 +648,14 @@ export function SubjectProgressTab({
                                                  cancelPlanCompletion();
                                                }
                                              }}
-                                             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                             className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                              aria-label="오늘 실제 학습량"
                                            />
-                                           <span className="shrink-0 text-[9px] font-semibold text-slate-500">{unit}</span>
+                                           <span className="shrink-0 text-[9px] font-semibold text-slate-500 dark:text-slate-400">{unit}</span>
                                            <button
                                              type="button"
                                              onClick={() => setPendingAmount((value) => value + 1)}
-                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[12px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
                                            >
                                              +
                                            </button>
@@ -674,7 +674,7 @@ export function SubjectProgressTab({
                                            <button
                                              type="button"
                                              onClick={cancelPlanCompletion}
-                                             className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[8px] font-semibold text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                             className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-[8px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97]"
                                            >
                                              취소
                                            </button>
@@ -695,8 +695,8 @@ export function SubjectProgressTab({
                                          aria-pressed={displayCompleted}
                                          className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] ${
                                            displayCompleted
-                                             ? 'border-emerald-200 bg-white/70 text-emerald-700'
-                                             : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                             ? 'border-emerald-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-emerald-700 dark:text-emerald-300'
+                                             : 'border-[#0071E3]/20 dark:border-white/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/10'
                                          }`}
                                        >
                                          {todayCompleted
@@ -737,7 +737,7 @@ export function SubjectProgressTab({
 
               {sub.lectures.length > 0 && (
                 <div className="space-y-4 mt-6">
-                  <h4 className="text-xs font-black text-slate-700 flex items-center">
+                  <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center">
                     <Tv className="w-4 h-4 mr-2 text-[#0071E3]" />
                     {isStudentReport ? '인강별 수강 스케줄 및 달성 지표' : '인강 진도 현황'}
                   </h4>
@@ -756,17 +756,17 @@ export function SubjectProgressTab({
                       );
 
                       return (
-                        <div key={l.id} className="p-5 rounded-2xl border border-slate-100 bg-gradient-to-b from-slate-50/50 to-white space-y-4 shadow-sm">
+                        <div key={l.id} className="p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
                           <div className="flex justify-between items-start flex-wrap gap-2">
                             <div>
-                              <h5 className="text-xs font-black text-slate-700">{l.name}</h5>
+                              <h5 className="text-xs font-black text-slate-700 dark:text-slate-300">{l.name}</h5>
                               {l.goalDescription && (
                                 <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
                                   수강 목표: {l.goalDescription}
                                 </p>
                               )}
                               {isStudentReport && paceComparison && (
-                                <p className="text-[10px] text-slate-500 font-bold mt-1.5">
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-1.5">
                                   {paceComparison}
                                 </p>
                               )}
@@ -778,7 +778,7 @@ export function SubjectProgressTab({
                                 </span>
                               )}
                               {isStudentReport ? (
-                                <span className="flex items-center gap-1 text-xs font-bold text-slate-500 group relative">
+                                <span className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 group relative">
                                   <div className="relative flex items-center">
                                     <input
                                       key={l.completedLectures}
@@ -789,32 +789,32 @@ export function SubjectProgressTab({
                                       defaultValue={l.completedLectures}
                                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                       onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== l.completedLectures) updateProgress('lecture', l.id, v); }}
-                                      className="w-14 rounded-lg border border-dashed border-slate-300 bg-white pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
+                                      className="w-14 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
                                       aria-label="수강 강수 입력"
                                     />
                                     <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
                                   </div>
-                                  <span className="font-normal text-slate-300">/</span> {l.totalLectures}강
+                                  <span className="font-normal text-slate-300 dark:text-slate-600">/</span> {l.totalLectures}강
                                   <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
                                     숫자를 수정하여 직접 진도를 기록하세요
                                   </span>
                                 </span>
                               ) : (
-                                <span className="text-xs font-bold text-slate-500">{l.completedLectures} / {l.totalLectures}강</span>
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{l.completedLectures} / {l.totalLectures}강</span>
                               )}
                               <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{percent}%</span>
                             </div>
                           </div>
 
-                          <div className="bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
+                          <div className="bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
                             <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
                           </div>
 
                           {isStudentReport && oneMonthPlans.length > 0 && (
-                            <div className="pt-4 border-t border-slate-100 space-y-3">
+                            <div className="pt-4 border-t border-slate-100 dark:border-white/10 space-y-3">
                               <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold">
                                 <span>최근 1개월 주간 수강 스케줄 ({completedPlans}/{totalPlans}주 완료)</span>
-                                <span className="text-emerald-600 font-extrabold bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100/50">{planPercent}% 달성률</span>
+                                <span className="text-emerald-600 font-extrabold bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 rounded-lg border border-emerald-100/50 dark:border-white/10">{planPercent}% 달성률</span>
                               </div>
 
                               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
@@ -832,10 +832,10 @@ export function SubjectProgressTab({
                                      key={plan.id}
                                      className={`p-3 rounded-xl border text-left text-[10px] flex flex-col justify-between gap-2 transition-all duration-200 hover:scale-[1.02] shadow-[0_2px_6px_rgba(0,0,0,0.005)] ${
                                        displayCompleted
-                                         ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                                         ? 'border-emerald-200 dark:border-white/10 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
                                          : isPending
-                                         ? 'border-amber-200 bg-amber-50 text-amber-800'
-                                         : 'border-slate-100 bg-white text-slate-600 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03]'
+                                         ? 'border-amber-200 dark:border-white/10 bg-amber-50 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300'
+                                         : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-600 dark:text-slate-400 hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15'
                                      }`}
                                    >
                                      <div className="flex justify-between items-center font-bold">
@@ -847,16 +847,16 @@ export function SubjectProgressTab({
                                       )}
                                     </div>
                                      <p className="text-slate-400 font-bold tracking-tight text-[8px]">{plan.startDate.substring(5)} ~ {plan.endDate.substring(5)}</p>
-                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 truncate">{plan.rangeText}</span>
+                                     <span className="font-extrabold text-[10px] tracking-tight text-slate-700 dark:text-slate-300 truncate">{plan.rangeText}</span>
                                      <span className="text-[8px] font-bold text-slate-400">일일 {plan.dailyAmount || Math.ceil(plan.targetAmount / 6)}</span>
                                      {isPending ? (
-                                       <div className="mt-1 space-y-2 rounded-lg border border-amber-200 bg-white/80 p-2">
+                                       <div className="mt-1 space-y-2 rounded-lg border border-amber-200 dark:border-white/10 bg-white/80 dark:bg-white/5 p-2">
                                          <p className="text-[8px] font-bold text-amber-700">오늘 실제 수강량</p>
                                          <div className="flex items-center gap-1.5">
                                            <button
                                              type="button"
                                              onClick={() => setPendingAmount((value) => Math.max(0, value - 1))}
-                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[12px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
                                            >
                                              -
                                            </button>
@@ -872,14 +872,14 @@ export function SubjectProgressTab({
                                                  cancelPlanCompletion();
                                                }
                                              }}
-                                             className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                             className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                              aria-label="오늘 실제 수강량"
                                            />
-                                           <span className="shrink-0 text-[9px] font-semibold text-slate-500">{unit}</span>
+                                           <span className="shrink-0 text-[9px] font-semibold text-slate-500 dark:text-slate-400">{unit}</span>
                                            <button
                                              type="button"
                                              onClick={() => setPendingAmount((value) => value + 1)}
-                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[12px] font-semibold text-slate-600 active:scale-95"
+                                             className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[12px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
                                            >
                                              +
                                            </button>
@@ -898,7 +898,7 @@ export function SubjectProgressTab({
                                            <button
                                              type="button"
                                              onClick={cancelPlanCompletion}
-                                             className="rounded-full border border-slate-200 bg-white px-2 py-1.5 text-[8px] font-semibold text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                             className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-[8px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97]"
                                            >
                                              취소
                                            </button>
@@ -919,8 +919,8 @@ export function SubjectProgressTab({
                                          aria-pressed={displayCompleted}
                                          className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] ${
                                            displayCompleted
-                                             ? 'border-emerald-200 bg-white/70 text-emerald-700'
-                                             : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                             ? 'border-emerald-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-emerald-700 dark:text-emerald-300'
+                                             : 'border-[#0071E3]/20 dark:border-white/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/10'
                                          }`}
                                        >
                                          {todayCompleted

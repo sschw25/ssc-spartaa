@@ -49,9 +49,9 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
 
   if (loading) {
     return (
-      <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm flex items-center justify-center py-10">
+      <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 md:p-8 shadow-sm flex items-center justify-center py-10">
         <Loader2 className="w-5 h-5 text-[#0071E3] animate-spin mr-2" />
-        <span className="text-sm text-slate-500">내 순공 위치 불러오는 중…</span>
+        <span className="text-sm text-slate-500 dark:text-slate-400">내 순공 위치 불러오는 중…</span>
       </div>
     );
   }
@@ -67,28 +67,28 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
   const pct = Math.max(4, Math.min(100, Math.round((st.myMinutes / target) * 100)));
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-5">
+    <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 md:p-8 shadow-sm space-y-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Trophy className="w-5 h-5 text-[#F56300]" />
-          <h3 className="text-[15px] font-semibold text-slate-900">나의 순공 랭킹</h3>
+          <h3 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100">나의 순공 랭킹</h3>
         </div>
         {typeof data.liveCount === 'number' && data.liveCount > 0 && (
-          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2.5 py-1 rounded-full">
             <Flame className="w-3.5 h-3.5 text-emerald-600" /> 지금 {data.liveCount}명 몰입 중
           </span>
         )}
       </div>
 
       {/* 주간 / 오늘 토글 */}
-      <div className="inline-flex p-0.5 rounded-xl bg-[#F5F5F7] border border-black/[0.05]">
+      <div className="inline-flex p-0.5 rounded-xl bg-[#F5F5F7] dark:bg-white/5 border border-black/[0.05] dark:border-white/10">
         {([['week', '주간'], ['day', '오늘']] as const).map(([key, label]) => (
           <button
             key={key}
             type="button"
             onClick={() => setPeriod(key)}
             className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-              period === key ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'
+              period === key ? 'bg-white dark:bg-[#1c1c1e] text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'
             }`}
           >
             {label}
@@ -97,11 +97,11 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
       </div>
 
       {/* 내 순공 (대표 숫자) */}
-      <div className="rounded-2xl bg-[#0071E3]/[0.05] border border-[#0071E3]/15 p-5">
+      <div className="rounded-2xl bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 border border-[#0071E3]/15 p-5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold text-slate-500">{periodLabel} 나의 순공</p>
-            <p className="text-2xl font-black text-slate-900 mt-0.5">{fmt(st.myMinutes)}</p>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{periodLabel} 나의 순공</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-0.5">{fmt(st.myMinutes)}</p>
           </div>
           {st.hasRecord && st.topPercent != null && (
             <span className="inline-flex items-center gap-1 text-sm font-black text-[#F56300] bg-[#F56300]/10 border border-[#F56300]/15 px-3 py-1.5 rounded-full">
@@ -113,13 +113,13 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
         {/* 진척 바 */}
         {st.hasRecord && (
           <div className="mt-4">
-            <div className="h-2.5 rounded-full bg-black/[0.06] overflow-hidden">
+            <div className="h-2.5 rounded-full bg-black/[0.06] dark:bg-white/10 overflow-hidden">
               <div
                 className={`h-full rounded-full ${st.inTop10 ? 'bg-gradient-to-r from-[#F56300] to-amber-400' : 'bg-[#0071E3]'}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
-            <div className="flex justify-between mt-1.5 text-[10px] font-bold text-slate-500">
+            <div className="flex justify-between mt-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400">
               <span>나 {fmt(st.myMinutes)}</span>
               <span>{st.inTop10 ? `1위 ${fmt(st.top1)}` : `TOP 10 ${fmt(st.cutline)}`}</span>
             </div>
@@ -130,7 +130,7 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
       {/* 동기부여 메시지 */}
       <MotivationBanner st={st} periodLabel={periodLabel} />
 
-      <p className="text-[10px] text-slate-500 text-center">QR 등하원으로 측정된 {periodLabel} 순공 시간 기준입니다. 다른 학생의 정보는 보이지 않습니다.</p>
+      <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">QR 등하원으로 측정된 {periodLabel} 순공 시간 기준입니다. 다른 학생의 정보는 보이지 않습니다.</p>
     </div>
   );
 }
@@ -139,9 +139,9 @@ function MotivationBanner({ st, periodLabel }: { st: Standing; periodLabel: stri
   // 기록 없음
   if (!st.hasRecord) {
     return (
-      <div className="flex items-center gap-2.5 rounded-2xl bg-[#0071E3]/[0.05] border border-[#0071E3]/15 px-4 py-3">
+      <div className="flex items-center gap-2.5 rounded-2xl bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 border border-[#0071E3]/15 px-4 py-3">
         <Target className="w-4 h-4 text-[#0071E3] shrink-0" />
-        <span className="text-xs font-bold text-slate-900">
+        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
           {periodLabel} 첫 순공을 기록해 보세요!{st.cutline > 0 && <> TOP 10 커트라인은 <span className="text-[#0071E3]">{fmt(st.cutline)}</span> 입니다.</>}
         </span>
       </div>
@@ -152,7 +152,7 @@ function MotivationBanner({ st, periodLabel }: { st: Standing; periodLabel: stri
     return (
       <div className="flex items-center gap-2.5 rounded-2xl bg-gradient-to-r from-[#F56300]/[0.1] to-amber-400/[0.08] border border-[#F56300]/15 px-4 py-3">
         <Sparkles className="w-4 h-4 text-[#F56300] shrink-0" />
-        <span className="text-xs font-bold text-slate-900">
+        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
           {st.rank === 1
             ? <>🏆 {periodLabel} <span className="text-[#F56300]">1위</span>! 최고의 몰입이에요. 이 페이스를 지켜요!</>
             : st.nextUpGap != null
@@ -164,11 +164,11 @@ function MotivationBanner({ st, periodLabel }: { st: Standing; periodLabel: stri
   }
   // TOP 10 밖
   return (
-    <div className="flex items-center gap-2.5 rounded-2xl bg-[#0071E3]/[0.05] border border-[#0071E3]/15 px-4 py-3">
+    <div className="flex items-center gap-2.5 rounded-2xl bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 border border-[#0071E3]/15 px-4 py-3">
       <TrendingUp className="w-4 h-4 text-[#0071E3] shrink-0" />
-      <span className="text-xs font-bold text-slate-900">
+      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
         {st.toTop10 > 0
-          ? <>TOP 10까지 <span className="text-[#0071E3]">{fmt(st.toTop10)}</span> 더 채우면 진입!{st.nextUpGap != null && <span className="text-slate-500 font-semibold"> · 한 칸 위까지 {fmt(st.nextUpGap)}</span>}</>
+          ? <>TOP 10까지 <span className="text-[#0071E3]">{fmt(st.toTop10)}</span> 더 채우면 진입!{st.nextUpGap != null && <span className="text-slate-500 dark:text-slate-400 font-semibold"> · 한 칸 위까지 {fmt(st.nextUpGap)}</span>}</>
           : <>TOP 10 진입까지 한 걸음! 조금만 더 몰입해 보세요.</>}
       </span>
     </div>

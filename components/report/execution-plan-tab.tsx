@@ -200,7 +200,7 @@ export function ExecutionPlanTab({
   const getTimelineStatusBadge = (status: string, adminReply?: string) => {
     if (status === 'approved') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
           승인
         </span>
@@ -208,7 +208,7 @@ export function ExecutionPlanTab({
     }
     if (status === 'rejected') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-black text-red-600">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-red-600">
           <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
           반려
         </span>
@@ -216,7 +216,7 @@ export function ExecutionPlanTab({
     }
     if (status === 'resolved' || status === 'completed') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
           처리완료
         </span>
@@ -224,14 +224,14 @@ export function ExecutionPlanTab({
     }
     if (adminReply && adminReply.trim()) {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 px-2.5 py-0.5 text-[10px] font-black text-[#0071E3]">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 border border-[#0071E3]/20 px-2.5 py-0.5 text-[10px] font-black text-[#0071E3]">
           <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-pulse" />
           처리중
         </span>
       );
     }
     return (
-      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-black text-amber-700">
+      <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-white/10 px-2.5 py-0.5 text-[10px] font-black text-amber-700">
         <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
         접수중
       </span>
@@ -342,7 +342,7 @@ export function ExecutionPlanTab({
     <div id="execution-plan" className={`scroll-mt-24 flex flex-col gap-5 print-card ${!isStudentReport || activeTab === 'execution-plan' ? '' : 'hidden print:block'}`}>
       <div className="order-1 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
+          <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 tracking-wider uppercase flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[#0071E3]" />
             오늘 기준 실행 학습 계획표
           </h3>
@@ -350,21 +350,21 @@ export function ExecutionPlanTab({
             요일별로 어떤 공부를 어떤 순서로, 하루에 어느 정도 진행할지 정리했습니다.
           </p>
         </div>
-        <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
+        <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
           오늘 기준 실행 브리핑
         </span>
       </div>
 
       {/* 오래 쉬고 온 학생을 위한 진도 재조정 — 학생이 직접 실행하지 않고 코멘터에게 '요청'으로 전달 (#11) */}
       {isStudentReport && (
-        <div className="order-4 no-print rounded-3xl border border-amber-300 bg-amber-50/60 p-4 md:p-5 shadow-sm space-y-3">
+        <div className="order-4 no-print rounded-3xl border border-amber-300 dark:border-white/10 bg-amber-50/60 dark:bg-amber-500/10 p-4 md:p-5 shadow-sm space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h4 className="text-xs font-black text-amber-800 flex items-center gap-1.5">
+              <h4 className="text-xs font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <RefreshCw className="h-3.5 w-3.5 shrink-0" />
                 오랜만에 복귀하셨거나 진도가 많이 밀렸나요?
               </h4>
-              <p className="mt-1 text-[10px] font-semibold text-slate-500">
+              <p className="mt-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                 계획 재설정은 코멘터 검토가 필요해요. 희망하는 방식을 코멘터에게 요청하면, 검토 후 반영하거나 상담을 안내해 드려요.
               </p>
             </div>
@@ -381,7 +381,7 @@ export function ExecutionPlanTab({
               <button
                 type="button"
                 onClick={() => setShowRealignBox(false)}
-                className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-[10px] font-black px-3 py-2 shadow-sm transition active:scale-[0.98] whitespace-nowrap self-start sm:self-auto"
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400 text-[10px] font-black px-3 py-2 shadow-sm transition active:scale-[0.98] whitespace-nowrap self-start sm:self-auto"
               >
                 취소
               </button>
@@ -389,23 +389,23 @@ export function ExecutionPlanTab({
           </div>
 
           {realignRequested ? (
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
+            <div className="rounded-2xl border border-emerald-200 dark:border-white/10 bg-emerald-50/70 dark:bg-emerald-500/10 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
               코멘터에게 계획 재조정 요청을 보냈어요. 검토 후 반영하거나 상담을 안내해 드릴게요. (아래 ‘학습 관련 요청’에서 진행 상황 확인)
             </div>
           ) : showRealignBox && (
-            <div className="pt-3 border-t border-amber-200/60 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up">
+            <div className="pt-3 border-t border-amber-200/60 dark:border-white/10 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up">
               <button
                 type="button"
                 disabled={!!realignRequesting}
                 onClick={() => requestRealign('keepTargetDate')}
-                className="p-3.5 rounded-2xl border border-[#0071E3]/20 bg-white hover:bg-[#0071E3]/[0.02] text-left transition shadow-sm hover:border-[#0071E3]/40 disabled:opacity-50 group"
+                className="p-3.5 rounded-2xl border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] hover:bg-[#0071E3]/[0.02] dark:hover:bg-[#0071E3]/15 text-left transition shadow-sm hover:border-[#0071E3]/40 disabled:opacity-50 group"
               >
                 <div className="text-[11px] font-black text-[#0071E3] flex items-center justify-between">
                   <span className="inline-flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> 목표 완료일 유지 요청 (추천)</span>
-                  <span className="text-[9px] font-bold bg-[#0071E3]/10 px-1.5 py-0.5 rounded">{realignRequesting === 'keepTargetDate' ? '전송 중' : '기본값'}</span>
+                  <span className="text-[9px] font-bold bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-1.5 py-0.5 rounded">{realignRequesting === 'keepTargetDate' ? '전송 중' : '기본값'}</span>
                 </div>
-                <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
+                <p className="mt-1 text-[9.5px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
                   원래 약속된 목표일에 끝내기 위해, 밀렸던 분량만큼 하루 목표치를 늘리는 방향으로 코멘터에게 요청합니다.
                 </p>
               </button>
@@ -414,12 +414,12 @@ export function ExecutionPlanTab({
                 type="button"
                 disabled={!!realignRequesting}
                 onClick={() => requestRealign('keepPace')}
-                className="p-3.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-left transition shadow-sm hover:border-slate-500/40 disabled:opacity-50"
+                className="p-3.5 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 text-left transition shadow-sm hover:border-slate-500/40 disabled:opacity-50"
               >
-                <div className="flex items-center gap-1 text-[11px] font-black text-slate-800">
+                <div className="flex items-center gap-1 text-[11px] font-black text-slate-800 dark:text-slate-200">
                   <Turtle className="w-3.5 h-3.5" /> 학습 페이스 유지 요청 {realignRequesting === 'keepPace' && <span className="text-[9px] text-slate-400">(전송 중)</span>}
                 </div>
-                <p className="mt-1 text-[9.5px] font-semibold text-slate-500 leading-relaxed">
+                <p className="mt-1 text-[9.5px] font-semibold text-slate-500 dark:text-slate-400 leading-relaxed">
                   하루 학습 강도는 유지하는 대신, 남은 분량만큼 완료 목표일을 늦추는 방향으로 코멘터에게 요청합니다.
                 </p>
               </button>
@@ -430,7 +430,7 @@ export function ExecutionPlanTab({
 
       {/* 학생 변경 신청 (관리자에게) — 학생 본인만 노출. 학부모는 신청 권한이 없으므로 숨김 */}
       {isStudentReport && (
-      <div id="student-request-panel" className="order-5 no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 md:p-6 shadow-sm space-y-4">
+      <div id="student-request-panel" className="order-5 no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-5 md:p-6 shadow-sm space-y-4">
         <div>
           <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
             <MessageSquare className="w-4 h-4" /> 학습 관련 요청
@@ -446,7 +446,7 @@ export function ExecutionPlanTab({
                 type="button"
                 disabled={requestSubmitting}
                 onClick={() => handleQuickRequest(q.type, q.message)}
-                className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] active:scale-[0.97] disabled:opacity-50"
+                className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15 active:scale-[0.97] disabled:opacity-50"
               >
                 {React.createElement(q.icon, { className: 'h-4 w-4 shrink-0 text-[#0071E3]' })}
                 <span className="min-w-0 leading-tight">{q.label}</span>
@@ -458,7 +458,7 @@ export function ExecutionPlanTab({
           <button
             type="button"
             onClick={() => setRequestCustomOpen(!requestCustomOpen)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 bg-white/60 py-2 text-[11px] font-bold text-slate-500 transition hover:text-slate-700"
+            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-slate-300 dark:border-white/10 bg-white/60 dark:bg-white/5 py-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:text-slate-700 dark:hover:text-slate-300"
           >
             <Plus className={`w-3.5 h-3.5 transition-transform ${requestCustomOpen ? 'rotate-45' : ''}`} />
             {requestCustomOpen ? '직접 작성 닫기' : '직접 작성하기'}
@@ -489,9 +489,9 @@ export function ExecutionPlanTab({
                 }
                 sendRequest(requestForm.requestType, requestForm.message, proposedGoal);
               }}
-              className="space-y-2.5 rounded-2xl border border-slate-100 bg-white/70 p-3"
+              className="space-y-2.5 rounded-2xl border border-slate-100 dark:border-white/10 bg-white/70 dark:bg-[#1c1c1e]/95 p-3"
             >
-              <div className="bg-[#0071E3]/5 rounded-xl p-2.5 text-[10px] font-bold text-[#0071E3] mb-1 leading-normal flex items-start gap-1.5 border border-[#0071E3]/10">
+              <div className="bg-[#0071E3]/5 dark:bg-[#0071E3]/15 rounded-xl p-2.5 text-[10px] font-bold text-[#0071E3] mb-1 leading-normal flex items-start gap-1.5 border border-[#0071E3]/10">
                 <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                 <span>템플릿에 맞춰 내용을 채워 뒀어요. 아래에서 과목과 조정 내용을 고른 뒤 [신청하기]를 눌러 주세요.</span>
               </div>
@@ -501,7 +501,7 @@ export function ExecutionPlanTab({
                     key={v}
                     type="button"
                     onClick={() => setRequestForm((f) => ({ ...f, requestType: v }))}
-                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${requestForm.requestType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
+                    className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${requestForm.requestType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
                   >
                     {label}
                   </button>
@@ -509,10 +509,10 @@ export function ExecutionPlanTab({
               </div>
 
               {(requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && (
-                <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-2.5 my-1 text-left">
+                <div className="space-y-3 rounded-xl border border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-2.5 my-1 text-left">
                   <p className="text-[10px] font-black text-slate-400">바꿀 계획 상세 (신청에 자동 첨부돼요)</p>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-500">대상 학습자료 선택</label>
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">대상 학습자료 선택</label>
                     <select
                       value={requestForm.materialId}
                       onChange={(e) => {
@@ -535,7 +535,7 @@ export function ExecutionPlanTab({
                           } : null,
                         }));
                       }}
-                      className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-material-select"
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-material-select"
                     >
                       <option value="">-- 변경할 교재/인강 선택 --</option>
                       {(student?.books || []).length > 0 && (
@@ -558,7 +558,7 @@ export function ExecutionPlanTab({
                   {requestForm.materialId && (
                     <>
                       {requestForm.currentGoalSnapshot?.goalValue ? (
-                        <div className="rounded-lg bg-slate-100/80 border border-slate-200 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 flex items-center gap-1.5">
+                        <div className="rounded-lg bg-slate-100/80 dark:bg-white/10 border border-slate-200 dark:border-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                           <span className="font-black text-slate-400">현재 설정:</span>
                           <span>{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '목표 기간' : requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '기간 목표' : requestForm.currentGoalSnapshot.goalType === 'weeklyAmount' ? '주간 학습량' : '일일 학습량'} {requestForm.currentGoalSnapshot.goalValue}{requestForm.currentGoalSnapshot.goalType === 'weeks' || requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}</span>
                           {requestForm.currentGoalSnapshot.speedMultiplier && requestForm.currentGoalSnapshot.speedMultiplier !== 1.0 && (
@@ -569,27 +569,27 @@ export function ExecutionPlanTab({
                       ) : null}
                       <div className="grid grid-cols-2 gap-2">
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500">목표 설정 방식</label>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">목표 설정 방식</label>
                           <select
                             value={requestForm.goalType}
                             onChange={(e) => setRequestForm((f) => ({ ...f, goalType: e.target.value as GoalType }))}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-type-select"
+                            className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-goal-type-select"
                           >
                             <option value="deadlineWeeks">기간 목표(주 선택)</option>
                             <option value="dailyAmount">일일 학습량</option>
                           </select>
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500">목표 수치</label>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">목표 수치</label>
                           <div className="flex items-center gap-1">
                             <input
                               type="number"
                               value={requestForm.goalValue}
                               onChange={(e) => setRequestForm((f) => ({ ...f, goalValue: e.target.value }))}
                               placeholder="예: 8"
-                              className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-goal-value-input"
+                              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-goal-value-input"
                             />
-                            <span className="text-xs font-bold text-slate-500">
+                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                               {requestForm.goalType === 'weeks' || requestForm.goalType === 'deadlineWeeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}
                             </span>
                           </div>
@@ -598,11 +598,11 @@ export function ExecutionPlanTab({
 
                       {requestForm.materialType === 'lecture' && (
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold text-slate-500">제안할 강의 배속 설정</label>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">제안할 강의 배속 설정</label>
                           <select
                             value={requestForm.speedMultiplier || '1.0'}
                             onChange={(e) => setRequestForm((f) => ({ ...f, speedMultiplier: e.target.value }))}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-speed-multiplier-select"
+                            className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-speed-multiplier-select"
                           >
                             <option value="1.0">1.0 배속 (기본)</option>
                             <option value="1.2">1.2 배속</option>
@@ -614,27 +614,27 @@ export function ExecutionPlanTab({
                       )}
 
                       {requestForm.requestType === 'progress' && (
-                        <div className="space-y-2 border-t border-slate-200/60 pt-2">
+                        <div className="space-y-2 border-t border-slate-200/60 dark:border-white/10 pt-2">
                           <p className="text-[10px] font-bold text-slate-400">특정 주차 범위 정정 (선택사항)</p>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500">주차 번호</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">주차 번호</label>
                               <input
                                 type="number"
                                 value={requestForm.proposedWeekNumber}
                                 onChange={(e) => setRequestForm((f) => ({ ...f, proposedWeekNumber: e.target.value }))}
                                 placeholder="예: 1"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-week-number-input"
+                                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-week-number-input"
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[10px] font-bold text-slate-500">수정할 범위</label>
+                              <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">수정할 범위</label>
                               <input
                                 type="text"
                                 value={requestForm.proposedRangeText}
                                 onChange={(e) => setRequestForm((f) => ({ ...f, proposedRangeText: e.target.value }))}
                                 placeholder="예: 1p ~ 50p"
-                                className="w-full rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none request-range-text-input"
+                                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-range-text-input"
                               />
                             </div>
                           </div>
@@ -650,7 +650,7 @@ export function ExecutionPlanTab({
                 onChange={(e) => { setRequestForm((f) => ({ ...f, message: e.target.value })); setValidationError(''); }}
                 placeholder="신청 내용을 적어 주세요. 예) 수학I 진도를 주 3회로 늘리고 싶어요"
                 rows={2}
-                className={`w-full resize-none rounded-xl border bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 ${validationError ? 'border-red-400 focus:border-red-400' : 'border-slate-200 focus:border-[#0071E3]'}`}
+                className={`w-full resize-none rounded-xl border bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 ${validationError ? 'border-red-400 focus:border-red-400' : 'border-slate-200 dark:border-white/10 focus:border-[#0071E3]'}`}
               />
               {validationError && <p className="text-[10px] font-bold text-red-500">{validationError}</p>}
               <button
@@ -677,19 +677,19 @@ export function ExecutionPlanTab({
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">내 학습 요청 내역</p>
 
                 {pending.map((r) => (
-                  <div key={r.id} className="rounded-2xl border border-slate-100 bg-white p-3 text-[11px]">
+                  <div key={r.id} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 text-[11px]">
                     <div className="flex items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-black text-slate-500">{getRequestTypeLabel(r.requestType)}</span>
+                        <span className="shrink-0 rounded-full bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-slate-500 dark:text-slate-400">{getRequestTypeLabel(r.requestType)}</span>
                         {getTimelineStatusBadge(r.status || 'pending', r.adminReply)}
                       </span>
-                      <button type="button" onClick={() => cancelRequest(r.id)} className="shrink-0 text-slate-300 transition-colors hover:text-red-500" aria-label="신청 취소">
+                      <button type="button" onClick={() => cancelRequest(r.id)} className="shrink-0 text-slate-300 dark:text-slate-600 transition-colors hover:text-red-500" aria-label="신청 취소">
                         <Trash2 className="w-3 h-3" />
                       </button>
                     </div>
-                    <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600">{r.content}</p>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600 dark:text-slate-400">{r.content}</p>
                     {r.adminReply && (
-                      <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                      <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
                         코멘터 답변: {r.adminReply}
                       </div>
                     )}
@@ -701,26 +701,26 @@ export function ExecutionPlanTab({
                     <button
                       type="button"
                       onClick={() => setShowRequestHistory(!showRequestHistory)}
-                      className="flex w-full items-center justify-between rounded-xl bg-white border border-slate-200 px-3 py-2 text-left text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 hover:border-slate-300"
+                      className="flex w-full items-center justify-between rounded-xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 px-3 py-2 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-300 dark:hover:border-white/10"
                     >
                       <span>지난 학습 요청 보기 ({resolved.length}건)</span>
                       <span className="text-[10px]">{showRequestHistory ? '접기 ▲' : '펼치기 ▼'}</span>
                     </button>
 
                     {showRequestHistory && (
-                      <div className="space-y-2 pl-1 border-l-2 border-slate-100 ml-1">
+                      <div className="space-y-2 pl-1 border-l-2 border-slate-100 dark:border-white/10 ml-1">
                         {resolved.map((r) => (
-                          <div key={r.id} className="rounded-2xl border border-slate-100 bg-slate-50/50 p-3 text-[11px]">
+                          <div key={r.id} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-3 text-[11px]">
                             <div className="flex items-center justify-between gap-2">
                               <span className="flex min-w-0 items-center gap-1.5">
-                                <span className="shrink-0 rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-slate-500 border border-slate-200">{getRequestTypeLabel(r.requestType)}</span>
+                                <span className="shrink-0 rounded-full bg-white dark:bg-[#1c1c1e] px-1.5 py-0.5 text-[10px] font-black text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10">{getRequestTypeLabel(r.requestType)}</span>
                                 {getTimelineStatusBadge(r.status || 'resolved', r.adminReply)}
                                 <span className="shrink-0 text-[10px] font-bold text-slate-400">{r.date}</span>
                               </span>
                             </div>
-                            <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500">{r.content}</p>
+                            <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500 dark:text-slate-400">{r.content}</p>
                             {r.adminReply && (
-                              <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                              <div className="mt-2 rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
                                 코멘터 답변: {r.adminReply}
                               </div>
                             )}
@@ -738,10 +738,10 @@ export function ExecutionPlanTab({
       )}
 
       {isStudentReport && deadlinePlanEntries.length > 0 && (
-        <section className="order-2 rounded-3xl border border-[#0071E3]/10 bg-white p-4 shadow-sm break-inside-avoid">
-          <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-3 sm:flex-row sm:items-end sm:justify-between">
+        <section className="order-2 rounded-3xl border border-[#0071E3]/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm break-inside-avoid">
+          <div className="mb-4 flex flex-col gap-2 border-b border-slate-100 dark:border-white/10 pb-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800">
+              <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
                 <Target className="h-4 w-4 text-[#0071E3]" />
                 주간 목표 계획
               </h4>
@@ -749,7 +749,7 @@ export function ExecutionPlanTab({
                 요일별 오늘 계획과 별도로, 이번 주와 예정된 주차 목표를 확인합니다.
               </p>
             </div>
-            <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
+            <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
               {deadlinePlanEntries.length}개 목표
             </span>
           </div>
@@ -770,10 +770,10 @@ export function ExecutionPlanTab({
               const fillGap = Math.max(0, todayTarget - entry.actualAmount);
               const periodLabel = `${entry.startDate.slice(5).replace('-', '.')} ~ ${entry.endDate.slice(5).replace('-', '.')}`;
               const cardTone = entry.done
-                ? 'border-emerald-100 bg-emerald-50/40'
+                ? 'border-emerald-100 dark:border-white/10 bg-emerald-50/40 dark:bg-emerald-500/10'
                 : entry.active
-                  ? 'border-[#0071E3]/20 bg-[#0071E3]/[0.03]'
-                  : 'border-slate-100 bg-slate-50/60';
+                  ? 'border-[#0071E3]/20 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15'
+                  : 'border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/5';
 
               return (
                 <article key={entry.id} className={`rounded-2xl border p-3 ${cardTone}`}>
@@ -782,25 +782,25 @@ export function ExecutionPlanTab({
                       <p className="text-[10px] font-black text-slate-400">
                         {entry.weekNumber}주차 · {periodLabel}
                       </p>
-                      <h5 className="mt-1 truncate text-[13px] font-black text-slate-900">
+                      <h5 className="mt-1 truncate text-[13px] font-black text-slate-900 dark:text-slate-100">
                         {entry.subject} · {entry.title}
                       </h5>
                     </div>
                     <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
                       entry.done
-                        ? 'bg-emerald-100 text-emerald-700'
+                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700'
                         : entry.active
                           ? entry.goal?.behind
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'bg-[#0071E3]/10 text-[#0071E3]'
-                          : 'bg-white text-slate-400'
+                            ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-700'
+                            : 'bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3]'
+                          : 'bg-white dark:bg-white/10 text-slate-400'
                     }`}>
                       {entry.done ? '완료' : entry.active ? (entry.goal?.behind ? '조금 부족' : '진행 중') : '예정'}
                     </span>
                   </div>
 
-                  <p className="mt-2 rounded-xl bg-white/80 px-2.5 py-2 text-[11px] font-bold text-slate-600">
-                    목표 범위: <span className="text-slate-900">{entry.rangeText}</span>
+                  <p className="mt-2 rounded-xl bg-white/80 dark:bg-white/5 px-2.5 py-2 text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    목표 범위: <span className="text-slate-900 dark:text-slate-100">{entry.rangeText}</span>
                   </p>
 
                   <div className="mt-3 space-y-1.5">
@@ -808,7 +808,7 @@ export function ExecutionPlanTab({
                       <span>누적 {entry.actualAmount}/{entry.targetAmount}{entry.unit}</span>
                       <span>{progressPercent}%</span>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-white">
+                    <div className="h-2 overflow-hidden rounded-full bg-white dark:bg-white/10">
                       <div
                         className={`h-full rounded-full transition-all ${entry.done ? 'bg-emerald-500' : 'bg-[#0071E3]'}`}
                         style={{ width: `${progressPercent}%` }}
@@ -817,16 +817,16 @@ export function ExecutionPlanTab({
                   </div>
 
                   {entry.active && entry.goal ? (
-                    <div className="mt-3 grid gap-1.5 text-[11px] font-black text-slate-500 sm:grid-cols-2">
-                      <p className="rounded-xl bg-white px-2.5 py-1.5">
+                    <div className="mt-3 grid gap-1.5 text-[11px] font-black text-slate-500 dark:text-slate-400 sm:grid-cols-2">
+                      <p className="rounded-xl bg-white dark:bg-white/5 px-2.5 py-1.5">
                         오늘 권장 <span className={metToday ? 'text-emerald-600' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${entry.unit}` : '없음'}</span>
                       </p>
-                      <p className="rounded-xl bg-white px-2.5 py-1.5">
-                        예상목표치 <span className="text-slate-900">{entry.goal.expectedAmount}{entry.unit}</span>
+                      <p className="rounded-xl bg-white dark:bg-white/5 px-2.5 py-1.5">
+                        예상목표치 <span className="text-slate-900 dark:text-slate-100">{entry.goal.expectedAmount}{entry.unit}</span>
                       </p>
                     </div>
                   ) : (
-                    <p className="mt-3 flex items-center gap-1.5 rounded-xl bg-white/70 px-2.5 py-2 text-[11px] font-bold text-slate-400">
+                    <p className="mt-3 flex items-center gap-1.5 rounded-xl bg-white/70 dark:bg-white/5 px-2.5 py-2 text-[11px] font-bold text-slate-400">
                       <Clock className="h-3.5 w-3.5" />
                       시작일에 맞춰 오늘 권장량이 표시됩니다.
                     </p>
@@ -835,7 +835,7 @@ export function ExecutionPlanTab({
                   {entry.active && entry.goal && !entry.done && (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       {metToday ? (
-                        <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-black text-emerald-700">
+                        <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-3 py-2 text-[11px] font-black text-emerald-700">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           오늘 완료
                         </span>
@@ -856,7 +856,7 @@ export function ExecutionPlanTab({
                           setDeadlineEditId(isEditing ? null : entry.id);
                           setDeadlineEditAmount(entry.actualAmount);
                         }}
-                        className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 bg-white px-3 py-2 text-[11px] font-black text-slate-500 transition hover:bg-slate-50 active:scale-[0.97] ${
+                        className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-black text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] ${
                           metToday || fillGap <= 0 ? 'flex-1 sm:flex-none' : ''
                         }`}
                       >
@@ -866,23 +866,23 @@ export function ExecutionPlanTab({
                   )}
 
                   {isEditing && (
-                    <div className="mt-3 rounded-2xl border border-slate-100 bg-white p-3">
-                      <p className="text-[11px] font-black text-slate-600">이번 주 누적 완료량</p>
+                    <div className="mt-3 rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3">
+                      <p className="text-[11px] font-black text-slate-600 dark:text-slate-400">이번 주 누적 완료량</p>
                       <div className="mt-2 flex items-center gap-2">
                         <button
                           type="button"
                           onClick={() => setDeadlineEditAmount((value) => Math.max(0, value - 1))}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-95"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
                         >
                           -
                         </button>
-                        <span className="min-w-[4rem] text-center text-sm font-black text-slate-900">
+                        <span className="min-w-[4rem] text-center text-sm font-black text-slate-900 dark:text-slate-100">
                           {deadlineEditAmount}{entry.unit}
                         </span>
                         <button
                           type="button"
                           onClick={() => setDeadlineEditAmount((value) => Math.min(entry.targetAmount, value + 1))}
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-600 active:scale-95"
+                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
                         >
                           +
                         </button>
@@ -911,29 +911,29 @@ export function ExecutionPlanTab({
             (e) => !!week.startDate && !!week.endDate && e.startDate <= week.endDate && e.endDate >= week.startDate,
           );
           return (
-          <div key={week.weekNumber} className="rounded-3xl border border-slate-100 bg-white p-4 shadow-sm break-inside-avoid">
-            <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div key={week.weekNumber} className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm break-inside-avoid">
+            <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-100 dark:border-white/10 pb-3">
               <div>
-                <p className="text-xs font-black text-slate-900">{week.weekNumber}주차</p>
+                <p className="text-xs font-black text-slate-900 dark:text-slate-100">{week.weekNumber}주차</p>
                 <p className="text-[10px] font-bold text-slate-400">{week.rangeLabel}</p>
               </div>
-              <span className="rounded-xl bg-slate-50 px-2.5 py-1 text-[10px] font-black text-slate-500">
+              <span className="rounded-xl bg-slate-50 dark:bg-white/5 px-2.5 py-1 text-[10px] font-black text-slate-500 dark:text-slate-400">
                 요일별 실행 순서
               </span>
             </div>
 
             {weekGoals.length > 0 && (
-              <div className="mb-4 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-3">
+              <div className="mb-4 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3">
                 <p className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#0071E3]">
                   <Target className="h-3.5 w-3.5" />
                   이번 주 주간목표
                 </p>
                 <div className="flex flex-col gap-1.5">
                   {weekGoals.map((g) => (
-                    <div key={`wk_${week.weekNumber}_${g.id}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/80 px-3 py-2">
-                      <span className="text-[11px] font-black text-slate-900">{g.subject} · {g.title}</span>
+                    <div key={`wk_${week.weekNumber}_${g.id}`} className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-white/80 dark:bg-white/5 px-3 py-2">
+                      <span className="text-[11px] font-black text-slate-900 dark:text-slate-100">{g.subject} · {g.title}</span>
                       <span className="text-[10px] font-bold text-slate-400">{g.rangeText}</span>
-                      <span className="ml-auto shrink-0 rounded-full bg-[#0071E3]/10 px-2 py-0.5 text-[10px] font-black text-[#0071E3] tabular-nums">
+                      <span className="ml-auto shrink-0 rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-2 py-0.5 text-[10px] font-black text-[#0071E3] tabular-nums">
                         {g.actualAmount}/{g.targetAmount}{g.unit}
                       </span>
                     </div>
@@ -944,19 +944,19 @@ export function ExecutionPlanTab({
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-7">
               {week.days.map((day) => (
-                <div key={`${week.weekNumber}_${day.key}`} className="min-h-[170px] rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                <div key={`${week.weekNumber}_${day.key}`} className="min-h-[170px] rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 p-3">
                   <div className="mb-3 flex items-center justify-between">
                     <div>
-                      <p className="text-[10px] font-black text-slate-800">{day.label}</p>
+                      <p className="text-[10px] font-black text-slate-800 dark:text-slate-200">{day.label}</p>
                       <p className="text-[10px] font-bold text-slate-400">{day.dateLabel}</p>
                     </div>
-                    <span className="rounded-lg bg-white px-1.5 py-0.5 text-[8px] font-black text-slate-400">
+                    <span className="rounded-lg bg-white dark:bg-white/10 px-1.5 py-0.5 text-[8px] font-black text-slate-400">
                       {day.entries.length}개
                     </span>
                   </div>
 
                   {day.entries.length === 0 ? (
-                    <p className="rounded-xl border border-dashed border-slate-200 bg-white/70 px-2 py-5 text-center text-[10px] font-bold text-slate-300">
+                    <p className="rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-2 py-5 text-center text-[10px] font-bold text-slate-300 dark:text-slate-600">
                       계획 없음
                     </p>
                   ) : (
@@ -970,25 +970,25 @@ export function ExecutionPlanTab({
                             key={`${entry.id}_${index}`}
                             className={`rounded-xl border p-2 shadow-sm ${
                               entry.isCompleted
-                                ? 'border-emerald-100 bg-emerald-50/45'
-                                : 'border-white bg-white'
+                                ? 'border-emerald-100 dark:border-white/10 bg-emerald-50/45 dark:bg-emerald-500/10'
+                                : 'border-white dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
                             }`}
                           >
                             <div className="mb-1 flex items-center gap-1.5">
                               <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-slate-900'}`}>
                                 {index + 1}
                               </span>
-                              <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[8px] font-black text-slate-500">
+                              <span className="rounded-lg bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[8px] font-black text-slate-500 dark:text-slate-400">
                                 {studyTimeLabels[entry.studyTime] || '미지정'}
                               </span>
                             </div>
-                            <p className="text-[10px] font-black text-slate-800 leading-snug">
+                            <p className="text-[10px] font-black text-slate-800 dark:text-slate-200 leading-snug">
                               {entry.subject} · {entry.title}
                             </p>
                             <p className="mt-1 text-[8px] font-bold text-slate-400 leading-snug">
                               {entry.type} / {entry.rangeText}
                             </p>
-                            <p className="mt-1 rounded-lg bg-[#0071E3]/5 px-2 py-1 text-[8px] font-black text-[#0071E3]">
+                            <p className="mt-1 rounded-lg bg-[#0071E3]/5 dark:bg-[#0071E3]/15 px-2 py-1 text-[8px] font-black text-[#0071E3]">
                               {entry.dailyLabel}
                             </p>
                             {isStudentReport ? (
@@ -1005,44 +1005,44 @@ export function ExecutionPlanTab({
                                 aria-pressed={entry.isCompleted}
                                 className={`mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border text-[10px] font-black transition active:scale-[0.97] ${
                                   entry.isCompleted
-                                    ? 'border-emerald-200 bg-white/80 text-emerald-700'
+                                    ? 'border-emerald-200 dark:border-white/10 bg-white/80 dark:bg-emerald-500/10 text-emerald-700'
                                     : isPending
-                                    ? 'border-amber-200 bg-amber-50 text-amber-700'
-                                    : 'border-[#0071E3]/20 bg-[#0071E3]/5 text-[#0071E3] hover:bg-[#0071E3]/10'
+                                    ? 'border-amber-200 dark:border-white/10 bg-amber-50 dark:bg-amber-500/10 text-amber-700'
+                                    : 'border-[#0071E3]/20 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/10'
                                 }`}
                               >
                                 <CheckCircle2 className="h-3 w-3" />
                                 {entry.isCompleted ? (entry.actualAmount !== undefined ? `완료 (${entry.actualAmount}${unit})` : '완료됨') : '완료'}
                               </button>
                             ) : entry.isCompleted ? (
-                              <span className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-700 text-[10px] font-black">
+                              <span className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-emerald-200 dark:border-white/10 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 text-[10px] font-black">
                                 <CheckCircle2 className="h-3 w-3" />
                                 {entry.actualAmount !== undefined ? `완료 (${entry.actualAmount}${unit})` : '완료됨'}
                               </span>
                             ) : (
-                              <span className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-slate-100 bg-slate-50 text-slate-400 text-[10px] font-black">
+                              <span className="mt-2 inline-flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-400 text-[10px] font-black">
                                 미완료
                               </span>
                             )}
 
                             {isPending && (
-                              <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 pt-3 text-left">
-                                <p className="text-[10px] font-black text-slate-500">실제로 얼마나 했나요?</p>
+                              <div className="mt-3 flex flex-col gap-2 border-t border-slate-100 dark:border-white/10 pt-3 text-left">
+                                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400">실제로 얼마나 했나요?</p>
                                 <div className="flex items-center gap-2">
                                   <button
                                     type="button"
                                     onClick={() => setPendingAmount((v) => Math.max(0, v - 1))}
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 active:scale-95"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
                                   >
                                     −
                                   </button>
-                                  <span className="min-w-[3rem] text-center text-sm font-black text-slate-900">
+                                  <span className="min-w-[3rem] text-center text-sm font-black text-slate-900 dark:text-slate-100">
                                     {pendingAmount}{unit}
                                   </span>
                                   <button
                                     type="button"
                                     onClick={() => setPendingAmount((v) => v + 1)}
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-black text-slate-600 hover:bg-slate-50 active:scale-95"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-black text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
                                   >
                                     +
                                   </button>
@@ -1061,7 +1061,7 @@ export function ExecutionPlanTab({
                                   <button
                                     type="button"
                                     onClick={() => setPendingPlanId(null)}
-                                    className="flex-1 rounded-full border border-slate-200 bg-white py-1.5 text-[10px] font-black text-slate-500 hover:bg-slate-50 active:scale-[0.97]"
+                                    className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-1.5 text-[10px] font-black text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97]"
                                   >
                                     취소
                                   </button>

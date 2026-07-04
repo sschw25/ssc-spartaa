@@ -330,9 +330,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       <div className={`rounded-3xl border p-5 flex flex-col justify-between gap-4 transition-all duration-500 ${
         pomodoroActive
           ? isFocus
-            ? 'bg-gradient-to-br from-white to-blue-50/60 border-[#0071E3]/20 shadow-[0_8px_32px_rgba(0,113,227,0.12)]'
-            : 'bg-gradient-to-br from-white to-emerald-50/60 border-emerald-300/30 shadow-[0_8px_32px_rgba(16,185,129,0.12)]'
-          : 'bg-white border-slate-100 shadow-sm'
+            ? 'bg-gradient-to-br from-white to-blue-50/60 dark:from-[#1c1c1e] dark:to-[#0071E3]/15 border-[#0071E3]/20 shadow-[0_8px_32px_rgba(0,113,227,0.12)]'
+            : 'bg-gradient-to-br from-white to-emerald-50/60 dark:from-[#1c1c1e] dark:to-emerald-500/10 border-emerald-300/30 shadow-[0_8px_32px_rgba(16,185,129,0.12)]'
+          : 'bg-white dark:bg-[#1c1c1e] border-slate-100 dark:border-white/10 shadow-sm'
       }`}>
         {/* 헤더 */}
         <div className="flex items-center justify-between">
@@ -341,7 +341,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
             <button
               type="button"
               onClick={() => toggleFullscreen('pomodoro-fullscreen-container')}
-              className="p-1 hover:bg-slate-100 active:scale-95 text-slate-400 hover:text-slate-600 rounded transition"
+              className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-95 text-slate-400 hover:text-slate-600 rounded transition"
               title="전체화면 (몰입 모드)"
             >
               <Maximize2 className="w-3.5 h-3.5" />
@@ -352,8 +352,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                   ? 'bg-[#0071E3] text-white border-[#0071E3] shadow-[0_2px_8px_rgba(0,113,227,0.35)]'
                   : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_2px_8px_rgba(16,185,129,0.35)]'
                 : isFocus
-                  ? 'bg-[#0071E3]/8 text-[#0071E3] border-[#0071E3]/15'
-                  : 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                  ? 'bg-[#0071E3]/8 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/15'
+                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-200'
             }`}>
               {isFocus ? <Target className="w-2.5 h-2.5" /> : <Coffee className="w-2.5 h-2.5" />}
               {isFocus ? '집중 50분' : '휴식 10분'}
@@ -407,21 +407,21 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
             {/* 중앙 시간 표시 */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               {isEditingPomoTime ? (
-                <form onSubmit={handlePomoTimeSubmit} className="flex items-center gap-1 bg-white p-1 rounded-lg shadow-sm border border-slate-100">
+                <form onSubmit={handlePomoTimeSubmit} className="flex items-center gap-1 bg-white dark:bg-[#1c1c1e] p-1 rounded-lg shadow-sm border border-slate-100 dark:border-white/10">
                   <input
                     type="number"
                     min="1"
                     max="180"
                     value={pomoEditValue}
                     onChange={(e) => setPomoEditValue(e.target.value)}
-                    className="w-12 px-1 py-0.5 text-xs text-center border rounded font-black focus:outline-none focus:ring-1 focus:ring-[#0071E3] text-slate-800"
+                    className="w-12 px-1 py-0.5 text-xs text-center border rounded font-black focus:outline-none focus:ring-1 focus:ring-[#0071E3] text-slate-800 dark:text-slate-200"
                     placeholder="분"
                     autoFocus
                   />
                   <button type="submit" className="p-1 bg-[#0071E3] text-white rounded text-[9px] font-black hover:bg-[#0077ED]">
                     <Check className="w-3 h-3" />
                   </button>
-                  <button type="button" onClick={() => setIsEditingPomoTime(false)} className="p-1 bg-slate-100 text-slate-400 rounded text-[9px] font-bold hover:bg-slate-200">
+                  <button type="button" onClick={() => setIsEditingPomoTime(false)} className="p-1 bg-slate-100 dark:bg-white/10 text-slate-400 rounded text-[9px] font-bold hover:bg-slate-200">
                     <X className="w-3 h-3" />
                   </button>
                 </form>
@@ -433,7 +433,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                       setIsEditingPomoTime(true);
                     }}
                     className={`text-[28px] font-black leading-none tabular-nums cursor-pointer transition-colors hover:opacity-85 ${
-                      pomodoroActive ? (isFocus ? 'text-[#0071E3]' : 'text-emerald-600') : 'text-slate-800'
+                      pomodoroActive ? (isFocus ? 'text-[#0071E3]' : 'text-emerald-600') : 'text-slate-800 dark:text-slate-200'
                     }`}
                     style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
                     title="클릭하여 시간 수정"
@@ -462,7 +462,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
               onClick={() => setPomodoroActive(!pomodoroActive)}
               className={`w-full rounded-2xl text-xs font-black py-3 transition active:scale-95 ${
                 pomodoroActive
-                  ? 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-slate-300'
                   : isFocus
                     ? 'bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-[0_4px_16px_rgba(0,113,227,0.35)]'
                     : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.35)]'
@@ -481,7 +481,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                     clearStoredPomodoro();
                     await handlePomodoroComplete(3000 - pomodoroSeconds);
                   }}
-                  className="w-full inline-flex items-center justify-center gap-1 rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/5 hover:bg-[#0071E3]/10 text-[#0071E3] py-2.5 text-xs font-black transition active:scale-95"
+                  className="w-full inline-flex items-center justify-center gap-1 rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/10 text-[#0071E3] py-2.5 text-xs font-black transition active:scale-95"
                 >
                   <CheckCircle2 className="w-3.5 h-3.5" /> 세션 완료
                 </button>
@@ -493,7 +493,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                     setPomodoroSeconds(3000);
                     clearStoredPomodoro();
                   }}
-                  className="w-full text-center text-[10px] font-bold text-slate-300 hover:text-slate-400 py-1 transition"
+                  className="w-full text-center text-[10px] font-bold text-slate-300 dark:text-slate-600 hover:text-slate-400 py-1 transition"
                 >
                   ↺ 리셋
                 </button>
@@ -507,7 +507,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                   setPomodoroSeconds(3000);
                   clearStoredPomodoro();
                 }}
-                className="w-full rounded-2xl border border-slate-200 hover:bg-slate-50 text-slate-500 py-2.5 text-xs font-bold transition active:scale-95"
+                className="w-full rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 text-slate-500 dark:text-slate-400 py-2.5 text-xs font-bold transition active:scale-95"
               >
                 ↺ 리셋
               </button>
@@ -516,15 +516,15 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
         </div>
 
         {/* 집중 이탈(알트탭/창전환) 카운트 — 본인·학원 모두 확인 */}
-        <div className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/70 px-3.5 py-2">
+        <div className="flex items-center justify-between rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 px-3.5 py-2">
           <span className="text-[10px] font-bold text-slate-400">집중 이탈 (창 전환·알트탭)</span>
           <span className="flex items-center gap-2">
             {pomodoroActive && isFocus && (
-              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${distractions > 0 ? 'bg-amber-100 text-amber-700' : 'bg-emerald-50 text-emerald-600'}`}>
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${distractions > 0 ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-700' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600'}`}>
                 이번 세션 {distractions}회
               </span>
             )}
-            <span className="text-[11px] font-black text-slate-600">오늘 {todayDistractions}회</span>
+            <span className="text-[11px] font-black text-slate-600 dark:text-slate-400">오늘 {todayDistractions}회</span>
           </span>
         </div>
       </div>

@@ -146,14 +146,14 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
   })();
 
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-sm md:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
             <Armchair className="h-3.5 w-3.5" /> 자리이동
           </div>
-          <h3 className="mt-2 text-xl font-black text-slate-900">자리이동 신청</h3>
-          <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500">
+          <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">자리이동 신청</h3>
+          <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500 dark:text-slate-400">
             배치도에서 빈자리를 골라 신청하면 학원 확인 후 좌석이 옮겨져요.
             {data?.mySeat != null && (
               <> 현재 내 자리 <span className="font-black text-[#0071E3]">{data.mySeat}번</span></>
@@ -167,7 +167,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
             setPickerOpen(true);
           }}
           disabled={Boolean(request && request.status === 'pending')}
-          className="shrink-0 rounded-full bg-[#0071E3] px-4 py-2.5 text-xs font-black text-white shadow-[0_6px_16px_rgba(0,113,227,0.22)] transition active:scale-95 disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+          className="shrink-0 rounded-full bg-[#0071E3] px-4 py-2.5 text-xs font-black text-white shadow-[0_6px_16px_rgba(0,113,227,0.22)] transition active:scale-95 disabled:bg-slate-200 dark:disabled:bg-white/10 disabled:text-slate-400 disabled:shadow-none"
         >
           자리 선택하기
         </button>
@@ -175,13 +175,13 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
 
       {/* 내 신청 현황 */}
       {request && (
-        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-3">
+        <div className="mt-4 flex flex-wrap items-center gap-2 rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3.5 py-3">
           {statusBadge}
-          <p className="text-xs font-bold text-slate-700">
+          <p className="text-xs font-bold text-slate-700 dark:text-slate-300">
             {request.fromSeat != null ? `${request.fromSeat}번` : '미배정'} → {request.toSeat}번
           </p>
           {request.status === 'rejected' && request.rejectReason && (
-            <p className="w-full text-[11px] font-semibold text-slate-500">사유: {request.rejectReason}</p>
+            <p className="w-full text-[11px] font-semibold text-slate-500 dark:text-slate-400">사유: {request.rejectReason}</p>
           )}
           {request.status === 'approved' && (
             <p className="w-full text-[11px] font-semibold text-emerald-700">좌석이 {request.toSeat}번으로 이동되었어요.</p>
@@ -189,7 +189,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
           <button
             type="button"
             onClick={() => cancelRequest(request.id, request.status !== 'pending')}
-            className="ml-auto shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-500 transition hover:text-slate-800"
+            className="ml-auto shrink-0 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:text-slate-800"
           >
             {request.status === 'pending' ? '신청 취소' : '확인'}
           </button>
@@ -200,15 +200,15 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
       {pickerOpen && (
         <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center" onClick={() => setPickerOpen(false)}>
           <div
-            className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl"
+            className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-3xl bg-white dark:bg-[#1c1c1e] shadow-2xl sm:rounded-3xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 px-5 py-4">
               <div>
-                <h4 className="text-base font-black text-slate-900">자리 선택</h4>
+                <h4 className="text-base font-black text-slate-900 dark:text-slate-100">자리 선택</h4>
                 <p className="mt-0.5 text-[11px] font-semibold text-slate-400">회색은 사용 중이거나 신청된 자리예요. 빈자리를 눌러 신청하세요.</p>
               </div>
-              <button type="button" onClick={() => setPickerOpen(false)} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="닫기">
+              <button type="button" onClick={() => setPickerOpen(false)} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700" aria-label="닫기">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -223,7 +223,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                 <button
                   type="button"
                   onClick={() => { setLoaded(false); }}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-600 transition hover:border-[#0071E3] hover:text-[#0071E3]"
+                  className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 transition hover:border-[#0071E3] hover:text-[#0071E3]"
                 >
                   다시 시도
                 </button>
@@ -238,7 +238,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                         key={page.label}
                         type="button"
                         onClick={() => setPageIdx(i)}
-                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${pageIdx === i ? 'bg-[#0071E3] text-white' : 'border border-slate-200 bg-white text-slate-500'}`}
+                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${pageIdx === i ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
                       >
                         {page.label}
                       </button>
@@ -273,8 +273,8 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                                       isMine
                                         ? 'border-[#0071E3] bg-[#0071E3] text-white'
                                         : isOccupied || isRequested
-                                          ? 'border-slate-200 bg-slate-200 text-slate-400'
-                                          : 'border-slate-200 bg-white text-slate-700 hover:border-[#0071E3] hover:text-[#0071E3] active:scale-95'
+                                          ? 'border-slate-200 dark:border-white/10 bg-slate-200 dark:bg-white/10 text-slate-400'
+                                          : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-700 dark:text-slate-300 hover:border-[#0071E3] hover:text-[#0071E3] active:scale-95'
                                     }`}
                                   >
                                     {cell}
@@ -286,9 +286,9 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                             {page.hallwayAfterRow === ri && (
                               <div className="flex items-center justify-between px-1 py-1.5 text-[10px] font-bold text-slate-400">
                                 <span>{page.hallwayLabels?.left}</span>
-                                <span className="flex-1 border-t border-dashed border-slate-200 mx-2" />
+                                <span className="flex-1 border-t border-dashed border-slate-200 dark:border-white/10 mx-2" />
                                 <span>{page.hallwayLabels?.center}</span>
-                                <span className="flex-1 border-t border-dashed border-slate-200 mx-2" />
+                                <span className="flex-1 border-t border-dashed border-slate-200 dark:border-white/10 mx-2" />
                                 <span>{page.hallwayLabels?.right}</span>
                               </div>
                             )}
@@ -300,10 +300,10 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                   })()}
                 </div>
 
-                <div className="flex items-center gap-3 border-t border-slate-100 px-5 py-3 text-[10px] font-bold text-slate-500">
+                <div className="flex items-center gap-3 border-t border-slate-100 dark:border-white/10 px-5 py-3 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                   <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded border border-[#0071E3] bg-[#0071E3]" /> 내 자리</span>
-                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded border border-slate-200 bg-slate-200" /> 사용 중·신청됨</span>
-                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded border border-slate-200 bg-white" /> 신청 가능</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded border border-slate-200 dark:border-white/10 bg-slate-200 dark:bg-white/10" /> 사용 중·신청됨</span>
+                  <span className="inline-flex items-center gap-1"><span className="h-3 w-3 rounded border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e]" /> 신청 가능</span>
                 </div>
               </>
             )}

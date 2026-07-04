@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptic } from '@/lib/haptics';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar } from 'lucide-react';
 import { Student } from '@/lib/types/student';
 import { StudentNotification, StudentNotificationTone } from './notifications-section';
@@ -161,7 +162,7 @@ export function StudentLayout({
   const shouldUseQuickActiveKey = Boolean(selectedQuickItem && selectedQuickItem.tabId === activeTab);
 
   return (
-    <div className={`report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] px-4 font-sans text-[#1E293B] antialiased transition-all ${
+    <div className={`report-page min-h-screen bg-gradient-to-b from-[#F8FAFC] to-[#F1F5F9] dark:from-[#0b0b0c] dark:to-[#0b0b0c] px-4 font-sans text-[#1E293B] dark:text-slate-200 antialiased transition-all ${
       isStudentReport ? 'pt-8 pb-28 md:pt-16 md:pb-32' : 'py-8 md:py-16'
     }`}>
       {/* 등록 만료 3일 이내 경고 배너 */}
@@ -248,7 +249,7 @@ export function StudentLayout({
                 <button
                   type="button"
                   onClick={() => { setMobileMenuOpen((open) => !open); setNotificationPanelOpen(false); }}
-                  className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 bg-white/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+                  className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
                   aria-expanded={mobileMenuOpen}
                   aria-label="학습 메뉴 열기"
                 >
@@ -258,7 +259,7 @@ export function StudentLayout({
                 <AnimatePresence>
                 {mobileMenuOpen && (
                   <motion.div
-                    className="mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                    className="mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
                     style={{ transformOrigin: 'top left' }}
                     initial={{ opacity: 0, scale: 0.96, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -268,7 +269,7 @@ export function StudentLayout({
                     <div className="mb-2 flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 pb-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Menu</p>
-                        <p className="mt-0.5 text-sm font-black text-slate-900">학습 메뉴</p>
+                        <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-slate-100">학습 메뉴</p>
                       </div>
                       <button
                         type="button"
@@ -294,20 +295,22 @@ export function StudentLayout({
                               selectStudentTab(id);
                             }}
                             className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${
-                              activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-white'
+                              activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5 dark:bg-[#0071E3]/15' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-white/5'
                             }`}
                           >
                             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
                               <Icon className="h-4 w-4" />
                             </span>
                             <span className="min-w-0">
-                              <span className="block truncate text-[11px] font-black text-slate-800">{item.label}</span>
+                              <span className="block truncate text-[11px] font-black text-slate-800 dark:text-slate-200">{item.label}</span>
                               <span className="block truncate text-[10px] font-bold text-slate-400">{item.meta}</span>
                             </span>
                           </a>
                         );
                       })}
                     </div>
+
+                    <ThemeToggle className="mt-2 min-h-12 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200" />
                   </motion.div>
                 )}
                 </AnimatePresence>
@@ -317,7 +320,7 @@ export function StudentLayout({
                 <button
                   type="button"
                   onClick={() => { setNotificationPanelOpen((open) => !open); setMobileMenuOpen(false); }}
-                  className="relative grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 bg-white/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+                  className="relative grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
                   aria-expanded={notificationPanelOpen}
                   aria-label={`알림 열기, 현재 ${notificationCount}개`}
                 >
@@ -332,7 +335,7 @@ export function StudentLayout({
                 <AnimatePresence>
                 {notificationPanelOpen && (
                   <motion.div
-                    className="mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200/80 bg-white/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                    className="mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
                     style={{ transformOrigin: 'top right' }}
                     initial={{ opacity: 0, scale: 0.96, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}

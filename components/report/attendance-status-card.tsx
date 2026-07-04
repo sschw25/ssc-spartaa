@@ -77,25 +77,25 @@ export function AttendanceStatusCard() {
     : 0;
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] bg-white p-6 md:p-8 shadow-sm space-y-5">
+    <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 md:p-8 shadow-sm space-y-5">
       <div className="flex flex-col gap-4">
         {/* 상단: 상태 표시 */}
         <div className="flex items-center gap-3.5 pb-2">
           <span
             className={`grid size-12 shrink-0 place-items-center rounded-2xl ${
-              status.loading ? 'bg-slate-100 text-slate-400' : checkedIn ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-500'
+              status.loading ? 'bg-slate-100 dark:bg-white/10 text-slate-400' : checkedIn ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 dark:bg-white/10 text-slate-500'
             }`}
           >
             {status.loading ? <Loader2 className="size-5 animate-spin" /> : checkedIn ? <LogIn className="size-5" /> : <LogOut className="size-5" />}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">현재 등하원 상태</p>
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">현재 등하원 상태</p>
             {status.loading ? (
               <p className="mt-0.5 text-lg font-black text-slate-400">확인 중…</p>
             ) : checkedIn ? (
               <div className="mt-0.5 space-y-1">
                 <div className="flex flex-wrap items-baseline gap-x-1.5">
-                  <span className="text-lg font-black text-slate-900">등원 중</span>
+                  <span className="text-lg font-black text-slate-900 dark:text-slate-100">등원 중</span>
                   {status.since && (
                     <span className="text-xs font-bold text-[#0071E3] whitespace-nowrap">
                       {timeKST(status.since)}부터
@@ -104,7 +104,7 @@ export function AttendanceStatusCard() {
                 </div>
                 {elapsedMin > 0 && (
                   <div className="pt-0.5">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
                       <Flame className="size-3 shrink-0" />
                       {fmtMin(elapsedMin)}째 집중 중
                     </span>
@@ -112,19 +112,19 @@ export function AttendanceStatusCard() {
                 )}
               </div>
             ) : (
-              <p className="mt-0.5 text-lg font-black text-slate-900">하원 상태</p>
+              <p className="mt-0.5 text-lg font-black text-slate-900 dark:text-slate-100">하원 상태</p>
             )}
           </div>
         </div>
 
         {/* 하단: 안내 박스 */}
-        <div className="flex items-start gap-2.5 rounded-2xl bg-[#0071E3]/[0.06] p-4 ring-1 ring-[#0071E3]/15 w-full">
+        <div className="flex items-start gap-2.5 rounded-2xl bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 p-4 ring-1 ring-[#0071E3]/15 w-full">
           <ScanLine className="mt-0.5 size-4 shrink-0 text-[#0071E3]" />
-          <div className="space-y-1.5 text-xs text-[#0F172A] leading-normal flex-1">
+          <div className="space-y-1.5 text-xs text-[#0F172A] dark:text-slate-300 leading-normal flex-1">
             <p className="font-semibold">
               등·하원은 <b>입구 키오스크의 QR</b>을 휴대폰으로 스캔하면 자동 처리돼요.
             </p>
-            <p className="text-[11px] text-slate-500 font-medium">
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               한 번 스캔할 때마다 등원 ↔ 하원이 전환됩니다.
             </p>
             <p className="text-[11px] text-[#F56300] font-semibold pt-1.5 border-t border-[#0071E3]/10">
@@ -136,9 +136,9 @@ export function AttendanceStatusCard() {
 
       {/* 오늘 등하원 타임라인 + 오늘 순공 */}
       {!status.loading && (
-        <div className="rounded-2xl bg-[#F5F5F7] p-4 space-y-3">
+        <div className="rounded-2xl bg-[#F5F5F7] dark:bg-white/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500">오늘 학습 시간</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">오늘 학습 시간</span>
             <span className="text-sm font-black text-[#0071E3]">{fmtMin(status.todayMinutes)}</span>
           </div>
           {status.todaySessions.length > 0 ? (
@@ -148,9 +148,9 @@ export function AttendanceStatusCard() {
                   <span className="inline-flex shrink-0 items-center gap-1 font-bold text-emerald-600">
                     <LogIn className="size-3" /> {timeKST(s.checkIn)}
                   </span>
-                  <span className="h-px flex-1 border-t border-dashed border-slate-300" />
+                  <span className="h-px flex-1 border-t border-dashed border-slate-300 dark:border-slate-600" />
                   {s.checkOut ? (
-                    <span className="inline-flex shrink-0 items-center gap-1 font-bold text-slate-500">
+                    <span className="inline-flex shrink-0 items-center gap-1 font-bold text-slate-500 dark:text-slate-400">
                       <LogOut className="size-3" /> {timeKST(s.checkOut)}
                     </span>
                   ) : (

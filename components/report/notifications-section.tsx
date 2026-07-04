@@ -36,29 +36,29 @@ const NOTIFICATION_TONE_ICON: Record<StudentNotificationTone, React.ElementType>
 
 const NOTIFICATION_TONE_CLASS: Record<StudentNotificationTone, { item: string; icon: string; label: string }> = {
   blue: {
-    item: 'border-[#0071E3]/15 bg-[#0071E3]/[0.04]',
+    item: 'border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:border-white/10 dark:bg-[#0071E3]/15',
     icon: 'bg-[#0071E3] text-white',
-    label: 'bg-[#0071E3]/10 text-[#0071E3]',
+    label: 'bg-[#0071E3]/10 text-[#0071E3] dark:bg-[#0071E3]/15',
   },
   emerald: {
-    item: 'border-emerald-200 bg-emerald-50/70',
+    item: 'border-emerald-200 bg-emerald-50/70 dark:border-emerald-500/20 dark:bg-emerald-500/10',
     icon: 'bg-emerald-600 text-white',
-    label: 'bg-emerald-100 text-emerald-700',
+    label: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300',
   },
   amber: {
-    item: 'border-amber-200 bg-amber-50/70',
+    item: 'border-amber-200 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/10',
     icon: 'bg-amber-500 text-white',
-    label: 'bg-amber-100 text-amber-700',
+    label: 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300',
   },
   red: {
-    item: 'border-red-200 bg-red-50/70',
+    item: 'border-red-200 bg-red-50/70 dark:border-red-500/20 dark:bg-red-500/10',
     icon: 'bg-red-500 text-white',
-    label: 'bg-red-100 text-red-700',
+    label: 'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-300',
   },
   slate: {
-    item: 'border-slate-200 bg-slate-50/80',
+    item: 'border-slate-200 bg-slate-50/80 dark:border-white/10 dark:bg-white/5',
     icon: 'bg-slate-500 text-white',
-    label: 'bg-slate-200 text-slate-600',
+    label: 'bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-slate-400',
   },
 };
 
@@ -105,7 +105,7 @@ function NotificationThread({
         <div className="space-y-1.5">
           {convo.map((m) => (
             <div key={m.id} className={`flex ${m.from === 'student' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold leading-4 whitespace-pre-wrap break-words ${m.from === 'student' ? 'bg-slate-900 text-white' : 'bg-white border border-[#0071E3]/20 text-slate-700'}`}>
+              <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold leading-4 whitespace-pre-wrap break-words ${m.from === 'student' ? 'bg-slate-900 text-white dark:bg-white/10' : 'bg-white border border-[#0071E3]/20 text-slate-700 dark:bg-[#1c1c1e] dark:text-slate-300'}`}>
                 <span className={`block text-[8px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'student' ? 'text-white/60' : 'text-[#0071E3]/70'}`}>
                   {m.from === 'student' ? '나' : '코멘터'}
                 </span>
@@ -121,7 +121,7 @@ function NotificationThread({
           onChange={(e) => setText(e.target.value)}
           rows={1}
           placeholder="코멘터에게 답장하기..."
-          className="min-h-9 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15"
+          className="min-h-9 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600"
         />
         <button
           type="button"
@@ -155,24 +155,24 @@ export function NotificationsSection({
 
   return (
     <section id="student-notifications" className={`scroll-mt-24 space-y-5 ${activeTab === 'student-notifications' ? '' : 'hidden print:block'}`}>
-      <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 shadow-sm md:p-6">
+      <div className="rounded-3xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-5 shadow-sm md:p-6 dark:border-white/10 dark:bg-[#0071E3]/15">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3] dark:bg-[#0071E3]/15">
               <Bell className="h-3.5 w-3.5" />
               Student Notifications
             </div>
-            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl dark:text-slate-100">
               {notificationCount > 0 ? `${studentName}님에게 온 알림 ${notificationCount}개` : `${studentName}님, 새 알림이 없습니다`}
             </h2>
-            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+            <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500 dark:text-slate-400">
               코멘터 답변, 신청 처리 상태, 성적 입력 안내처럼 지금 먼저 확인해야 할 내용을 한곳에 모았습니다.
             </p>
           </div>
           <button
             type="button"
             onClick={() => { slideDirRef.current = 1; setActiveTab('report-overview'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
-            className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl border border-[#0071E3]/20 bg-white px-4 text-xs font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98]"
+            className="inline-flex h-10 shrink-0 items-center justify-center rounded-2xl border border-[#0071E3]/20 bg-white px-4 text-xs font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98] dark:bg-[#1c1c1e]"
           >
             오늘 브리핑 보기
           </button>
@@ -184,7 +184,7 @@ export function NotificationsSection({
           <button
             type="button"
             onClick={() => setShowDismissed((value) => !value)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-500 shadow-sm transition hover:bg-slate-50 active:scale-[0.98]"
+            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-500 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400 dark:hover:bg-white/5"
           >
             {showDismissed ? '확인한 알림 접기' : `확인한 알림 ${dismissedCount}개`}
           </button>
@@ -192,7 +192,7 @@ export function NotificationsSection({
             <button
               type="button"
               onClick={onRestoreAllNotifications}
-              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white px-3 text-[11px] font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98]"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white px-3 text-[11px] font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98] dark:bg-[#1c1c1e]"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               모두 다시 알림으로
@@ -217,12 +217,12 @@ export function NotificationsSection({
                       <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${toneClass.label}`}>
                         {notification.label}
                       </span>
-                      <span className="text-[10px] font-bold text-slate-400">{formatNotificationDate(notification.date)}</span>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">{formatNotificationDate(notification.date)}</span>
                     </div>
-                    <h3 className="mt-2 text-sm font-black leading-5 text-slate-900">{notification.title}</h3>
-                    <p className="mt-1.5 whitespace-pre-wrap break-words text-xs font-semibold leading-5 text-slate-600">{notification.body}</p>
+                    <h3 className="mt-2 text-sm font-black leading-5 text-slate-900 dark:text-slate-100">{notification.title}</h3>
+                    <p className="mt-1.5 whitespace-pre-wrap break-words text-xs font-semibold leading-5 text-slate-600 dark:text-slate-400">{notification.body}</p>
                     {notification.meta && (
-                      <p className="mt-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500">
+                      <p className="mt-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                         신청 내용: {notification.meta}
                       </p>
                     )}
@@ -235,7 +235,7 @@ export function NotificationsSection({
                   <button
                     type="button"
                     onClick={() => onDismissNotification(notification.id)}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[11px] font-black text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[0.98]"
+                    className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 text-[11px] font-black text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-300 dark:hover:bg-white/5"
                     aria-label={`${notification.title} 확인했어요`}
                     title="확인하면 알림 배지에서 사라집니다"
                   >
@@ -248,23 +248,23 @@ export function NotificationsSection({
           })}
         </div>
       ) : notificationCount === 0 ? (
-        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center">
-          <Bell className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-black text-slate-700">확인할 알림이 없습니다.</p>
-          <p className="mt-1 text-xs font-semibold text-slate-400">신청 답변이나 코멘터 안내가 도착하면 이 화면 맨 위에 표시됩니다.</p>
+        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/80 p-8 text-center dark:border-white/10 dark:bg-white/5">
+          <Bell className="mx-auto h-8 w-8 text-slate-300 dark:text-slate-600" />
+          <p className="mt-3 text-sm font-black text-slate-700 dark:text-slate-300">확인할 알림이 없습니다.</p>
+          <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-400">신청 답변이나 코멘터 안내가 도착하면 이 화면 맨 위에 표시됩니다.</p>
         </div>
       ) : (
-        <p className="px-1 text-xs font-semibold text-slate-400">아래의 모의고사 · OT · 증빙 응답 카드를 확인해 주세요.</p>
+        <p className="px-1 text-xs font-semibold text-slate-400 dark:text-slate-400">아래의 모의고사 · OT · 증빙 응답 카드를 확인해 주세요.</p>
       )}
 
       {showDismissed && dismissedCount > 0 && (
-        <div className="no-print rounded-3xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm md:p-5">
+        <div className="no-print rounded-3xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm md:p-5 dark:border-white/10 dark:bg-white/5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Archived</p>
-              <h3 className="mt-1 text-sm font-black text-slate-800">확인한 알림</h3>
+              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400 dark:text-slate-400">Archived</p>
+              <h3 className="mt-1 text-sm font-black text-slate-800 dark:text-slate-200">확인한 알림</h3>
             </div>
-            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-slate-400">{dismissedCount}개</span>
+            <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-black text-slate-400 dark:bg-[#1c1c1e] dark:text-slate-400">{dismissedCount}개</span>
           </div>
           <div className="grid grid-cols-1 gap-3">
             {dismissedNotifications.map((notification) => {
@@ -275,7 +275,7 @@ export function NotificationsSection({
                   <button
                     type="button"
                     onClick={() => onRestoreNotification(notification.id)}
-                    className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-white/80 bg-white/90 text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-95"
+                    className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full border border-white/80 bg-white/90 text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-95 dark:border-white/10 dark:bg-[#1c1c1e]"
                     aria-label={`${notification.title} 다시 알림으로`}
                     title="다시 알림으로 되돌리기"
                   >
@@ -290,12 +290,12 @@ export function NotificationsSection({
                         <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${toneClass.label}`}>
                           {notification.label}
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400">{formatNotificationDate(notification.date)}</span>
+                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">{formatNotificationDate(notification.date)}</span>
                       </div>
-                      <h3 className="mt-2 text-sm font-black leading-5 text-slate-900">{notification.title}</h3>
-                      <p className="mt-1.5 whitespace-pre-wrap break-words text-xs font-semibold leading-5 text-slate-600">{notification.body}</p>
+                      <h3 className="mt-2 text-sm font-black leading-5 text-slate-900 dark:text-slate-100">{notification.title}</h3>
+                      <p className="mt-1.5 whitespace-pre-wrap break-words text-xs font-semibold leading-5 text-slate-600 dark:text-slate-400">{notification.body}</p>
                       {notification.meta && (
-                        <p className="mt-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500">
+                        <p className="mt-2 rounded-2xl border border-white/70 bg-white/70 px-3 py-2 text-[10px] font-semibold leading-4 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
                           신청 내용: {notification.meta}
                         </p>
                       )}
