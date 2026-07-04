@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
+import { AwayReplanPanel } from '@/components/admin/away-replan-panel';
 import { ProgressTab } from '@/components/admin/detail-tabs/progress-tab';
 import { ConsultTab } from '@/components/admin/detail-tabs/consult-tab';
 import { PenaltyTab } from '@/components/admin/detail-tabs/penalty-tab';
@@ -4627,6 +4628,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setAwaySchedules={handleUpdateAwaySchedules}
                 onApplyQuickAwaySchedules={handleApplyQuickAwaySchedules}
               />
+              <div className="mt-4">
+                <AwayReplanPanel student={student} />
+              </div>
             </TabsContent>
           </Tabs>
         </div>
