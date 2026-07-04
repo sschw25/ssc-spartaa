@@ -1,7 +1,8 @@
 // 정기 외출(AwaySchedule) → 상시 손실 슬롯 감지. 계획 재조정(C)의 단일 소스.
 // 외출 시간대를 학원 시간표(교시)와 겹쳐, 어떤 요일·슬롯이 상시로 막히는지 판정한다.
-import type { AwaySchedule, Student, SubjectProgress } from '@/lib/types/student';
+import type { AwaySchedule, Student, SubjectProgress, BookProgress, LectureProgress, DetailedPlan } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE, type StudyTimeKey } from '@/lib/academy-timetable';
+import { generateDetailedPlans } from '@/lib/progress-plan';
 
 const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 export type WeekdayKey = (typeof WEEKDAYS)[number];
@@ -85,6 +86,88 @@ export function getAffectedSubjects(student: Student, todayKey: string): Affecte
     const days = (subject.studyDays || []) as WeekdayKey[];
     const lost = days.filter((d) => impact.get(d)?.has(slot));
     if (lost.length > 0) out.push({ subject, lostStudyDays: lost });
+  }
+  return out;
+}
+
+// ── C-2. 외출 반영 계획 재생성 preview ──────────────────────────────────────
+export interface AwayReplanItem {
+  subjectId: string;
+  subjectName: string;
+  materialId: string;
+  materialType: 'book' | 'lecture';
+  title: string;
+  lostStudyDays: WeekdayKey[];
+  beforeStudyDays: WeekdayKey[];
+  afterStudyDays: WeekdayKey[];
+  beforeTargetDate: string;
+  afterTargetDate: string;
+  newPlans: DetailedPlan[];
+  diff: string;       // 사람이 읽는 요약
+  blocked: boolean;   // 남은 학습일이 없어 자동적용 불가(외출 재검토 권고)
+}
+
+function mdOf(dateKey: string): string {
+  const p = (dateKey || '').split('-');
+  return p.length === 3 ? `${Number(p[1])}-${Number(p[2])}` : dateKey;
+}
+
+function lastPlanEnd(plans: DetailedPlan[] | undefined, fallback: string): string {
+  const list = plans || [];
+  if (list.length === 0) return fallback;
+  return list.reduce((max, p) => (p.endDate > max ? p.endDate : max), list[0].endDate);
+}
+
+function replanMaterial(
+  subject: SubjectProgress,
+  material: BookProgress | LectureProgress,
+  materialType: 'book' | 'lecture',
+  lost: WeekdayKey[],
+): AwayReplanItem | null {
+  if (!material.goalType || material.goalValue == null) return null; // 목표 미설정 자료는 재생성 불가
+  const beforeStudyDays = (subject.studyDays || []) as WeekdayKey[];
+  const afterStudyDays = beforeStudyDays.filter((d) => !lost.includes(d));
+  const beforeTargetDate = material.targetDate || lastPlanEnd(material.detailedPlans, '');
+  const title = materialType === 'book' ? (material as BookProgress).title : (material as LectureProgress).name;
+
+  if (afterStudyDays.length === 0) {
+    return {
+      subjectId: subject.id, subjectName: subject.name, materialId: material.id, materialType, title,
+      lostStudyDays: lost, beforeStudyDays, afterStudyDays, beforeTargetDate, afterTargetDate: beforeTargetDate,
+      newPlans: [], diff: '외출로 이 과목의 학습일이 모두 사라져요 — 외출/시간표를 재검토해 주세요.', blocked: true,
+    };
+  }
+
+  const total = materialType === 'book' ? (material as BookProgress).totalPages : (material as LectureProgress).totalLectures;
+  const current = materialType === 'book' ? (material as BookProgress).currentPage : (material as LectureProgress).completedLectures;
+  const unit = materialType === 'book' ? (material as BookProgress).unit : '강';
+  const speed = materialType === 'lecture' ? ((material as LectureProgress).speedMultiplier ?? 1) : 1;
+  const { plans, calculatedTargetDate } = generateDetailedPlans(
+    material.id, total, materialType, material.goalType, material.goalValue, current,
+    unit, material.reviewPasses || [], afterStudyDays, speed, material.estimatedMinutesPerUnit,
+    subject.studyTime || '', material.category,
+  );
+  const diff = `주 ${beforeStudyDays.length}일→${afterStudyDays.length}일 · 마감 ${mdOf(beforeTargetDate)}→${mdOf(calculatedTargetDate)}`;
+  return {
+    subjectId: subject.id, subjectName: subject.name, materialId: material.id, materialType, title,
+    lostStudyDays: lost, beforeStudyDays, afterStudyDays, beforeTargetDate, afterTargetDate: calculatedTargetDate,
+    newPlans: plans, diff, blocked: false,
+  };
+}
+
+// 외출로 영향받는 모든 과목·자료의 재생성 preview. UI(미리보기)·적용(API) 공용.
+export function buildAwayReplan(student: Student, todayKey: string): AwayReplanItem[] {
+  const affected = getAffectedSubjects(student, todayKey);
+  const out: AwayReplanItem[] = [];
+  for (const { subject, lostStudyDays } of affected) {
+    for (const book of subject.books || []) {
+      const item = replanMaterial(subject, book, 'book', lostStudyDays);
+      if (item) out.push(item);
+    }
+    for (const lecture of subject.lectures || []) {
+      const item = replanMaterial(subject, lecture, 'lecture', lostStudyDays);
+      if (item) out.push(item);
+    }
   }
   return out;
 }
