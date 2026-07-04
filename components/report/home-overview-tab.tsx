@@ -279,6 +279,16 @@ export function HomeOverviewTab({
     return sum;
   }, [isStudentReport, student]);
 
+  // 최근(14일) 외출 반영 계획조정 — 홈에서 서브탭 없이 바로 확인.
+  const recentAwayReplans = React.useMemo(() => {
+    if (!isStudentReport) return [];
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    return (student.awayReplanNotices || [])
+      .filter((n) => (n.appliedAt || '') >= cutoff)
+      .slice(-5)
+      .reverse();
+  }, [isStudentReport, student]);
+
   const saveDeadlineAmount = async (goal: DeadlineGoal, amount: number) => {
     const safeAmount = Math.max(0, Math.min(goal.targetAmount, Math.round(amount)));
     setDeadlineSavingId(goal.id);
@@ -338,10 +348,24 @@ export function HomeOverviewTab({
       {isStudentReport ? (
         <div className="stagger-children w-full space-y-5">
           {totalMakeup > 0 && (
-            <p className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] font-bold text-amber-800">
+            <p className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/25 px-3.5 py-2.5 text-[12px] font-bold text-amber-800 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               최근 휴가로 이번 주 보강이 있어요 — 과목별 진도 탭에서 보강량을 확인하세요.
             </p>
+          )}
+          {recentAwayReplans.length > 0 && (
+            <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/12 dark:border-[#0071E3]/30 px-3.5 py-2.5 space-y-1.5">
+              <p className="flex items-center gap-2 text-[12px] font-bold text-[#0071E3]">
+                <CalendarDays className="h-4 w-4 shrink-0" />
+                외출 반영으로 학습 계획이 조정됐어요
+              </p>
+              {recentAwayReplans.map((n) => (
+                <p key={n.id} className="pl-6 text-[11px] font-semibold leading-4 text-slate-600 dark:text-slate-400">
+                  {n.subjectName} {n.materialTitle} · {n.summary}
+                </p>
+              ))}
+              <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">학습계획 · 주간 계획 탭에서 조정된 일정을 확인하세요.</p>
+            </div>
           )}
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 space-y-3">

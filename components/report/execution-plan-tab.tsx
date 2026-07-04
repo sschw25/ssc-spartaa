@@ -320,6 +320,17 @@ export function ExecutionPlanTab({
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.weekNumber - b.weekNumber || a.subject.localeCompare(b.subject));
   }, [deadlineGoals, isStudentReport, student.subjects, todayKey]);
 
+  // 최근(14일) 외출 반영으로 조정된 과목명 — 계획 항목에 '외출 반영' 배지 표시용.
+  const awayAdjustedSubjects = React.useMemo(() => {
+    if (!isStudentReport) return new Set<string>();
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    return new Set(
+      (student.awayReplanNotices || [])
+        .filter((n) => (n.appliedAt || '') >= cutoff)
+        .map((n) => n.subjectName),
+    );
+  }, [isStudentReport, student]);
+
   const saveDeadlinePlanAmount = async (entry: DeadlinePlanEntry, amount: number) => {
     if (!entry.goal) return;
     const safeAmount = Math.max(0, Math.min(entry.targetAmount, Math.round(amount)));
@@ -785,6 +796,11 @@ export function ExecutionPlanTab({
                       <h5 className="mt-1 truncate text-[13px] font-black text-slate-900 dark:text-slate-100">
                         {entry.subject} · {entry.title}
                       </h5>
+                      {awayAdjustedSubjects.has(entry.subject) && (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-1.5 py-0.5 text-[9px] font-bold text-[#0071E3]">
+                          외출 반영 조정됨
+                        </span>
+                      )}
                     </div>
                     <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
                       entry.done
