@@ -1,4 +1,5 @@
-import { BookProgress, DetailedPlan, LectureProgress, Student, ReviewPassSetting } from '@/lib/types/student';
+import { BookProgress, DetailedPlan, LectureProgress, Student, ReviewPassSetting, MakeupCarryover } from '@/lib/types/student';
+import { getCarryoverNet, weekKeyOf } from '@/lib/makeup-carryover';
 
 export type ProgressItemType = 'book' | 'lecture';
 
@@ -319,6 +320,7 @@ export function getMakeupAmount(
   leaveDates: Set<string>,
   leaveExemptions?: Map<string, LeaveExemption>,
   subjectStudyTime?: string,
+  carryovers?: MakeupCarryover[],
 ): { makeupTotal: number; perDay: number } {
   const day = new Date(today);
   day.setHours(0, 0, 0, 0);
@@ -350,9 +352,11 @@ export function getMakeupAmount(
     }
     cur.setDate(cur.getDate() + 1);
   }
-  if (leaveDaysWeighted <= 0) return { makeupTotal: 0, perDay: 0 };
-
-  const makeupTotal = Math.round(leaveDaysWeighted * dailyAmount);
+  const baseTotal = Math.round(leaveDaysWeighted * dailyAmount);
+  // 이월 오버레이: 이번 주에서 나간(out) 만큼 이번 주 보강 감소, 들어온(in) 만큼 증가.
+  const wk = weekKeyOf(toDateKey(day));
+  const net = carryovers && carryovers.length ? getCarryoverNet(carryovers, material.id, wk) : { out: 0, in: 0 };
+  const makeupTotal = Math.max(0, baseTotal - net.out + net.in);
   if (makeupTotal <= 0) return { makeupTotal: 0, perDay: 0 };
   const remaining = countStudyDaysInRange(day, end, studyDays, leaveDates); // 오늘~창끝, 휴가일 제외
   const perDay = remaining > 0 ? Math.ceil(makeupTotal / remaining) : makeupTotal;

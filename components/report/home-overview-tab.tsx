@@ -273,7 +273,7 @@ export function HomeOverviewTab({
     let sum = 0;
     for (const s of subjects) {
       for (const m of [...(s.books || []), ...(s.lectures || [])]) {
-        sum += getMakeupAmount(m, now, s.studyDays, leaveDates, exemptions, (s as { studyTime?: string }).studyTime).makeupTotal;
+        sum += getMakeupAmount(m, now, s.studyDays, leaveDates, exemptions, (s as { studyTime?: string }).studyTime, student.makeupCarryovers).makeupTotal;
       }
     }
     return sum;

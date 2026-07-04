@@ -788,7 +788,7 @@ export function SubjectProgressTab({
                           )}
 
                           {(() => {
-                            const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime);
+                            const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
                             return (
                               <>
                                 {mk.makeupTotal > 0 && (
@@ -1017,7 +1017,7 @@ export function SubjectProgressTab({
                           )}
 
                           {(() => {
-                            const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime);
+                            const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
                             return (
                               <>
                                 {mk.makeupTotal > 0 && (

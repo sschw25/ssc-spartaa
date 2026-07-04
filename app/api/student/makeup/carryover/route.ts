@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, patchStudentProgress } from '@/lib/store';
 import type { MakeupCarryover } from '@/lib/types/student';
+import { getMakeupAmount, getLeaveDates, getLeaveExemptions } from '@/lib/progress-plan';
 import { kstToday, getLeaveTypeLabel } from '@/lib/leave';
 import {
   CARRYOVER_COUPON_COST,
@@ -75,17 +76,24 @@ export async function POST(req: NextRequest) {
     if (!subject || !material) {
       return NextResponse.json({ success: false, message: '대상 학습 자료를 찾을 수 없습니다.' }, { status: 404 });
     }
-    const activePlan = (material.detailedPlans || []).find(
-      (p) => p.periodType === 'deadline' && weekKeyOf(p.startDate) === thisWeek,
-    );
-    if (!activePlan) {
-      return NextResponse.json({ success: false, message: '이번 주 이월할 기간 목표 계획이 없어요.' }, { status: 400 });
+    // 이월 상한(cap): 이번 주 활성 계획 기준. deadline=남은 목표, daily=이번 주 보강량.
+    const plans = material.detailedPlans || [];
+    const deadlinePlan = plans.find((p) => p.periodType === 'deadline' && weekKeyOf(p.startDate) === thisWeek);
+    let cap = 0;
+    if (deadlinePlan) {
+      cap = Math.max(0, Number(deadlinePlan.targetAmount || 0) - Number(deadlinePlan.actualAmount || 0));
+    } else {
+      const todayKey = kstToday();
+      const dailyActive = plans.find((p) => !p.periodType && p.startDate <= todayKey && todayKey <= p.endDate);
+      if (dailyActive) {
+        const todayDate = new Date(`${todayKey}T00:00:00`);
+        cap = getMakeupAmount(material, todayDate, subject.studyDays, getLeaveDates(student), getLeaveExemptions(student), subject.studyTime, student.makeupCarryovers).makeupTotal;
+      }
     }
-    const remaining = Math.max(0, Number(activePlan.targetAmount || 0) - Number(activePlan.actualAmount || 0));
-    if (remaining <= 0) {
-      return NextResponse.json({ success: false, message: '이번 주 남은 목표가 없어 이월할 게 없어요.' }, { status: 400 });
+    if (cap <= 0) {
+      return NextResponse.json({ success: false, message: '이번 주 이월할 보강이 없어요.' }, { status: 400 });
     }
-    const amount = Math.min(reqAmount, remaining);
+    const amount = Math.min(reqAmount, cap);
     const unit = materialType === 'book' ? ((material as { unit?: string }).unit || 'p') : '강';
     const title = materialType === 'book' ? (material as { title?: string }).title || '' : (material as { name?: string }).name || '';
 
