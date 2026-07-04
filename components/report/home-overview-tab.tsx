@@ -46,7 +46,6 @@ interface HomeOverviewTabProps {
   pendingAmount: number;
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
-  updateDeadlineProgress: (materialType: 'book' | 'lecture', materialId: string, planId: string, amount: number) => Promise<void>;
   homeAttend: { loading: boolean; checkedIn: boolean; todayMinutes: number; since: string | null; sinceToday: boolean };
   homeTotalMin: number;
   currentSubjectText: string;
@@ -87,7 +86,6 @@ export function HomeOverviewTab({
   pendingAmount,
   setPendingAmount,
   updatePlanCompletion,
-  updateDeadlineProgress,
   homeAttend,
   homeTotalMin,
   currentSubjectText,
@@ -116,9 +114,6 @@ export function HomeOverviewTab({
   const [ddayDate, setDdayDate] = useState('');
   const [ddayAdding, setDdayAdding] = useState(false);
   const [ddayDeleting, setDdayDeleting] = useState<string | null>(null);
-  const [deadlineSavingId, setDeadlineSavingId] = useState<string | null>(null);
-  const [deadlineEditId, setDeadlineEditId] = useState<string | null>(null);
-  const [deadlineEditAmount, setDeadlineEditAmount] = useState(0);
 
   const ddays: DDayEvent[] = student.ddays || [];
 
@@ -288,18 +283,6 @@ export function HomeOverviewTab({
       .slice(-5)
       .reverse();
   }, [isStudentReport, student]);
-
-  const saveDeadlineAmount = async (goal: DeadlineGoal, amount: number) => {
-    const safeAmount = Math.max(0, Math.min(goal.targetAmount, Math.round(amount)));
-    setDeadlineSavingId(goal.id);
-    try {
-      await updateDeadlineProgress(goal.materialType, goal.materialId, goal.planId, safeAmount);
-      setDeadlineEditId(null);
-      toast.success('주간 목표 진행량을 저장했어요.');
-    } finally {
-      setDeadlineSavingId(null);
-    }
-  };
 
   const renderCoachQuestList = () => {
     if (coachQuests.length === 0) return null;
@@ -525,12 +508,8 @@ export function HomeOverviewTab({
                 {activeDeadlineGoals.map((goal) => {
                   const done = goal.actualAmount >= goal.targetAmount;
                   const recommend = Math.min(Math.max(0, goal.targetAmount - goal.actualAmount), Math.max(0, goal.todayRecommend));
-                  // 예상목표치(오늘까지 누적 기대) 90% 이상 채우면 오늘 완료. '오늘 완료' 버튼은 예상목표치까지 채운다.
-                  const todayTarget = Math.min(goal.targetAmount, Math.round(goal.expectedAmount));
+                  // 예상목표치(오늘까지 누적 기대) 90% 이상이면 오늘 완료 표시. 홈은 요약만 — 입력은 실행계획 탭.
                   const metToday = goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount * 0.9;
-                  const fillGap = Math.max(0, todayTarget - goal.actualAmount);
-                  const isSaving = deadlineSavingId === goal.id;
-                  const isEditing = deadlineEditId === goal.id;
 
                   return (
                     <div key={goal.id} className="rounded-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3">
@@ -559,74 +538,12 @@ export function HomeOverviewTab({
                         </p>
                       </div>
 
-                      {!done && (
-                        <div className="mt-3 flex flex-wrap items-center gap-2">
-                          {metToday ? (
-                            <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 px-3 py-2 text-[11px] font-semibold text-emerald-700">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              오늘 완료
-                            </span>
-                          ) : fillGap > 0 ? (
-                            <button
-                              type="button"
-                              disabled={isSaving}
-                              onClick={() => saveDeadlineAmount(goal, todayTarget)}
-                              className="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0071E3] px-3 py-2 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-[0.97] disabled:opacity-40 sm:flex-none"
-                            >
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              오늘 완료
-                            </button>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setDeadlineEditId(isEditing ? null : goal.id);
-                              setDeadlineEditAmount(goal.actualAmount);
-                            }}
-                            className={`inline-flex min-h-9 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] ${
-                              metToday || fillGap <= 0 ? 'flex-1 sm:flex-none' : ''
-                            }`}
-                          >
-                            {metToday ? '수정 · 추가 입력' : '직접 입력'}
-                          </button>
-                        </div>
-                      )}
-
-                      {isEditing && (
-                        <div className="mt-3 rounded-xl border border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-3">
-                          <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">이번 주 누적 완료량</p>
-                          <div className="mt-2 flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setDeadlineEditAmount((v) => Math.max(0, v - 1))}
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
-                            >
-                              -
-                            </button>
-                            <span className="min-w-[4rem] text-center text-sm font-semibold text-slate-900 dark:text-slate-100">
-                              {deadlineEditAmount}{goal.unit}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setDeadlineEditAmount((v) => Math.min(goal.targetAmount, v + 1))}
-                              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
-                            >
-                              +
-                            </button>
-                            <button
-                              type="button"
-                              disabled={isSaving}
-                              onClick={() => saveDeadlineAmount(goal, deadlineEditAmount)}
-                              className="ml-auto rounded-full bg-slate-900 px-3 py-2 text-[11px] font-semibold text-white active:scale-[0.97] disabled:opacity-40"
-                            >
-                              저장
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
+                <p className="pt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                  진도 입력은 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 해요.
+                </p>
               </div>
             )}
 

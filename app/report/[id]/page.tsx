@@ -559,7 +559,6 @@ function StudentReportInner() {
           pendingAmount={pendingAmount}
           setPendingAmount={setPendingAmount}
           updatePlanCompletion={updatePlanCompletion}
-          updateDeadlineProgress={updateDeadlineProgress}
           homeAttend={homeAttend}
           homeTotalMin={homeTotalMin}
           currentSubjectText={currentSubjectText}
