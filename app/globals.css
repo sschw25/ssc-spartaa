@@ -173,6 +173,14 @@
     word-break: keep-all;
     overflow-wrap: break-word;
   }
+  /* 줄바꿈 균형 — 제목은 위/아래 줄 길이를 고르게(balance), 본문은 마지막 줄 외톨이 단어 방지(pretty).
+     "위 줄 길고 아래 줄 짧은" 들쭉날쭉 방지. 미지원 브라우저는 자동 무시(점진적 향상). */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Pretendard', var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
