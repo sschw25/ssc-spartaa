@@ -772,7 +772,7 @@ export default function AdminCalendarPage() {
                                     {ev.request.reason && (
                                       <div className="rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 px-3 py-2.5">
                                         <p className="text-[9px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">신청 사유</p>
-                                        <p className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 leading-relaxed break-all">{ev.request.reason}</p>
+                                        <p className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 leading-relaxed break-words">{ev.request.reason}</p>
                                       </div>
                                     )}
                                     {ev.request.adminReply && (
@@ -822,7 +822,7 @@ export default function AdminCalendarPage() {
                           <div><span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100">{student.name}</span><span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium ml-2">{campusLabel(student.campus)} · 코멘터 {student.manager || '없음'}</span></div>
                           <span className="text-[9px] font-black text-slate-400 bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded">코멘터 {log.manager}</span>
                         </div>
-                        <div className="rounded-lg bg-emerald-50/[0.2] dark:bg-emerald-500/10 border border-emerald-100/30 dark:border-white/10 p-2.5"><p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap break-all">{log.content}</p></div>
+                        <div className="rounded-lg bg-emerald-50/[0.2] dark:bg-emerald-500/10 border border-emerald-100/30 dark:border-white/10 p-2.5"><p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap break-words">{log.content}</p></div>
                       </div>
                     ))}
                   </div>
@@ -842,7 +842,7 @@ export default function AdminCalendarPage() {
                             <div><span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100">{student.name}</span><span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium ml-2">{campusLabel(student.campus)}</span></div>
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border ${isPenalty ? 'bg-red-50 dark:bg-red-500/10 text-red-700 border-red-100/50 dark:border-white/10' : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 border-emerald-100/50 dark:border-white/10'}`}>{isPenalty ? '벌점' : '상점'} {record.points}점</span>
                           </div>
-                          <div className="rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-2.5"><p className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 leading-relaxed break-all">{record.reason}</p></div>
+                          <div className="rounded-lg bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 p-2.5"><p className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 leading-relaxed break-words">{record.reason}</p></div>
                         </div>
                       );
                     })}

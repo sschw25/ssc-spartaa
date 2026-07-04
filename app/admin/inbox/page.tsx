@@ -1104,7 +1104,7 @@ export default function AdminInboxPage() {
                     <span className="text-[10px] text-slate-400 dark:text-slate-500">{selectedItem.date}</span>
                   </div>
                   <p className="font-extrabold text-slate-600 dark:text-slate-300 text-[11px] mt-1">{selectedItem.title}</p>
-                  <p className="text-slate-500 dark:text-slate-400 font-semibold mt-1 whitespace-pre-wrap leading-relaxed break-all bg-white dark:bg-[#1c1c1e] p-2.5 rounded-xl border border-slate-100 dark:border-white/10">
+                  <p className="text-slate-500 dark:text-slate-400 font-semibold mt-1 whitespace-pre-wrap leading-relaxed break-words bg-white dark:bg-[#1c1c1e] p-2.5 rounded-xl border border-slate-100 dark:border-white/10">
                     {selectedItem.content}
                   </p>
                 </div>

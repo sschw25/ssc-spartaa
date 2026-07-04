@@ -351,7 +351,7 @@ export default function AdminLeaveRequestsPage() {
                           {ev.request.reason && (
                             <div className="rounded-xl bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 px-3 py-2.5">
                               <p className="text-[9px] font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wide mb-1">신청 사유</p>
-                              <p className="text-[11px] font-semibold text-slate-900 dark:text-slate-200 leading-relaxed break-all">{ev.request.reason}</p>
+                              <p className="text-[11px] font-semibold text-slate-900 dark:text-slate-200 leading-relaxed break-words">{ev.request.reason}</p>
                             </div>
                           )}
                           {ev.request.adminReply && (
