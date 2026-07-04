@@ -181,6 +181,11 @@
   p {
     text-wrap: pretty;
   }
+  /* text-wrap-style 은 상속되므로 앱 컨테이너에 pretty 를 걸면 span·div·button 등 모든
+     텍스트가 외톨이 단어 방지를 받는다(제목은 위 element 규칙으로 balance 우선). */
+  .report-page, .admin-fluid-ui, .ios-app-bg {
+    text-wrap: pretty; /* 앱 텍스트 외톨이 단어 방지 */
+  }
   body {
     @apply bg-background text-foreground;
     font-family: 'Pretendard', var(--font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
