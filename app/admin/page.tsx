@@ -75,7 +75,7 @@ export default function AdminLoginPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F5F5F7] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#0b0b0c] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
         <p className="text-slate-500 text-sm">로그인 세션 확인 중...</p>
       </div>
@@ -83,7 +83,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#F5F5F7] via-white to-[#E5E7EB] flex flex-col items-center justify-center px-4 font-sans text-slate-900">
+    <main className="min-h-screen bg-gradient-to-br from-[#F5F5F7] via-white to-[#E5E7EB] dark:from-[#0b0b0c] dark:via-[#111113] dark:to-[#0b0b0c] flex flex-col items-center justify-center px-4 font-sans text-slate-900 dark:text-slate-100">
       <div className="w-full max-w-md">
 
         {/* Logo or Title */}
@@ -95,7 +95,7 @@ export default function AdminLoginPage() {
         </div>
 
         {/* Login Card */}
-        <Card className="border border-black/[0.05] shadow-xl rounded-2xl bg-white/80 backdrop-blur-md overflow-hidden">
+        <Card className="border border-black/[0.05] dark:border-white/10 shadow-xl rounded-2xl bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-md overflow-hidden">
           <CardHeader className="space-y-1 pb-6">
             <CardTitle className="text-xl font-bold text-center">관리자 로그인</CardTitle>
             <CardDescription className="text-center text-slate-500 text-xs">
@@ -106,14 +106,14 @@ export default function AdminLoginPage() {
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4">
               {errorMsg && (
-                <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 flex items-start gap-2.5 text-xs">
+                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/25 text-red-600 dark:text-red-400 rounded-xl px-4 py-3 flex items-start gap-2.5 text-xs">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{errorMsg}</span>
                 </div>
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-xs font-semibold text-slate-900">
+                <Label htmlFor="username" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                   아이디
                 </Label>
                 <div className="relative">
@@ -124,14 +124,14 @@ export default function AdminLoginPage() {
                     placeholder="admin"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="pl-10 py-5 rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-sm bg-white"
+                    className="pl-10 py-5 rounded-xl border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3] text-sm bg-white dark:bg-[#1c1c1e]"
                     required
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-semibold text-slate-900">
+                <Label htmlFor="password" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
                   비밀번호
                 </Label>
                 <div className="relative">
@@ -142,7 +142,7 @@ export default function AdminLoginPage() {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 py-5 rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-sm bg-white"
+                    className="pl-10 py-5 rounded-xl border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3] text-sm bg-white dark:bg-[#1c1c1e]"
                     required
                   />
                 </div>
