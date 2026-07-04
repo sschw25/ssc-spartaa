@@ -713,6 +713,16 @@ export function SubjectProgressTab({
                             </div>
                           )}
 
+                          {(() => {
+                            const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates);
+                            return mk.makeupTotal > 0 ? (
+                              <div className="mt-2.5">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
+                                  휴가 보강 +{mk.makeupTotal}{b.unit || 'p'} · 하루 +{mk.perDay}
+                                </span>
+                              </div>
+                            ) : null;
+                          })()}
                           <InputHeatmap inputLog={b.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />
 
                           {isStudentReport && (
@@ -927,6 +937,16 @@ export function SubjectProgressTab({
                             </div>
                           )}
 
+                          {(() => {
+                            const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates);
+                            return mk.makeupTotal > 0 ? (
+                              <div className="mt-2.5">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
+                                  휴가 보강 +{mk.makeupTotal}강 · 하루 +{mk.perDay}
+                                </span>
+                              </div>
+                            ) : null;
+                          })()}
                           <InputHeatmap inputLog={l.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />
 
                           {isStudentReport && (

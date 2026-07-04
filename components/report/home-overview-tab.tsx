@@ -10,6 +10,7 @@ import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
+import { getLeaveDates, getMakeupAmount } from '@/lib/progress-plan';
 
 type DailyPlanEntry = {
   id: string;
@@ -259,6 +260,24 @@ export function HomeOverviewTab({
   const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
   const activeDeadlineGoals = isStudentReport ? deadlineGoals.filter((goal) => goal.targetAmount > 0) : [];
 
+  // 휴가 보강 총합 — 이번 주 승인 휴가로 이월된 자료별 보강량의 합.
+  const totalMakeup = React.useMemo(() => {
+    if (!isStudentReport) return 0;
+    const leaveDates = getLeaveDates(student);
+    if (leaveDates.size === 0) return 0;
+    const now = new Date();
+    const subjects = student.subjects && student.subjects.length > 0
+      ? student.subjects
+      : [{ studyDays: undefined, books: student.books || [], lectures: student.lectures || [] }];
+    let sum = 0;
+    for (const s of subjects) {
+      for (const m of [...(s.books || []), ...(s.lectures || [])]) {
+        sum += getMakeupAmount(m, now, s.studyDays, leaveDates).makeupTotal;
+      }
+    }
+    return sum;
+  }, [isStudentReport, student]);
+
   const saveDeadlineAmount = async (goal: DeadlineGoal, amount: number) => {
     const safeAmount = Math.max(0, Math.min(goal.targetAmount, Math.round(amount)));
     setDeadlineSavingId(goal.id);
@@ -317,6 +336,12 @@ export function HomeOverviewTab({
     <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
       {isStudentReport ? (
         <div className="stagger-children w-full space-y-5">
+          {totalMakeup > 0 && (
+            <p className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[12px] font-bold text-amber-800">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              최근 휴가로 이번 주 보강이 있어요 — 과목별 진도 탭에서 보강량을 확인하세요.
+            </p>
+          )}
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="min-w-0 space-y-3">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/[0.07] px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
