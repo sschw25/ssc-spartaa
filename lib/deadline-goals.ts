@@ -1,5 +1,6 @@
 import type { Student, DetailedPlan, SubjectProgress, BookProgress, LectureProgress } from '@/lib/types/student';
 import { getPlanUnitMinutes, getDeadlinePace, getActiveStudyDays, getLeaveFractionByDate } from '@/lib/progress-plan';
+import { getCarryoverNet, weekKeyOf } from '@/lib/makeup-carryover';
 
 // ── 기간 목표(모드 B) 미션 파생 — 서버(missions-hub)와 클라이언트(use-report-state)가 공유하는 단일 소스 ──
 // 자료별 deadline plan(periodType==='deadline')을 모아 분(min) 정규화로 집계하고,
@@ -29,6 +30,8 @@ export interface DeadlineGoal {
   todayRecommend: number;
   aheadUnits: number;
   riskLevel: DeadlineRiskLevel;
+  carriedOut: number;   // 이번 주 → 다음 주로 이월해 나간 양(이번 주 목표에서 감산됨)
+  carriedIn: number;    // 지난 주에서 이번 주로 들어온 이월 양(이번 주 목표에 가산됨)
 }
 
 export interface DeadlineSummary {
@@ -101,8 +104,12 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
     (material.detailedPlans || [])
       .filter((plan) => plan.periodType === 'deadline' && isPlanActiveOnDate(plan, todayKey))
       .forEach((plan) => {
-        const pace = getDeadlinePace(plan, unitMinutes, today, studyDays, leaveByDate);
-        const targetAmount = Math.max(0, Number(plan.targetAmount || 0));
+        // 보강 이월 오버레이 — 이번 주 window 로 나간/들어온 이월을 유효 목표에 반영(원본 plan 불변).
+        const net = getCarryoverNet(student.makeupCarryovers, material.id, weekKeyOf(plan.startDate));
+        const baseTarget = Math.max(0, Number(plan.targetAmount || 0));
+        const targetAmount = Math.max(0, baseTarget - net.out + net.in);
+        const planForPace = net.out || net.in ? { ...plan, targetAmount } : plan;
+        const pace = getDeadlinePace(planForPace, unitMinutes, today, studyDays, leaveByDate);
         const actualRatio = targetAmount > 0 ? Math.min(1, pace.actualAmount / targetAmount) : 0;
         // 위험 판정은 "어제까지 했어야 할" 기준(expectedRatioPrior) — 오늘 몫을 아직 안 했다고
         // 위험으로 표시하지 않는다(당일등록·당일수정 학생이 곧바로 danger 로 뜨는 문제 방지).
@@ -136,6 +143,8 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
           todayRecommend: pace.todayRecommend,
           aheadUnits: pace.aheadUnits,
           riskLevel,
+          carriedOut: net.out,
+          carriedIn: net.in,
         });
       });
   };

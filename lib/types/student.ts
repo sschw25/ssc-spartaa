@@ -6,6 +6,24 @@ export interface AwaySchedule {
   until: string;         // 'forever' 또는 'YYYY-MM-DD'
 }
 
+// 보강 이월 — 휴가로 생긴 이번 주 보강을 다음 주로 이월(쿠폰 소모). append-only 오버레이.
+export interface MakeupCarryover {
+  id: string;
+  createdAt: string;        // ISO
+  weekKey: string;          // 이월 출발 주(월요일 YYYY-MM-DD, KST)
+  nextWeekKey: string;      // 이월 도착 주(다음 주 월요일)
+  subjectId: string;
+  subjectName: string;
+  materialId: string;
+  materialType: 'book' | 'lecture';
+  materialTitle: string;
+  amount: number;           // 이월 보강량(단위 수)
+  unit: string;             // 'p' | '강' 등
+  leaveDate: string;        // 사유가 된 휴가일 YYYY-MM-DD
+  leaveType: string;        // morning/afternoon/night/fullday...
+  couponCost: number;       // 소모 쿠폰(3)
+}
+
 export interface DetailedPlan {
   id: string;
   materialId: string;      // 대상 교재/인강 ID
@@ -487,6 +505,8 @@ export interface Student {
   leaveRequests?: LeaveRequest[];
   // 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)
   leaveCoupons?: number;
+  // 보강 이월 내역 (휴가 보강을 다음 주로 이월 — 쿠폰 소모, append-only 오버레이)
+  makeupCarryovers?: MakeupCarryover[];
   // 쿠폰 리워드 교환/지급 내역
   rewardRedemptions?: RewardRedemption[];
   // 토요 지각 증빙 내역
