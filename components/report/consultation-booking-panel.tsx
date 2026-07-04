@@ -344,7 +344,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                 className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-bold ${
                   c.deputy
                     ? 'border-[#0071E3]/25 bg-[#0071E3]/[0.06] text-[#0071E3]'
-                    : 'border-slate-200 bg-white text-slate-600'
+                    : 'border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400'
                 }`}
               >
                 {c.deputy && <Star className="h-2.5 w-2.5 fill-current" />}
@@ -357,17 +357,17 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
 
       {/* 왜 상담 예정인지 */}
       {whyConsultation && (
-        <div className="rounded-2xl border border-[#0071E3]/15 bg-white px-3.5 py-3 text-[11px] font-semibold leading-5 text-slate-600">
+        <div className="rounded-2xl border border-[#0071E3]/15 bg-white px-3.5 py-3 text-[11px] font-semibold leading-5 text-slate-600 dark:bg-[#1c1c1e] dark:text-slate-400">
           <span className="font-semibold text-[#0071E3]">{whyConsultation.subjectName}</span> 과목의{' '}
-          <span className="font-semibold text-slate-800">『{whyConsultation.materialTitle}』</span>{' '}
+          <span className="font-semibold text-slate-800 dark:text-slate-200">『{whyConsultation.materialTitle}』</span>{' '}
           {whyConsultation.type === 'book' ? '교재' : '강의'} 학습 계획이{' '}
-          <span className="font-semibold text-slate-800">{whyConsultation.planEndDate}</span>에 끝날 예정이라,
+          <span className="font-semibold text-slate-800 dark:text-slate-200">{whyConsultation.planEndDate}</span>에 끝날 예정이라,
           그 즈음 클리닉 상담이 필요해요.
         </div>
       )}
 
       {loading ? (
-        <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-6 text-center text-[11px] font-bold text-slate-400">
+        <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-6 text-center text-[11px] font-bold text-slate-400 dark:border-white/10 dark:bg-[#1c1c1e]">
           상담 예약 정보를 불러오는 중...
         </div>
       ) : myBooking ? (
@@ -432,7 +432,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                   type="button"
                   onClick={() => respondAdminReschedule(false)}
                   disabled={rsBusy}
-                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-[#1c1c1e] dark:hover:bg-white/5"
                 >
                   거절
                 </button>
@@ -456,7 +456,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                 type="button"
                 onClick={cancelReschedule}
                 disabled={rsBusy}
-                className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50"
+                className="mt-2 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-[#1c1c1e] dark:hover:bg-white/5"
               >
                 {rsBusy ? '처리 중...' : '요청 취소'}
               </button>
@@ -476,9 +476,9 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
             </div>
           ) : (
             /* 변경 요청 날짜·시간 선택 */
-            <div className="mt-3 rounded-xl border border-[#0071E3]/15 bg-white px-3 py-3 space-y-3">
+            <div className="mt-3 rounded-xl border border-[#0071E3]/15 bg-white px-3 py-3 space-y-3 dark:bg-[#1c1c1e]">
               <div className="flex items-center justify-between">
-                <p className="text-[11px] font-bold text-slate-700">변경할 시간 선택</p>
+                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-300">변경할 시간 선택</p>
                 <button type="button" onClick={() => setRsOpen(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600">닫기</button>
               </div>
               {weekGroups.map((group) => (
@@ -496,10 +496,10 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                           onClick={() => setRsDate(day.date)}
                           className={`relative flex flex-col items-center rounded-xl border px-1.5 py-2 transition active:scale-[0.97] ${
                             day.full
-                              ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300'
+                              ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-white/10 dark:bg-white/5'
                               : active
                               ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400'
                           }`}
                         >
                           {deputy && !day.full && (
@@ -530,7 +530,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                             key={slot}
                             type="button"
                             onClick={() => setRsSlot(slot)}
-                            className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'}`}
+                            className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400'}`}
                           >
                             {slot}
                           </button>
@@ -576,10 +576,10 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                       onClick={() => setSelectedDate(day.date)}
                       className={`relative flex flex-col items-center rounded-xl border px-1.5 py-2 transition active:scale-[0.97] ${
                         day.full
-                          ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300'
+                          ? 'cursor-not-allowed border-slate-100 bg-slate-50 text-slate-300 dark:border-white/10 dark:bg-white/5'
                           : active
                           ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm'
-                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400'
                       }`}
                     >
                       {deputy && !day.full && (
@@ -600,8 +600,8 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
           ))}
 
           {selectedDay && !selectedDay.full && (
-            <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-3">
-              <p className="text-[11px] font-semibold text-slate-700">
+            <div className="rounded-2xl border border-slate-100 bg-white px-3.5 py-3 dark:border-white/10 dark:bg-[#1c1c1e]">
+              <p className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                 {mdLabel(selectedDay.date)}({weekdayLabel(selectedDay.weekday)}) · 담당 {selectedDay.counselor}
                 {isDeputy(selectedDay.counselor) ? ' (부원장 상담)' : ''}
               </p>
@@ -614,7 +614,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
                       key={slot}
                       type="button"
                       onClick={() => setSelectedSlot(slot)}
-                      className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40'}`}
+                      className={`rounded-xl border px-2 py-2 text-[11px] font-bold transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3] shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#0071E3]/40 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400'}`}
                     >
                       {slot}
                     </button>
@@ -697,7 +697,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
           <button
             type="button"
             onClick={() => { setExtraOpen(true); setExtraError(''); }}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3]"
+            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400"
           >
             <MessageSquarePlus className="h-3.5 w-3.5" /> 추가·긴급 상담 신청
           </button>
@@ -712,13 +712,13 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
               placeholder="신청 사유를 적어 주세요. 예) 모의고사 결과 상담이 급해요"
               rows={3}
               maxLength={500}
-              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
+              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
             />
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={() => { setExtraOpen(false); setExtraError(''); }}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50"
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-bold text-slate-500 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#1c1c1e] dark:hover:bg-white/5"
               >
                 닫기
               </button>

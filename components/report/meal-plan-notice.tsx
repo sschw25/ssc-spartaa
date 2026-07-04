@@ -81,7 +81,7 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
           <Utensils className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-900">
+          <p className="text-xs font-black text-slate-900 dark:text-slate-100">
             {weekRangeLabel(plan.weekStart)} 주 도시락 신청 · {plan.meals.map((m) => MEAL_KIND_LABELS[m]).join('·')}
           </p>
           <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
@@ -95,9 +95,9 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
       {/* 마감 전 — 끼니별 선택 그리드 */}
       {!plan.pastDeadline ? (
         <div className="px-4 pb-4 space-y-3">
-          <div className="overflow-hidden rounded-xl border border-[#F1DFC0] bg-white">
+          <div className="overflow-hidden rounded-xl border border-[#F1DFC0] bg-white dark:border-white/10 dark:bg-[#1c1c1e]">
             <table className="w-full text-center text-xs">
-              <thead className="bg-[#FFF3E0] text-[10px] font-black text-[#B45309]">
+              <thead className="bg-[#FFF3E0] dark:bg-[#B45309]/15 text-[10px] font-black text-[#B45309]">
                 <tr>
                   <th className="py-2 px-2">요일</th>
                   {plan.meals.map((k) => <th key={k} className="py-2 px-2">{MEAL_KIND_LABELS[k]}</th>)}
@@ -107,8 +107,8 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
                 {MEAL_DAYS.map((day) => {
                   const closed = isClosedDay(plan, day);
                   return (
-                    <tr key={day} className={closed ? 'bg-slate-50' : ''}>
-                      <td className="py-1.5 px-2 font-black text-slate-600">{MEAL_DAY_LABELS[day]}</td>
+                    <tr key={day} className={closed ? 'bg-slate-50 dark:bg-white/5' : ''}>
+                      <td className="py-1.5 px-2 font-black text-slate-600 dark:text-slate-400">{MEAL_DAY_LABELS[day]}</td>
                       {closed ? (
                         <td colSpan={plan.meals.length} className="py-1.5 px-2 text-[11px] font-bold text-slate-300">휴무</td>
                       ) : plan.meals.map((kind) => {
@@ -117,7 +117,7 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
                           <td key={kind} className="py-1.5 px-2">
                             <button type="button" onClick={() => toggle(day, kind)}
                               className={`h-8 w-full rounded-lg text-[11px] font-black border transition active:scale-95 ${
-                                on ? 'border-[#B45309] bg-[#F59E0B] text-white' : 'border-slate-200 bg-slate-50 text-slate-300'
+                                on ? 'border-[#B45309] bg-[#F59E0B] text-white' : 'border-slate-200 bg-slate-50 text-slate-300 dark:border-white/10 dark:bg-white/5'
                               }`}>
                               {on ? '먹음' : '—'}
                             </button>
@@ -137,7 +137,7 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
               {savedAt ? '신청 수정 저장' : '도시락 신청 저장'}
             </button>
             <button type="button" disabled={saving} onClick={saveNone}
-              className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-[#F1DFC0] bg-white px-4 py-2.5 text-xs font-semibold text-[#B45309] transition hover:bg-[#FFF3E0] disabled:opacity-50"
+              className="flex min-h-11 items-center justify-center gap-1.5 rounded-full border border-[#F1DFC0] bg-white px-4 py-2.5 text-xs font-semibold text-[#B45309] transition hover:bg-[#FFF3E0] disabled:opacity-50 dark:border-white/10 dark:bg-[#1c1c1e]"
               title="이번 주 도시락을 먹지 않는 것으로 저장">
               <XCircle className="w-3.5 h-3.5" />
               미신청
@@ -148,7 +148,7 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
       ) : (
         /* 마감 후 — 현재 신청 요약 + 추가신청 */
         <div className="px-4 pb-4 space-y-3">
-          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-semibold text-slate-600 flex items-center gap-2">
+          <div className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[11px] font-semibold text-slate-600 flex items-center gap-2 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400">
             <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>
               내 신청:{' '}
@@ -178,17 +178,17 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
               <p className="text-[11px] font-black text-slate-500">추가 신청 (선생님 승인 필요)</p>
               <div className="flex gap-2">
                 <select value={addDay} onChange={(e) => setAddDay(e.target.value as MealDay)}
-                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700 focus:outline-none">
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700 focus:outline-none dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-300">
                   {MEAL_DAYS.filter((d) => !isClosedDay(plan, d)).map((d) => <option key={d} value={d}>{MEAL_DAY_LABELS[d]}요일</option>)}
                 </select>
                 <select value={addMeal} onChange={(e) => setAddMeal(e.target.value as MealKind)}
-                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700 focus:outline-none">
+                  className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-bold text-slate-700 focus:outline-none dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-300">
                   {plan.meals.map((k) => <option key={k} value={k}>{MEAL_KIND_LABELS[k]}</option>)}
                 </select>
               </div>
               <input value={addReason} onChange={(e) => setAddReason(e.target.value)} maxLength={200}
                 placeholder="사유 (선택)"
-                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none" />
+                className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 focus:outline-none dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-300 dark:placeholder:text-slate-600" />
               <button type="button" disabled={addSubmitting} onClick={submitAdd}
                 className="w-full rounded-xl bg-slate-800 py-2.5 text-xs font-black text-white hover:bg-slate-900 transition disabled:opacity-50 flex items-center justify-center gap-1.5">
                 {addSubmitting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null} 추가 신청 보내기

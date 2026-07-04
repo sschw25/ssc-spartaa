@@ -68,7 +68,7 @@ export function SaturdayLateExcuseNotice({
           <AlertCircle className="w-5 h-5" />
         </div>
         <div className="space-y-1">
-          <h4 className="text-sm font-black text-slate-900">토요 지각 · 결석 사유 증빙 요청</h4>
+          <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">토요 지각 · 결석 사유 증빙 요청</h4>
           <p className="text-[11px] font-semibold text-slate-500 leading-normal">
             <b>{target.date}</b> 토요일에 반차/휴가 신청 없이 등원하지 않은 내역이 확인되었습니다. <br />
             정상 참작을 위해 지각/결석 사유를 입력하여 제출해 주시기 바랍니다.
@@ -85,7 +85,7 @@ export function SaturdayLateExcuseNotice({
           }}
           placeholder="예) 병원 긴급 진료로 인해 늦었습니다. / 독감으로 인해 등원하지 못했습니다."
           rows={2}
-          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
+          className="w-full resize-none rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs font-semibold text-slate-800 placeholder:text-slate-300 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.01)]"
         />
 
         {error && <p className="text-[10px] font-bold text-red-500">{error}</p>}

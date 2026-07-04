@@ -135,7 +135,7 @@ export function GradeAnalysisTab({
 
   return (
     <div id="grade-analysis" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'grade-analysis' ? '' : 'hidden print:block'}`}>
-      <h3 className="text-xs font-black text-slate-800 tracking-wider uppercase flex items-center gap-2">
+      <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 tracking-wider uppercase flex items-center gap-2">
         <Calendar className="w-4 h-4 text-emerald-600" />
         모의고사 성적 추이 및 주간 테스트 분석 결과
       </h3>
@@ -151,7 +151,7 @@ export function GradeAnalysisTab({
               onChange={(e) => setGradeForm((f) => ({ ...f, subject: e.target.value }))}
               placeholder="과목 (예: 국어)"
               list="grade-subject-options"
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
             />
             <datalist id="grade-subject-options">
               {[...new Set((student.subjects || []).map((s) => s.name).filter(Boolean))].map((name) => (
@@ -163,7 +163,7 @@ export function GradeAnalysisTab({
               onChange={(e) => setGradeForm((f) => ({ ...f, testName: e.target.value }))}
               placeholder="시험명 (예: 6월 모평)"
               list="weekly-mock-exam-options"
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
             />
             <datalist id="weekly-mock-exam-options">
               {weeklyMockExams.map((exam) => (
@@ -176,13 +176,13 @@ export function GradeAnalysisTab({
               value={gradeForm.score}
               onChange={(e) => setGradeForm((f) => ({ ...f, score: e.target.value }))}
               placeholder="점수"
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
             />
             <input
               type="date"
               value={gradeForm.date}
               onChange={(e) => setGradeForm((f) => ({ ...f, date: e.target.value }))}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
             />
           </div>
           {gradeError && <p className="text-[10px] font-bold text-red-500">{gradeError}</p>}
@@ -197,7 +197,7 @@ export function GradeAnalysisTab({
       )}
 
       {student.grades.length === 0 ? (
-        <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
+        <div className="p-8 text-center bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center gap-2.5">
           <Calendar className="w-7 h-7 text-slate-300" />
           <p className="text-xs font-bold text-slate-400">아직 성적 기록이 없어요.</p>
           <p className="text-[10px] text-slate-400/80 font-semibold">위 입력란에서 직접 추가하거나, 테스트 후 관리자가 입력하면 추이 그래프가 나타나요.</p>
@@ -206,12 +206,12 @@ export function GradeAnalysisTab({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-stretch">
 
           {/* 성적 차트 시각화 */}
-          <div className={`${isStudentReport ? 'md:col-span-2' : 'md:col-span-3'} p-5 rounded-3xl bg-gradient-to-br from-white to-slate-50/80 border border-slate-100 shadow-sm overflow-hidden relative`}>
+          <div className={`${isStudentReport ? 'md:col-span-2' : 'md:col-span-3'} p-5 rounded-3xl bg-gradient-to-br from-white to-slate-50/80 dark:from-[#1c1c1e] dark:to-[#1c1c1e] border border-slate-100 dark:border-white/10 shadow-sm overflow-hidden relative`}>
             <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full bg-[#0071E3]/[0.04] pointer-events-none" />
             <div className="absolute -left-4 -bottom-4 w-16 h-16 rounded-full bg-emerald-400/[0.04] pointer-events-none" />
             <div className="relative flex items-center justify-between mb-4">
               <div>
-                <h4 className="text-[11px] font-black text-slate-700 tracking-tight">성적 향상 곡선</h4>
+                <h4 className="text-[11px] font-black text-slate-700 dark:text-slate-300 tracking-tight">성적 향상 곡선</h4>
                 <p className="text-[9px] text-slate-400 font-bold mt-0.5">과목별 점수 추이 및 5회 가중평균</p>
               </div>
               <span className="text-[9px] font-black text-[#0071E3] bg-[#0071E3]/8 border border-[#0071E3]/15 px-2.5 py-1 rounded-full">최근 {chartData.length}회 시험</span>
@@ -284,14 +284,14 @@ export function GradeAnalysisTab({
 
           {/* 성적 목록 요약 */}
           {isStudentReport && (
-            <div className="p-5 rounded-3xl border border-slate-100 bg-white space-y-3.5 flex flex-col justify-between max-h-[280px] print:max-h-none shadow-sm">
+            <div className="p-5 rounded-3xl border border-slate-100 bg-white dark:border-white/10 dark:bg-[#1c1c1e] space-y-3.5 flex flex-col justify-between max-h-[280px] print:max-h-none shadow-sm">
               <div>
-                <h4 className="text-[10px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 pb-2">최근 실시한 시험 목록</h4>
+                <h4 className="text-[10px] font-black text-slate-400 tracking-wider uppercase border-b border-slate-100 dark:border-white/10 pb-2">최근 실시한 시험 목록</h4>
                 <div className="space-y-3 mt-3 overflow-y-auto max-h-[160px] pr-1 print:max-h-none print:overflow-visible print:pr-0">
                   {[...student.grades].sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(g => (
-                    <div key={g.id} className="flex justify-between items-center text-[10px] border-b border-slate-100/50 pb-2">
+                    <div key={g.id} className="flex justify-between items-center text-[10px] border-b border-slate-100/50 dark:border-white/10 pb-2">
                       <div className="min-w-0 flex items-center gap-1.5">
-                        <span className="font-extrabold text-slate-700 bg-slate-100 px-1.5 py-0.5 rounded-lg shrink-0">{g.subject}</span>
+                        <span className="font-extrabold text-slate-700 bg-slate-100 dark:bg-white/10 dark:text-slate-300 px-1.5 py-0.5 rounded-lg shrink-0">{g.subject}</span>
                         <span className="text-slate-500 font-semibold truncate max-w-[80px]">{g.testName}</span>
                         {g.source === 'student' && <span className="shrink-0 text-[7px] font-black text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.5 rounded-full">직접</span>}
                       </div>
@@ -362,7 +362,7 @@ export function GradeAnalysisTab({
                 href="https://band.us"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 px-3.5 py-2 text-[10px] font-bold transition shadow-sm flex items-center gap-1"
+                className="rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 dark:bg-[#1c1c1e] dark:border-white/10 dark:hover:bg-white/5 dark:text-slate-400 px-3.5 py-2 text-[10px] font-bold transition shadow-sm flex items-center gap-1"
               >
                 밴드 톡 바로가기
               </a>
@@ -408,7 +408,7 @@ export function GradeAnalysisTab({
         };
 
         return (
-          <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
+          <div className="mt-6 rounded-3xl border border-slate-100 bg-white dark:border-white/10 dark:bg-[#1c1c1e] p-5 shadow-sm space-y-4">
             <div className="flex justify-between items-start">
               <div>
                 <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">오답 원인 분석 (취약성 진단)</h4>
@@ -422,7 +422,7 @@ export function GradeAnalysisTab({
             </div>
 
             {totalIncorrect === 0 ? (
-              <div className="py-8 px-4 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-1.5">
+              <div className="py-8 px-4 text-center bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center gap-1.5">
                 <p className="text-xs font-bold text-slate-400">아직 오답 원인 분석 데이터가 부족합니다.</p>
                 <p className="text-[10px] text-slate-400/80 font-semibold">학습 진도 영역의 교재 목록에서 푼 문항 수 아래에 있는 '오답 사유 추가' 단추들을 눌러서 실수의 원인을 등록해보세요!</p>
               </div>
@@ -447,7 +447,7 @@ export function GradeAnalysisTab({
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute text-center">
-                    <p className="text-sm font-black text-slate-800">{totalIncorrect}건</p>
+                    <p className="text-sm font-black text-slate-800 dark:text-slate-200">{totalIncorrect}건</p>
                     <p className="text-[8px] font-bold text-slate-400">오답 총합</p>
                   </div>
                 </div>
@@ -457,11 +457,11 @@ export function GradeAnalysisTab({
                     const pct = ((d.value / totalIncorrect) * 100).toFixed(1);
                     return (
                       <div key={d.name} className="flex justify-between items-center text-xs font-bold">
-                        <span className="flex items-center gap-1.5 text-slate-600">
+                        <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
                           <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLORS[d.name as keyof typeof COLORS] }} />
                           {d.name}
                         </span>
-                        <span className="text-slate-700">
+                        <span className="text-slate-700 dark:text-slate-300">
                           {d.value}건 <span className="text-[10px] font-semibold text-slate-400">({pct}%)</span>
                         </span>
                       </div>
