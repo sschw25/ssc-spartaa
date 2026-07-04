@@ -211,6 +211,7 @@ function StudentReportInner() {
     deadlineGoals,
     deadlineSummary,
     incrementBookIncorrectTag,
+    applyCarryover,
     submitChecklist,
     studyTimeLabels,
     weekDaySlots,
@@ -629,6 +630,7 @@ function StudentReportInner() {
           updateBookSolvedQuestions={updateBookSolvedQuestions}
           incrementBookIncorrectTag={incrementBookIncorrectTag}
           updatePlanCompletion={updatePlanCompletion}
+          onCarryoverApplied={applyCarryover}
           materialBenchmarks={materialBenchmarks}
           activeTab={learningActiveTab}
           setActiveTab={selectReportTab}

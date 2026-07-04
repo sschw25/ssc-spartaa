@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Flame } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest } from '@/lib/types/student';
+import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -1925,6 +1925,15 @@ export function useReportState() {
 
   const tabIds = reportNavItems.map((item) => item.href.slice(1));
 
+  // 보강 이월 성공 시 조용한 낙관적 갱신(쿠폰 차감 + 이월 내역 추가) — 하드 리로드 대체.
+  const applyCarryover = (record: MakeupCarryover) => {
+    setStudent((prev) => (prev ? {
+      ...prev,
+      leaveCoupons: Math.max(0, (prev.leaveCoupons ?? 0) - (record.couponCost || 0)),
+      makeupCarryovers: [...(prev.makeupCarryovers || []), record],
+    } : prev));
+  };
+
   return {
     studentId,
     shareTokenParam,
@@ -2047,6 +2056,7 @@ export function useReportState() {
     deadlineGoals: deadlineDerivation.deadlineGoals,
     deadlineSummary: deadlineDerivation.deadlineSummary,
     incrementBookIncorrectTag,
+    applyCarryover,
     submitChecklist,
     studyTimeLabels: STUDY_TIME_LABELS,
     weekDaySlots: WEEK_DAY_SLOTS,

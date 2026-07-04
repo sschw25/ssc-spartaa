@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BookOpen, Tv, FileText, Pencil, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
-import { Student, DetailedPlan } from '@/lib/types/student';
+import { Student, DetailedPlan, MakeupCarryover } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
   formatPaceComparison,
@@ -63,6 +63,7 @@ interface SubjectProgressTabProps {
   updateBookSolvedQuestions: (materialId: string, solvedQuestions: number) => void;
   incrementBookIncorrectTag: (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => void;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
+  onCarryoverApplied?: (record: MakeupCarryover) => void;
   materialBenchmarks: MaterialBenchmarkMap;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -75,6 +76,7 @@ export function SubjectProgressTab({
   updateBookSolvedQuestions,
   incrementBookIncorrectTag,
   updatePlanCompletion,
+  onCarryoverApplied,
   materialBenchmarks,
   activeTab,
   setActiveTab,
@@ -117,7 +119,8 @@ export function SubjectProgressTab({
       const j = await res.json();
       if (res.ok && j.success) {
         toast.success(j.message || '다음 주로 이월했어요.');
-        setTimeout(() => window.location.reload(), 900);
+        // 하드 리로드 대신 조용한 낙관적 갱신(쿠폰 차감·이월 내역 반영).
+        if (j.carryover) onCarryoverApplied?.(j.carryover);
       } else {
         toast.error(j.message || '이월에 실패했어요.');
       }
