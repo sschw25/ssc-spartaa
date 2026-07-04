@@ -234,6 +234,46 @@ export function getManagedProgressItems(students: Student[], today = new Date())
   });
 }
 
+// 이번 주(현재 활성 일일 plan 창) 안에서 오늘 이전 휴가 학습일 × 일일량을 남은 학습일(오늘~창끝)에 분배.
+// 기간 목표(periodType) plan 은 제외. 남은 학습일 0 이면 makeupTotal 을 perDay 로 반환.
+export function getMakeupAmount(
+  material: BookProgress | LectureProgress,
+  today: Date,
+  studyDays: string[] | undefined,
+  leaveDates: Set<string>,
+): { makeupTotal: number; perDay: number } {
+  const day = new Date(today);
+  day.setHours(0, 0, 0, 0);
+  const plans = (material.detailedPlans || []).filter((p) => !p.periodType);
+  const active = plans.find((p) => {
+    const s = parseDate(p.startDate);
+    const e = parseDate(p.endDate);
+    return s && e && s <= day && day <= e;
+  });
+  if (!active) return { makeupTotal: 0, perDay: 0 };
+
+  const start = parseDate(active.startDate);
+  const end = parseDate(active.endDate);
+  if (!start || !end) return { makeupTotal: 0, perDay: 0 };
+  const dailyAmount = Math.max(1, Math.round(active.dailyAmount ?? Math.ceil((active.targetAmount || 1) / 6)));
+
+  const yesterday = new Date(day);
+  yesterday.setDate(day.getDate() - 1);
+  let leaveStudyDaysBefore = 0;
+  const cur = new Date(start);
+  cur.setHours(0, 0, 0, 0);
+  while (cur <= yesterday && cur <= end) {
+    if (isStudyDay(cur, studyDays) && leaveDates.has(toDateKey(cur))) leaveStudyDaysBefore++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  if (leaveStudyDaysBefore === 0) return { makeupTotal: 0, perDay: 0 };
+
+  const makeupTotal = leaveStudyDaysBefore * dailyAmount;
+  const remaining = countStudyDaysInRange(day, end, studyDays, leaveDates); // 오늘~창끝, 휴가일 제외
+  const perDay = remaining > 0 ? Math.ceil(makeupTotal / remaining) : makeupTotal;
+  return { makeupTotal, perDay };
+}
+
 export function getEstimatedStudyTimeMin(
   unit: string | undefined,
   amount: number,
