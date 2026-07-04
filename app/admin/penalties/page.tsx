@@ -3,13 +3,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  ChevronLeft, Shield, RefreshCw, Loader2, TrendingDown, TrendingUp, Search, X,
+  ChevronLeft, Shield, Loader2, TrendingDown, TrendingUp, Search, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { toast } from 'sonner';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { AdminNavActions } from '@/components/admin/admin-nav-actions';
 import { PenaltyTab } from '@/components/admin/detail-tabs/penalty-tab';
 import type { Student } from '@/lib/types/student';
 
@@ -84,7 +85,7 @@ export default function PenaltiesPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
-      <AdminTopNav title="벌점 · 상점 관리" onLogout={handleLogout} />
+      <AdminTopNav title="벌점 · 상점 관리" onLogout={handleLogout} actions={<AdminNavActions onRefresh={loadStudents} loading={loading} onLogout={handleLogout} />} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-5">
         {/* 헤더 */}
@@ -106,15 +107,6 @@ export default function PenaltiesPage() {
               학생 클릭 시 벌점/상점 부여 및 내역 확인
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadStudents}
-            className="shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            새로고침
-          </Button>
         </div>
 
         {/* 요약 통계 */}

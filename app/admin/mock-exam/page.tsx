@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  ChevronLeft, ClipboardCheck, RefreshCw, Loader2, Plus, Trash2,
+  ChevronLeft, ClipboardCheck, Loader2, Plus, Trash2,
   CheckCircle2, XCircle, HelpCircle, Send, Bell, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, MockExam, MockExamParticipation } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { AdminNavActions } from '@/components/admin/admin-nav-actions';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
@@ -285,7 +286,7 @@ export default function MockExamPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
-      <AdminTopNav title="모의고사 참여 체크" onLogout={handleLogout} />
+      <AdminTopNav title="모의고사 참여 체크" onLogout={handleLogout} actions={<AdminNavActions onRefresh={loadAll} loading={loading} onLogout={handleLogout} />} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         {/* 헤더 */}
@@ -307,15 +308,6 @@ export default function MockExamPage() {
               일정을 선택하고 학생별 참여/불참 여부를 기록합니다.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadAll}
-            className="ml-auto shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            새로고침
-          </Button>
         </div>
 
         {/* 일정 등록 */}

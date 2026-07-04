@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  ChevronLeft, CalendarClock, RefreshCw, Loader2, Plus, Trash2,
+  ChevronLeft, CalendarClock, Loader2, Plus, Trash2,
   CheckCircle2, XCircle, HelpCircle, Bell, MessageSquare, Ticket, Lightbulb,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, OtEvent, OtParticipation } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { AdminNavActions } from '@/components/admin/admin-nav-actions';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
@@ -169,7 +170,7 @@ export default function OtEventsPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
-      <AdminTopNav title="OT 참여 관리" titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
+      <AdminTopNav title="OT 참여 관리" titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} actions={<AdminNavActions onRefresh={loadAll} loading={loading} onLogout={handleLogout} />} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         <div className="flex items-center gap-3">
@@ -183,10 +184,6 @@ export default function OtEventsPage() {
             </h1>
             <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">OT 일정을 등록·알림하고 참여 학생에게 쿠폰을 지급합니다.</p>
           </div>
-          <Button variant="outline" size="sm" onClick={loadAll}
-            className="ml-auto shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5">
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> 새로고침
-          </Button>
         </div>
 
         {/* 쿠폰 안내 */}

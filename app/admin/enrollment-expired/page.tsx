@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { XCircle, ChevronLeft, Search, RefreshCw, Loader2, ArrowRight } from 'lucide-react';
+import { XCircle, ChevronLeft, Search, Loader2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 import { enrollmentDaysLeft } from '@/lib/student-flags';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { AdminNavActions } from '@/components/admin/admin-nav-actions';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
@@ -97,7 +98,7 @@ export default function EnrollmentExpiredPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
-      <AdminTopNav title="만료 경고 학생 목록" onLogout={handleLogout} />
+      <AdminTopNav title="만료 경고 학생 목록" onLogout={handleLogout} actions={<AdminNavActions onRefresh={loadStudents} loading={loading} onLogout={handleLogout} />} />
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
         {/* 헤더 */}
@@ -121,15 +122,6 @@ export default function EnrollmentExpiredPage() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadStudents}
-            className="shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            새로고침
-          </Button>
         </div>
 
         {/* 캠퍼스 + 검색 필터 */}

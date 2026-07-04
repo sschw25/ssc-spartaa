@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  ChevronLeft, MessageSquare, Search, RefreshCw, Loader2,
+  ChevronLeft, MessageSquare, Search, Loader2,
   Send, CheckSquare, Square, AlertTriangle, CheckCircle2, Bookmark, BookmarkPlus, X, Users,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -13,6 +13,7 @@ import { useConfirm, usePrompt } from '@/components/ui/confirm-dialog';
 import { Student } from '@/lib/types/student';
 import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { AdminNavActions } from '@/components/admin/admin-nav-actions';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const getCampusLabel = (c: string) =>
@@ -215,7 +216,7 @@ export default function MessagesPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
-      <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} />
+      <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} actions={<AdminNavActions onRefresh={loadStudents} loading={loading} onLogout={handleLogout} />} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-40 sm:px-6 space-y-6">
         {/* 헤더 */}
@@ -239,15 +240,6 @@ export default function MessagesPage() {
               </p>
             </div>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={loadStudents}
-            className="shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
-            새로고침
-          </Button>
         </div>
 
         {/* STEP 1 — 대상 선택 */}
