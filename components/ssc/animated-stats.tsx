@@ -5,7 +5,9 @@ import { motion, useInView, useSpring, useTransform } from 'framer-motion'
 
 function Counter({ value, suffix = '' }: { value: number; suffix?: string }) {
   const ref = useRef(null)
-  const inView = useInView(ref, { once: true, margin: '-100px' })
+  // amount(가시 비율)로 판정 — 예전 margin:'-100px'는 좌우도 100px 줄여서 오른쪽(합격률) 컬럼의
+  // 가운데 정렬 숫자가 좁은 화면에서 "화면 밖"으로 잡혀 카운트업이 0에 머무는 버그가 있었다.
+  const inView = useInView(ref, { once: true, amount: 0.4 })
   
   const spring = useSpring(0, {
     stiffness: 100,
