@@ -10,6 +10,10 @@ import {
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
 import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMakeupAmount, toDateKey, isStudyDay } from '@/lib/progress-plan';
+import { canCarryLeaveType, hasCarryoverInWeek, weekKeyOf, CARRYOVER_COUPON_COST, formatCarryoverMessage } from '@/lib/makeup-carryover';
+import { kstToday } from '@/lib/leave';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { toast } from 'sonner';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
 
 // 과목별 진도 입력 히트맵 — 최근 35일. 파랑=입력한 날 / 옅은칸=학습일·미입력 / 점=비학습일·휴가일.
@@ -81,6 +85,74 @@ export function SubjectProgressTab({
   const leaveDates = React.useMemo(() => getLeaveDates(student), [student]);
   // 슬롯-특정 부분면제(반차는 그 슬롯만) — 보강량 계산에 사용.
   const leaveExemptions = React.useMemo(() => getLeaveExemptions(student), [student]);
+
+  // ── 보강 이월(다음 주로, 쿠폰 소모) ──
+  const confirmDialog = useConfirm();
+  const [carrying, setCarrying] = React.useState(false);
+  const thisWeek = weekKeyOf(kstToday());
+  // 이번 주에 발생한, 이월 가능한(반차/휴식권) 승인 휴가 하나(이월 근거).
+  const deferLeave = React.useMemo(
+    () => (student.leaveRequests || []).find((r) => r.status === 'approved' && canCarryLeaveType(r.type) && weekKeyOf(r.date) === thisWeek),
+    [student.leaveRequests, thisWeek],
+  );
+  const alreadyCarried = hasCarryoverInWeek(student.makeupCarryovers, thisWeek);
+  const coupons = student.leaveCoupons ?? 0;
+
+  const handleCarryover = async (subjectId: string, materialId: string, materialType: 'book' | 'lecture', amount: number, unit: string) => {
+    if (!deferLeave || carrying) return;
+    const ok = await confirmDialog({
+      title: '이번 주 보강을 다음 주로 이월할까요?',
+      description: `이월권 ${CARRYOVER_COUPON_COST}장을 사용해 보강 ${amount}${unit}을 다음 주로 넘깁니다. (주 1회)`,
+      confirmText: '이월하기',
+    });
+    if (!ok) return;
+    setCarrying(true);
+    try {
+      const res = await fetch('/api/student/makeup/carryover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ leaveId: deferLeave.id, subjectId, materialId, materialType, amount }),
+      });
+      const j = await res.json();
+      if (res.ok && j.success) {
+        toast.success(j.message || '다음 주로 이월했어요.');
+        setTimeout(() => window.location.reload(), 900);
+      } else {
+        toast.error(j.message || '이월에 실패했어요.');
+      }
+    } catch {
+      toast.error('네트워크 오류로 이월에 실패했어요.');
+    } finally {
+      setCarrying(false);
+    }
+  };
+
+  // 보강 배지 아래 이월 버튼 + 이월 내역(자료별). book/lecture 공용.
+  const renderCarryoverUI = (subjectId: string, materialId: string, materialType: 'book' | 'lecture', makeupTotal: number, unit: string) => {
+    const mine = (student.makeupCarryovers || []).filter((c) => c.materialId === materialId);
+    const canOffer = isStudentReport && makeupTotal > 0 && !!deferLeave && !alreadyCarried && coupons >= CARRYOVER_COUPON_COST;
+    if (!canOffer && mine.length === 0) return null;
+    return (
+      <div className="mt-1.5 space-y-1">
+        {canOffer && (
+          <button
+            type="button"
+            disabled={carrying}
+            onClick={() => handleCarryover(subjectId, materialId, materialType, makeupTotal, unit)}
+            className="inline-flex items-center gap-1 rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.06] px-2.5 py-1 text-[11px] font-bold text-[#0071E3] transition hover:bg-[#0071E3]/10 disabled:opacity-50 dark:border-[#0071E3]/30 dark:bg-[#0071E3]/10"
+          >
+            다음 주로 이월 (이월권 {CARRYOVER_COUPON_COST})
+          </button>
+        )}
+        {mine.map((c) => (
+          <p key={c.id} className="text-[10px] font-semibold leading-4 text-slate-500 dark:text-slate-400">
+            ↪ {formatCarryoverMessage(c)}
+          </p>
+        ))}
+      </div>
+    );
+  };
 
   const getSeoulDateKey = () =>
     new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -717,13 +789,18 @@ export function SubjectProgressTab({
 
                           {(() => {
                             const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime);
-                            return mk.makeupTotal > 0 ? (
-                              <div className="mt-2.5">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
-                                  휴가 보강 +{mk.makeupTotal}{b.unit || 'p'} · 하루 +{mk.perDay}
-                                </span>
-                              </div>
-                            ) : null;
+                            return (
+                              <>
+                                {mk.makeupTotal > 0 && (
+                                  <div className="mt-2.5">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                                      휴가 보강 +{mk.makeupTotal}{b.unit || 'p'} · 하루 +{mk.perDay}
+                                    </span>
+                                  </div>
+                                )}
+                                {renderCarryoverUI(sub.id, b.id, 'book', mk.makeupTotal, b.unit || 'p')}
+                              </>
+                            );
                           })()}
                           <InputHeatmap inputLog={b.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />
 
@@ -941,13 +1018,18 @@ export function SubjectProgressTab({
 
                           {(() => {
                             const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime);
-                            return mk.makeupTotal > 0 ? (
-                              <div className="mt-2.5">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
-                                  휴가 보강 +{mk.makeupTotal}강 · 하루 +{mk.perDay}
-                                </span>
-                              </div>
-                            ) : null;
+                            return (
+                              <>
+                                {mk.makeupTotal > 0 && (
+                                  <div className="mt-2.5">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                                      휴가 보강 +{mk.makeupTotal}강 · 하루 +{mk.perDay}
+                                    </span>
+                                  </div>
+                                )}
+                                {renderCarryoverUI(sub.id, l.id, 'lecture', mk.makeupTotal, '강')}
+                              </>
+                            );
                           })()}
                           <InputHeatmap inputLog={l.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />
 
