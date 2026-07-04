@@ -85,8 +85,9 @@ function rowToStudent(r: any): Student {
     otEvents: r.ot_events || [],
     eventParticipations: r.event_participations || [],
     studentState: r.student_state || {},
-    // 보강 이월은 별도 컬럼 없이 student_state(jsonb)에 보관 — 마이그레이션 불필요.
+    // 보강 이월·외출 계획조정 통지는 별도 컬럼 없이 student_state(jsonb)에 보관 — 마이그레이션 불필요.
     makeupCarryovers: r.student_state?.makeupCarryovers || [],
+    awayReplanNotices: r.student_state?.awayReplanNotices || [],
     saturdayLateExcuses: r.saturday_late_excuses || [],
     phoneSubmissions: r.phone_submissions || [],
     awaySchedules: (r.away_schedules || []).map((item: unknown) => {
@@ -149,7 +150,7 @@ function studentToRow(student: Student, nowIso: string) {
     ot_events: student.otEvents || [],
     event_participations: student.eventParticipations || [],
     // enrollStartDate(이용 시작일)는 별도 컬럼 없이 student_state(jsonb)에 함께 보관 — 마이그레이션 불필요
-    student_state: { ...(student.studentState || {}), enrollStartDate: student.enrollStartDate || null, ddays, makeupCarryovers: student.makeupCarryovers || [] },
+    student_state: { ...(student.studentState || {}), enrollStartDate: student.enrollStartDate || null, ddays, makeupCarryovers: student.makeupCarryovers || [], awayReplanNotices: student.awayReplanNotices || [] },
     saturday_late_excuses: student.saturdayLateExcuses || [],
     away_schedules: student.awaySchedules || [],
     phone_submissions: student.phoneSubmissions || [],

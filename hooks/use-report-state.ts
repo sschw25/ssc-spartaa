@@ -1736,6 +1736,16 @@ export function useReportState() {
   }> | undefined) || [];
 
   const systemNotifications = [
+    // 정기 외출 반영으로 관리자가 계획을 조정했을 때 — 학생 홈 알림으로 노출.
+    ...((student.awayReplanNotices || []).map((n) => ({
+      id: `away-replan-${n.id}`,
+      tone: 'blue' as const,
+      label: '계획 조정',
+      title: '외출 반영으로 학습 계획이 조정됐어요',
+      body: `${n.subjectName} ${n.materialTitle}\n${n.summary}\n정기 외출 시간이 반영되어 계획이 자동으로 조정됐어요.`,
+      date: n.appliedAt,
+      priority: 2,
+    }))),
     // 출결판 미착석 알림(관리자 발송) — 확인(dismiss) 전까지 누적 노출
     ...((student.seatAlerts || []).map((alert) => ({
       id: `seat-alert-${alert.id}`,

@@ -24,6 +24,15 @@ export interface MakeupCarryover {
   couponCost: number;       // 소모 쿠폰(3)
 }
 
+// 정기외출 반영 계획조정 통지 — 관리자 적용 시 append, 학생 홈 알림으로 노출.
+export interface AwayReplanNotice {
+  id: string;
+  appliedAt: string;        // ISO
+  subjectName: string;
+  materialTitle: string;
+  summary: string;          // "주 3일→2일 · 마감 7-30→8-06" 등 diff
+}
+
 export interface DetailedPlan {
   id: string;
   materialId: string;      // 대상 교재/인강 ID
@@ -507,6 +516,8 @@ export interface Student {
   leaveCoupons?: number;
   // 보강 이월 내역 (휴가 보강을 다음 주로 이월 — 쿠폰 소모, append-only 오버레이)
   makeupCarryovers?: MakeupCarryover[];
+  // 정기외출 반영 계획조정 통지 (관리자 적용 시 append → 학생 홈 알림)
+  awayReplanNotices?: AwayReplanNotice[];
   // 쿠폰 리워드 교환/지급 내역
   rewardRedemptions?: RewardRedemption[];
   // 토요 지각 증빙 내역
