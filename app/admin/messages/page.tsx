@@ -225,7 +225,7 @@ export default function MessagesPage() {
               variant="outline"
               size="icon"
               onClick={() => router.push('/admin/dashboard')}
-              className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 transition active:scale-95 shrink-0"
+              className="h-9 w-9 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 transition active:scale-95 shrink-0"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -234,7 +234,7 @@ export default function MessagesPage() {
                 <MessageSquare className="w-5 h-5 text-blue-500" />
                 학생 메시지 발송
               </h1>
-              <p className="text-xs font-bold text-slate-400 mt-0.5">
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">
                 ① 발송할 학생을 먼저 선택하고 ② 아래에서 메시지를 작성해 발송합니다.
               </p>
             </div>
@@ -243,7 +243,7 @@ export default function MessagesPage() {
             variant="outline"
             size="sm"
             onClick={loadStudents}
-            className="shrink-0 rounded-xl text-xs h-9 bg-white border-slate-200 hover:bg-slate-50"
+            className="shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             새로고침
@@ -254,7 +254,7 @@ export default function MessagesPage() {
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <span className="grid place-items-center w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-black">1</span>
-            <p className="text-sm font-black text-slate-700">발송 대상 선택</p>
+            <p className="text-sm font-black text-slate-700 dark:text-slate-300">발송 대상 선택</p>
           </div>
 
           {/* 필터 */}
@@ -267,7 +267,7 @@ export default function MessagesPage() {
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                     campusFilter === c
                       ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                      : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
                   {c === 'all' ? '전체' : getCampusLabel(c)}
@@ -286,7 +286,7 @@ export default function MessagesPage() {
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                     filterMode === mode
                       ? 'border-amber-500 bg-amber-500 text-white'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                      : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
                   {label}
@@ -300,13 +300,13 @@ export default function MessagesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="학생명 또는 코멘터 검색"
-              className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 focus:border-slate-400 focus:outline-none transition-all"
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-slate-400 focus:outline-none transition-all"
             />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
           {/* 학생 목록 */}
-          <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+          <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
             {loading && students.length === 0 ? (
               <div className="py-20 text-center flex flex-col items-center gap-3">
                 <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
@@ -318,14 +318,14 @@ export default function MessagesPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
-                  <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  <thead className="bg-slate-50/80 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                     <tr>
                       <th className="px-4 py-4 w-10">
                         <button type="button" onClick={toggleAll}>
                           {allSelected
                             ? <CheckSquare className="w-4 h-4 text-blue-500" />
-                            : <Square className="w-4 h-4 text-slate-300" />}
+                            : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600" />}
                         </button>
                       </th>
                       <th className="px-4 py-4">학생</th>
@@ -334,7 +334,7 @@ export default function MessagesPage() {
                       <th className="px-4 py-4">비고</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100/60">
+                  <tbody className="divide-y divide-slate-100/60 dark:divide-white/10">
                     {filteredStudents.map((s) => {
                       const checked = selectedIds.has(s.id);
                       const noPhone = !s.parentPhone && !s.studentPhone;
@@ -344,42 +344,42 @@ export default function MessagesPage() {
                           key={s.id}
                           onClick={() => toggleOne(s.id)}
                           className={`cursor-pointer transition-colors ${
-                            checked ? 'bg-blue-50/60' : 'hover:bg-slate-50/60'
+                            checked ? 'bg-blue-50/60 dark:bg-[#0071E3]/15' : 'hover:bg-slate-50/60 dark:hover:bg-white/5'
                           }`}
                         >
                           <td className="px-4 py-4">
                             {checked
                               ? <CheckSquare className="w-4 h-4 text-blue-500" />
-                              : <Square className="w-4 h-4 text-slate-300" />}
+                              : <Square className="w-4 h-4 text-slate-300 dark:text-slate-600" />}
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-2">
-                              <span className="font-black text-slate-800">{s.name}</span>
-                              <Badge className="bg-slate-100 text-slate-500 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
+                              <span className="font-black text-slate-800 dark:text-slate-200">{s.name}</span>
+                              <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
                                 {getCampusLabel(s.campus)}
                               </Badge>
                             </div>
                           </td>
-                          <td className="px-4 py-4 font-bold text-slate-500">{s.manager || '미지정'}</td>
+                          <td className="px-4 py-4 font-bold text-slate-500 dark:text-slate-400">{s.manager || '미지정'}</td>
                           <td className="px-4 py-4">
                             {noPhone ? (
                               <span className="text-red-400 font-bold">연락처 없음</span>
                             ) : (
                               <div className="flex flex-col gap-0.5">
-                                {s.parentPhone && <span className="text-slate-500">학부모: {s.parentPhone}</span>}
-                                {s.studentPhone && <span className="text-slate-500">학생: {s.studentPhone}</span>}
+                                {s.parentPhone && <span className="text-slate-500 dark:text-slate-400">학부모: {s.parentPhone}</span>}
+                                {s.studentPhone && <span className="text-slate-500 dark:text-slate-400">학생: {s.studentPhone}</span>}
                               </div>
                             )}
                           </td>
                           <td className="px-4 py-4">
                             <div className="flex gap-1">
                               {gradesMissing && (
-                                <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">
+                                <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400">
                                   <AlertTriangle className="w-3 h-3" /> 성적 미입력
                                 </span>
                               )}
                               {noPhone && (
-                                <span className="inline-flex items-center gap-1 rounded-lg bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-700">
+                                <span className="inline-flex items-center gap-1 rounded-lg bg-red-100 dark:bg-red-500/10 px-2 py-0.5 text-[10px] font-black text-red-700 dark:text-red-400">
                                   연락처 없음
                                 </span>
                               )}
@@ -398,27 +398,27 @@ export default function MessagesPage() {
         {/* STEP 2 — 메시지 작성 (대상 선택 후 활성) */}
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <span className={`grid place-items-center w-6 h-6 rounded-full text-xs font-black ${selectedIds.size > 0 ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-400'}`}>2</span>
-            <p className={`text-sm font-black ${selectedIds.size > 0 ? 'text-slate-700' : 'text-slate-400'}`}>메시지 작성</p>
+            <span className={`grid place-items-center w-6 h-6 rounded-full text-xs font-black ${selectedIds.size > 0 ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-white/10 text-slate-400'}`}>2</span>
+            <p className={`text-sm font-black ${selectedIds.size > 0 ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'}`}>메시지 작성</p>
           </div>
 
           {selectedIds.size === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-5 py-8 text-center">
-              <Users className="w-7 h-7 text-slate-300 mx-auto mb-2" />
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 px-5 py-8 text-center">
+              <Users className="w-7 h-7 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
               <p className="text-xs font-bold text-slate-400">위에서 발송할 학생을 먼저 선택하세요.</p>
             </div>
           ) : (
-            <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-4">
+            <div className="rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-100 dark:border-white/10 shadow-sm p-5 space-y-4">
               {/* 선택 요약 */}
-              <div className="rounded-xl bg-blue-50 border border-blue-200/60 px-4 py-2.5 flex items-center gap-2.5">
+              <div className="rounded-xl bg-blue-50 dark:bg-[#0071E3]/15 border border-blue-200/60 dark:border-white/10 px-4 py-2.5 flex items-center gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />
-                <p className="text-xs font-black text-blue-700">{selectedIds.size}명에게 발송합니다.</p>
+                <p className="text-xs font-black text-blue-700 dark:text-blue-400">{selectedIds.size}명에게 발송합니다.</p>
                 <button type="button" onClick={() => setSelectedIds(new Set())} className="ml-auto text-[11px] font-bold text-blue-500 hover:text-blue-700">선택 취소</button>
               </div>
 
               {/* 발송 대상 */}
               <div className="flex flex-wrap gap-2">
-                <p className="text-xs font-bold text-slate-500 w-full">받는 사람</p>
+                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 w-full">받는 사람</p>
                 {(['parent', 'student'] as const).map((t) => (
                   <button
                     key={t}
@@ -427,7 +427,7 @@ export default function MessagesPage() {
                     className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                       targets.includes(t)
                         ? 'border-blue-600 bg-blue-600 text-white'
-                        : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                        : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                     }`}
                   >
                     {t === 'parent' ? '학부모' : '학생 본인'}
@@ -439,20 +439,20 @@ export default function MessagesPage() {
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5">
                   <Bookmark className="w-3.5 h-3.5 text-slate-400" />
-                  <p className="text-xs font-bold text-slate-500">자주 쓰는 문자 <span className="text-slate-300 font-medium">(관리자 공유)</span></p>
+                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">자주 쓰는 문자 <span className="text-slate-300 dark:text-slate-600 font-medium">(관리자 공유)</span></p>
                 </div>
                 {templates.length === 0 ? (
-                  <p className="text-[11px] font-semibold text-slate-300">저장된 템플릿이 없습니다. 아래에서 작성 후 "템플릿 저장"을 눌러보세요.</p>
+                  <p className="text-[11px] font-semibold text-slate-300 dark:text-slate-600">저장된 템플릿이 없습니다. 아래에서 작성 후 "템플릿 저장"을 눌러보세요.</p>
                 ) : (
                   <div className="flex flex-wrap gap-1.5">
                     {templates.map((t) => (
-                      <div key={t.id} className="group inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 hover:border-blue-300 transition overflow-hidden">
+                      <div key={t.id} className="group inline-flex items-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:border-blue-300 transition overflow-hidden">
                         <button type="button" onClick={() => setMessage(t.body)} title={t.body}
-                          className="px-2.5 py-1.5 text-[11px] font-black text-slate-600 group-hover:text-blue-600 max-w-[160px] truncate">
+                          className="px-2.5 py-1.5 text-[11px] font-black text-slate-600 dark:text-slate-400 group-hover:text-blue-600 max-w-[160px] truncate">
                           {t.title}
                         </button>
                         <button type="button" onClick={() => deleteTemplate(t.id)} title="템플릿 삭제"
-                          className="px-1.5 py-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 border-l border-slate-200">
+                          className="px-1.5 py-1.5 text-slate-300 dark:text-slate-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 border-l border-slate-200 dark:border-white/10">
                           <X className="w-3 h-3" />
                         </button>
                       </div>
@@ -468,7 +468,7 @@ export default function MessagesPage() {
                 placeholder="[SSC스파르타] 로 시작하는 메시지를 작성하세요. (최대 80자 권장)"
                 rows={4}
                 maxLength={200}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-800 focus:border-blue-400 focus:outline-none resize-none transition"
+                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-blue-400 focus:outline-none resize-none transition"
               />
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[11px] font-bold text-slate-400">{message.length}/200자</p>
@@ -477,7 +477,7 @@ export default function MessagesPage() {
                     variant="outline"
                     onClick={saveCurrentAsTemplate}
                     disabled={savingTpl || !message.trim()}
-                    className="rounded-xl text-xs font-black h-9 px-3 bg-white border-slate-200 hover:bg-slate-50 disabled:opacity-40"
+                    className="rounded-xl text-xs font-black h-9 px-3 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5 disabled:opacity-40"
                   >
                     {savingTpl ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <BookmarkPlus className="w-3.5 h-3.5 mr-1" />}
                     템플릿 저장

@@ -827,14 +827,14 @@ export default function AdminInboxPage() {
 
   if (checkingAuth) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#F8F9FA]">
+      <div className="flex h-screen items-center justify-center bg-[#F8F9FA] dark:bg-[#0b0b0c]">
         <Loader2 className="h-8 w-8 animate-spin text-[#0071E3]" />
       </div>
     );
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900 font-sans transition-all">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans transition-all">
       <AdminTopNav
         title="통합 신청 & 건의 인박스"
         onLogout={handleLogout}
@@ -843,7 +843,7 @@ export default function AdminInboxPage() {
             size="sm"
             variant="outline"
             onClick={() => loadStudents()}
-            className="rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-premium"
+            className="rounded-2xl border-black/[0.05] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/10 text-xs h-9.5 bg-white dark:bg-[#1c1c1e] px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-premium"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             새로고침
@@ -857,19 +857,19 @@ export default function AdminInboxPage() {
         <div className="lg:col-span-2 space-y-4">
           {/* 검색 — 신청 원생 / 코멘터 답장 / 전달 텍스트 */}
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="원생 이름 · 신청 내용 · 코멘터 답변으로 검색"
-              className="w-full rounded-2xl border border-slate-200 bg-white pl-10 pr-9 py-2.5 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 transition-all shadow-sm"
+              className="w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-10 pr-9 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 transition-all shadow-sm"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 hover:text-slate-500 dark:hover:text-slate-400"
                 aria-label="검색어 지우기"
               >
                 <X className="w-4 h-4" />
@@ -877,7 +877,7 @@ export default function AdminInboxPage() {
             )}
           </div>
 
-          <div className="flex flex-wrap gap-1.5 bg-[#F5F5F7] p-1 rounded-2xl border border-black/[0.02]">
+          <div className="flex flex-wrap gap-1.5 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-2xl border border-black/[0.02] dark:border-white/10">
             {CATEGORY_TABS.map((tab) => (
               <button
                 key={tab.value}
@@ -889,8 +889,8 @@ export default function AdminInboxPage() {
                 }}
                 className={`flex-1 rounded-xl py-2 px-3 text-xs font-bold transition-all text-center whitespace-nowrap ${
                   activeCategory === tab.value
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-white/40'
+                    ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/40 dark:hover:bg-white/10'
                 }`}
               >
                 {tab.label}
@@ -900,7 +900,7 @@ export default function AdminInboxPage() {
 
           <div className="flex flex-wrap items-center justify-between gap-2.5">
             {/* 정렬 셀렉터 */}
-            <div className="flex items-center gap-1 bg-[#F5F5F7] p-0.5 rounded-xl border border-black/[0.02]">
+            <div className="flex items-center gap-1 bg-[#F5F5F7] dark:bg-white/5 p-0.5 rounded-xl border border-black/[0.02] dark:border-white/10">
               <button
                 type="button"
                 onClick={() => {
@@ -913,8 +913,8 @@ export default function AdminInboxPage() {
                 }}
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
                   inboxSortField === 'status'
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 미처리순 {inboxSortField === 'status' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
@@ -931,8 +931,8 @@ export default function AdminInboxPage() {
                 }}
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
                   inboxSortField === 'date'
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 신청일순 {inboxSortField === 'date' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
@@ -949,8 +949,8 @@ export default function AdminInboxPage() {
                 }}
                 className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all flex items-center gap-1 ${
                   inboxSortField === 'name'
-                    ? 'bg-white text-black shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900'
+                    ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}
               >
                 이름순 {inboxSortField === 'name' && (inboxSortOrder === 'asc' ? '▲' : '▼')}
@@ -963,7 +963,7 @@ export default function AdminInboxPage() {
               className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold border transition-all ${
                 hideCompleted
                   ? 'bg-emerald-600 border-emerald-600 text-white shadow-sm'
-                  : 'bg-white border-slate-200 text-slate-500 hover:border-emerald-300 hover:text-emerald-700'
+                  : 'bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-emerald-300 hover:text-emerald-700 dark:hover:text-emerald-400'
               }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -977,15 +977,15 @@ export default function AdminInboxPage() {
             const selCount = approvable.filter((i) => selectedIds.has(i.id)).length;
             const allSel = approvable.length > 0 && selCount === approvable.length;
             return (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 cursor-pointer select-none">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-2.5 shadow-sm">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-300 cursor-pointer select-none">
                   <input
                     type="checkbox"
                     checked={allSel}
                     onChange={() => setSelectedIds(allSel ? new Set() : new Set(approvable.map((i) => i.id)))}
-                    className="h-4 w-4 rounded border-slate-300 accent-[#0071E3] cursor-pointer"
+                    className="h-4 w-4 rounded border-slate-300 dark:border-white/20 accent-[#0071E3] cursor-pointer"
                   />
-                  미처리 전체 선택 <span className="text-slate-400 font-semibold">({selCount}/{approvable.length})</span>
+                  미처리 전체 선택 <span className="text-slate-400 dark:text-slate-500 font-semibold">({selCount}/{approvable.length})</span>
                 </label>
                 <Button
                   size="sm"
@@ -1002,14 +1002,14 @@ export default function AdminInboxPage() {
 
           <div className="space-y-3 max-h-[75vh] overflow-y-auto pr-1">
             {loading && students.length === 0 ? (
-              <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 flex flex-col items-center justify-center gap-2">
+              <div className="p-12 text-center bg-white dark:bg-[#1c1c1e] rounded-3xl border border-slate-100 dark:border-white/10 flex flex-col items-center justify-center gap-2">
                 <RefreshCw className="w-6 h-6 animate-spin text-[#0071E3]" />
-                <p className="text-xs text-slate-400 font-bold">요청 목록을 동기화하는 중...</p>
+                <p className="text-xs text-slate-400 dark:text-slate-400 font-bold">요청 목록을 동기화하는 중...</p>
               </div>
             ) : sortedInboxItems.length === 0 ? (
-              <div className="p-12 text-center bg-white rounded-3xl border border-slate-100 flex flex-col items-center justify-center gap-2">
-                <Inbox className="w-8 h-8 text-slate-300" />
-                <p className="text-xs text-slate-400 font-bold">조회 대상 요청이 없습니다.</p>
+              <div className="p-12 text-center bg-white dark:bg-[#1c1c1e] rounded-3xl border border-slate-100 dark:border-white/10 flex flex-col items-center justify-center gap-2">
+                <Inbox className="w-8 h-8 text-slate-300 dark:text-slate-600" />
+                <p className="text-xs text-slate-400 dark:text-slate-400 font-bold">조회 대상 요청이 없습니다.</p>
               </div>
             ) : (
               sortedInboxItems.map((item) => {
@@ -1020,8 +1020,8 @@ export default function AdminInboxPage() {
                     onClick={() => handleSelectItem(item)}
                     className={`p-5 rounded-3xl border text-left cursor-pointer transition-all shadow-sm flex flex-col gap-3.5 ${
                       isSelected
-                        ? 'border-[#0071E3] bg-[#0071E3]/[0.02] ring-2 ring-[#0071E3]/15'
-                        : 'border-slate-100 bg-white hover:border-slate-200 hover:shadow-md'
+                        ? 'border-[#0071E3] bg-[#0071E3]/[0.02] dark:bg-[#0071E3]/15 ring-2 ring-[#0071E3]/15'
+                        : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:border-slate-200 dark:hover:border-white/20 hover:shadow-md'
                     }`}
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2">
@@ -1032,14 +1032,14 @@ export default function AdminInboxPage() {
                             checked={selectedIds.has(item.id)}
                             onClick={(e) => e.stopPropagation()}
                             onChange={() => toggleSelectOne(item.id)}
-                            className="h-4 w-4 rounded border-slate-300 accent-[#0071E3] cursor-pointer shrink-0"
+                            className="h-4 w-4 rounded border-slate-300 dark:border-white/20 accent-[#0071E3] cursor-pointer shrink-0"
                           />
                         )}
-                        <span className="font-black text-sm text-slate-800">{item.studentName}</span>
-                        <Badge className="rounded-md border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                        <span className="font-black text-sm text-slate-800 dark:text-slate-200">{item.studentName}</span>
+                        <Badge className="rounded-md border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400">
                           {getCampusLabel(item.campus)}
                         </Badge>
-                        <span className="text-[10px] font-semibold text-slate-400">{item.date}</span>
+                        <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">{item.date}</span>
                       </span>
 
                       {/* 상태 타임라인 뱃지 */}
@@ -1066,18 +1066,18 @@ export default function AdminInboxPage() {
                     </div>
 
                     <div className="space-y-1.5">
-                      <h4 className="text-xs font-black text-slate-700">{item.title}</h4>
-                      <p className="text-xs font-semibold text-slate-500 whitespace-pre-wrap leading-relaxed break-words bg-slate-50/50 p-3.5 rounded-2xl border border-slate-100/50">
+                      <h4 className="text-xs font-black text-slate-700 dark:text-slate-300">{item.title}</h4>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-pre-wrap leading-relaxed break-words bg-slate-50/50 dark:bg-white/5 p-3.5 rounded-2xl border border-slate-100/50 dark:border-white/10">
                         {item.content}
                       </p>
                     </div>
 
                     {item.adminReply && (
-                      <div className="text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.04] border border-[#0071E3]/10 p-3 rounded-2xl flex items-start gap-1.5">
+                      <div className="text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 border border-[#0071E3]/10 dark:border-[#0071E3]/25 p-3 rounded-2xl flex items-start gap-1.5">
                         <MessageSquare className="w-3.5 h-3.5 shrink-0 mt-0.5" />
                         <div className="min-w-0">
                           <p className="font-black text-[10px] text-[#0071E3]/80 uppercase tracking-wider">코멘터 답변 완료</p>
-                          <p className="mt-1 font-semibold whitespace-pre-wrap leading-normal text-slate-600">{item.adminReply}</p>
+                          <p className="mt-1 font-semibold whitespace-pre-wrap leading-normal text-slate-600 dark:text-slate-300">{item.adminReply}</p>
                         </div>
                       </div>
                     )}
@@ -1090,21 +1090,21 @@ export default function AdminInboxPage() {
 
         {/* 우측: 상세 처리 패널 */}
         <div className="space-y-4">
-          <Card className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm space-y-4">
-            <h3 className="text-xs font-black text-slate-500 tracking-wider uppercase border-b border-slate-100 pb-3 flex items-center gap-1.5">
+          <Card className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-sm space-y-4">
+            <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 tracking-wider uppercase border-b border-slate-100 dark:border-white/10 pb-3 flex items-center gap-1.5">
               <Inbox className="w-4 h-4 text-[#0071E3]" />
               요청 상세 및 실시간 피드백 처리
             </h3>
 
             {selectedItem ? (
               <div className="space-y-4">
-                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-                  <div className="flex justify-between items-center font-black text-slate-700 border-b border-slate-200/50 pb-2">
+                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 space-y-2 text-xs">
+                  <div className="flex justify-between items-center font-black text-slate-700 dark:text-slate-300 border-b border-slate-200/50 dark:border-white/10 pb-2">
                     <span>{selectedItem.studentName} ({getCampusLabel(selectedItem.campus)})</span>
-                    <span className="text-[10px] text-slate-400">{selectedItem.date}</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">{selectedItem.date}</span>
                   </div>
-                  <p className="font-extrabold text-slate-600 text-[11px] mt-1">{selectedItem.title}</p>
-                  <p className="text-slate-500 font-semibold mt-1 whitespace-pre-wrap leading-relaxed break-all bg-white p-2.5 rounded-xl border border-slate-100">
+                  <p className="font-extrabold text-slate-600 dark:text-slate-300 text-[11px] mt-1">{selectedItem.title}</p>
+                  <p className="text-slate-500 dark:text-slate-400 font-semibold mt-1 whitespace-pre-wrap leading-relaxed break-all bg-white dark:bg-[#1c1c1e] p-2.5 rounded-xl border border-slate-100 dark:border-white/10">
                     {selectedItem.content}
                   </p>
                 </div>
@@ -1122,12 +1122,12 @@ export default function AdminInboxPage() {
                   if (convo.length === 0) return null;
                   return (
                     <div className="space-y-2">
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-wider">대화 내역</p>
+                      <p className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">대화 내역</p>
                       <div className="space-y-2">
                         {convo.map((m) => (
                           <div key={m.id} className={`flex ${m.from === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold whitespace-pre-wrap break-words ${m.from === 'admin' ? 'bg-[#0071E3]/[0.06] border border-[#0071E3]/15 text-slate-700' : 'bg-slate-100 border border-slate-200 text-slate-700'}`}>
-                              <span className={`block text-[9px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'admin' ? 'text-[#0071E3]/70' : 'text-slate-400'}`}>
+                            <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-[11px] font-semibold whitespace-pre-wrap break-words ${m.from === 'admin' ? 'bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 border border-[#0071E3]/15 dark:border-[#0071E3]/25 text-slate-700 dark:text-slate-300' : 'bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-300'}`}>
+                              <span className={`block text-[9px] font-black uppercase tracking-wider mb-0.5 ${m.from === 'admin' ? 'text-[#0071E3]/70' : 'text-slate-400 dark:text-slate-500'}`}>
                                 {m.from === 'admin' ? (m.author || '코멘터') : '학생'}
                               </span>
                               {m.text}
@@ -1153,15 +1153,15 @@ export default function AdminInboxPage() {
                       });
                     }
                   }}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-[#F5F5F7] text-xs font-bold text-slate-600 py-2.5 transition-all active:scale-[0.98]"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 py-2.5 transition-all active:scale-[0.98]"
                 >
                   <User className="w-3.5 h-3.5 text-[#0071E3]" />
                   원생 상세 시트 열기
                 </button>
 
                 <div className="space-y-2">
-                  <label className="text-[11px] font-black text-slate-400 uppercase tracking-wider block">코멘터 답변 / 재답변 작성</label>
-                  <div className="flex items-end gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 focus-within:border-[#0071E3] focus-within:ring-2 focus-within:ring-[#0071E3]/20">
+                  <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">코멘터 답변 / 재답변 작성</label>
+                  <div className="flex items-end gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 focus-within:border-[#0071E3] focus-within:ring-2 focus-within:ring-[#0071E3]/20">
                     <textarea
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}
@@ -1173,20 +1173,20 @@ export default function AdminInboxPage() {
                       }}
                       placeholder="원생에게 보낼 메시지를 입력하세요."
                       rows={3}
-                      className="min-h-[76px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:outline-none"
+                      className="min-h-[76px] flex-1 resize-none border-0 bg-transparent px-1 py-1 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none"
                     />
                     <button
                       type="button"
                       onClick={handleSendReply}
                       disabled={!canSendReply(selectedItem) || !replyText.trim() || replySending}
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-white shadow-sm transition hover:bg-[#0077ED] active:scale-[0.96] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0071E3] text-white shadow-sm transition hover:bg-[#0077ED] active:scale-[0.96] disabled:bg-slate-200 dark:disabled:bg-white/10 disabled:text-slate-400 dark:disabled:text-slate-500 disabled:shadow-none"
                       aria-label="답변 전송"
                       title="답변 전송"
                     >
                       {replySending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                     </button>
                   </div>
-                  <p className="text-[9px] font-bold text-slate-400">Enter 전송 · Shift+Enter 줄바꿈. 처리완료와 확인 처리는 아래 버튼으로 따로 기록합니다.</p>
+                  <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500">Enter 전송 · Shift+Enter 줄바꿈. 처리완료와 확인 처리는 아래 버튼으로 따로 기록합니다.</p>
                 </div>
                 </>
                 )}
@@ -1199,7 +1199,7 @@ export default function AdminInboxPage() {
                   const isBook = pg.materialType === 'book';
                   const unitFor = (gt?: string) => gt === 'weeks' ? '주' : gt === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주') : (isBook ? 'p/일' : '강/일');
                   return (
-                    <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.03] p-4 space-y-3">
+                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-3">
                       <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
                         <Target className="w-3.5 h-3.5" />
                         학생 제안 변경 내역
@@ -1208,31 +1208,31 @@ export default function AdminInboxPage() {
                       {/* 교재/인강 제목 */}
                       <div className="flex items-center gap-2 text-[11px]">
                         {isBook
-                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          : <Tv className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                        <span className="font-black text-slate-700 truncate">{materialTitle}</span>
-                        <span className="text-[9px] font-bold text-slate-400 shrink-0">{isBook ? '교재' : '인강'}</span>
+                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
+                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">{materialTitle}</span>
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">{isBook ? '교재' : '인강'}</span>
                       </div>
 
                       {/* 변경 전/후 비교 */}
                       {cg ? (
                         <div className="grid grid-cols-2 gap-2 text-[10px]">
-                          <div className="rounded-xl border border-slate-200 bg-white p-2.5 space-y-1.5">
-                            <p className="font-black text-slate-400 uppercase tracking-wider text-[9px]">변경 전 (현재)</p>
+                          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
+                            <p className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[9px]">변경 전 (현재)</p>
                             {cg.goalType && cg.goalValue ? (
-                              <span className="inline-block bg-slate-100 rounded-md px-2 py-0.5 font-bold text-slate-600">
+                              <span className="inline-block bg-slate-100 dark:bg-white/10 rounded-md px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
                                 {getGoalTypeLabel(cg.goalType)}: {cg.goalValue}{unitFor(cg.goalType)}
                               </span>
                             ) : (
-                              <span className="text-slate-400 font-semibold">미설정</span>
+                              <span className="text-slate-400 dark:text-slate-500 font-semibold">미설정</span>
                             )}
                             {cg.speedMultiplier && cg.speedMultiplier !== 1.0 && (
-                              <span className="inline-block ml-1 bg-slate-100 rounded-md px-2 py-0.5 font-bold text-slate-600">
+                              <span className="inline-block ml-1 bg-slate-100 dark:bg-white/10 rounded-md px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
                                 {cg.speedMultiplier}×
                               </span>
                             )}
                           </div>
-                          <div className="rounded-xl border border-[#0071E3]/30 bg-[#0071E3]/[0.04] p-2.5 space-y-1.5">
+                          <div className="rounded-xl border border-[#0071E3]/30 dark:border-[#0071E3]/40 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-2.5 space-y-1.5">
                             <p className="font-black text-[#0071E3]/70 uppercase tracking-wider text-[9px]">변경 후 (신청)</p>
                             <span className="inline-block bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
                               {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{unitFor(pg.goalType)}
@@ -1246,11 +1246,11 @@ export default function AdminInboxPage() {
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                          <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                             {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{unitFor(pg.goalType)}
                           </span>
                           {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
-                            <span className="bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                            <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                               배속 {pg.speedMultiplier}×
                             </span>
                           )}
@@ -1258,7 +1258,7 @@ export default function AdminInboxPage() {
                       )}
 
                       {pg.proposedWeekNumber && pg.proposedRangeText && (
-                        <span className="inline-block bg-white border border-slate-200 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                           {pg.proposedWeekNumber}주차: {pg.proposedRangeText}
                         </span>
                       )}
@@ -1270,7 +1270,7 @@ export default function AdminInboxPage() {
                   );
                 })()}
 
-                <div className="space-y-2 border-t border-slate-100 pt-4">
+                <div className="space-y-2 border-t border-slate-100 dark:border-white/10 pt-4">
                   {selectedItem.type === 'signup' ? (
                     <Button
                       onClick={() => router.push('/admin/applications')}
@@ -1333,7 +1333,7 @@ export default function AdminInboxPage() {
                       <Button
                         disabled={processing}
                         onClick={() => handleProcessRequest('rejected')}
-                        className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                        className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
                       >
                         <X className="w-3.5 h-3.5 mr-1" /> 반려(참석 요청)
                       </Button>
@@ -1377,10 +1377,10 @@ export default function AdminInboxPage() {
                 </div>
               </div>
             ) : (
-              <div className="p-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
-                <Inbox className="w-6 h-6 text-slate-300" />
-                <p className="text-[11px] font-bold text-slate-400">요청을 선택하세요</p>
-                <p className="text-[9px] text-slate-400/80 font-semibold">좌측 목록에서 신청건을 클릭하면 상세 내용 확인 및 답변 처리를 진행할 수 있습니다.</p>
+              <div className="p-8 text-center bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center gap-2.5">
+                <Inbox className="w-6 h-6 text-slate-300 dark:text-slate-600" />
+                <p className="text-[11px] font-bold text-slate-400 dark:text-slate-400">요청을 선택하세요</p>
+                <p className="text-[9px] text-slate-400/80 dark:text-slate-500 font-semibold">좌측 목록에서 신청건을 클릭하면 상세 내용 확인 및 답변 처리를 진행할 수 있습니다.</p>
               </div>
             )}
           </Card>

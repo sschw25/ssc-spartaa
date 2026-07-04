@@ -225,15 +225,15 @@ export default function AdminLeavePage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0b0b0c] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-slate-500">휴가 쿠폰 정보 로드 중...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">휴가 쿠폰 정보 로드 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav
         title="휴가 쿠폰 관리"
         titleIcon={<Ticket className="w-4 h-4 text-[#0071E3]" />}
@@ -250,19 +250,19 @@ export default function AdminLeavePage() {
           onClick={() => router.push('/admin/inbox')}
           className={`w-full flex items-center justify-between gap-3 rounded-2xl border p-4 text-left transition-all active:scale-[0.99] ${
             pendingCount > 0
-              ? 'border-amber-200/70 bg-amber-50 hover:bg-amber-100/70'
-              : 'border-black/[0.05] bg-white hover:bg-[#F5F5F7]'
+              ? 'border-amber-200/70 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-100/70'
+              : 'border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-[#F5F5F7] dark:hover:bg-white/5'
           }`}
         >
           <span className="flex items-center gap-3 min-w-0">
-            <span className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${pendingCount > 0 ? 'bg-amber-500 text-white' : 'bg-[#F5F5F7] text-slate-500'}`}>
+            <span className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${pendingCount > 0 ? 'bg-amber-500 text-white' : 'bg-[#F5F5F7] dark:bg-white/10 text-slate-500 dark:text-slate-400'}`}>
               <Inbox className="w-4 h-4" />
             </span>
             <span className="min-w-0">
-              <span className="block text-sm font-black text-slate-900">
+              <span className="block text-sm font-black text-slate-900 dark:text-slate-100">
                 {pendingCount > 0 ? `대기 중인 휴가·반차 신청 ${pendingCount}건` : '휴가·반차 신청 승인'}
               </span>
-              <span className="block text-[11px] font-semibold text-slate-500">
+              <span className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                 신청 승인·반려는 통합 인박스에서 처리합니다. 이 화면은 쿠폰(반차 추가권) 관리 전용입니다.
               </span>
             </span>
@@ -273,18 +273,18 @@ export default function AdminLeavePage() {
         </button>
 
         {/* 탭: 쿠폰 관리 / 리워드 지급내역 */}
-        <div className="flex items-center gap-1 bg-[#F5F5F7] p-1 rounded-2xl border border-black/[0.02] w-fit">
+        <div className="flex items-center gap-1 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-2xl border border-black/[0.02] dark:border-white/10 w-fit">
           <button
             type="button"
             onClick={() => setActiveTab('coupons')}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'coupons' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'coupons' ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
           >
             쿠폰 관리
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('rewards')}
-            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'rewards' ? 'bg-white text-black shadow-sm' : 'text-slate-500 hover:text-slate-900'}`}
+            className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'rewards' ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
           >
             <Gift className="w-3.5 h-3.5" /> 리워드 지급내역
             {pendingRewardCount > 0 && (
@@ -295,31 +295,31 @@ export default function AdminLeavePage() {
 
         {activeTab === 'coupons' && (<>
         {/* 리워드 교환 안내 */}
-        <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-4 text-[11px] font-semibold text-[#0071E3]">
+        <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 text-[11px] font-semibold text-[#0071E3]">
           쿠폰 교환은 <b>학생이 본인 리포트에서 직접</b> 합니다 — 반차권/휴식권은 즉시 교환(쿠폰 즉시 차감), 상품권·플래너는 신청 시 통합 인박스로 알림이 와요. 이 화면은 쿠폰 지급/차감과 <b>리워드 지급내역</b> 관리 전용입니다.
         </div>
 
         {/* 검색 */}
-        <div className="bg-white p-5 rounded-2xl border border-black/[0.05] shadow-sm">
+        <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-2xl border border-black/[0.05] dark:border-white/10 shadow-sm">
           <div className="relative max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <Input
               placeholder="학생 이름 검색"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-10 rounded-xl border-black/[0.08] text-xs h-10 bg-[#F5F5F7]"
+              className="pl-10 rounded-xl border-black/[0.08] dark:border-white/10 text-xs h-10 bg-[#F5F5F7] dark:bg-white/5"
             />
           </div>
         </div>
 
         {/* 학생별 쿠폰 목록 */}
         {loading && students.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
+          <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-3xl flex flex-col items-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-            <p className="text-xs text-slate-500">불러오는 중...</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">불러오는 중...</p>
           </div>
         ) : studentRows.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+          <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
             조건에 맞는 학생이 없습니다.
           </div>
         ) : (
@@ -327,23 +327,23 @@ export default function AdminLeavePage() {
             {studentRows.map(({ student, pending, approvedThisMonth }) => {
               const cpKey = `cp_${student.id}`;
               return (
-                <div key={student.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div key={student.id} className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-black text-sm text-slate-900">{student.name}</span>
-                    <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">{campusLabel(student.campus)}</Badge>
-                    <span className="text-[10px] text-slate-500 font-semibold">{student.manager || '담당 코멘터'}</span>
+                    <span className="font-black text-sm text-slate-900 dark:text-slate-100">{student.name}</span>
+                    <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] dark:bg-white/10 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10">{campusLabel(student.campus)}</Badge>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{student.manager || '담당 코멘터'}</span>
                     {pending > 0 && (
-                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700">대기 {pending}건</span>
+                      <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400">대기 {pending}건</span>
                     )}
-                    <span className="text-[10px] text-slate-500 font-semibold">이번 달 사용 {approvedThisMonth}회</span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">이번 달 사용 {approvedThisMonth}회</span>
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-1.5">
-                      <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                      <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         <Ticket className="w-3.5 h-3.5" /> 쿠폰
                       </span>
-                      <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(student, -1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="쿠폰 차감">
+                      <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(student, -1)} className="h-7 w-7 rounded-lg border-black/[0.08] dark:border-white/10" title="쿠폰 차감">
                         <Minus className="w-3.5 h-3.5" />
                       </Button>
                       {/* 텍스트로 직접 수정 */}
@@ -358,10 +358,10 @@ export default function AdminLeavePage() {
                         }}
                         onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
                         disabled={busy[cpKey]}
-                        className="h-7 w-14 rounded-lg border border-black/[0.08] bg-white text-center text-sm font-black text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                        className="h-7 w-14 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-center text-sm font-black text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                         title="쿠폰 수 직접 입력 (Enter 또는 포커스 해제 시 저장)"
                       />
-                      <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(student, 1)} className="h-7 w-7 rounded-lg border-black/[0.08]" title="쿠폰 지급">
+                      <Button size="icon" variant="outline" disabled={busy[cpKey]} onClick={() => adjustCoupon(student, 1)} className="h-7 w-7 rounded-lg border-black/[0.08] dark:border-white/10" title="쿠폰 지급">
                         <Plus className="w-3.5 h-3.5" />
                       </Button>
                     </div>
@@ -376,12 +376,12 @@ export default function AdminLeavePage() {
         {/* 리워드 지급내역 탭 */}
         {activeTab === 'rewards' && (
           loading && students.length === 0 ? (
-            <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
+            <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-3xl flex flex-col items-center">
               <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-              <p className="text-xs text-slate-500">불러오는 중...</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">불러오는 중...</p>
             </div>
           ) : redemptionRows.length === 0 ? (
-            <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+            <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
               리워드 교환 내역이 없습니다.
             </div>
           ) : (
@@ -393,24 +393,24 @@ export default function AdminLeavePage() {
                 const actionable = isRequested || isPending;
                 const draft = fulfillDrafts[r.id] || { voucherCode: r.voucherCode || '', note: r.note || '' };
                 return (
-                  <div key={r.id} className={`bg-white border rounded-2xl p-4 md:p-5 shadow-sm space-y-3 ${actionable ? 'border-amber-200/70' : 'border-black/[0.05]'}`}>
+                  <div key={r.id} className={`bg-white dark:bg-[#1c1c1e] border rounded-2xl p-4 md:p-5 shadow-sm space-y-3 ${actionable ? 'border-amber-200/70 dark:border-amber-500/20' : 'border-black/[0.05] dark:border-white/10'}`}>
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-black text-sm text-slate-900">{student.name}</span>
-                        <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">{campusLabel(student.campus)}</Badge>
-                        <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-black">
-                          <Gift className="w-3 h-3" /> {getRewardLabel(r.type)} <span className="text-slate-500 font-bold">(쿠폰 {r.cost})</span>
+                        <span className="font-black text-sm text-slate-900 dark:text-slate-100">{student.name}</span>
+                        <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] dark:bg-white/10 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10">{campusLabel(student.campus)}</Badge>
+                        <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/15 text-[#0071E3] px-2 py-0.5 text-[11px] font-black">
+                          <Gift className="w-3 h-3" /> {getRewardLabel(r.type)} <span className="text-slate-500 dark:text-slate-400 font-bold">(쿠폰 {r.cost})</span>
                         </span>
-                        <span className="text-[10px] text-slate-500 font-semibold">{(r.createdAt || '').slice(0, 10)}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{(r.createdAt || '').slice(0, 10)}</span>
                       </div>
                       {isRequested ? (
-                        <span className="flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-black text-blue-700"><Clock className="w-3 h-3" /> 승인 대기</span>
+                        <span className="flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 text-[10px] font-black text-blue-700 dark:text-blue-400"><Clock className="w-3 h-3" /> 승인 대기</span>
                       ) : isPending ? (
-                        <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black text-amber-700"><Clock className="w-3 h-3" /> 지급 대기</span>
+                        <span className="flex items-center gap-1 rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400"><Clock className="w-3 h-3" /> 지급 대기</span>
                       ) : r.status === 'rejected' ? (
-                        <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-black text-red-600"><X className="w-3 h-3" /> 반려</span>
+                        <span className="flex items-center gap-1 rounded-full bg-red-50 dark:bg-red-500/10 px-2 py-0.5 text-[10px] font-black text-red-600"><X className="w-3 h-3" /> 반려</span>
                       ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-black text-emerald-700"><Check className="w-3 h-3" /> 지급 완료</span>
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-400"><Check className="w-3 h-3" /> 지급 완료</span>
                       )}
                     </div>
 
@@ -431,7 +431,7 @@ export default function AdminLeavePage() {
                           variant="outline"
                           disabled={busy[`rev_${r.id}`]}
                           onClick={async () => { if (await confirm({ title: '이 교환 신청을 반려할까요?', description: '쿠폰은 차감되지 않습니다.', tone: 'danger', confirmText: '반려' })) reviewReward(student.id, r, 'reject'); }}
-                          className="h-8 rounded-lg border-black/[0.08] text-[11px] font-bold px-3 text-red-600"
+                          className="h-8 rounded-lg border-black/[0.08] dark:border-white/10 text-[11px] font-bold px-3 text-red-600"
                         >
                           <X className="w-3.5 h-3.5 mr-1" /> 반려
                         </Button>
@@ -447,14 +447,14 @@ export default function AdminLeavePage() {
                               placeholder="쿠폰(상품권) 번호"
                               value={draft.voucherCode}
                               onChange={(e) => setFulfillDrafts((d) => ({ ...d, [r.id]: { ...draft, voucherCode: e.target.value } }))}
-                              className="h-8 max-w-[200px] rounded-lg border-black/[0.08] text-xs bg-white"
+                              className="h-8 max-w-[200px] rounded-lg border-black/[0.08] dark:border-white/10 text-xs bg-white dark:bg-[#1c1c1e]"
                             />
                           )}
                           <Input
                             placeholder={r.type === 'planner' ? '플래너 지급일/메모' : '메모(선택)'}
                             value={draft.note}
                             onChange={(e) => setFulfillDrafts((d) => ({ ...d, [r.id]: { ...draft, note: e.target.value } }))}
-                            className="h-8 flex-1 min-w-[160px] rounded-lg border-black/[0.08] text-xs bg-white"
+                            className="h-8 flex-1 min-w-[160px] rounded-lg border-black/[0.08] dark:border-white/10 text-xs bg-white dark:bg-[#1c1c1e]"
                           />
                           <Button
                             size="sm"
@@ -475,15 +475,15 @@ export default function AdminLeavePage() {
                             <X className="w-3.5 h-3.5 mr-1" /> 반려
                           </Button>
                         </div>
-                        <p className="text-[10px] font-semibold text-slate-500">쿠폰 번호를 입력하고 지급 완료를 누르면 학생 화면에 번호가 표시됩니다.</p>
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">쿠폰 번호를 입력하고 지급 완료를 누르면 학생 화면에 번호가 표시됩니다.</p>
                       </div>
                     )}
 
                     {/* 지급 완료/반려된 실물 — 번호·메모 표시 */}
                     {meta?.physical && !isRequested && !isPending && (
-                      <div className="text-[11px] font-semibold text-slate-500 flex flex-wrap gap-x-4 gap-y-1">
-                        {r.voucherCode && <span>상품권 번호: <b className="text-slate-900">{r.voucherCode}</b></span>}
-                        {r.note && <span>메모: <b className="text-slate-900">{r.note}</b></span>}
+                      <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
+                        {r.voucherCode && <span>상품권 번호: <b className="text-slate-900 dark:text-slate-100">{r.voucherCode}</b></span>}
+                        {r.note && <span>메모: <b className="text-slate-900 dark:text-slate-100">{r.note}</b></span>}
                         {r.fulfilledAt && <span>지급: {(r.fulfilledAt || '').slice(0, 10)}</span>}
                         {r.handledBy && <span>처리: {r.handledBy}</span>}
                       </div>

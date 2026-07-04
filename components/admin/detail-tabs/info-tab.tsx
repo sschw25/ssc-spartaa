@@ -33,9 +33,9 @@ function enrollmentHint(dateStr: string): { label: string; tone: 'ok' | 'warn' |
 }
 
 const hintTone: Record<'ok' | 'warn' | 'expired', string> = {
-  ok: 'bg-[#F5F5F7] text-slate-600',
-  warn: 'bg-amber-50 text-amber-700',
-  expired: 'bg-red-50 text-red-600',
+  ok: 'bg-[#F5F5F7] dark:bg-white/5 text-slate-600 dark:text-slate-400',
+  warn: 'bg-amber-50 dark:bg-amber-500/10 text-amber-700',
+  expired: 'bg-red-50 dark:bg-red-500/10 text-red-600',
 };
 
 interface InfoTabProps {
@@ -231,21 +231,21 @@ export function InfoTab({
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-black/[0.05] bg-white">
+      <div className="grid grid-cols-2 gap-4 p-4 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e]">
         <div className="space-y-1.5">
-          <Label htmlFor="edit-name" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-name" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             이름 *
           </Label>
           <Input
             id="edit-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-login-id" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-login-id" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             로그인 ID (학생용 포털)
           </Label>
           <Input
@@ -253,19 +253,19 @@ export function InfoTab({
             value={loginId}
             onChange={(e) => setLoginId(e.target.value.trim().toLowerCase())}
             placeholder="영어/숫자 조합"
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-campus" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-campus" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             소속 센터
           </Label>
           <Select value={campus} onValueChange={setCampus}>
-            <SelectTrigger id="edit-campus" className="rounded-lg border-black/[0.08] text-xs h-9 bg-white">
+            <SelectTrigger id="edit-campus" className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent className="bg-white dark:bg-[#1c1c1e]">
               <SelectItem value="wonju" className="text-xs">원주 캠퍼스</SelectItem>
               <SelectItem value="chuncheon" className="text-xs">춘천 캠퍼스</SelectItem>
               <SelectItem value="chungju" className="text-xs">충주 캠퍼스</SelectItem>
@@ -275,19 +275,19 @@ export function InfoTab({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-manager" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-manager" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             담당 상담자
           </Label>
           <Input
             id="edit-manager"
             value={manager}
             onChange={(e) => setManager(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-contact" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-contact" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             목표 시험
           </Label>
           <Input
@@ -296,7 +296,7 @@ export function InfoTab({
             onChange={(e) => setContact(e.target.value)}
             list="edit-target-exams-list"
             placeholder="예: 수능, 9급 공무원, 임용"
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
           />
           <datalist id="edit-target-exams-list">
             {uniqueExams.map((exam) => (
@@ -306,7 +306,7 @@ export function InfoTab({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-seat-number" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-seat-number" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             좌석 번호
           </Label>
           <Input
@@ -316,8 +316,8 @@ export function InfoTab({
             value={seatNumber}
             onChange={(e) => setSeatNumber(e.target.value)}
             placeholder="예: 104"
-            className={`rounded-lg text-xs h-9 bg-white ${
-              seatConflictNames.length > 0 ? 'border-red-400' : 'border-black/[0.08]'
+            className={`rounded-lg text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100 ${
+              seatConflictNames.length > 0 ? 'border-red-400' : 'border-black/[0.08] dark:border-white/10'
             }`}
           />
           {seatConflictNames.length > 0 && (
@@ -328,7 +328,7 @@ export function InfoTab({
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="edit-next" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-next" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             다음 상담 예정일
           </Label>
           <Input
@@ -336,14 +336,14 @@ export function InfoTab({
             type="date"
             value={nextConsultationDate}
             onChange={(e) => setNextConsultationDate(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
           />
         </div>
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="edit-enrollment-end" className="flex items-center gap-1 text-xs font-semibold text-slate-900">
-              <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
+            <Label htmlFor="edit-enrollment-end" className="flex items-center gap-1 text-xs font-semibold text-slate-900 dark:text-slate-100">
+              <CalendarClock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
               등록 종료일
             </Label>
             {(() => {
@@ -360,25 +360,25 @@ export function InfoTab({
             type="date"
             value={enrollmentEndDate}
             onChange={(e) => setEnrollmentEndDate(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
           />
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
             종료 3일 전(D-3)부터 학생 출결 화면에 재등록 안내가 표시됩니다.
           </p>
         </div>
 
-        <div className="col-span-2 rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-3 py-2.5">
-          <span className="flex items-center gap-1 text-xs font-semibold text-slate-900">
-            <ClipboardCheck className="w-3.5 h-3.5 text-slate-500" />
+        <div className="col-span-2 rounded-lg border border-black/[0.06] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 px-3 py-2.5">
+          <span className="flex items-center gap-1 text-xs font-semibold text-slate-900 dark:text-slate-100">
+            <ClipboardCheck className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
             모의고사 성적 입력
           </span>
-          <span className="mt-0.5 block text-[10px] font-normal leading-relaxed text-slate-500">
+          <span className="mt-0.5 block text-[10px] font-normal leading-relaxed text-slate-500 dark:text-slate-400">
             모의고사 일정 생성 시 목표 시험 유형으로 대상을 선택하면 해당 학생에게 알림이 발송되고, 학생이 직접 성적을 입력합니다.
           </span>
         </div>
 
         <div className="col-span-2 space-y-1.5">
-          <Label htmlFor="edit-special-note" className="text-xs font-semibold text-slate-900">
+          <Label htmlFor="edit-special-note" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             특이사항
           </Label>
           <Textarea
@@ -386,35 +386,35 @@ export function InfoTab({
             placeholder="보호자 요청, 연락 가능 시간, 건강/생활 참고사항 등 내부 관리 메모를 입력하세요."
             value={specialNote}
             onChange={(e) => setSpecialNote(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs bg-white min-h-[78px]"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs bg-white dark:bg-white/5 dark:text-slate-100 min-h-[78px]"
           />
-          <p className="text-[10px] text-slate-500">
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
             내부 관리용 메모이며 학부모용 결과지에는 표시되지 않습니다.
           </p>
         </div>
       </div>
 
       {/* 정기 외출 / 빠지는 시간대 관리 */}
-      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
+      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e]">
         <div className="flex items-center gap-1.5">
           <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-          <h4 className="text-xs font-bold text-slate-900">정기 외출 / 빠지는 시간대 관리</h4>
+          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">정기 외출 / 빠지는 시간대 관리</h4>
         </div>
-        <p className="text-[10px] text-slate-500">
+        <p className="text-[10px] text-slate-500 dark:text-slate-400">
           지정된 시간에 출결판 교시 셀 내부에 외출 예정 시각이 자동으로 표시됩니다. (예: 14:30)
         </p>
 
         {onApplyQuickAwaySchedules && (
-          <div className="space-y-2 rounded-lg border border-black/[0.06] bg-[#F5F5F7] p-3">
+          <div className="space-y-2 rounded-lg border border-black/[0.06] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 p-3">
             <div className="flex items-center gap-1.5">
-              <ClipboardPaste className="h-3.5 w-3.5 text-slate-500" />
-              <span className="text-[11px] font-semibold text-slate-900">빠른 입력</span>
+              <ClipboardPaste className="h-3.5 w-3.5 text-slate-500 dark:text-slate-400" />
+              <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-100">빠른 입력</span>
             </div>
             <Textarea
               value={quickAwayText}
               onChange={(e) => setQuickAwayText(e.target.value)}
               placeholder={`홍길동\t14:30\t16:00\n김철수\t18:00\t`}
-              className="min-h-[72px] rounded-lg border-black/[0.08] bg-white font-mono text-[11px]"
+              className="min-h-[72px] rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 dark:text-slate-100 font-mono text-[11px]"
             />
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -427,7 +427,7 @@ export function InfoTab({
                 빠른 입력 적용
               </Button>
               {quickAwayResult && (
-                <span className="text-[11px] font-medium text-slate-500">{quickAwayResult}</span>
+                <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">{quickAwayResult}</span>
               )}
             </div>
           </div>
@@ -436,34 +436,34 @@ export function InfoTab({
         {/* 시간 */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[11px] font-bold text-slate-500">외출</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">외출</span>
             <Input
               type="time"
               value={newAwayTime}
               onChange={(e) => setNewAwayTime(e.target.value)}
-              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white w-[128px] min-w-[128px] shrink-0"
+              className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100 w-[128px] min-w-[128px] shrink-0"
             />
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[11px] font-bold text-slate-500">복귀 (선택)</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">복귀 (선택)</span>
             <Input
               type="time"
               value={newReturnTime}
               onChange={(e) => setNewReturnTime(e.target.value)}
-              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white w-[128px] min-w-[128px] shrink-0"
+              className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100 w-[128px] min-w-[128px] shrink-0"
             />
           </div>
         </div>
 
         {/* 요일 반복 */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold text-slate-500 shrink-0">요일</span>
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">요일</span>
           <div className="flex gap-1 flex-wrap">
             <button
               type="button"
               onClick={() => setNewDays([])}
               className={`px-2.5 h-7 rounded-full text-[10px] font-bold transition-all ${
-                newDays.length === 0 ? 'bg-[#0071E3] text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                newDays.length === 0 ? 'bg-[#0071E3] text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/[0.15]'
               }`}
             >
               매일
@@ -476,7 +476,7 @@ export function InfoTab({
                 className={`w-7 h-7 rounded-full text-[10px] font-bold transition-all ${
                   newDays.includes(d)
                     ? 'bg-[#0071E3] text-white'
-                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/[0.15]'
                 }`}
               >
                 {label}
@@ -487,7 +487,7 @@ export function InfoTab({
 
         {/* 기간 */}
         <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-[11px] font-bold text-slate-500 shrink-0">기간</span>
+          <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 shrink-0">기간</span>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
               type="radio"
@@ -495,7 +495,7 @@ export function InfoTab({
               onChange={() => setNewUntilForever(true)}
               className="accent-[#0071E3]"
             />
-            <span className="text-[11px] font-semibold text-slate-900">계속 반복</span>
+            <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-100">계속 반복</span>
           </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
@@ -504,14 +504,14 @@ export function InfoTab({
               onChange={() => setNewUntilForever(false)}
               className="accent-[#0071E3]"
             />
-            <span className="text-[11px] font-semibold text-slate-900">종료일 지정</span>
+            <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-100">종료일 지정</span>
           </label>
           {!newUntilForever && (
             <Input
               type="date"
               value={newUntilDate}
               onChange={(e) => setNewUntilDate(e.target.value)}
-              className="rounded-lg border-black/[0.08] text-xs h-8 bg-white max-w-[140px]"
+              className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-8 bg-white dark:bg-white/5 dark:text-slate-100 max-w-[140px]"
             />
           )}
         </div>
@@ -529,7 +529,7 @@ export function InfoTab({
             awaySchedules.map((s, idx) => (
               <span
                 key={idx}
-                className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] border border-[#0071E3]/20 rounded-full px-2.5 py-1"
+                className="flex items-center gap-1 text-[11px] font-bold text-[#0071E3] bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 border border-[#0071E3]/20 rounded-full px-2.5 py-1"
               >
                 {formatAwayChip(s)}
                 <button
@@ -542,44 +542,44 @@ export function InfoTab({
               </span>
             ))
           ) : (
-            <p className="text-[10px] text-slate-400 py-1">등록된 정기 외출 시간대가 없습니다.</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-600 py-1">등록된 정기 외출 시간대가 없습니다.</p>
           )}
         </div>
       </div>
 
       {/* 출결 알림 문자 설정 */}
-      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] bg-white">
+      <div className="space-y-3 p-4 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e]">
         <div className="flex items-center gap-1.5">
           <Bell className="w-4 h-4 text-[#0071E3]" />
-          <h4 className="text-xs font-bold text-slate-900">출결 알림 문자</h4>
+          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">출결 알림 문자</h4>
         </div>
-        <p className="text-[10px] text-slate-500">
+        <p className="text-[10px] text-slate-500 dark:text-slate-400">
           등/하원 시 아래 번호로 자동 발송됩니다. (PII — 학생 홈엔 노출되지 않음)
         </p>
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-900">학부모 휴대폰</Label>
+            <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">학부모 휴대폰</Label>
             <Input
               value={parentPhone}
               onChange={(e) => setParentPhone(e.target.value)}
               placeholder="01012345678"
               inputMode="numeric"
-              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+              className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-slate-900">학생 휴대폰</Label>
+            <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">학생 휴대폰</Label>
             <Input
               value={studentPhone}
               onChange={(e) => setStudentPhone(e.target.value)}
               placeholder="01087654321"
               inputMode="numeric"
-              className="rounded-lg border-black/[0.08] text-xs h-9 bg-white"
+              className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
             />
           </div>
         </div>
         <div className="flex items-center gap-4 pt-1">
-          <span className="text-[11px] font-semibold text-slate-500">수신 대상</span>
+          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">수신 대상</span>
           {([
             { key: 'parent' as const, label: '학부모' },
             { key: 'student' as const, label: '학생' },
@@ -595,24 +595,24 @@ export function InfoTab({
             </label>
           ))}
           {smsTargets.length === 0 && (
-            <span className="text-[11px] font-semibold text-slate-500">자동 문자 발송 안 함</span>
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">자동 문자 발송 안 함</span>
           )}
 
         </div>
       </div>
 
       {/* 학부모 리포트 공유 */}
-      <div className="rounded-2xl border border-black/[0.06] bg-[#FAFAFA] p-4 space-y-3">
+      <div className="rounded-2xl border border-black/[0.06] dark:border-white/10 bg-[#FAFAFA] dark:bg-white/5 p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <Link2 className="w-3.5 h-3.5 text-slate-500" />
-          <span className="text-[11px] font-semibold tracking-wide text-slate-900">학부모 리포트 공유</span>
+          <Link2 className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <span className="text-[11px] font-semibold tracking-wide text-slate-900 dark:text-slate-100">학부모 리포트 공유</span>
           {tokenValid && (
-            <span className="ml-auto text-[9px] font-semibold text-green-700 bg-green-50 border border-green-200/60 rounded-full px-2 py-0.5">
+            <span className="ml-auto text-[9px] font-semibold text-green-700 bg-green-50 dark:bg-emerald-500/10 border border-green-200/60 dark:border-emerald-500/20 rounded-full px-2 py-0.5">
               활성 · {expiryLabel} 만료
             </span>
           )}
           {shareToken && tokenExpired && (
-            <span className="ml-auto text-[9px] font-semibold text-slate-500 bg-[#F5F5F7] border border-black/[0.06] rounded-full px-2 py-0.5">
+            <span className="ml-auto text-[9px] font-semibold text-slate-500 dark:text-slate-400 bg-[#F5F5F7] dark:bg-white/5 border border-black/[0.06] dark:border-white/10 rounded-full px-2 py-0.5">
               만료됨
             </span>
           )}
@@ -620,27 +620,27 @@ export function InfoTab({
 
         {tokenValid && shareUrl ? (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 bg-white border border-black/[0.08] rounded-xl px-3 py-2">
-              <span className="text-[10px] text-slate-600 truncate flex-1 font-mono">{shareUrl}</span>
+            <div className="flex items-center gap-2 bg-white dark:bg-white/5 border border-black/[0.08] dark:border-white/10 rounded-xl px-3 py-2">
+              <span className="text-[10px] text-slate-600 dark:text-slate-300 truncate flex-1 font-mono">{shareUrl}</span>
               <button
                 onClick={handleCopy}
-                className="shrink-0 p-1 rounded-md hover:bg-[#F5F5F7] transition-colors"
+                className="shrink-0 p-1 rounded-md hover:bg-[#F5F5F7] dark:hover:bg-white/10 transition-colors"
                 title="링크 복사"
               >
                 {copied
                   ? <span className="text-[9px] font-semibold text-green-600">복사됨!</span>
-                  : <Copy className="w-3.5 h-3.5 text-slate-500" />
+                  : <Copy className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                 }
               </button>
             </div>
             {sharePassword && (
-              <div className="flex items-center gap-2 bg-[#F5F5F7] rounded-xl px-3 py-2">
-                <span className="text-[10px] text-slate-500 font-semibold">비밀번호</span>
-                <span className="text-sm font-semibold tracking-[0.25em] text-slate-900">{sharePassword}</span>
-                <span className="ml-auto text-[9px] text-slate-500">링크와 별도로 전달</span>
+              <div className="flex items-center gap-2 bg-[#F5F5F7] dark:bg-white/5 rounded-xl px-3 py-2">
+                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">비밀번호</span>
+                <span className="text-sm font-semibold tracking-[0.25em] text-slate-900 dark:text-slate-100">{sharePassword}</span>
+                <span className="ml-auto text-[9px] text-slate-500 dark:text-slate-400">링크와 별도로 전달</span>
               </div>
             )}
-            <p className="text-[10px] text-slate-500">링크와 비밀번호를 각각 따로 전달해 주세요.</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">링크와 비밀번호를 각각 따로 전달해 주세요.</p>
             <div className="flex gap-2">
               <button
                 onClick={handleGenerate}
@@ -662,7 +662,7 @@ export function InfoTab({
           </div>
         ) : (
           <div className="space-y-2">
-            <p className="text-[10px] text-slate-500">
+            <p className="text-[10px] text-slate-500 dark:text-slate-400">
               임시 링크를 생성하면 학부모님이 로그인 없이 리포트를 열람할 수 있습니다. 유효 기간은 7일입니다.
             </p>
             <button
@@ -682,7 +682,7 @@ export function InfoTab({
           onClick={onSetPassword}
           disabled={loading}
           variant="outline"
-          className="rounded-lg text-xs py-4 px-4 border-black/[0.1] bg-white hover:bg-[#F5F5F7] font-bold"
+          className="rounded-lg text-xs py-4 px-4 border-black/[0.1] dark:border-white/10 bg-white dark:bg-white/5 dark:text-slate-100 hover:bg-[#F5F5F7] dark:hover:bg-white/10 font-bold"
         >
           <KeyRound className="w-3.5 h-3.5 mr-1" />
           포털 비밀번호 설정
@@ -693,7 +693,7 @@ export function InfoTab({
           onClick={onDeleteStudent}
           disabled={loading}
           variant="destructive"
-          className="rounded-lg text-xs py-4 px-4 bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 font-bold"
+          className="rounded-lg text-xs py-4 px-4 bg-red-50 dark:bg-red-500/10 text-red-600 border border-red-200 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 font-bold"
         >
           <Trash2 className="w-3.5 h-3.5 mr-1" />
           학생 영구 삭제

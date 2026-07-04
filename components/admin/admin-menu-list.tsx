@@ -30,6 +30,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 type AdminSession = { id: string; username: string; campus: string; role: string } | null;
 
@@ -170,19 +171,19 @@ export function AdminMenuList({
 
   const menuButtonClass = (active: boolean) =>
     cn(
-      'flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-slate-900',
-      active ? 'bg-[#F5F5F7]' : 'hover:bg-[#F5F5F7]'
+      'flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-slate-900 dark:text-slate-200',
+      active ? 'bg-[#F5F5F7] dark:bg-white/10' : 'hover:bg-[#F5F5F7] dark:hover:bg-white/5'
     );
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-2 border-b border-black/[0.05] p-5">
+      <div className="flex items-start justify-between gap-2 border-b border-black/[0.05] dark:border-white/10 p-5">
         <div className="min-w-0 text-left">
-          <div className="flex items-center gap-2 text-base font-semibold text-slate-900">
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-900 dark:text-slate-100">
             <span className="rounded-lg bg-slate-900 px-2.5 py-1.5 text-sm font-semibold text-white">SSC</span>
             관리자 메뉴
           </div>
-          <p className="mt-1 text-xs font-semibold text-slate-500">자주 쓰는 관리자 화면으로 이동합니다.</p>
+          <p className="mt-1 text-xs font-semibold text-slate-500 dark:text-slate-400">자주 쓰는 관리자 화면으로 이동합니다.</p>
         </div>
         <button
           type="button"
@@ -192,8 +193,8 @@ export function AdminMenuList({
           className={cn(
             'hidden lg:flex h-9 shrink-0 items-center gap-1.5 rounded-xl px-2.5 text-[12px] font-semibold transition-premium',
             pinned
-              ? 'bg-[#0071E3]/12 text-[#0071E3] hover:bg-[#0071E3]/18'
-              : 'text-slate-500 hover:bg-[#F5F5F7] hover:text-slate-900'
+              ? 'bg-[#0071E3]/12 dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/18'
+              : 'text-slate-500 dark:text-slate-400 hover:bg-[#F5F5F7] dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-100'
           )}
         >
           {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -210,7 +211,7 @@ export function AdminMenuList({
                 type="button"
                 onClick={() => toggleSection(section.key)}
                 aria-expanded={!isCollapsed}
-                className="group mt-3 flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 transition-premium hover:bg-[#F5F5F7] hover:text-slate-900 first:mt-1"
+                className="group mt-3 flex w-full items-center justify-between rounded-lg px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 transition-premium hover:bg-[#F5F5F7] dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-slate-100 first:mt-1"
               >
                 <span>{section.title}</span>
                 <ChevronDown
@@ -251,11 +252,12 @@ export function AdminMenuList({
         })}
       </div>
 
-      <div className="mt-auto border-t border-black/[0.05] p-3">
+      <div className="mt-auto border-t border-black/[0.05] dark:border-white/10 p-3">
+        <ThemeToggle className="mb-1 flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-slate-900 dark:text-slate-200 hover:bg-[#F5F5F7] dark:hover:bg-white/5" />
         <button
           type="button"
           onClick={onLogout}
-          className="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-red-600 hover:bg-red-50"
+          className="flex h-12 w-full items-center gap-3 rounded-xl px-3 text-left text-[15px] font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
         >
           <LogOut className="w-4 h-4" />
           로그아웃

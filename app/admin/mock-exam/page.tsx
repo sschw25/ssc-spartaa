@@ -32,7 +32,7 @@ const STATUS_CONFIG: Record<'attending' | 'absent' | 'undecided', { label: strin
   },
   undecided: {
     label: '미정',
-    cls: 'bg-white text-slate-500 border-slate-200',
+    cls: 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10',
     icon: <HelpCircle className="w-3.5 h-3.5" />,
   },
 };
@@ -277,14 +277,14 @@ export default function MockExamPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0b0b0c] flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav title="모의고사 참여 체크" onLogout={handleLogout} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-6">
@@ -294,7 +294,7 @@ export default function MockExamPage() {
             variant="outline"
             size="icon"
             onClick={() => router.push('/admin/dashboard')}
-            className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 transition active:scale-95 shrink-0"
+            className="h-9 w-9 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 transition active:scale-95 shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -303,7 +303,7 @@ export default function MockExamPage() {
               <ClipboardCheck className="w-5 h-5 text-[#0071E3]" />
               모의고사 참여 체크
             </h1>
-            <p className="text-xs font-bold text-slate-400 mt-0.5">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">
               일정을 선택하고 학생별 참여/불참 여부를 기록합니다.
             </p>
           </div>
@@ -311,7 +311,7 @@ export default function MockExamPage() {
             variant="outline"
             size="sm"
             onClick={loadAll}
-            className="ml-auto shrink-0 rounded-xl text-xs h-9 bg-white border-slate-200 hover:bg-slate-50"
+            className="ml-auto shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             새로고침
@@ -319,27 +319,27 @@ export default function MockExamPage() {
         </div>
 
         {/* 일정 등록 */}
-        <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-3">
-          <p className="text-sm font-black text-slate-700">모의고사 일정 등록</p>
+        <div className="rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-100 dark:border-white/10 shadow-sm p-5 space-y-3">
+          <p className="text-sm font-black text-slate-700 dark:text-slate-300">모의고사 일정 등록</p>
           <div className="flex flex-wrap gap-2">
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="시험명 (예: 6월 모의고사)"
-              className="flex-1 min-w-40 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
+              className="flex-1 min-w-40 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
             />
             <input
               type="date"
               value={newDate}
               onChange={(e) => setNewDate(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
+              className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
             />
             <select
               value={newCampus}
               onChange={(e) => setNewCampus(e.target.value)}
               disabled={adminCampus !== 'all'}
               title={adminCampus !== 'all' ? '담당 센터로 자동 지정됩니다' : '대상 센터 선택'}
-              className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70"
+              className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none disabled:opacity-70"
             >
               <option value="all">전체 센터</option>
               <option value="wonju">원주</option>
@@ -358,7 +358,7 @@ export default function MockExamPage() {
           {/* 대상 목표시험 유형 선택 */}
           {uniqueExamTypes.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[11px] font-black text-slate-500">
+              <p className="text-[11px] font-black text-slate-500 dark:text-slate-400">
                 알림 대상 (선택 안 하면 전체 학생)
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -374,7 +374,7 @@ export default function MockExamPage() {
                     className={`rounded-xl px-3 py-1 text-[11px] font-black border transition active:scale-95 ${
                       newTargetTypes.includes(t)
                         ? 'bg-[#0071E3] text-white border-[#0071E3]'
-                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-400'
+                        : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/10 hover:border-slate-400'
                     }`}
                   >
                     {t}
@@ -394,7 +394,7 @@ export default function MockExamPage() {
             <div className="space-y-2 pt-1">
               {exams.map((exam) => (
                 <div key={exam.id} className={`flex items-center gap-2 rounded-2xl border px-3 py-2.5 transition ${
-                  selectedExamId === exam.id ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-slate-50/60'
+                  selectedExamId === exam.id ? 'border-[#0071E3]/30 bg-[#0071E3]/5 dark:bg-[#0071E3]/15' : 'border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/5'
                 }`}>
                   <button
                     type="button"
@@ -403,15 +403,15 @@ export default function MockExamPage() {
                   >
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`text-xs font-black ${selectedExamId === exam.id ? 'text-[#0071E3]' : 'text-slate-700'}`}>
+                        <span className={`text-xs font-black ${selectedExamId === exam.id ? 'text-[#0071E3]' : 'text-slate-700 dark:text-slate-300'}`}>
                           {exam.name}
                         </span>
                         <span className="text-[11px] font-semibold text-slate-400">{exam.date}</span>
-                        <span className="rounded-lg bg-slate-200/70 text-slate-600 px-1.5 py-0.5 text-[9px] font-black">
+                        <span className="rounded-lg bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 text-[9px] font-black">
                           {exam.campus && exam.campus !== 'all' ? getCampusLabel(exam.campus) : '전체 센터'}
                         </span>
                         {exam.notifiedAt && (
-                          <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
+                          <span className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 text-[9px] font-black">
                             <Bell className="w-2 h-2" /> 알림됨
                           </span>
                         )}
@@ -419,7 +419,7 @@ export default function MockExamPage() {
                       {exam.targetExamTypes && exam.targetExamTypes.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1">
                           {exam.targetExamTypes.map((t) => (
-                            <span key={t} className="rounded-md bg-[#0071E3]/[0.08] text-[#0071E3] px-1.5 py-0.5 text-[9px] font-black">{t}</span>
+                            <span key={t} className="rounded-md bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/15 text-[#0071E3] px-1.5 py-0.5 text-[9px] font-black">{t}</span>
                           ))}
                         </div>
                       )}
@@ -432,7 +432,7 @@ export default function MockExamPage() {
                     title={exam.notifiedAt ? `발송: ${new Date(exam.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
                       exam.notifiedAt
-                        ? 'border border-red-100 bg-red-50 text-red-600 hover:bg-red-100'
+                        ? 'border border-red-100 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100'
                         : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}
                   >
@@ -444,7 +444,7 @@ export default function MockExamPage() {
                   <button
                     type="button"
                     onClick={() => deleteExam(exam.id)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition shrink-0"
+                    className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition shrink-0"
                     title="삭제"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -460,10 +460,10 @@ export default function MockExamPage() {
             {/* 통계 요약 */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {([
-                ['참여', 'bg-emerald-50 border-emerald-200/70 text-emerald-800', stats.attending],
-                ['불참 승인대기', 'bg-amber-50 border-amber-200/70 text-amber-800', stats.pending],
-                ['불참(승인)', 'bg-red-50 border-red-200/70 text-red-800', stats.absent],
-                ['미정', 'bg-slate-50 border-slate-200/70 text-slate-600', stats.undecided],
+                ['참여', 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200/70 dark:border-emerald-500/20 text-emerald-800 dark:text-emerald-400', stats.attending],
+                ['불참 승인대기', 'bg-amber-50 dark:bg-amber-500/10 border-amber-200/70 dark:border-amber-500/20 text-amber-800 dark:text-amber-400', stats.pending],
+                ['불참(승인)', 'bg-red-50 dark:bg-red-500/10 border-red-200/70 dark:border-red-500/20 text-red-800 dark:text-red-400', stats.absent],
+                ['미정', 'bg-slate-50 dark:bg-white/5 border-slate-200/70 dark:border-white/10 text-slate-600 dark:text-slate-400', stats.undecided],
               ] as [string, string, number][]).map(([label, cls, count]) => (
                 <div key={label} className={`rounded-2xl border px-4 py-3 ${cls}`}>
                   <p className="text-[18px] font-semibold tracking-tight">{count}</p>
@@ -474,8 +474,8 @@ export default function MockExamPage() {
 
             {/* 불참자 알림 */}
             {stats.absent > 0 && (
-              <div className="rounded-2xl bg-red-50 border border-red-200/60 p-4 space-y-3">
-                <p className="text-xs font-black text-red-700 flex items-center gap-2">
+              <div className="rounded-2xl bg-red-50 dark:bg-red-500/10 border border-red-200/60 dark:border-red-500/20 p-4 space-y-3">
+                <p className="text-xs font-black text-red-700 dark:text-red-400 flex items-center gap-2">
                   <Send className="w-3.5 h-3.5" />
                   불참 {stats.absent}명 학부모 알림 발송
                 </p>
@@ -484,7 +484,7 @@ export default function MockExamPage() {
                     value={notifyMsg}
                     onChange={(e) => setNotifyMsg(e.target.value)}
                     placeholder={`[SSC스파르타] ${selectedExam.name} 불참 안내 메시지`}
-                    className="flex-1 rounded-xl border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-red-400"
+                    className="flex-1 rounded-xl border border-red-200 dark:border-red-500/20 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-red-400"
                   />
                   <Button
                     onClick={notifyAbsent}
@@ -506,7 +506,7 @@ export default function MockExamPage() {
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                     campusFilter === c
                       ? 'border-slate-900 bg-slate-900 text-white'
-                      : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                      : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
                   {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
@@ -515,15 +515,15 @@ export default function MockExamPage() {
             </div>
 
             {/* 학생 체크리스트 */}
-            <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+            <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
               {loading && students.length === 0 ? (
                 <div className="py-20 text-center flex flex-col items-center gap-3">
                   <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
-                    <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600 dark:text-slate-400">
+                    <thead className="bg-slate-50/80 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                       <tr>
                         <th className="px-5 py-4">학생</th>
                         <th className="px-4 py-4">목표 시험</th>
@@ -531,7 +531,7 @@ export default function MockExamPage() {
                         <th className="px-4 py-4">점수 (학생 입력)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100/60">
+                    <tbody className="divide-y divide-slate-100/60 dark:divide-white/10">
                       {scopedStudents.map((s) => {
                         const status = getStatus(s);
                         const key = `${s.id}-${selectedExamId}`;
@@ -548,14 +548,14 @@ export default function MockExamPage() {
                           <tr key={s.id}>
                             <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <span className="font-black text-slate-800">{s.name}</span>
-                                <Badge className="bg-slate-100 text-slate-500 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
+                                <span className="font-black text-slate-800 dark:text-slate-200">{s.name}</span>
+                                <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
                                   {getCampusLabel(s.campus)}
                                 </Badge>
                               </div>
                             </td>
                             <td className="px-4 py-3">
-                              <span className="text-[11px] font-semibold text-slate-500">{s.contact || '—'}</span>
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{s.contact || '—'}</span>
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap gap-1.5 items-center">
@@ -569,7 +569,7 @@ export default function MockExamPage() {
                                       disabled={isUpdating}
                                       onClick={() => setStatus(s.id, st)}
                                       className={`flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${
-                                        active ? cfg.cls : 'bg-white text-slate-400 border-slate-200 hover:border-slate-300'
+                                        active ? cfg.cls : 'bg-white dark:bg-[#1c1c1e] text-slate-400 border-slate-200 dark:border-white/10 hover:border-slate-300'
                                       }`}
                                     >
                                       {isUpdating && active ? <Loader2 className="w-3 h-3 animate-spin" /> : cfg.icon}
@@ -578,10 +578,10 @@ export default function MockExamPage() {
                                   );
                                 })}
                                 {pendingAbsence && (
-                                  <span className="rounded-lg bg-amber-100 text-amber-700 px-2 py-1 text-[10px] font-black animate-pulse">불참 승인대기</span>
+                                  <span className="rounded-lg bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 px-2 py-1 text-[10px] font-black animate-pulse">불참 승인대기</span>
                                 )}
                                 {selfResponded && !pendingAbsence && (
-                                  <span className="rounded-lg bg-blue-50 text-blue-600 px-2 py-1 text-[10px] font-black">학생응답</span>
+                                  <span className="rounded-lg bg-blue-50 dark:bg-blue-500/10 text-blue-600 px-2 py-1 text-[10px] font-black">학생응답</span>
                                 )}
                               </div>
                               {absentReason && (
@@ -594,7 +594,7 @@ export default function MockExamPage() {
                                     <XCircle className="w-3 h-3" /> 불참 승인
                                   </button>
                                   <button type="button" disabled={isUpdating} onClick={() => setStatus(s.id, 'undecided')}
-                                    className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white text-slate-600 px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 hover:border-slate-300 disabled:opacity-50">
+                                    className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-600 dark:text-slate-300 px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 hover:border-slate-300 disabled:opacity-50">
                                     반려
                                   </button>
                                 </div>
@@ -604,14 +604,14 @@ export default function MockExamPage() {
                               {status === 'attending' ? (
                                 <div className="space-y-0.5">
                                   {score != null ? (
-                                    <span className="text-sm font-black text-slate-900">{score}점</span>
+                                    <span className="text-sm font-black text-slate-900 dark:text-slate-100">{score}점</span>
                                   ) : (
-                                    <span className="text-[11px] font-semibold text-slate-300">미입력</span>
+                                    <span className="text-[11px] font-semibold text-slate-300 dark:text-slate-600">미입력</span>
                                   )}
                                   {subjectScores && Object.keys(subjectScores).length > 0 && (
                                     <div className="flex flex-wrap gap-1 mt-0.5">
                                       {Object.entries(subjectScores).map(([subj, sc]) => (
-                                        <span key={subj} className="text-[9px] font-bold bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 text-slate-500">
+                                        <span key={subj} className="text-[9px] font-bold bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded px-1.5 py-0.5 text-slate-500 dark:text-slate-400">
                                           {subj} {sc}
                                         </span>
                                       ))}
@@ -619,7 +619,7 @@ export default function MockExamPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[11px] text-slate-200">—</span>
+                                <span className="text-[11px] text-slate-200 dark:text-slate-600">—</span>
                               )}
                             </td>
                           </tr>
@@ -634,8 +634,8 @@ export default function MockExamPage() {
         )}
 
         {!selectedExam && !(loading && students.length === 0) && (
-          <div className="rounded-2xl bg-white border border-slate-100 p-12 text-center">
-            <ClipboardCheck className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+          <div className="rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-100 dark:border-white/10 p-12 text-center">
+            <ClipboardCheck className="w-10 h-10 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-400">모의고사 일정을 먼저 등록해 주세요.</p>
           </div>
         )}

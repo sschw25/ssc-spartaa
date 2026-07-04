@@ -3811,7 +3811,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     <Sheet open={isOpen} onOpenChange={(open) => {
       if (!open) requestClose();
     }}>
-      <SheetContent className="w-full sm:max-w-2xl bg-white border-l border-black/[0.05] p-0 font-sans text-slate-900">
+      <SheetContent className="w-full sm:max-w-2xl bg-white dark:bg-[#1c1c1e] border-l border-black/[0.05] dark:border-white/10 p-0 font-sans text-slate-900 dark:text-slate-100">
 
         {/* 상시 플로팅 마스터 저장 버튼 & 동기화 뱃지 (X 버튼 바로 왼쪽 옆에 배치) */}
         <div className="absolute top-3 right-12 z-50 flex items-center gap-2">
@@ -3952,42 +3952,42 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
         <div className="p-6">
           {pendingRequests.length > 0 && (
-            <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+            <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/10 p-4">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">{pendingRequests.length}</span>
-                <h4 className="text-xs font-semibold text-amber-800">학생 변경 신청 (대기 중)</h4>
+                <h4 className="text-xs font-semibold text-amber-800 dark:text-amber-300">학생 변경 신청 (대기 중)</h4>
               </div>
               <div className="space-y-2">
                 {pendingRequests.map(req => (
-                  <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
+                  <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 dark:border-amber-500/20 bg-white dark:bg-[#1c1c1e] p-3">
                     <div className="flex items-center gap-1.5 text-[10px]">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500">{getRequestTypeLabel(req.requestType)}</span>
-                      <span className="font-semibold text-slate-400">{req.date}</span>
+                      <span className="rounded-full bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 font-semibold text-slate-500 dark:text-slate-400">{getRequestTypeLabel(req.requestType)}</span>
+                      <span className="font-semibold text-slate-400 dark:text-slate-400">{req.date}</span>
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
+                    <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700 dark:text-slate-300">{req.content}</p>
 
                     {req.proposedGoal && (
                       <div
                         onClick={() => scrollToMaterial(req.proposedGoal?.materialId ?? '', req.proposedGoal?.materialType ?? 'book')}
-                        className="rounded-xl border border-blue-100 bg-blue-50/50 p-2.5 text-[10px] space-y-1 my-1.5 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-all active:scale-[0.99] group"
+                        className="rounded-xl border border-blue-100 dark:border-[#0071E3]/20 bg-blue-50/50 dark:bg-[#0071E3]/15 p-2.5 text-[10px] space-y-1 my-1.5 cursor-pointer hover:bg-blue-50 dark:hover:bg-[#0071E3]/20 hover:border-blue-300 dark:hover:border-[#0071E3]/40 transition-all active:scale-[0.99] group"
                         title="클릭하여 학습 현황 확인 및 스크롤"
                       >
                         <p className="font-semibold text-[#0071E3] flex items-center gap-1">제안된 학습 계획 변경 사항</p>
-                        <p className="font-bold text-slate-600">
+                        <p className="font-bold text-slate-600 dark:text-slate-300">
                           • 대상: {req.proposedGoal.materialType === 'book' ? '교재' : '인강'}
                         </p>
                         {req.proposedGoal.proposedWeekNumber && req.proposedGoal.proposedRangeText && (
-                          <p className="font-bold text-slate-600">
+                          <p className="font-bold text-slate-600 dark:text-slate-300">
                             • {req.proposedGoal.proposedWeekNumber}주차 범위: <span className="text-[#0071E3] font-semibold">{req.proposedGoal.proposedRangeText}</span>
                           </p>
                         )}
                         {req.proposedGoal.goalValue > 0 && (
-                          <p className="font-bold text-slate-600">
+                          <p className="font-bold text-slate-600 dark:text-slate-300">
                             • 기준 값: {req.proposedGoal.goalType === 'weeks' ? '총 주 수' : req.proposedGoal.goalType === 'weeklyAmount' ? '주당 목표' : '하루 목표'} ({req.proposedGoal.goalValue})
                           </p>
                         )}
                         {req.proposedGoal.targetDate && (
-                          <p className="font-bold text-slate-600">
+                          <p className="font-bold text-slate-600 dark:text-slate-300">
                             • 완독 목표일: {req.proposedGoal.targetDate}
                           </p>
                         )}
@@ -3995,7 +3995,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                     )}
 
                     {(sentReplies[req.id] ?? req.adminReply) && (
-                      <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
+                      <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
                         내 답변: {sentReplies[req.id] ?? req.adminReply}
                       </div>
                     )}
@@ -4008,7 +4008,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                           type="button"
                           disabled={resolvingReqId === req.id}
                           onClick={() => setReplyDrafts((d) => ({ ...d, [req.id]: (d[req.id]?.trim() ? d[req.id].trim() + ' ' : '') + qr }))}
-                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
+                          className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:text-slate-300 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
                         >
                           {qr}
                         </button>
@@ -4027,7 +4027,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                           }
                         }}
                         placeholder="답변 직접 입력..."
-                        className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                        className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                       />
                       <Button
                         size="sm"
@@ -4066,22 +4066,22 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             </div>
           )}
           {pendingSuggestions.length > 0 && (
-            <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 bg-amber-50/60 p-4">
+            <div className="mb-6 space-y-3 rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/10 p-4">
               <div className="flex items-center gap-2">
                 <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-[10px] font-semibold text-white">{pendingSuggestions.length}</span>
-                <h4 className="text-xs font-semibold text-amber-800">건의사항 (대기 중)</h4>
+                <h4 className="text-xs font-semibold text-amber-800 dark:text-amber-300">건의사항 (대기 중)</h4>
               </div>
               <div className="space-y-2">
                 {pendingSuggestions.map(req => (
-                  <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 bg-white p-3">
+                  <div key={req.id} className="space-y-2.5 rounded-xl border border-amber-100 dark:border-amber-500/20 bg-white dark:bg-[#1c1c1e] p-3">
                     <div className="flex items-center gap-1.5 text-[10px]">
-                      <span className="rounded-full bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500">건의사항</span>
-                      <span className="font-semibold text-slate-400">{req.date}</span>
+                      <span className="rounded-full bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 font-semibold text-slate-500 dark:text-slate-400">건의사항</span>
+                      <span className="font-semibold text-slate-400 dark:text-slate-400">{req.date}</span>
                     </div>
-                    <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700">{req.content}</p>
+                    <p className="whitespace-pre-wrap break-words text-xs font-semibold text-slate-700 dark:text-slate-300">{req.content}</p>
 
                     {(sentReplies[req.id] ?? req.adminReply) && (
-                      <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
+                      <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
                         내 답변: {sentReplies[req.id] ?? req.adminReply}
                       </div>
                     )}
@@ -4093,7 +4093,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                           type="button"
                           disabled={resolvingReqId === req.id}
                           onClick={() => setReplyDrafts((d) => ({ ...d, [req.id]: (d[req.id]?.trim() ? d[req.id].trim() + ' ' : '') + qr }))}
-                          className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[10px] font-bold text-slate-600 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
+                          className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1 text-[10px] font-bold text-slate-600 dark:text-slate-300 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] disabled:opacity-50"
                         >
                           {qr}
                         </button>
@@ -4111,7 +4111,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                           }
                         }}
                         placeholder="답변 직접 입력..."
-                        className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                        className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                       />
                       <Button
                         size="sm"
@@ -4156,7 +4156,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 <button
                   type="button"
                   onClick={() => setShowHistory(!showHistory)}
-                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-xs font-bold text-slate-600 transition hover:bg-slate-50 hover:border-slate-300"
+                  className="flex w-full items-center justify-between rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-3 text-left text-xs font-bold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-300 dark:hover:border-white/10"
                 >
                   <div className="flex items-center gap-2">
                     <History className="w-4 h-4 text-slate-400" />
@@ -4168,7 +4168,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 </button>
 
                 {showHistory && (
-                  <div className="space-y-2 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 max-h-96 overflow-y-auto">
+                  <div className="space-y-2 rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-3 max-h-96 overflow-y-auto">
                     {[
                       ...resolvedRequests.map(r => ({ ...r, category: 'request' as const })),
                       ...resolvedSuggestions.map(r => ({ ...r, category: 'suggestion' as const })),
@@ -4192,40 +4192,40 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         return timeB.localeCompare(timeA);
                       })
                       .map(item => (
-                        <div key={item.id} className="rounded-xl border border-slate-200 bg-white p-3 text-[11px] space-y-1.5">
+                        <div key={item.id} className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 text-[11px] space-y-1.5">
                           <div className="flex items-start justify-between gap-2">
                             <span className="flex min-w-0 flex-wrap items-center gap-1.5">
                               {item.category === 'request' && (
                                 <>
-                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                                     <MessageSquare className="w-2.5 h-2.5" />{getRequestTypeLabel(item.requestType)}
                                   </span>
-                                  <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                  <span className="shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                                     처리완료
                                   </span>
                                 </>
                               )}
                               {item.category === 'suggestion' && (
                                 <>
-                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                                     <MessageSquare className="w-2.5 h-2.5" />건의사항
                                   </span>
-                                  <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                  <span className="shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                                     처리완료
                                   </span>
                                 </>
                               )}
                               {item.category === 'leave' && (
                                 <>
-                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                  <span className="inline-flex items-center gap-1 shrink-0 rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                                     <Calendar className="w-2.5 h-2.5" /> {getLeaveTypeLabel(item.leaveType!)}
                                   </span>
                                   {item.status === 'approved' ? (
-                                    <span className="shrink-0 rounded-full bg-emerald-50 border border-emerald-200 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                                    <span className="shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
                                       승인
                                     </span>
                                   ) : (
-                                    <span className="shrink-0 rounded-full bg-red-50 border border-red-200 px-2 py-0.5 text-[10px] font-bold text-red-600">
+                                    <span className="shrink-0 rounded-full bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 px-2 py-0.5 text-[10px] font-bold text-red-600">
                                       반려
                                     </span>
                                   )}
@@ -4240,13 +4240,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                             )}
                           </div>
                           {item.content && item.content !== '(사유 없음)' && (
-                            <p className="whitespace-pre-wrap break-words text-slate-600">{item.content}</p>
+                            <p className="whitespace-pre-wrap break-words text-slate-600 dark:text-slate-300">{item.content}</p>
                           )}
                           {!item.content || item.content === '(사유 없음)' ? (
                             <p className="text-slate-400 italic">(내용 없음)</p>
                           ) : null}
                           {item.adminReply && (
-                            <div className="flex items-start gap-1.5 rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
+                            <div className="flex items-start gap-1.5 rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
                               <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
                               <span>{item.adminReply}</span>
                             </div>
@@ -4260,7 +4260,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           })()}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-6 bg-[#F5F5F7] p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
+            <TabsList className="grid grid-cols-6 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger id="admin-tab-progress" value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학습 관리</span>
@@ -4480,10 +4480,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
             {/* TAB D-Day: 학생 D-Day 관리 */}
             <TabsContent value="ddays" className="space-y-5 outline-none">
-              <div className="rounded-2xl border border-black/[0.06] bg-white shadow-sm overflow-hidden">
-                <div className="px-5 py-4 border-b border-black/[0.04] flex items-center gap-2 bg-[#FAFAFA]">
+              <div className="rounded-2xl border border-black/[0.06] dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-black/[0.04] dark:border-white/10 flex items-center gap-2 bg-[#FAFAFA] dark:bg-white/5">
                   <CalendarDays className="w-4 h-4 text-[#0071E3]" />
-                  <h3 className="text-xs font-semibold text-slate-900">D-Day 목록</h3>
+                  <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-100">D-Day 목록</h3>
                 </div>
 
                 {/* 현황 */}
@@ -4500,12 +4500,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         const label = diff === 0 ? 'D-Day' : diff > 0 ? `D-${diff}` : `D+${Math.abs(diff)}`;
                         const isPast = diff < 0;
                         return (
-                          <div key={d.id} className="flex items-center gap-3 rounded-xl border border-black/[0.06] bg-white px-3 py-2.5 hover:bg-slate-50/50 transition-colors">
+                          <div key={d.id} className="flex items-center gap-3 rounded-xl border border-black/[0.06] dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2.5 hover:bg-slate-50/50 dark:hover:bg-white/10 transition-colors">
                             <span className={`shrink-0 text-xs font-semibold min-w-[3.5rem] text-center ${
                               diff === 0 ? 'text-emerald-600' : isPast ? 'text-slate-400' : 'text-[#0071E3]'
                             }`}>{label}</span>
                             <div className="flex-1 min-w-0">
-                              <p className="text-xs font-bold text-slate-900 truncate">{d.title}</p>
+                              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{d.title}</p>
                               <p className="text-[10px] font-semibold text-slate-400">{d.date}</p>
                             </div>
                             <button
@@ -4518,7 +4518,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                                   if (onUpdate) onUpdate(updated as Student);
                                 }
                               }}
-                              className="shrink-0 text-slate-300 hover:text-red-500 transition-colors"
+                              className="shrink-0 text-slate-300 dark:text-slate-600 hover:text-red-500 transition-colors"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
@@ -4529,7 +4529,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 </div>
 
                 {/* 추가 */}
-                <div className="px-5 py-4 border-t border-black/[0.04] bg-[#FAFAFA] space-y-2">
+                <div className="px-5 py-4 border-t border-black/[0.04] dark:border-white/10 bg-[#FAFAFA] dark:bg-white/5 space-y-2">
                   <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">새 D-Day 추가 (관리자)</p>
                   <div className="flex gap-2">
                     <input
@@ -4537,13 +4537,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                       value={ddayAdminTitle}
                       onChange={(e) => setDdayAdminTitle(e.target.value)}
                       placeholder="이름 (예: 수능, 기말고사)"
-                      className="flex-1 rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-slate-900 placeholder:text-slate-300 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                      className="flex-1 rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
                     />
                     <input
                       type="date"
                       value={ddayAdminDate}
                       onChange={(e) => setDdayAdminDate(e.target.value)}
-                      className="rounded-xl border border-black/[0.08] bg-white px-3 py-2 text-xs font-semibold text-slate-900 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
+                      className="rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 px-3 py-2 text-xs font-semibold text-slate-900 dark:text-slate-100 focus:outline-none focus:border-[#0071E3] focus:ring-2 focus:ring-[#0071E3]/20"
                     />
                   </div>
                   <button
@@ -4640,10 +4640,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         if (!open) afterCloseActionRef.current = null;
       }}
     >
-      <AlertDialogContent className="bg-white">
+      <AlertDialogContent className="bg-white dark:bg-[#1c1c1e]">
         <AlertDialogHeader>
-          <AlertDialogTitle className="text-base text-slate-900">변경사항을 저장할까요?</AlertDialogTitle>
-          <AlertDialogDescription className="text-xs leading-5 text-slate-600">
+          <AlertDialogTitle className="text-base text-slate-900 dark:text-slate-100">변경사항을 저장할까요?</AlertDialogTitle>
+          <AlertDialogDescription className="text-xs leading-5 text-slate-600 dark:text-slate-300">
             저장하지 않고 닫으면 지금 입력한 상담 기록과 변경사항이 저장되지 않습니다.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -4653,7 +4653,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             variant="outline"
             onClick={handleDiscardAndClose}
             disabled={loading}
-            className="rounded-lg border-black/[0.08] bg-white text-xs font-bold text-slate-900"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 text-xs font-bold text-slate-900 dark:text-slate-100"
           >
             끝내기
           </Button>

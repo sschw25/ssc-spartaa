@@ -58,30 +58,30 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
     .flatMap(([, ss]) => ss).length;
 
   return (
-    <div className="bg-white rounded-3xl border border-black/[0.04] shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.04] dark:border-white/10 shadow-sm overflow-hidden">
       {/* 헤더 */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.04] bg-[#FAFAFA]">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.04] dark:border-white/10 bg-[#FAFAFA] dark:bg-white/5">
         <div className="flex items-center gap-3">
           <button
             onClick={prevMonth}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/[0.06] transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/10 transition-colors"
           >
-            <ChevronLeft className="w-4 h-4 text-slate-500" />
+            <ChevronLeft className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           </button>
-          <span className="text-sm font-semibold text-slate-900 min-w-[90px] text-center">
+          <span className="text-sm font-semibold text-slate-900 dark:text-slate-100 min-w-[90px] text-center">
             {viewYear}년 {viewMonth + 1}월
           </span>
           <button
             onClick={nextMonth}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/[0.06] transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/[0.06] dark:hover:bg-white/10 transition-colors"
           >
-            <ChevronRight className="w-4 h-4 text-slate-500" />
+            <ChevronRight className="w-4 h-4 text-slate-500 dark:text-slate-400" />
           </button>
         </div>
         <div className="flex items-center gap-3 text-[10px] font-semibold">
-          <span className="text-slate-500">이달 상담 <span className="text-slate-900">{thisMonthStudents.length}명</span></span>
+          <span className="text-slate-500 dark:text-slate-400">이달 상담 <span className="text-slate-900 dark:text-slate-100">{thisMonthStudents.length}명</span></span>
           {overdueCount > 0 && (
-            <span className="flex items-center gap-1 text-amber-700 bg-amber-50 border border-amber-200/60 rounded-full px-2.5 py-1">
+            <span className="flex items-center gap-1 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-500/10 border border-amber-200/60 dark:border-amber-500/20 rounded-full px-2.5 py-1">
               <AlertTriangle className="w-3 h-3" />
               미완 {overdueCount}명
             </span>
@@ -90,12 +90,12 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
       </div>
 
       {/* 요일 헤더 */}
-      <div className="grid grid-cols-7 border-b border-black/[0.04]">
+      <div className="grid grid-cols-7 border-b border-black/[0.04] dark:border-white/10">
         {DOW_LABELS.map((d, i) => (
           <div
             key={d}
             className={`py-2 text-center text-[10px] font-semibold tracking-wider ${
-              i === 5 ? 'text-blue-500' : i === 6 ? 'text-red-500' : 'text-slate-500'
+              i === 5 ? 'text-blue-500' : i === 6 ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'
             }`}
           >
             {d}
@@ -116,8 +116,8 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
           return (
             <div
               key={idx}
-              className={`min-h-[80px] border-b border-r border-black/[0.03] p-1.5 flex flex-col gap-0.5 last:border-r-0 ${
-                !day ? 'bg-[#F8F9FA]/60' : isToday ? 'bg-blue-50/40' : ''
+              className={`min-h-[80px] border-b border-r border-black/[0.03] dark:border-white/10 p-1.5 flex flex-col gap-0.5 last:border-r-0 ${
+                !day ? 'bg-[#F8F9FA]/60 dark:bg-white/5' : isToday ? 'bg-blue-50/40 dark:bg-[#0071E3]/15' : ''
               }`}
             >
               {day && (
@@ -132,7 +132,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                         ? 'text-blue-500'
                         : dow === 6
                         ? 'text-red-500'
-                        : 'text-slate-900'
+                        : 'text-slate-900 dark:text-slate-100'
                     }`}
                   >
                     {day}
@@ -144,8 +144,8 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                         onClick={() => onOpenStudent(s.id)}
                         className={`w-full text-left text-[9px] font-semibold px-1.5 py-0.5 rounded-md truncate transition-all hover:scale-[1.02] ${
                           hasOverdue
-                            ? 'bg-amber-100/80 text-amber-800 hover:bg-amber-200'
-                            : 'bg-[#0071E3]/[0.08] text-[#0071E3] hover:bg-[#0071E3]/[0.14]'
+                            ? 'bg-amber-100/80 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-500/20'
+                            : 'bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/[0.14] dark:hover:bg-[#0071E3]/25'
                         }`}
                         title={`${s.name} · ${s.campus}`}
                       >
@@ -153,7 +153,7 @@ export function ConsultationCalendar({ students, onOpenStudent }: ConsultationCa
                       </button>
                     ))}
                     {scheduled.length > 3 && (
-                      <span className="text-[9px] font-semibold text-slate-500 pl-1">
+                      <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 pl-1">
                         +{scheduled.length - 3}
                       </span>
                     )}

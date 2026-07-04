@@ -28,7 +28,7 @@ const isCampusFilterValue = (value: string | null): value is string => !!value &
 export default function AdminConsultationPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-black flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
         <p className="text-sm text-slate-500">상담일지 로드 중...</p>
       </div>
@@ -478,7 +478,7 @@ function ConsultationContent() {
 
   // 캠퍼스는 분류(식별)용이라 의미색(초록=양호/파랑=정보)과 분리해 중립 스타일로 통일.
   // 식별은 뱃지 텍스트(원주/춘천/충주)가 담당하며, 앱 전반의 캠퍼스 표기(회색)와도 일치.
-  const getCampusBadgeColor = (_val: string) => 'bg-[#F5F5F7] text-slate-500 border-black/[0.06]';
+  const getCampusBadgeColor = (_val: string) => 'bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10';
 
   const getStudentSubjectSummaries = (student: Student) => {
     const subjects = student.subjects && student.subjects.length > 0
@@ -628,10 +628,10 @@ function ConsultationContent() {
 
   const getProgressStatusStyle = (status: string) => {
     switch (status) {
-      case 'behind': return 'bg-red-50 text-red-700 border-red-100';
-      case 'ahead': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'on-track': return 'bg-blue-50 text-blue-700 border-blue-100';
-      default: return 'bg-[#F5F5F7] text-slate-500 border-black/[0.06] break-keep';
+      case 'behind': return 'bg-red-50 dark:bg-red-500/10 text-red-700 border-red-100 dark:border-red-500/20';
+      case 'ahead': return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 border-emerald-100 dark:border-emerald-500/20';
+      case 'on-track': return 'bg-blue-50 dark:bg-[#0071E3]/15 text-blue-700 border-blue-100 dark:border-[#0071E3]/20';
+      default: return 'bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10 break-keep';
     }
   };
 
@@ -663,7 +663,7 @@ function ConsultationContent() {
               size="sm"
               variant="outline"
               onClick={handleFocusSearch}
-              className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+              className="admin-fit-button rounded-2xl border-black/[0.05] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5 text-xs h-9.5 bg-white dark:bg-[#1c1c1e] px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
               title="검색"
             >
               <Search className="w-4 h-4 md:mr-1.5 text-slate-500" />
@@ -673,7 +673,7 @@ function ConsultationContent() {
               size="sm"
               variant="outline"
               onClick={loadStudents}
-              className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+              className="admin-fit-button rounded-2xl border-black/[0.05] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5 text-xs h-9.5 bg-white dark:bg-[#1c1c1e] px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
               title="새로고침"
             >
               <RefreshCw className={`w-3.5 h-3.5 md:mr-1.5 ${loading ? 'animate-spin' : ''}`} />
@@ -683,7 +683,7 @@ function ConsultationContent() {
               size="sm"
               variant="ghost"
               onClick={handleLogout}
-              className="admin-fit-button text-red-600 hover:text-red-700 hover:bg-red-50 rounded-2xl text-xs h-9.5 px-3 transition-premium"
+              className="admin-fit-button text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl text-xs h-9.5 px-3 transition-premium"
               title="로그아웃"
             >
               <LogOut className="w-4 h-4 mr-1.5 text-red-500" />
@@ -696,7 +696,7 @@ function ConsultationContent() {
       <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 pb-28 space-y-6">
 
         {/* 필터 및 검색 바 */}
-        <div className="admin-fit-box flex flex-col gap-3.5 bg-white p-5 rounded-3xl border border-black/[0.05] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+        <div className="admin-fit-box flex flex-col gap-3.5 bg-white dark:bg-[#1c1c1e] p-5 rounded-3xl border border-black/[0.05] dark:border-white/10 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
           <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
             <div className="relative flex-1 max-w-md admin-mobile-full">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
@@ -705,7 +705,7 @@ function ConsultationContent() {
                 placeholder="수강생 이름 또는 교재명을 입력해 주세요."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 rounded-2xl border-transparent text-[13px] h-11 bg-black/[0.04]"
+                className="pl-10 rounded-2xl border-transparent text-[13px] h-11 bg-black/[0.04] dark:bg-white/5"
               />
             </div>
 
@@ -718,13 +718,13 @@ function ConsultationContent() {
             </Button>
           </div>
 
-          <div className="h-px bg-black/[0.04] my-0.5" />
+          <div className="h-px bg-black/[0.04] dark:bg-white/5 my-0.5" />
 
           {/* 필터 선택 영역 (캠퍼스 필터 + 퀵 필터) */}
           <div className="flex flex-wrap items-center gap-5 text-xs">
             {/* 캠퍼스(센터) 필터 */}
             <div className="flex items-center gap-2.5">
-              <span className="font-extrabold text-slate-500 shrink-0">캠퍼스</span>
+              <span className="font-extrabold text-slate-500 dark:text-slate-400 shrink-0">캠퍼스</span>
               <div className="glass-capsule flex items-center p-1 rounded-full shrink-0">
                 {CAMPUS_FILTERS.map((c) => (
                   <Button
@@ -734,8 +734,8 @@ function ConsultationContent() {
                     onClick={() => handleCampusFilterChange(c)}
                     className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
                       campusFilter === c
-                        ? 'bg-white hover:bg-white text-black shadow-sm'
-                        : 'text-slate-500 hover:text-black'
+                        ? 'bg-white dark:bg-[#1c1c1e] hover:bg-white dark:hover:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-slate-100'
                     }`}
                   >
                     {c === 'all' ? '전체' : getCampusLabel(c)}
@@ -746,14 +746,14 @@ function ConsultationContent() {
 
             {/* 퀵 필터 (상담/진도/정체/미입력) */}
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="font-extrabold text-slate-500 shrink-0">상태 필터</span>
+              <span className="font-extrabold text-slate-500 dark:text-slate-400 shrink-0">상태 필터</span>
               <div className="glass-capsule flex flex-wrap items-center p-1 rounded-2xl gap-0.5">
                 <Button
                   variant={quickFilter === 'all' ? 'default' : 'ghost'}
                   size="sm"
                   onClick={() => handleQuickFilterChange('all')}
                   className={`h-7.5 rounded-lg px-3 text-[11px] font-bold transition-premium ${
-                    quickFilter === 'all' ? 'bg-white hover:bg-white text-black shadow-sm' : 'text-slate-500 hover:text-black'
+                    quickFilter === 'all' ? 'bg-white dark:bg-[#1c1c1e] hover:bg-white dark:hover:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-black dark:hover:text-slate-100'
                   }`}
                 >
                   전체
@@ -765,8 +765,8 @@ function ConsultationContent() {
                   onClick={() => handleQuickFilterChange('stagnant')}
                   className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
                     quickFilter === 'stagnant'
-                      ? 'bg-red-50 hover:bg-red-50 text-red-600 shadow-sm border border-red-100'
-                      : 'text-slate-500 hover:text-red-500 hover:bg-red-50/40'
+                      ? 'bg-red-50 dark:bg-red-500/10 hover:bg-red-50 dark:hover:bg-red-500/10 text-red-600 shadow-sm border border-red-100 dark:border-red-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-red-500 hover:bg-red-50/40 dark:hover:bg-red-500/10'
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-1.5 inline-block" />
@@ -779,8 +779,8 @@ function ConsultationContent() {
                   onClick={() => handleQuickFilterChange('behind')}
                   className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
                     quickFilter === 'behind'
-                      ? 'bg-orange-50 hover:bg-orange-50 text-orange-600 shadow-sm border border-orange-100'
-                      : 'text-slate-500 hover:text-orange-500 hover:bg-orange-50/40'
+                      ? 'bg-orange-50 dark:bg-orange-500/10 hover:bg-orange-50 dark:hover:bg-orange-500/10 text-orange-600 shadow-sm border border-orange-100 dark:border-orange-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-orange-500 hover:bg-orange-50/40 dark:hover:bg-orange-500/10'
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500 mr-1.5 inline-block" />
@@ -793,8 +793,8 @@ function ConsultationContent() {
                   onClick={() => handleQuickFilterChange('missing_grade')}
                   className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
                     quickFilter === 'missing_grade'
-                      ? 'bg-amber-50 hover:bg-amber-50 text-amber-600 shadow-sm border border-amber-100'
-                      : 'text-slate-500 hover:text-amber-600 hover:bg-amber-50/40'
+                      ? 'bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-50 dark:hover:bg-amber-500/10 text-amber-600 shadow-sm border border-amber-100 dark:border-amber-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-amber-600 hover:bg-amber-50/40 dark:hover:bg-amber-500/10'
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 inline-block" />
@@ -807,8 +807,8 @@ function ConsultationContent() {
                   onClick={() => handleQuickFilterChange('consultation')}
                   className={`h-7.5 rounded-lg px-2.5 text-[11px] font-bold transition-premium ${
                     quickFilter === 'consultation'
-                      ? 'bg-blue-50 hover:bg-blue-50 text-[#0071E3] shadow-sm border border-blue-100'
-                      : 'text-slate-500 hover:text-[#0071E3] hover:bg-blue-50/40'
+                      ? 'bg-blue-50 dark:bg-[#0071E3]/15 hover:bg-blue-50 dark:hover:bg-[#0071E3]/15 text-[#0071E3] shadow-sm border border-blue-100 dark:border-[#0071E3]/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-[#0071E3] hover:bg-blue-50/40 dark:hover:bg-[#0071E3]/15'
                   }`}
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] mr-1.5 inline-block" />
@@ -821,14 +821,14 @@ function ConsultationContent() {
 
         {/* 메인 대시보드 탭 분기 — 스피너는 첫 로딩(데이터 없음)일 때만, 재조회 중엔 기존 콘텐츠 유지 */}
         {loading && students.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center justify-center">
+          <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-3xl flex flex-col items-center justify-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-            <p className="text-xs text-slate-500">스마트 시트 정보 불러오는 중...</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">스마트 시트 정보 불러오는 중...</p>
           </div>
         ) : (
           <Tabs value={dashboardTab} onValueChange={handleDashboardTabChange} className="w-full" id="student-list-section">
-            <div className="admin-fit-row flex justify-between items-center border-b border-black/[0.05] pb-4 mb-4 gap-3 admin-mobile-wrap">
-              <TabsList className="bg-white border border-black/[0.06] p-1 grid grid-cols-3 gap-1 h-auto min-w-0 w-full sm:w-auto rounded-full shadow-sm">
+            <div className="admin-fit-row flex justify-between items-center border-b border-black/[0.05] dark:border-white/10 pb-4 mb-4 gap-3 admin-mobile-wrap">
+              <TabsList className="bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/10 p-1 grid grid-cols-3 gap-1 h-auto min-w-0 w-full sm:w-auto rounded-full shadow-sm">
                 <TabsTrigger
                   value="cards"
                   className="admin-fit-button text-sm font-bold !rounded-full border border-transparent data-[state=active]:border-black/[0.06] data-[state=active]:!bg-slate-900 data-[state=active]:!text-white data-[state=active]:shadow-sm px-4 py-2 h-10 w-full"
@@ -860,12 +860,12 @@ function ConsultationContent() {
                     size="sm"
                     variant="outline"
                     onClick={() => setQuickFilter('all')}
-                    className="admin-fit-button h-7 rounded-full border-black/[0.08] bg-white px-2 text-[10px]"
+                    className="admin-fit-button h-7 rounded-full border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[10px]"
                   >
                     필터 해제
                   </Button>
                 )}
-                <span className="admin-fit-caption text-slate-500 font-semibold">
+                <span className="admin-fit-caption text-slate-500 dark:text-slate-400 font-semibold">
                   {quickFilter === 'consultation' ? '상담 대상: ' :
                    quickFilter === 'behind' ? '진도 지연: ' :
                    quickFilter === 'stagnant' ? '진도 정체: ' :
@@ -881,7 +881,7 @@ function ConsultationContent() {
 
               {/* 보기 모드 토글 (카드형 / 표형) */}
               <div className="flex justify-end items-center">
-                <div className="flex bg-white border border-black/[0.06] p-0.5 rounded-lg shadow-sm">
+                <div className="flex bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/10 p-0.5 rounded-lg shadow-sm">
                   <Button
                     size="sm"
                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -889,7 +889,7 @@ function ConsultationContent() {
                     className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all ${
                       viewMode === 'grid'
                         ? 'bg-slate-900 text-white hover:bg-slate-900/90 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-[#F5F5F7]'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#F5F5F7] dark:hover:bg-white/5'
                     }`}
                   >
                     <LayoutGrid className="w-3.5 h-3.5 mr-1" />
@@ -902,7 +902,7 @@ function ConsultationContent() {
                     className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all ${
                       viewMode === 'table'
                         ? 'bg-slate-900 text-white hover:bg-slate-900/90 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-[#F5F5F7]'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#F5F5F7] dark:hover:bg-white/5'
                     }`}
                   >
                     <Table className="w-3.5 h-3.5 mr-1" />
@@ -912,7 +912,7 @@ function ConsultationContent() {
               </div>
 
               {filteredStudents.length === 0 ? (
-                <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+                <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
                   검색 조건에 맞는 학생이 없습니다.
                 </div>
               ) : viewMode === 'grid' ? (
@@ -924,18 +924,18 @@ function ConsultationContent() {
                       <div
                         key={student.id}
                         onClick={() => handleOpenStudentDetail(student.id)}
-                        className="admin-fit-box bg-white border border-black/[0.05] rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-[1px] cursor-pointer transition-all duration-300 flex flex-col justify-between"
+                        className="admin-fit-box bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-5 shadow-sm hover:shadow-md hover:-translate-y-[1px] cursor-pointer transition-all duration-300 flex flex-col justify-between"
                       >
                         <div className="space-y-3">
                           <div className="admin-fit-row flex justify-between items-start gap-2">
                             <div className="min-w-0">
                               <div className="admin-fit-row flex items-center gap-1.5">
-                                <h4 className="admin-fit-text admin-fit-title font-bold text-slate-900">{student.name}</h4>
+                                <h4 className="admin-fit-text admin-fit-title font-bold text-slate-900 dark:text-slate-100">{student.name}</h4>
                                 <Badge className={`admin-fit-button rounded-md text-[9px] px-1.5 py-0.5 border shrink-0 ${getCampusBadgeColor(student.campus)}`}>
                                   {getCampusLabel(student.campus)}
                                 </Badge>
                               </div>
-                              <p className="admin-fit-text admin-fit-caption text-slate-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                              <p className="admin-fit-text admin-fit-caption text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-1.5 flex-wrap">
                                 <span>{student.manager || '담당 코멘터'}</span>
                                 {(() => {
                                   const todayMin = getStudentTodayTotalStudyTimeMin(student);
@@ -951,20 +951,20 @@ function ConsultationContent() {
                                 })()}
                               </p>
                             </div>
-                            <ChevronRight className="admin-fit-icon w-4 h-4 text-slate-500" />
+                            <ChevronRight className="admin-fit-icon w-4 h-4 text-slate-500 dark:text-slate-400" />
                           </div>
 
                           {/* 과목별 현재 학습 흐름 */}
-                          <div className="space-y-2.5 pt-2 border-t border-black/[0.03]">
+                          <div className="space-y-2.5 pt-2 border-t border-black/[0.03] dark:border-white/10">
                             {totalItems === 0 ? (
-                              <p className="admin-fit-caption text-slate-500 italic">진행 중인 교재/인강이 없습니다.</p>
+                              <p className="admin-fit-caption text-slate-500 dark:text-slate-400 italic">진행 중인 교재/인강이 없습니다.</p>
                             ) : (
                               <div className="space-y-2">
                                 {subjectSummaries.map((summary) => (
-                                  <div key={summary.id} className="rounded-lg bg-[#F5F5F7]/70 p-2.5">
+                                  <div key={summary.id} className="rounded-lg bg-[#F5F5F7]/70 dark:bg-white/5 p-2.5">
                                     <div className="admin-fit-row flex items-center justify-between gap-2">
-                                      <span className="admin-fit-text admin-fit-caption font-black text-slate-900">{summary.name}</span>
-                                      <span className="admin-fit-caption text-slate-500 shrink-0">
+                                      <span className="admin-fit-text admin-fit-caption font-black text-slate-900 dark:text-slate-100">{summary.name}</span>
+                                      <span className="admin-fit-caption text-slate-500 dark:text-slate-400 shrink-0">
                                         {summary.periodStart ? `${summary.periodStart.substring(5, 10)}~` : ''}
                                         {summary.completedCount > 0 ? ` 완료 ${summary.completedCount}` : ' 진행중'}
                                       </span>
@@ -976,21 +976,21 @@ function ConsultationContent() {
                                         summary.activeItems.map((item) => (
                                           <div key={item.id} className="space-y-1">
                                             <div className="admin-fit-row flex items-center justify-between gap-2">
-                                              <span className="admin-fit-text admin-fit-caption font-semibold text-slate-700">
+                                              <span className="admin-fit-text admin-fit-caption font-semibold text-slate-700 dark:text-slate-300">
                                                 {item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />} {item.title}
                                               </span>
                                               <span className={`admin-fit-caption font-bold shrink-0 ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
                                                 현재 {item.current}/{item.total}{item.unit}
                                               </span>
                                             </div>
-                                            <div className="h-1.5 rounded-full bg-white overflow-hidden border border-black/[0.03]">
+                                            <div className="h-1.5 rounded-full bg-white dark:bg-white/10 overflow-hidden border border-black/[0.03] dark:border-white/10">
                                               <div
                                                 className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#0071E3]'}`}
                                                 style={{ width: `${Math.min(100, Math.max(0, item.percent))}%` }}
                                               />
                                             </div>
                                             <div className="admin-fit-row flex items-center justify-between gap-2">
-                                              <span className="admin-fit-caption text-slate-500 shrink-0">
+                                              <span className="admin-fit-caption text-slate-500 dark:text-slate-400 shrink-0">
                                                 {item.startDate ? `${item.startDate.substring(5, 10)}~` : '기간 미정'}
                                                 {item.targetDate ? item.targetDate.substring(5, 10) : '진행중'}
                                               </span>
@@ -1002,7 +1002,7 @@ function ConsultationContent() {
                                         ))
                                       )}
                                       {summary.completedItems.length > 0 && (
-                                        <p className="admin-fit-text admin-fit-caption text-slate-500">
+                                        <p className="admin-fit-text admin-fit-caption text-slate-500 dark:text-slate-400">
                                           완료: {summary.completedItems.map(item => item.title).join(', ')}
                                         </p>
                                       )}
@@ -1010,7 +1010,7 @@ function ConsultationContent() {
                                   </div>
                                 ))}
                                 {totalItems > subjectSummaries.reduce((sum, summary) => sum + summary.activeItems.length + summary.completedCount, 0) && (
-                                  <p className="admin-fit-text admin-fit-caption text-slate-500 font-medium">추가 학습 항목이 더 있습니다.</p>
+                                  <p className="admin-fit-text admin-fit-caption text-slate-500 dark:text-slate-400 font-medium">추가 학습 항목이 더 있습니다.</p>
                                 )}
                               </div>
                             )}
@@ -1018,15 +1018,15 @@ function ConsultationContent() {
                         </div>
 
                         {/* 다음 상담일 정보 */}
-                        <div className="admin-fit-row mt-4 pt-3.5 border-t border-black/[0.03] flex justify-between items-center gap-2">
-                          <span className="admin-fit-caption text-slate-500 shrink-0">다음 상담일</span>
+                        <div className="admin-fit-row mt-4 pt-3.5 border-t border-black/[0.03] dark:border-white/10 flex justify-between items-center gap-2">
+                          <span className="admin-fit-caption text-slate-500 dark:text-slate-400 shrink-0">다음 상담일</span>
                           {student.nextConsultationDate ? (
-                            <span className={`admin-fit-text admin-fit-caption font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200 animate-pulse-slow' : 'bg-[#F5F5F7] text-slate-900'}`}>
+                            <span className={`admin-fit-text admin-fit-caption font-bold px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-900 border border-amber-200 dark:border-amber-500/20 animate-pulse-slow' : 'bg-[#F5F5F7] dark:bg-white/5 text-slate-900 dark:text-slate-100'}`}>
                               <Calendar className="h-3 w-3" aria-hidden="true" />
                               {student.nextConsultationDate}
                             </span>
                           ) : (
-                            <span className="admin-fit-text admin-fit-caption text-slate-500 italic">상담일 미지정</span>
+                            <span className="admin-fit-text admin-fit-caption text-slate-500 dark:text-slate-400 italic">상담일 미지정</span>
                           )}
                         </div>
                       </div>
@@ -1035,13 +1035,13 @@ function ConsultationContent() {
                 </div>
               ) : (
                 /* 표 뷰 (간략히) */
-                <div className="bg-white border border-black/[0.05] rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="min-w-[1120px] w-full text-left border-collapse text-xs">
                       <thead>
-                        <tr className="border-b border-black/[0.08] bg-[#F5F5F7] text-slate-500 font-bold">
+                        <tr className="border-b border-black/[0.08] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold">
                           <th
-                            className="p-3.5 pl-6 cursor-pointer hover:bg-black/[0.03] transition-colors select-none"
+                            className="p-3.5 pl-6 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors select-none"
                             onClick={() => handleSortStudents('name')}
                           >
                             <div className="flex items-center gap-1">
@@ -1049,7 +1049,7 @@ function ConsultationContent() {
                             </div>
                           </th>
                           <th
-                            className="p-3.5 cursor-pointer hover:bg-black/[0.03] transition-colors select-none"
+                            className="p-3.5 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors select-none"
                             onClick={() => handleSortStudents('campus')}
                           >
                             <div className="flex items-center gap-1">
@@ -1057,7 +1057,7 @@ function ConsultationContent() {
                             </div>
                           </th>
                           <th
-                            className="p-3.5 cursor-pointer hover:bg-black/[0.03] transition-colors select-none"
+                            className="p-3.5 cursor-pointer hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors select-none"
                             onClick={() => handleSortStudents('manager')}
                           >
                             <div className="flex items-center gap-1">
@@ -1079,11 +1079,11 @@ function ConsultationContent() {
                             <tr
                               key={student.id}
                               onClick={() => handleOpenStudentDetail(student.id)}
-                              className="border-b border-black/[0.04] hover:bg-black/[0.01] transition-colors align-middle cursor-pointer"
+                              className="border-b border-black/[0.04] dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/5 transition-colors align-middle cursor-pointer"
                             >
-                              <td className="p-3.5 pl-6 font-bold text-slate-900">
+                              <td className="p-3.5 pl-6 font-bold text-slate-900 dark:text-slate-100">
                                 <div className="flex items-center gap-1.5">
-                                  <User className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                                  <User className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 shrink-0" />
                                   <span>{student.name}</span>
                                 </div>
                               </td>
@@ -1092,22 +1092,22 @@ function ConsultationContent() {
                                   {getCampusLabel(student.campus)}
                                 </Badge>
                               </td>
-                              <td className="p-3.5 text-slate-700" onClick={(e) => e.stopPropagation()}>
+                              <td className="p-3.5 text-slate-700 dark:text-slate-300" onClick={(e) => e.stopPropagation()}>
                                 <input
                                   defaultValue={student.manager || ''}
                                   placeholder="담당 코멘터"
                                   onBlur={(event) => handleInlineStudentUpdate(student, { manager: event.currentTarget.value.trim() })}
                                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-                                  className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                  className="h-8 w-full rounded-lg border border-black/[0.06] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                 />
-                                <div className="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-1 items-center">
+                                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 flex flex-wrap gap-1 items-center">
                                   {(() => {
                                     const todayMin = getStudentTodayTotalStudyTimeMin(student);
                                     if (todayMin <= 0) return null;
                                     const h = Math.floor(todayMin / 60);
                                     const m = Math.round(todayMin % 60);
                                     return (
-                                      <span className="bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 rounded text-[9px] font-bold">
+                                      <span className="bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3] px-1.5 py-0.5 rounded text-[9px] font-bold">
                                         오늘 {h > 0 ? `${h}h ` : ''}{m}m
                                       </span>
                                     );
@@ -1125,7 +1125,7 @@ function ConsultationContent() {
                                     handleInlineStudentUpdate(student, { seatNumber: value ? Number(value) : undefined });
                                   }}
                                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-                                  className="h-8 w-16 rounded-lg border border-black/[0.06] bg-white px-2 text-center text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                  className="h-8 w-16 rounded-lg border border-black/[0.06] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-center text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                 />
                               </td>
                               <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
@@ -1134,7 +1134,7 @@ function ConsultationContent() {
                                   placeholder="목표 시험"
                                   onBlur={(event) => handleInlineStudentUpdate(student, { contact: event.currentTarget.value.trim() })}
                                   onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-                                  className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                  className="h-8 w-full rounded-lg border border-black/[0.06] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                 />
                               </td>
                               <td className="p-3.5" onClick={(e) => e.stopPropagation()}>
@@ -1144,31 +1144,31 @@ function ConsultationContent() {
                                     placeholder="본인전화"
                                     onBlur={(event) => handleInlineStudentUpdate(student, { studentPhone: event.currentTarget.value.trim() })}
                                     onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-                                    className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                    className="h-8 w-full rounded-lg border border-black/[0.06] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                   />
                                   <input
                                     defaultValue={student.parentPhone || ''}
                                     placeholder="부모전화"
                                     onBlur={(event) => handleInlineStudentUpdate(student, { parentPhone: event.currentTarget.value.trim() })}
                                     onKeyDown={(event) => { if (event.key === 'Enter') event.currentTarget.blur(); }}
-                                    className="h-8 w-full rounded-lg border border-black/[0.06] bg-white px-2 text-[11px] font-semibold text-slate-900 focus:border-[#0071E3] focus:outline-none"
+                                    className="h-8 w-full rounded-lg border border-black/[0.06] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
                                   />
                                 </div>
                               </td>
                               <td className="p-3.5 min-w-[280px]">
                                 {totalItems === 0 ? (
-                                  <span className="text-slate-500 italic">진행 중인 교재/인강 없음</span>
+                                  <span className="text-slate-500 dark:text-slate-400 italic">진행 중인 교재/인강 없음</span>
                                 ) : (
                                   <div className="space-y-1.5">
                                     {subjectSummaries.map((summary) => (
                                       <div key={summary.id} className="text-[11px] flex flex-wrap items-center gap-x-2">
-                                        <span className="font-bold text-slate-900 bg-[#F5F5F7] px-1.5 py-0.5 rounded text-[10px]">{summary.name}</span>
+                                        <span className="font-bold text-slate-900 dark:text-slate-100 bg-[#F5F5F7] dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px]">{summary.name}</span>
                                         {summary.activeItems.length === 0 ? (
                                           <span className="text-emerald-600 font-bold">완료 정리 필요</span>
                                         ) : (
                                           summary.activeItems.map((item, idx) => (
-                                            <span key={item.id} className="text-slate-700 inline-flex items-center gap-1">
-                                              {idx > 0 && <span className="text-black/10">|</span>}
+                                            <span key={item.id} className="text-slate-700 dark:text-slate-300 inline-flex items-center gap-1">
+                                              {idx > 0 && <span className="text-black/10 dark:text-white/10">|</span>}
                                               <span className="text-[10px]">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
                                               <span>{item.title}</span>
                                               <span className={`font-bold ${item.type === 'book' ? 'text-[#0071E3]' : 'text-[#0071E3]'}`}>
@@ -1184,12 +1184,12 @@ function ConsultationContent() {
                               </td>
                               <td className="p-3.5 text-center">
                                 {student.nextConsultationDate ? (
-                                  <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] inline-flex items-center gap-1 ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 text-amber-900 border border-amber-200' : 'bg-[#F5F5F7] text-slate-900'}`}>
+                                  <span className={`font-bold px-2 py-0.5 rounded-md text-[10px] inline-flex items-center gap-1 ${student.nextConsultationDate <= todayStr ? 'bg-amber-100 dark:bg-amber-500/15 text-amber-900 border border-amber-200 dark:border-amber-500/20' : 'bg-[#F5F5F7] dark:bg-white/5 text-slate-900 dark:text-slate-100'}`}>
                                     <Calendar className="h-3 w-3" aria-hidden="true" />
                                     {student.nextConsultationDate}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-500 italic">상담일 미지정</span>
+                                  <span className="text-slate-500 dark:text-slate-400 italic">상담일 미지정</span>
                                 )}
                               </td>
                             </tr>
@@ -1207,7 +1207,7 @@ function ConsultationContent() {
                   <Button
                     variant="outline"
                     onClick={() => setStudentLimit((n) => n + PAGE_SIZE)}
-                    className="rounded-full border-black/[0.08] bg-white text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7]"
+                    className="rounded-full border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7] dark:hover:bg-white/5"
                   >
                     더 보기 ({visibleStudents.length}/{filteredStudents.length})
                   </Button>
@@ -1221,8 +1221,8 @@ function ConsultationContent() {
               {/* 정렬 + 보기 모드 토글 */}
               <div className="flex flex-wrap justify-between items-center gap-2">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-500 shrink-0">정렬</span>
-                  <div className="flex bg-white border border-black/[0.06] p-0.5 rounded-lg shadow-sm">
+                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 shrink-0">정렬</span>
+                  <div className="flex bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/10 p-0.5 rounded-lg shadow-sm">
                     {([
                       { key: 'shortage', label: '부족분 많은순' },
                       { key: 'status', label: '상태순' },
@@ -1236,7 +1236,7 @@ function ConsultationContent() {
                         className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all ${
                           progressSort === opt.key
                             ? 'bg-slate-900 text-white hover:bg-slate-900/90 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-900 hover:bg-[#F5F5F7]'
+                            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#F5F5F7] dark:hover:bg-white/5'
                         }`}
                       >
                         {opt.label}
@@ -1245,7 +1245,7 @@ function ConsultationContent() {
                   </div>
                 </div>
 
-                <div className="flex bg-white border border-black/[0.06] p-0.5 rounded-lg shadow-sm">
+                <div className="flex bg-white dark:bg-[#1c1c1e] border border-black/[0.06] dark:border-white/10 p-0.5 rounded-lg shadow-sm">
                   <Button
                     size="sm"
                     variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -1253,7 +1253,7 @@ function ConsultationContent() {
                     className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all ${
                       viewMode === 'grid'
                         ? 'bg-slate-900 text-white hover:bg-slate-900/90 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-[#F5F5F7]'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#F5F5F7] dark:hover:bg-white/5'
                     }`}
                   >
                     <LayoutGrid className="w-3.5 h-3.5 mr-1" />
@@ -1266,7 +1266,7 @@ function ConsultationContent() {
                     className={`h-7 px-2.5 rounded-md text-[11px] font-bold transition-all ${
                       viewMode === 'table'
                         ? 'bg-slate-900 text-white hover:bg-slate-900/90 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-900 hover:bg-[#F5F5F7]'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-[#F5F5F7] dark:hover:bg-white/5'
                     }`}
                   >
                     <Table className="w-3.5 h-3.5 mr-1" />
@@ -1276,11 +1276,11 @@ function ConsultationContent() {
               </div>
 
               {filteredProgressItems.length === 0 ? (
-                <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+                <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
                   데이터가 없습니다.
                 </div>
               ) : viewMode === 'table' ? (
-                <div id="progress-table-section" className="bg-white border border-black/[0.05] rounded-2xl overflow-hidden shadow-sm scroll-mt-28">
+                <div id="progress-table-section" className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl overflow-hidden shadow-sm scroll-mt-28">
 
                   <div className="bg-slate-900 text-white p-4.5 flex justify-between items-center">
                     <h3 className="text-xs font-bold tracking-tight">교재/강의별 오늘 기준 진도 관리표</h3>
@@ -1290,7 +1290,7 @@ function ConsultationContent() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
-                        <tr className="border-b border-black/[0.08] bg-[#F5F5F7] text-slate-500 font-bold">
+                        <tr className="border-b border-black/[0.08] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 font-bold">
                           <th className="p-3.5 pl-6">교재/강의</th>
                           <th className="p-3.5">수강생</th>
                           <th className="p-3.5 text-center">상태</th>
@@ -1302,14 +1302,14 @@ function ConsultationContent() {
                       </thead>
                       <tbody>
                         {visibleProgressItems.map((item) => (
-                          <tr key={`${item.studentId}_${item.itemId}`} className="border-b border-black/[0.04] hover:bg-black/[0.01] transition-colors align-middle">
+                          <tr key={`${item.studentId}_${item.itemId}`} className="border-b border-black/[0.04] dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/5 transition-colors align-middle">
 
-                            <td className="p-3.5 pl-6 font-bold text-slate-900 min-w-[240px]">
+                            <td className="p-3.5 pl-6 font-bold text-slate-900 dark:text-slate-100 min-w-[240px]">
                               <div className="flex items-start gap-2">
                                 <span className="shrink-0">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
                                 <div className="min-w-0">
                                   <p className="truncate">{item.title}</p>
-                                  <p className="text-[10px] text-slate-500 mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
                                 </div>
                               </div>
                             </td>
@@ -1325,7 +1325,7 @@ function ConsultationContent() {
                                 <User className="w-3.5 h-3.5 shrink-0" />
                                 {item.studentName}
                               </span>
-                              <p className="text-[10px] text-slate-500 mt-1">{getCampusLabel(item.campus)} · {item.manager || '담당자'}</p>
+                              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{getCampusLabel(item.campus)} · {item.manager || '담당자'}</p>
                             </td>
 
                             <td className="p-3.5 text-center">
@@ -1338,7 +1338,7 @@ function ConsultationContent() {
                               {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}
                             </td>
 
-                            <td className="p-3.5 text-center font-bold text-slate-900">
+                            <td className="p-3.5 text-center font-bold text-slate-900 dark:text-slate-100">
                               {item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}
                             </td>
 
@@ -1352,7 +1352,7 @@ function ConsultationContent() {
                                       e.stopPropagation();
                                       handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'dec');
                                     }}
-                                    className="w-6.5 h-6.5 rounded-lg border-black/[0.08] bg-white hover:bg-[#F5F5F7] shrink-0"
+                                    className="w-6.5 h-6.5 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
                                   >
                                     <Minus className="w-2.5 h-2.5" />
                                   </Button>
@@ -1380,9 +1380,9 @@ function ConsultationContent() {
                                         e.currentTarget.blur();
                                       }
                                     }}
-                                    className="h-7 w-16 rounded-lg border-black/[0.08] bg-white px-2 text-center text-xs font-bold"
+                                    className="h-7 w-16 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-center text-xs font-bold"
                                   />
-                                  <span className="text-[10px] font-bold text-slate-500">{item.type === 'book' ? 'p' : '강'}</span>
+                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.type === 'book' ? 'p' : '강'}</span>
                                   <Button
                                     size="icon"
                                     variant="outline"
@@ -1390,7 +1390,7 @@ function ConsultationContent() {
                                       e.stopPropagation();
                                       handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'inc');
                                     }}
-                                    className="w-6.5 h-6.5 rounded-lg border-black/[0.08] bg-white hover:bg-[#F5F5F7] shrink-0"
+                                    className="w-6.5 h-6.5 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
                                   >
                                     <Plus className="w-2.5 h-2.5" />
                                   </Button>
@@ -1419,10 +1419,10 @@ function ConsultationContent() {
                               </div>
                             </td>
 
-                            <td className="p-3.5 pr-6 text-center text-slate-700">
+                            <td className="p-3.5 pr-6 text-center text-slate-700 dark:text-slate-300">
                               <div className="space-y-1">
                                 <p className="text-[10px]">상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</p>
-                                <p className="text-[10px] text-slate-500">목표 {item.targetDate || '-'}</p>
+                                <p className="text-[10px] text-slate-500 dark:text-slate-400">목표 {item.targetDate || '-'}</p>
                               </div>
                             </td>
 
@@ -1440,13 +1440,13 @@ function ConsultationContent() {
                     return (
                       <div
                         key={`${item.studentId}_${item.itemId}`}
-                        className="bg-white border border-black/[0.05] rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                        className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
                       >
                         <div className="space-y-3">
                           <div className="flex justify-between items-start gap-2">
                             <div className="min-w-0">
-                              <span className="text-[10px] text-slate-500">{item.subjectName}</span>
-                              <h4 className="font-bold text-slate-900 truncate mt-0.5">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400">{item.subjectName}</span>
+                              <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5">
                                 {item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />} {item.title}
                               </h4>
                             </div>
@@ -1455,7 +1455,7 @@ function ConsultationContent() {
                             </span>
                           </div>
 
-                          <div className="pt-2 border-t border-black/[0.03] space-y-1">
+                          <div className="pt-2 border-t border-black/[0.03] dark:border-white/10 space-y-1">
                             <div className="flex items-center justify-between">
                               <span
                                 onClick={(e) => {
@@ -1471,23 +1471,23 @@ function ConsultationContent() {
                                 {getCampusLabel(item.campus)}
                               </Badge>
                             </div>
-                            <p className="text-[10px] text-slate-500">담당: {item.manager || '담당자'}</p>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400">담당: {item.manager || '담당자'}</p>
                           </div>
 
-                          <div className="bg-[#F5F5F7] p-2.5 rounded-xl space-y-2">
-                            <div className="flex justify-between items-center text-[10px] text-slate-500">
-                              <span>오늘 기준 권장: <strong className="text-slate-900">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}</strong></span>
+                          <div className="bg-[#F5F5F7] dark:bg-white/5 p-2.5 rounded-xl space-y-2">
+                            <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
+                              <span>오늘 기준 권장: <strong className="text-slate-900 dark:text-slate-100">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}</strong></span>
                               <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}</strong></span>
                             </div>
-                            <div className="h-1.5 rounded-full bg-white overflow-hidden border border-black/[0.03]">
+                            <div className="h-1.5 rounded-full bg-white dark:bg-white/10 overflow-hidden border border-black/[0.03] dark:border-white/10">
                               <div
                                 className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#0071E3]'}`}
                                 style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
                               />
                             </div>
-                            <div className="flex justify-between items-center text-[9px] text-slate-500">
+                            <div className="flex justify-between items-center text-[9px] text-slate-500 dark:text-slate-400">
                               <span>진행도</span>
-                              <span className="font-bold text-slate-900">{progressPercent}%</span>
+                              <span className="font-bold text-slate-900 dark:text-slate-100">{progressPercent}%</span>
                             </div>
                           </div>
 
@@ -1497,11 +1497,11 @@ function ConsultationContent() {
                                 size="icon"
                                 variant="outline"
                                 onClick={() => handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'dec')}
-                                className="w-7 h-7 rounded-lg border-black/[0.08] bg-white hover:bg-[#F5F5F7] shrink-0"
+                                className="w-7 h-7 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
                               >
                                 <Minus className="w-3 h-3" />
                               </Button>
-                              <div className="flex-1 flex items-center justify-center gap-1 bg-[#F5F5F7] rounded-lg h-7 px-2">
+                              <div className="flex-1 flex items-center justify-center gap-1 bg-[#F5F5F7] dark:bg-white/5 rounded-lg h-7 px-2">
                                 <Input
                                   type="number"
                                   min={0}
@@ -1528,13 +1528,13 @@ function ConsultationContent() {
                                   }}
                                   className="h-5 w-12 border-none bg-transparent p-0 text-center text-xs font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
                                 />
-                                <span className="text-[10px] font-bold text-slate-500">/ {item.total}{item.type === 'book' ? 'p' : '강'}</span>
+                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">/ {item.total}{item.type === 'book' ? 'p' : '강'}</span>
                               </div>
                               <Button
                                 size="icon"
                                 variant="outline"
                                 onClick={() => handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'inc')}
-                                className="w-7 h-7 rounded-lg border-black/[0.08] bg-white hover:bg-[#F5F5F7] shrink-0"
+                                className="w-7 h-7 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
                               >
                                 <Plus className="w-3 h-3" />
                               </Button>
@@ -1563,7 +1563,7 @@ function ConsultationContent() {
                           </div>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-black/[0.03] flex justify-between items-center text-[10px] text-slate-500">
+                        <div className="mt-4 pt-3 border-t border-black/[0.03] dark:border-white/10 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
                           <span>상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</span>
                           <span>목표 {item.targetDate || '-'}</span>
                         </div>
@@ -1579,7 +1579,7 @@ function ConsultationContent() {
                   <Button
                     variant="outline"
                     onClick={() => setProgressLimit((n) => n + PAGE_SIZE)}
-                    className="rounded-full border-black/[0.08] bg-white text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7]"
+                    className="rounded-full border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7] dark:hover:bg-white/5"
                   >
                     더 보기 ({visibleProgressItems.length}/{filteredProgressItems.length})
                   </Button>

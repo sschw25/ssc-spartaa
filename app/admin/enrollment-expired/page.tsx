@@ -107,7 +107,7 @@ export default function EnrollmentExpiredPage() {
               variant="outline"
               size="icon"
               onClick={() => router.push('/admin/dashboard')}
-              className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 transition active:scale-95 shrink-0"
+              className="h-9 w-9 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 transition active:scale-95 shrink-0"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -116,7 +116,7 @@ export default function EnrollmentExpiredPage() {
                 <XCircle className="w-5 h-5 text-red-500" />
                 만료 경고 학생
               </h1>
-              <p className="text-xs font-bold text-slate-400 mt-0.5">
+              <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">
                 등록 종료일이 이미 지난 학생입니다. 결제 여부를 확인하세요.
               </p>
             </div>
@@ -125,7 +125,7 @@ export default function EnrollmentExpiredPage() {
             variant="outline"
             size="sm"
             onClick={loadStudents}
-            className="shrink-0 rounded-xl text-xs h-9 bg-white border-slate-200 hover:bg-slate-50"
+            className="shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             새로고침
@@ -142,7 +142,7 @@ export default function EnrollmentExpiredPage() {
                 className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                   campusFilter === c
                     ? 'border-red-600 bg-red-600 text-white'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                    : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
                 {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
@@ -154,19 +154,19 @@ export default function EnrollmentExpiredPage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="학생명 또는 코멘터 검색"
-              className="w-full rounded-xl border border-slate-200 bg-white pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 focus:border-slate-400 focus:outline-none transition-all"
+              className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-8 pr-4 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-slate-400 focus:outline-none transition-all"
             />
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-3.5 h-3.5 text-slate-400 dark:text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
         {/* 요약 배너 */}
         <div className={`rounded-2xl border px-5 py-4 flex items-center gap-4 ${
-          filtered.length > 0 ? 'bg-red-50 border-red-200/70' : 'bg-white border-slate-100'
+          filtered.length > 0 ? 'bg-red-50 dark:bg-red-500/10 border-red-200/70 dark:border-white/10' : 'bg-white dark:bg-[#1c1c1e] border-slate-100 dark:border-white/10'
         }`}>
-          <XCircle className={`w-5 h-5 shrink-0 ${filtered.length > 0 ? 'text-red-500' : 'text-slate-300'}`} />
+          <XCircle className={`w-5 h-5 shrink-0 ${filtered.length > 0 ? 'text-red-500' : 'text-slate-300 dark:text-slate-600'}`} />
           <div>
-            <p className={`text-sm font-black ${filtered.length > 0 ? 'text-red-800' : 'text-slate-400'}`}>
+            <p className={`text-sm font-black ${filtered.length > 0 ? 'text-red-800 dark:text-red-400' : 'text-slate-400'}`}>
               {filtered.length > 0
                 ? `만료 경고 학생 ${filtered.length}명 · 결제 확인 필요`
                 : '만료 경고 학생이 없습니다'}
@@ -180,7 +180,7 @@ export default function EnrollmentExpiredPage() {
         </div>
 
         {/* 목록 테이블 */}
-        <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
           {loading && students.length === 0 ? (
             <div className="py-20 text-center text-xs font-bold text-slate-400 flex flex-col items-center gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
@@ -192,8 +192,8 @@ export default function EnrollmentExpiredPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
-                <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <thead className="bg-slate-50/80 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="px-6 py-4">학생</th>
                     <th className="px-6 py-4">담당 코멘터</th>
@@ -202,7 +202,7 @@ export default function EnrollmentExpiredPage() {
                     <th className="px-6 py-4 text-right">상세 보기</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100/60">
+                <tbody className="divide-y divide-slate-100/60 dark:divide-white/10">
                   {filtered.map(({ student, daysLeft }) => (
                     <tr
                       key={student.id}
@@ -211,25 +211,25 @@ export default function EnrollmentExpiredPage() {
                         onDelete: id => setStudents(prev => prev.filter(s => s.id !== id)),
                         allStudents: students,
                       })}
-                      className="hover:bg-red-50/40 cursor-pointer transition-colors group"
+                      className="hover:bg-red-50/40 dark:hover:bg-red-500/10 cursor-pointer transition-colors group"
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
-                          <span className="font-black text-slate-800">{student.name}</span>
-                          <Badge className="bg-slate-100 text-slate-500 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
+                          <span className="font-black text-slate-800 dark:text-slate-200">{student.name}</span>
+                          <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
                             {getCampusLabel(student.campus)}
                           </Badge>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-bold text-slate-500">{student.manager || '미지정'}</td>
-                      <td className="px-6 py-4 font-bold text-slate-600">{student.enrollmentEndDate || '미설정'}</td>
+                      <td className="px-6 py-4 font-bold text-slate-500 dark:text-slate-400">{student.manager || '미지정'}</td>
+                      <td className="px-6 py-4 font-bold text-slate-600 dark:text-slate-400">{student.enrollmentEndDate || '미설정'}</td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 font-black rounded-lg px-2.5 py-1 text-[10px]">
+                        <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-500/10 text-red-700 dark:text-red-400 font-black rounded-lg px-2.5 py-1 text-[10px]">
                           만료 {Math.abs(daysLeft)}일
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <ArrowRight className="w-4 h-4 ml-auto text-slate-300 group-hover:text-red-500 transition-colors" />
+                        <ArrowRight className="w-4 h-4 ml-auto text-slate-300 dark:text-slate-600 group-hover:text-red-500 transition-colors" />
                       </td>
                     </tr>
                   ))}

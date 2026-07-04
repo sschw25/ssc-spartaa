@@ -511,27 +511,27 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border-black/[0.05] bg-white p-6 sm:max-w-3xl">
+      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden rounded-2xl border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 sm:max-w-3xl">
         <DialogHeader className="pb-3 pr-8">
-          <DialogTitle className="text-lg font-bold text-slate-900">신규 학생 등록</DialogTitle>
-          <DialogDescription className="text-xs text-slate-500">
+          <DialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">신규 학생 등록</DialogTitle>
+          <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
             학생 정보 탭에서 관리하는 핵심 프로필을 등록 시점에 함께 입력합니다.
           </DialogDescription>
         </DialogHeader>
 
         {/* 모드 탭 */}
-        <div className="inline-flex p-0.5 rounded-lg bg-[#F5F5F7] border border-black/[0.05] mb-4">
+        <div className="inline-flex p-0.5 rounded-lg bg-[#F5F5F7] dark:bg-white/5 border border-black/[0.05] dark:border-white/10 mb-4">
           <button
             type="button"
             onClick={() => setMode('single')}
-            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${mode === 'single' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${mode === 'single' ? 'bg-white dark:bg-[#1c1c1e] text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
           >
             개별 등록
           </button>
           <button
             type="button"
             onClick={() => setMode('bulk')}
-            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${mode === 'bulk' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}
+            className={`flex items-center gap-1.5 px-4 py-1.5 rounded-md text-xs font-bold transition-all ${mode === 'bulk' ? 'bg-white dark:bg-[#1c1c1e] text-slate-900 dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400'}`}
           >
             <ClipboardPaste className="w-3 h-3" />
             엑셀 일괄 등록
@@ -542,31 +542,31 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
         {mode === 'single' && (
           <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
            <div className="flex-1 space-y-4 overflow-y-auto">
-            <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
+            <section className="space-y-3 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4">
               <div className="flex items-center gap-1.5">
                 <UserPlus className="w-4 h-4 text-[#0071E3]" />
-                <h4 className="text-xs font-bold text-slate-900">기본 정보</h4>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">기본 정보</h4>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-name" className="text-xs font-semibold text-slate-900">이름 *</Label>
+                  <Label htmlFor="new-name" className="text-xs font-semibold text-slate-900 dark:text-slate-200">이름 *</Label>
                   <Input
                     id="new-name"
                     placeholder="홍길동"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9"
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-campus" className="text-xs font-semibold text-slate-900">소속 센터</Label>
+                  <Label htmlFor="new-campus" className="text-xs font-semibold text-slate-900 dark:text-slate-200">소속 센터</Label>
                   <Select value={campus} onValueChange={setCampus}>
-                    <SelectTrigger id="new-campus" className="rounded-xl border-black/[0.08] text-xs h-9 bg-white">
+                    <SelectTrigger id="new-campus" className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white">
                       <SelectValue placeholder="캠퍼스 선택" />
                     </SelectTrigger>
-                    <SelectContent className="bg-white">
+                    <SelectContent className="bg-white dark:bg-[#1c1c1e]">
                       {campusOptions.map((option) => (
                         <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
                       ))}
@@ -574,35 +574,35 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-manager" className="text-xs font-semibold text-slate-900">담당 상담자</Label>
+                  <Label htmlFor="new-manager" className="text-xs font-semibold text-slate-900 dark:text-slate-200">담당 상담자</Label>
                   <Input
                     id="new-manager"
                     placeholder="원주센터장"
                     value={manager}
                     onChange={(e) => setManager(e.target.value)}
                     list="managers-list"
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
                   <datalist id="managers-list">
                     {uniqueManagers.map((m) => <option key={m} value={m} />)}
                   </datalist>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-contact" className="text-xs font-semibold text-slate-900">목표 시험</Label>
+                  <Label htmlFor="new-contact" className="text-xs font-semibold text-slate-900 dark:text-slate-200">목표 시험</Label>
                   <Input
                     id="new-contact"
                     placeholder="예: 수능, 9급 공무원, 임용"
                     value={contact}
                     onChange={(e) => setContact(e.target.value)}
                     list="target-exams-list"
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
                   <datalist id="target-exams-list">
                     {uniqueExams.map((exam) => <option key={exam} value={exam} />)}
                   </datalist>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-seat-number" className="text-xs font-semibold text-slate-900">좌석 번호</Label>
+                  <Label htmlFor="new-seat-number" className="text-xs font-semibold text-slate-900 dark:text-slate-200">좌석 번호</Label>
                   <Input
                     id="new-seat-number"
                     type="number"
@@ -610,10 +610,10 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     placeholder="예: 104"
                     value={seatNumber}
                     onChange={(e) => setSeatNumber(e.target.value)}
-                    className={`rounded-xl text-xs h-9 bg-white ${
+                    className={`rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] ${
                       seatConflicts.length > 0
                         ? 'border-red-400 focus:border-red-400 focus:ring-red-400'
-                        : 'border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3]'
+                        : 'border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3]'
                     }`}
                   />
                   {seatConflicts.length > 0 && (
@@ -623,8 +623,8 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   )}
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-enrollment-end" className="flex items-center gap-1 text-xs font-semibold text-slate-900">
-                    <CalendarClock className="w-3.5 h-3.5 text-slate-500" />
+                  <Label htmlFor="new-enrollment-end" className="flex items-center gap-1 text-xs font-semibold text-slate-900 dark:text-slate-200">
+                    <CalendarClock className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
                     등록 종료일
                   </Label>
                   <Input
@@ -632,9 +632,9 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     type="date"
                     value={enrollmentEndDate}
                     onChange={(e) => setEnrollmentEndDate(e.target.value)}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
-                  <p className="text-[10px] text-slate-500">종료 3일 전(D-3)부터 학생 출결 화면에 재등록 안내가 표시됩니다.</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400">종료 3일 전(D-3)부터 학생 출결 화면에 재등록 안내가 표시됩니다.</p>
                 </div>
               </div>
 
@@ -642,85 +642,85 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
             </section>
 
             {/* 로그인 정보 — 아이디·비밀번호 동일 타일 */}
-            <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
+            <section className="space-y-3 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-1.5">
                   <UserPlus className="w-4 h-4 text-[#0071E3]" />
-                  <h4 className="text-xs font-bold text-slate-900">학생 포털 로그인 정보</h4>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">학생 포털 로그인 정보</h4>
                 </div>
                 <Button
                   type="button"
                   variant="outline"
                   onClick={generateTempCredentials}
                   disabled={generatingId}
-                  className="h-7 rounded-lg border-[#0071E3]/20 bg-white text-[10px] font-bold text-[#0071E3] px-2.5"
+                  className="h-7 rounded-lg border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] text-[10px] font-bold text-[#0071E3] px-2.5"
                 >
                   {generatingId ? <Loader2 className="w-3 h-3 animate-spin" /> : '임시 ID·비번 자동발급'}
                 </Button>
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 임시 계정(sparta00001 형식)은 전 센터 통합 순차로 발급되어 중복되지 않습니다. ID·비번이 노출돼도 다른 개인정보에는 영향이 없습니다.
               </p>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-login-id" className="text-xs font-semibold text-slate-900">로그인 ID</Label>
+                  <Label htmlFor="new-login-id" className="text-xs font-semibold text-slate-900 dark:text-slate-200">로그인 ID</Label>
                   <Input
                     id="new-login-id"
                     placeholder="영어/숫자 조합"
                     value={loginId}
                     onChange={(e) => setLoginId(e.target.value.trim().toLowerCase())}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-password" className="text-xs font-semibold text-slate-900">비밀번호 (4자 이상)</Label>
+                  <Label htmlFor="new-password" className="text-xs font-semibold text-slate-900 dark:text-slate-200">비밀번호 (4자 이상)</Label>
                   <Input
                     id="new-password"
                     placeholder="미입력 시 추후 설정"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
                 </div>
               </div>
             </section>
 
-            <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
+            <section className="space-y-3 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4">
               <div className="flex items-center gap-1.5">
                 <Bell className="w-4 h-4 text-[#0071E3]" />
-                <h4 className="text-xs font-bold text-slate-900">출결 알림 문자</h4>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">출결 알림 문자</h4>
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 등/하원 시 아래 번호로 자동 발송됩니다. 학생 홈에는 노출되지 않습니다.
               </p>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-parent-phone" className="text-xs font-semibold text-slate-900">학부모 휴대폰</Label>
+                  <Label htmlFor="new-parent-phone" className="text-xs font-semibold text-slate-900 dark:text-slate-200">학부모 휴대폰</Label>
                   <Input
                     id="new-parent-phone"
                     placeholder="01012345678"
                     value={parentPhone}
                     onChange={(e) => setParentPhone(e.target.value)}
                     inputMode="numeric"
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="new-student-phone" className="text-xs font-semibold text-slate-900">학생 휴대폰</Label>
+                  <Label htmlFor="new-student-phone" className="text-xs font-semibold text-slate-900 dark:text-slate-200">학생 휴대폰</Label>
                   <Input
                     id="new-student-phone"
                     placeholder="01087654321"
                     value={studentPhone}
                     onChange={(e) => setStudentPhone(e.target.value)}
                     inputMode="numeric"
-                    className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
                   />
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-4">
-                <span className="text-[11px] font-semibold text-slate-500">수신 대상</span>
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">수신 대상</span>
                 {([
                   { key: 'parent' as const, label: '학부모' },
                   { key: 'student' as const, label: '학생' },
@@ -736,48 +736,48 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   </label>
                 ))}
                 {smsTargets.length === 0 && (
-                  <span className="text-[11px] font-semibold text-slate-500">자동 문자 발송 안 함</span>
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">자동 문자 발송 안 함</span>
                 )}
               </div>
             </section>
 
-            <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
+            <section className="space-y-3 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4">
               <div className="flex items-center gap-1.5">
                 <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-                <h4 className="text-xs font-bold text-slate-900">정기 외출 / 빠지는 시간대</h4>
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">정기 외출 / 빠지는 시간대</h4>
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 지정된 시간에 출결판 교시 셀 내부에 외출 예정 시각이 자동으로 표시됩니다.
               </p>
 
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[11px] font-bold text-slate-500">외출</span>
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">외출</span>
                   <Input
                     type="time"
                     value={newAwayTime}
                     onChange={(e) => setNewAwayTime(e.target.value)}
-                    className="h-9 w-[128px] min-w-[128px] shrink-0 rounded-xl border-black/[0.08] bg-white text-xs"
+                    className="h-9 w-[128px] min-w-[128px] shrink-0 rounded-xl border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="text-[11px] font-bold text-slate-500">복귀</span>
+                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">복귀</span>
                   <Input
                     type="time"
                     value={newReturnTime}
                     onChange={(e) => setNewReturnTime(e.target.value)}
-                    className="h-9 w-[128px] min-w-[128px] shrink-0 rounded-xl border-black/[0.08] bg-white text-xs"
+                    className="h-9 w-[128px] min-w-[128px] shrink-0 rounded-xl border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs"
                   />
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <span className="shrink-0 text-[11px] font-bold text-slate-500">요일</span>
+                <span className="shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400">요일</span>
                 <button
                   type="button"
                   onClick={() => setNewDays([])}
                   className={`h-7 rounded-full px-2.5 text-[10px] font-bold transition-all ${
-                    newDays.length === 0 ? 'bg-[#0071E3] text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    newDays.length === 0 ? 'bg-[#0071E3] text-white' : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/[0.15]'
                   }`}
                 >
                   매일
@@ -790,7 +790,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     className={`h-7 w-7 rounded-full text-[10px] font-bold transition-all ${
                       newDays.includes(day)
                         ? 'bg-[#0071E3] text-white'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                        : 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/[0.15]'
                     }`}
                   >
                     {label}
@@ -799,7 +799,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
-                <span className="shrink-0 text-[11px] font-bold text-slate-500">기간</span>
+                <span className="shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400">기간</span>
                 <label className="flex cursor-pointer items-center gap-1.5">
                   <input
                     type="radio"
@@ -807,7 +807,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     onChange={() => setNewUntilForever(true)}
                     className="accent-[#0071E3]"
                   />
-                  <span className="text-[11px] font-semibold text-slate-900">계속 반복</span>
+                  <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-200">계속 반복</span>
                 </label>
                 <label className="flex cursor-pointer items-center gap-1.5">
                   <input
@@ -816,14 +816,14 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     onChange={() => setNewUntilForever(false)}
                     className="accent-[#0071E3]"
                   />
-                  <span className="text-[11px] font-semibold text-slate-900">종료일 지정</span>
+                  <span className="text-[11px] font-semibold text-slate-900 dark:text-slate-200">종료일 지정</span>
                 </label>
                 {!newUntilForever && (
                   <Input
                     type="date"
                     value={newUntilDate}
                     onChange={(e) => setNewUntilDate(e.target.value)}
-                    className="h-8 max-w-[140px] rounded-xl border-black/[0.08] bg-white text-xs"
+                    className="h-8 max-w-[140px] rounded-xl border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs"
                   />
                 )}
                 <Button
@@ -840,7 +840,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   awaySchedules.map((schedule, index) => (
                     <span
                       key={`${schedule.awayTime}-${schedule.returnTime || ''}-${index}`}
-                      className="flex items-center gap-1 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/[0.06] px-2.5 py-1 text-[11px] font-bold text-[#0071E3]"
+                      className="flex items-center gap-1 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[11px] font-bold text-[#0071E3]"
                     >
                       {formatAwayChip(schedule)}
                       <button
@@ -853,29 +853,29 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     </span>
                   ))
                 ) : (
-                  <p className="py-1 text-[10px] text-slate-400">등록된 정기 외출 시간대가 없습니다.</p>
+                  <p className="py-1 text-[10px] text-slate-400 dark:text-slate-500">등록된 정기 외출 시간대가 없습니다.</p>
                 )}
               </div>
             </section>
 
-            <section className="space-y-3 rounded-xl border border-black/[0.05] bg-white p-4">
-              <h4 className="text-xs font-bold text-slate-900">내부 메모 (특이사항)</h4>
+            <section className="space-y-3 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4">
+              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">내부 메모 (특이사항)</h4>
               <div className="space-y-1.5">
-                <Label htmlFor="new-special-note" className="text-xs font-semibold text-slate-900">특이사항</Label>
+                <Label htmlFor="new-special-note" className="text-xs font-semibold text-slate-900 dark:text-slate-200">특이사항</Label>
                 <Textarea
                   id="new-special-note"
                   placeholder="해당 학생의 특이사항만 적어 주세요. 예: 어디가 아프다 / 집이 멀다 / 기존 학습량 등"
                   value={specialNote}
                   onChange={(e) => setSpecialNote(e.target.value)}
-                  className="min-h-[88px] rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs"
+                  className="min-h-[88px] rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] text-xs"
                 />
-                <p className="text-[10px] text-slate-500">내부 관리용 메모이며 학부모용 결과지에는 표시되지 않습니다. 생활 코멘트는 추후 상담하면서 입력합니다.</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">내부 관리용 메모이며 학부모용 결과지에는 표시되지 않습니다. 생활 코멘트는 추후 상담하면서 입력합니다.</p>
               </div>
             </section>
 
            </div>
-            <DialogFooter className="-mx-6 -mb-6 mt-4 shrink-0 border-t border-black/[0.05] bg-white px-6 py-4">
-              <Button type="button" variant="outline" onClick={handleClose} className="rounded-xl text-xs py-4 bg-white">
+            <DialogFooter className="-mx-6 -mb-6 mt-4 shrink-0 border-t border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-6 py-4">
+              <Button type="button" variant="outline" onClick={handleClose} className="rounded-xl text-xs py-4 bg-white dark:bg-[#1c1c1e]">
                 취소
               </Button>
               <Button type="submit" disabled={loading} className="rounded-xl text-xs bg-slate-900 hover:bg-[#323236] text-white py-4">
@@ -890,14 +890,14 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
           <div className="flex min-h-0 flex-1 flex-col">
            <div className="flex-1 space-y-4 overflow-y-auto">
             {/* 공통 설정 */}
-            <div className="grid grid-cols-1 gap-3 rounded-xl border border-black/[0.05] bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-900">캠퍼스</Label>
+                <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">캠퍼스</Label>
                 <Select value={bulkCampus} onValueChange={setBulkCampus}>
-                  <SelectTrigger className="rounded-xl border-black/[0.08] text-xs h-9 bg-white">
+                  <SelectTrigger className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent className="bg-white">
+                  <SelectContent className="bg-white dark:bg-[#1c1c1e]">
                     {campusOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
                     ))}
@@ -905,34 +905,34 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-900">담당 관리자</Label>
+                <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">담당 관리자</Label>
                 <Input
                   placeholder="원주센터장"
                   value={bulkManager}
                   onChange={(e) => setBulkManager(e.target.value)}
-                  className="rounded-xl border-black/[0.08] text-xs h-9"
+                  className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9"
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-900">목표 시험</Label>
+                <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">목표 시험</Label>
                 <Input
                   placeholder="수능, 공무원…"
                   value={bulkContact}
                   onChange={(e) => setBulkContact(e.target.value)}
                   list="bulk-exams-list"
-                  className="rounded-xl border-black/[0.08] text-xs h-9 bg-white"
+                  className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white"
                 />
                 <datalist id="bulk-exams-list">
                   {uniqueExams.map((exam) => <option key={exam} value={exam} />)}
                 </datalist>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold text-slate-900">등록 종료일</Label>
+                <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">등록 종료일</Label>
                 <Input
                   type="date"
                   value={bulkEnrollmentEndDate}
                   onChange={(e) => setBulkEnrollmentEndDate(e.target.value)}
-                  className="rounded-xl border-black/[0.08] text-xs h-9 bg-white"
+                  className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white"
                 />
               </div>
 
@@ -940,13 +940,13 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
             {/* 붙여넣기 영역 */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-slate-900">
+              <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">
                 엑셀 데이터 붙여넣기
               </Label>
-              <div className="rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] p-3 text-[10px] font-semibold leading-relaxed text-slate-600">
+              <div className="rounded-xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3 text-[10px] font-semibold leading-relaxed text-slate-600 dark:text-slate-300">
                 <p className="mb-1 font-semibold text-[#0071E3]">권장 열 순서</p>
                 <p>좌석번호 · 이름 · 본인전화번호 · 부모님전화번호 · 부모님출결문자여부(Y/N) · 빠지는요일 · 나가는시간 · 들어오는시간 · 출결번호(로그인 비밀번호)</p>
-                <p className="mt-1 text-slate-400">빠지는요일 예: 월수금 또는 월,수,금. 시간이 비어 있으면 정기외출은 만들지 않습니다.</p>
+                <p className="mt-1 text-slate-400 dark:text-slate-500">빠지는요일 예: 월수금 또는 월,수,금. 시간이 비어 있으면 정기외출은 만들지 않습니다.</p>
               </div>
               <div className="relative">
                 <Textarea
@@ -954,19 +954,19 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                   value={pasteText}
                   onChange={handleTextChange}
                   onPaste={handlePaste}
-                  className="rounded-xl border-black/[0.08] focus:border-[#0071E3] text-xs min-h-[140px] font-mono resize-none"
+                  className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] text-xs min-h-[140px] font-mono resize-none"
                 />
                 {pasteText && (
                   <button
                     type="button"
                     onClick={() => { setPasteText(''); setBulkRows([]); }}
-                    className="absolute top-2 right-2 rounded-md p-1 hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+                    className="absolute top-2 right-2 rounded-md p-1 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition"
                   >
                     <X className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
-              <p className="text-[10px] text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 좌석번호와 이름만 있어도 등록 가능하며, 추가 열이 있으면 학생정보·출결문자·정기외출·로그인 비밀번호까지 함께 입력됩니다.
               </p>
             </div>
@@ -975,7 +975,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
             {bulkRows.length > 0 && (
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold text-slate-900">
+                  <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">
                     등록 예정 {bulkRows.length}명
                     {bulkConflictCount > 0 && (
                       <span className="ml-2 text-red-500">· 좌석 중복 {bulkConflictCount}건</span>
@@ -987,19 +987,19 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                     </span>
                   )}
                 </div>
-                <div className="rounded-xl border border-black/[0.06] overflow-auto max-h-[220px]">
+                <div className="rounded-xl border border-black/[0.06] dark:border-white/10 overflow-auto max-h-[220px]">
                   <table className="min-w-[900px] w-full text-xs">
-                    <thead className="bg-[#F5F5F7] sticky top-0">
+                    <thead className="bg-[#F5F5F7] dark:bg-white/5 sticky top-0">
                       <tr>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500 w-16">좌석</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">이름</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">본인전화</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">부모전화</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">부모문자</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">빠지는요일</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">외출</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">복귀</th>
-                        <th className="px-3 py-2 text-left font-bold text-slate-500">출결번호</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400 w-16">좌석</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">이름</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">본인전화</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">부모전화</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">부모문자</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">빠지는요일</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">외출</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">복귀</th>
+                        <th className="px-3 py-2 text-left font-bold text-slate-500 dark:text-slate-400">출결번호</th>
                         <th className="w-8" />
                       </tr>
                     </thead>
@@ -1007,28 +1007,28 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                       {bulkRows.map((row, i) => {
                         const conflicts = bulkSeatConflict(i);
                         return (
-                        <tr key={`${row.seatNumber}-${row.name}-${i}`} className={`border-t border-black/[0.04] ${conflicts.length > 0 ? 'bg-red-50 hover:bg-red-100/60' : 'hover:bg-[#F5F5F7]/60'}`}>
+                        <tr key={`${row.seatNumber}-${row.name}-${i}`} className={`border-t border-black/[0.04] dark:border-white/10 ${conflicts.length > 0 ? 'bg-red-50 dark:bg-red-500/10 hover:bg-red-100/60 dark:hover:bg-red-500/[0.15]' : 'hover:bg-[#F5F5F7]/60 dark:hover:bg-white/5'}`}>
                           <td className="px-3 py-2 font-mono">
                             {row.seatNumber
-                              ? <span className={conflicts.length > 0 ? 'font-bold text-red-500' : 'text-slate-500'}>{row.seatNumber}</span>
-                              : <span className="text-slate-300">-</span>}
+                              ? <span className={conflicts.length > 0 ? 'font-bold text-red-500' : 'text-slate-500 dark:text-slate-400'}>{row.seatNumber}</span>
+                              : <span className="text-slate-300 dark:text-slate-600">-</span>}
                             {conflicts.length > 0 && (
                               <span className="block text-[10px] font-semibold text-red-500">중복: {conflicts.join(', ')}</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 font-bold text-slate-900">{row.name}</td>
-                          <td className="px-3 py-2 text-slate-500 font-mono">{row.studentPhone || '-'}</td>
-                          <td className="px-3 py-2 text-slate-500 font-mono">{row.parentPhone || '-'}</td>
-                          <td className="px-3 py-2 text-slate-500">{row.parentSmsFlag || 'Y'}</td>
-                          <td className="px-3 py-2 text-slate-500">{row.awayDays || '-'}</td>
-                          <td className="px-3 py-2 text-slate-500 font-mono">{row.awayTime || '-'}</td>
-                          <td className="px-3 py-2 text-slate-500 font-mono">{row.returnTime || '-'}</td>
-                          <td className="px-3 py-2 text-slate-500 font-mono">{row.attendanceCode || '-'}</td>
+                          <td className="px-3 py-2 font-bold text-slate-900 dark:text-slate-100">{row.name}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400 font-mono">{row.studentPhone || '-'}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400 font-mono">{row.parentPhone || '-'}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.parentSmsFlag || 'Y'}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{row.awayDays || '-'}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400 font-mono">{row.awayTime || '-'}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400 font-mono">{row.returnTime || '-'}</td>
+                          <td className="px-3 py-2 text-slate-500 dark:text-slate-400 font-mono">{row.attendanceCode || '-'}</td>
                           <td className="px-3 py-2 text-right">
                             <button
                               type="button"
                               onClick={() => removeRow(i)}
-                              className="text-slate-300 hover:text-red-500 transition"
+                              className="text-slate-300 dark:text-slate-600 hover:text-red-500 transition"
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
@@ -1042,7 +1042,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
 
                 {/* 진행 바 */}
                 {bulkLoading && (
-                  <div className="w-full bg-[#F5F5F7] rounded-full h-1.5 overflow-hidden">
+                  <div className="w-full bg-[#F5F5F7] dark:bg-white/5 rounded-full h-1.5 overflow-hidden">
                     <div
                       className="bg-[#0071E3] h-1.5 rounded-full transition-all duration-300"
                       style={{ width: `${(bulkDone / bulkRows.length) * 100}%` }}
@@ -1053,8 +1053,8 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
             )}
 
            </div>
-            <DialogFooter className="-mx-6 -mb-6 mt-4 shrink-0 border-t border-black/[0.05] bg-white px-6 py-4">
-              <Button type="button" variant="outline" onClick={handleClose} className="rounded-xl text-xs py-4 bg-white">
+            <DialogFooter className="-mx-6 -mb-6 mt-4 shrink-0 border-t border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-6 py-4">
+              <Button type="button" variant="outline" onClick={handleClose} className="rounded-xl text-xs py-4 bg-white dark:bg-[#1c1c1e]">
                 취소
               </Button>
               <Button

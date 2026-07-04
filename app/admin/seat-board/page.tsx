@@ -455,7 +455,7 @@ function PeriodCell({
   // 8교시 (심야 A 라벨)
   if (label === '8') {
     return (
-      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300 text-amber-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20 text-amber-600' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400'}`}>
         <span className="text-[10px] font-bold leading-none">A</span>
       </div>
     );
@@ -464,7 +464,7 @@ function PeriodCell({
   // 수동 결석 override
   if (isOverridden && status === 'absent') {
     return (
-      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 border-amber-300`}>
+      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20`}>
         <span className="text-[10px] font-black leading-none text-amber-600">X</span>
       </div>
     );
@@ -473,7 +473,7 @@ function PeriodCell({
   // 승인 휴가/반차 결석 구간 — 미래 교시라도 X를 명시한다.
   if (isLeaveAbsent) {
     return (
-      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-blue-50 border-blue-200`}>
+      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-blue-50 dark:bg-[#0071E3]/15 border-blue-200 dark:border-[#0071E3]/25`}>
         <span className="text-[10px] font-black leading-none text-blue-500">X</span>
       </div>
     );
@@ -489,11 +489,11 @@ function PeriodCell({
         data-away-time={awayTime}
         title={awayTime ? `정기 외출 ${awayTime}` : undefined}
         onClick={onClick}
-        className={`w-[17px] h-[17px] border border-slate-300 rounded-[3px] bg-slate-50 flex items-center justify-center ${hoverCls}`}
+        className={`w-[17px] h-[17px] border border-slate-300 dark:border-white/10 rounded-[3px] bg-slate-50 dark:bg-white/5 flex items-center justify-center ${hoverCls}`}
       >
         {awayTime?.includes(':')
           ? <TimeHM hm={awayTime} cls="text-amber-500" />
-          : <span className="text-[10px] font-black leading-none text-slate-500">X</span>}
+          : <span className="text-[10px] font-black leading-none text-slate-500 dark:text-slate-400">X</span>}
       </div>
     );
   }
@@ -501,7 +501,7 @@ function PeriodCell({
   // 실제 하원 이후 교시 — 아직 미래 시간이어도 사람이 없어야 하므로 X를 명시한다.
   if (isCheckoutAbsent) {
     return (
-      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border border-red-200 rounded-[3px] bg-red-50 flex items-center justify-center ${hoverCls}`}>
+      <div data-period-label={label} data-expected-absent="true" onClick={onClick} className={`w-[17px] h-[17px] border border-red-200 dark:border-red-500/20 rounded-[3px] bg-red-50 dark:bg-red-500/10 flex items-center justify-center ${hoverCls}`}>
         <span className="text-[10px] font-black leading-none text-red-500">X</span>
       </div>
     );
@@ -510,7 +510,7 @@ function PeriodCell({
   // 정기 외출 시작 시각은 미래 교시라도 엑셀처럼 즉시 표시한다.
   if (awayTime?.includes(':')) {
     return (
-      <div data-period-label={label} data-away-time={awayTime} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-slate-900/[0.06] border-slate-900/[0.12]`}>
+      <div data-period-label={label} data-away-time={awayTime} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} bg-slate-900/[0.06] dark:bg-white/10 border-slate-900/[0.12] dark:border-white/10`}>
         <TimeHM hm={awayTime} cls="text-amber-500" />
       </div>
     );
@@ -519,8 +519,8 @@ function PeriodCell({
   // 미래 교시
   if (status === 'future') {
     return (
-      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
-        <span className="text-[7px] text-slate-300 font-bold leading-none">{label}</span>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 dark:border-white/10 rounded-[3px] bg-white dark:bg-[#1c1c1e] flex items-center justify-center ${hoverCls}`}>
+        <span className="text-[7px] text-slate-300 dark:text-slate-600 font-bold leading-none">{label}</span>
       </div>
     );
   }
@@ -531,10 +531,10 @@ function PeriodCell({
     if (awayTime?.includes(':'))      inner = <TimeHM hm={awayTime} cls="text-amber-500" />;
     else if (checkOutTime?.includes(':')) inner = <TimeHM hm={checkOutTime} cls="text-[#0071E3]" />;
     else if (checkInTime?.includes(':'))  inner = <TimeHM hm={checkInTime} cls="text-emerald-600" />;
-    else inner = <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-slate-900/70'}`}>/</span>;
+    else inner = <span className={`text-[11px] font-black leading-none ${isOverridden ? 'text-amber-600' : 'text-slate-900/70 dark:text-slate-300'}`}>/</span>;
 
     return (
-      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 border-amber-300' : 'bg-slate-900/[0.06] border-slate-900/[0.12]'}`}>
+      <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border rounded-[3px] flex items-center justify-center ${hoverCls} ${isOverridden ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-300 dark:border-amber-500/20' : 'bg-slate-900/[0.06] dark:bg-white/10 border-slate-900/[0.12] dark:border-white/10'}`}>
         {inner}
       </div>
     );
@@ -542,8 +542,8 @@ function PeriodCell({
 
   // 결석 — 일반 (교시 번호 흐리게)
   return (
-    <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 rounded-[3px] bg-white flex items-center justify-center ${hoverCls}`}>
-      <span className="text-[7px] leading-none text-slate-200 font-bold">{label}</span>
+    <div data-period-label={label} onClick={onClick} className={`w-[17px] h-[17px] border border-slate-200 dark:border-white/10 rounded-[3px] bg-white dark:bg-[#1c1c1e] flex items-center justify-center ${hoverCls}`}>
+      <span className="text-[7px] leading-none text-slate-200 dark:text-slate-700 font-bold">{label}</span>
     </div>
   );
 }
@@ -569,8 +569,8 @@ interface SeatCardProps {
 function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, isUnauthorizedCheckout, todayStr, onTogglePeriod, onClick, onNameClick, phoneNoSubmit, onTogglePhone }: SeatCardProps) {
   if (!student) {
     return (
-      <div data-seat-card="empty" data-seat-num={seatNum} className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 bg-slate-50/40 p-1.5 flex flex-col shrink-0">
-        <span className="text-[9px] font-black text-slate-300">{seatNum}</span>
+      <div data-seat-card="empty" data-seat-num={seatNum} className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/40 dark:bg-white/5 p-1.5 flex flex-col shrink-0">
+        <span className="text-[9px] font-black text-slate-300 dark:text-slate-600">{seatNum}</span>
       </div>
     );
   }
@@ -581,28 +581,28 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
       return {
         label: '미승인',
         title: '미승인 조기 하원',
-        className: 'text-red-600 bg-red-50 border-red-200',
+        className: 'text-red-600 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20',
       };
     }
     if (isOnLeave) {
       return {
         label: '휴가',
         title: '승인된 휴가',
-        className: 'text-blue-500 bg-blue-100 border-blue-100',
+        className: 'text-blue-500 bg-blue-100 dark:bg-[#0071E3]/15 border-blue-100 dark:border-[#0071E3]/25',
       };
     }
     if (isLeftToday) {
       return {
         label: '하원',
         title: '하원 완료',
-        className: 'text-slate-500 bg-slate-100 border-slate-100',
+        className: 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/10 border-slate-100 dark:border-white/10',
       };
     }
     if (!isCheckedIn) {
       return {
         label: '미등원',
         title: '미등원',
-        className: 'text-red-500 bg-red-50 border-red-100',
+        className: 'text-red-500 bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20',
       };
     }
     return null;
@@ -612,37 +612,37 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
       return {
         label: '만료',
         title: '등록 기간 만료',
-        className: 'text-red-600 bg-red-50 border-red-200',
+        className: 'text-red-600 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20',
       };
     }
     if (dday.status === 'warning') {
       return {
         label: dday.daysLeft === 0 ? 'D0' : `D-${dday.daysLeft}`,
         title: dday.daysLeft === 0 ? '등록 만료 D-Day' : `등록 만료 D-${dday.daysLeft}`,
-        className: 'text-amber-600 bg-amber-50 border-amber-200',
+        className: 'text-amber-600 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20',
       };
     }
     return null;
   })();
 
   const ring = isCheckedIn
-    ? 'border-emerald-300 ring-1 ring-emerald-200'
+    ? 'border-emerald-300 dark:border-emerald-500/20 ring-1 ring-emerald-200 dark:ring-emerald-500/20'
     : isUnauthorizedCheckout
-    ? 'border-red-300 ring-1 ring-red-200'
+    ? 'border-red-300 dark:border-red-500/20 ring-1 ring-red-200 dark:ring-red-500/20'
     : isOnLeave
-    ? 'border-blue-200'
+    ? 'border-blue-200 dark:border-[#0071E3]/25'
     : isLeftToday
-    ? 'border-slate-300'
-    : 'border-slate-200/80';
+    ? 'border-slate-300 dark:border-white/10'
+    : 'border-slate-200/80 dark:border-white/10';
   const bg = isCheckedIn
-    ? 'bg-emerald-50/60'
+    ? 'bg-emerald-50/60 dark:bg-emerald-500/10'
     : isUnauthorizedCheckout
-    ? 'bg-red-50/70'
+    ? 'bg-red-50/70 dark:bg-red-500/10'
     : isOnLeave
-    ? 'bg-blue-50/60'
+    ? 'bg-blue-50/60 dark:bg-[#0071E3]/15'
     : isLeftToday
-    ? 'bg-slate-50/80'
-    : 'bg-white';
+    ? 'bg-slate-50/80 dark:bg-white/5'
+    : 'bg-white dark:bg-[#1c1c1e]';
 
   return (
     <div
@@ -653,10 +653,10 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
       data-student-name={student.name}
       data-enrollment-status={dday.status}
       data-unauthorized-checkout={isUnauthorizedCheckout ? 'true' : 'false'}
-      className={`w-[80px] h-[100px] overflow-hidden rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col shrink-0 cursor-pointer hover:border-slate-400 active:scale-[0.98] transition-all`}
+      className={`w-[80px] h-[100px] overflow-hidden rounded-lg border ${ring} ${bg} p-1.5 shadow-sm flex flex-col shrink-0 cursor-pointer hover:border-slate-400 dark:hover:border-white/20 active:scale-[0.98] transition-all`}
     >
       <div className="flex items-start justify-between gap-1">
-        <span className="text-[9px] font-black text-slate-400">{seatNum}</span>
+        <span className="text-[9px] font-black text-slate-400 dark:text-slate-400">{seatNum}</span>
         <div className="flex min-w-0 shrink-0 justify-end gap-[2px]">
           {[attendanceBadge, enrollmentBadge].filter(Boolean).map((badge) => (
             <span
@@ -679,7 +679,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
                 onNameClick();
               }
             }}
-            className="text-[11px] font-black text-slate-900 leading-tight truncate shrink-0 max-w-[50px] hover:underline decoration-slate-900/50 decoration-1"
+            className="text-[11px] font-black text-slate-900 dark:text-slate-100 leading-tight truncate shrink-0 max-w-[50px] hover:underline decoration-slate-900/50 dark:decoration-white/50 decoration-1"
           >
             {student.name}
           </p>
@@ -708,8 +708,8 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
                 onTogglePhone ? 'cursor-pointer active:scale-90' : ''
               } ${
                 showX
-                  ? 'bg-red-50 border-red-200'
-                  : 'bg-[#0071E3]/[0.06] border-[#0071E3]/20'
+                  ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/20'
+                  : 'bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 border-[#0071E3]/20 dark:border-[#0071E3]/25'
               }`}
             >
               <span className={`text-[6px] font-black leading-none ${
@@ -874,18 +874,18 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
 function HallwayDivider({ left, center, right }: { left: string; center: string; right: string }) {
   return (
     <div className="flex items-center gap-3 my-4">
-      <div className="w-8 h-8 rounded-lg border-2 border-slate-300 bg-slate-50 flex items-center justify-center shrink-0">
-        <span className="text-[9px] font-black text-slate-500 leading-tight text-center whitespace-pre-line">
+      <div className="w-8 h-8 rounded-lg border-2 border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-center shrink-0">
+        <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 leading-tight text-center whitespace-pre-line">
           {left.split('').join('\n')}
         </span>
       </div>
-      <div className="flex-1 border-t-2 border-dashed border-slate-200 relative">
-        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-2 text-[10px] font-black text-slate-400 tracking-widest whitespace-nowrap">
+      <div className="flex-1 border-t-2 border-dashed border-slate-200 dark:border-white/10 relative">
+        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-[#1c1c1e] px-2 text-[10px] font-black text-slate-400 tracking-widest whitespace-nowrap">
           {center}
         </span>
       </div>
-      <div className="w-8 h-8 rounded-lg border-2 border-slate-300 bg-slate-50 flex items-center justify-center shrink-0">
-        <span className="text-[9px] font-black text-slate-500 leading-tight text-center whitespace-pre-line">
+      <div className="w-8 h-8 rounded-lg border-2 border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex items-center justify-center shrink-0">
+        <span className="text-[9px] font-black text-slate-500 dark:text-slate-400 leading-tight text-center whitespace-pre-line">
           {right.split('').join('\n')}
         </span>
       </div>
@@ -1288,7 +1288,7 @@ export default function SeatBoardPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-black flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" />
       </div>
     );
@@ -1331,7 +1331,7 @@ export default function SeatBoardPage() {
   const hasOverrides = periodOverrides.size > 0;
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100">
       <AdminTopNav
         title="출결판"
         titleIcon={<LayoutGrid className="w-4 h-4" />}
@@ -1345,7 +1345,7 @@ export default function SeatBoardPage() {
             size="sm"
             onClick={() => loadData()}
             disabled={loading}
-            className="rounded-2xl border-black/[0.05] text-xs h-9 bg-white px-3"
+            className="rounded-2xl border-black/[0.05] dark:border-white/10 text-xs h-9 bg-white dark:bg-[#1c1c1e] px-3"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
             <span className="hidden sm:inline ml-1.5 font-bold">새로고침</span>
@@ -1356,7 +1356,7 @@ export default function SeatBoardPage() {
       <main className="stagger-children px-4 pt-4 pb-10">
         {/* ── 캠퍼스 선택 + 통계 ── */}
         <div className="flex items-center gap-6 mb-4 flex-wrap">
-          <div className="flex bg-white border border-black/[0.05] rounded-2xl p-1 gap-1 shadow-sm">
+          <div className="flex bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-1 gap-1 shadow-sm">
             {CAMPUS_KEYS.map((k) => (
               <button
                 key={k}
@@ -1364,7 +1364,7 @@ export default function SeatBoardPage() {
                 className={`px-4 py-1.5 rounded-xl text-xs font-black transition-all ${
                   campus === k
                     ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-900'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
                 {CAMPUS_LABELS[k]}
@@ -1372,7 +1372,7 @@ export default function SeatBoardPage() {
             ))}
           </div>
 
-          <div className="min-w-[220px] rounded-2xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
+          <div className="min-w-[220px] rounded-2xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 shadow-sm">
             <p className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-slate-400">
               <CalendarDays className="h-3.5 w-3.5 text-[#0071E3]" />
               출결 기준일
@@ -1382,13 +1382,13 @@ export default function SeatBoardPage() {
                 type="date"
                 value={selectedDate}
                 onChange={(event) => setSelectedDate(event.target.value || kstToday)}
-                className="h-8 rounded-xl border-black/[0.06] bg-[#F5F5F7] px-2 text-xs font-semibold text-slate-900"
+                className="h-8 rounded-xl border-black/[0.06] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 px-2 text-xs font-semibold text-slate-900 dark:text-slate-100"
               />
               {!isSelectedToday && (
                 <button
                   type="button"
                   onClick={() => setSelectedDate(kstToday)}
-                  className="h-8 shrink-0 rounded-full bg-[#0071E3]/10 px-3 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/15 active:scale-[0.97]"
+                  className="h-8 shrink-0 rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-3 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/15 dark:hover:bg-[#0071E3]/25 active:scale-[0.97]"
                 >
                   오늘
                 </button>
@@ -1397,7 +1397,7 @@ export default function SeatBoardPage() {
           </div>
 
           {isDemoMode && (
-            <div className="rounded-xl border border-[#0071E3]/20 bg-[#0071E3]/[0.06] px-3 py-1.5">
+            <div className="rounded-xl border border-[#0071E3]/20 dark:border-[#0071E3]/25 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-3 py-1.5">
               <p className="text-[10px] font-black text-[#0071E3]">샘플 검증 모드</p>
             </div>
           )}
@@ -1405,12 +1405,12 @@ export default function SeatBoardPage() {
           <div className="flex gap-4 ml-auto sm:ml-0">
             {[
               { label: '등원중', val: stats.present,                               color: 'text-emerald-600' },
-              { label: '미등원', val: stats.total - stats.present - stats.onLeave, color: 'text-slate-500' },
+              { label: '미등원', val: stats.total - stats.present - stats.onLeave, color: 'text-slate-500 dark:text-slate-400' },
               { label: '휴가',   val: stats.onLeave,                               color: 'text-blue-500' },
             ].map(({ label, val, color }) => (
               <div key={label} className="text-center">
                 <p className={`text-[18px] font-semibold tracking-tight leading-none ${color}`}>{val}</p>
-                <p className="text-[10px] font-bold text-slate-400 mt-0.5">{label}</p>
+                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 mt-0.5">{label}</p>
               </div>
             ))}
           </div>
@@ -1420,20 +1420,20 @@ export default function SeatBoardPage() {
         <SeatMoveRequestsPanel campus={campus} disabled={isDemoMode} onApproved={() => loadData()} />
 
         {/* ── 교시별 미착석 알림 ── */}
-        <div className="flex items-center gap-2 mb-4 flex-wrap rounded-2xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
-          <span className="shrink-0 text-[11px] font-bold text-slate-500">교시별 미착석 알림</span>
+        <div className="flex items-center gap-2 mb-4 flex-wrap rounded-2xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 shadow-sm">
+          <span className="shrink-0 text-[11px] font-bold text-slate-500 dark:text-slate-400">교시별 미착석 알림</span>
           {PERIODS.slice(0, 7).map((p, idx) => (
             <button
               key={idx}
               type="button"
               disabled={!isSelectedToday}
               onClick={() => notifyAbsentForPeriod(idx)}
-              className="h-7 min-w-[28px] rounded-lg border border-black/[0.06] bg-[#F5F5F7] px-2 text-[11px] font-bold text-slate-900 transition hover:bg-[#0071E3]/10 hover:text-[#0071E3] disabled:cursor-not-allowed disabled:opacity-40"
+              className="h-7 min-w-[28px] rounded-lg border border-black/[0.06] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 px-2 text-[11px] font-bold text-slate-900 dark:text-slate-100 transition hover:bg-[#0071E3]/10 dark:hover:bg-[#0071E3]/15 hover:text-[#0071E3] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {p.label}
             </button>
           ))}
-          <span className="ml-1 text-[11px] text-slate-400">교시 셀을 X로 표시한 학생에게 발송 (휴가·외출 자동 제외)</span>
+          <span className="ml-1 text-[11px] text-slate-400 dark:text-slate-400">교시 셀을 X로 표시한 학생에게 발송 (휴가·외출 자동 제외)</span>
         </div>
 
         {/* ── 페이지(구역) 탭 ── */}
@@ -1445,7 +1445,7 @@ export default function SeatBoardPage() {
               className={`px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
                 pageIdx === i
                   ? 'bg-slate-900 text-white border-transparent'
-                  : 'bg-white text-slate-500 border-black/[0.06] hover:text-slate-900'
+                  : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
               {p.label}
@@ -1460,8 +1460,8 @@ export default function SeatBoardPage() {
               title="추가 도구"
               className={`ml-2 px-2.5 py-1.5 rounded-xl text-xs font-black border transition-all ${
                 showResetTool
-                  ? 'border-slate-900/15 bg-slate-900/[0.04] text-slate-900'
-                  : 'border-black/[0.06] bg-white text-slate-400 hover:text-slate-900'
+                  ? 'border-slate-900/15 dark:border-white/10 bg-slate-900/[0.04] dark:bg-white/10 text-slate-900 dark:text-slate-100'
+                  : 'border-black/[0.06] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-400 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
               ⋯
@@ -1470,7 +1470,7 @@ export default function SeatBoardPage() {
           {hasOverrides && showResetTool && (
             <button
               onClick={() => { clearPeriodOverrides(); setShowResetTool(false); }}
-              className="px-3 py-1.5 rounded-xl text-xs font-black border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-all"
+              className="px-3 py-1.5 rounded-xl text-xs font-black border border-amber-300 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-500/15 transition-all"
             >
               수동변경 초기화
             </button>
@@ -1483,7 +1483,7 @@ export default function SeatBoardPage() {
           </div>
         ) : (
           <div className="overflow-x-auto pb-4">
-            <div className="bg-white rounded-3xl border border-black/[0.04] shadow-sm p-6 inline-block min-w-max">
+            <div className="bg-white dark:bg-[#1c1c1e] rounded-3xl border border-black/[0.04] dark:border-white/10 shadow-sm p-6 inline-block min-w-max">
 
               {hallwayAfter != null ? (
                 <>
@@ -1521,41 +1521,41 @@ export default function SeatBoardPage() {
         {/* 범례 */}
         <div className="mt-3 flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] bg-white border border-slate-200 rounded-[3px] flex items-center justify-center">
-              <span className="text-[7px] font-bold text-slate-300">3</span>
+            <div className="w-[17px] h-[17px] bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-[3px] flex items-center justify-center">
+              <span className="text-[7px] font-bold text-slate-300 dark:text-slate-600">3</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500">공란(점검 전·교시번호)</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">공란(점검 전·교시번호)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] bg-amber-50 border border-amber-300 rounded-[3px] flex items-center justify-center">
+            <div className="w-[17px] h-[17px] bg-amber-50 dark:bg-amber-500/10 border border-amber-300 dark:border-amber-500/20 rounded-[3px] flex items-center justify-center">
               <span className="text-[10px] font-black text-amber-600">X</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500">수기 결석표시(클릭)</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">수기 결석표시(클릭)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] bg-blue-50 border border-blue-200 rounded-[3px] flex items-center justify-center">
+            <div className="w-[17px] h-[17px] bg-blue-50 dark:bg-[#0071E3]/15 border border-blue-200 dark:border-[#0071E3]/25 rounded-[3px] flex items-center justify-center">
               <span className="text-[10px] font-black text-blue-500">X</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500">승인 휴가·반차</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">승인 휴가·반차</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-[17px] h-[17px] bg-slate-50 border border-slate-300 rounded-[3px] flex items-center justify-center">
-              <span className="text-[10px] font-black text-slate-500">X</span>
+            <div className="w-[17px] h-[17px] bg-slate-50 dark:bg-white/5 border border-slate-300 dark:border-white/10 rounded-[3px] flex items-center justify-center">
+              <span className="text-[10px] font-black text-slate-500 dark:text-slate-400">X</span>
             </div>
-            <span className="text-[11px] font-bold text-slate-500">정기 외출</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">정기 외출</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-            <span className="text-[11px] font-bold text-slate-500">현재 등원중</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">현재 등원중</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
-            <span className="text-[11px] font-bold text-slate-500">미승인 조기 하원</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">미승인 조기 하원</span>
           </div>
-          <span className="text-[10px] text-slate-400">
+          <span className="text-[10px] text-slate-400 dark:text-slate-400">
             1(09~10:50) · 2(11:10~12:30) · 3(13:50~15) · 4(15:10~16:20) · 5(16:30~17:40) · 6(18:50~20:20) · 7(20:30~22) · 심야(22:10~23:20)
           </span>
-          <span className="text-[10px] text-slate-400">· 기본은 공란 — 자리에 없으면 해당 교시 셀을 눌러 X로 근거를 남기세요 · 60초마다 자동 갱신</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-400">· 기본은 공란 — 자리에 없으면 해당 교시 셀을 눌러 X로 근거를 남기세요 · 60초마다 자동 갱신</span>
         </div>
 
       </main>

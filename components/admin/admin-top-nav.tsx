@@ -114,7 +114,7 @@ export function AdminTopNav({
             variant="ghost"
             onClick={() => setIsMenuOpen(true)}
             className={cn(
-              'h-9.5 w-9.5 shrink-0 rounded-2xl hover:bg-[#F5F5F7] transition-premium',
+              'h-9.5 w-9.5 shrink-0 rounded-2xl hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition-premium',
               // PC에서 메뉴가 고정돼 있으면 좌측 사이드바가 항상 보이므로 햄버거 숨김
               isMenuPinned && 'lg:hidden'
             )}
@@ -130,7 +130,7 @@ export function AdminTopNav({
           >
             SSC
           </button>
-          <h1 className="admin-fit-text text-[15px] sm:text-[17px] font-semibold tracking-tight text-slate-900 flex items-center gap-1.5 min-w-0">
+          <h1 className="admin-fit-text text-[15px] sm:text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1.5 min-w-0">
             {titleIcon}
             <span className="truncate">{title}</span>
           </h1>
@@ -138,7 +138,7 @@ export function AdminTopNav({
 
         {campusOptions && campusValue && onCampusChange && (
           <div className="glass-capsule flex items-center gap-2 rounded-full p-0.5 shrink-0">
-            <span className="hidden sm:inline pl-3.5 pr-1 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">센터</span>
+            <span className="hidden sm:inline pl-3.5 pr-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">센터</span>
             <div className="flex min-w-0 overflow-hidden gap-0.5">
               {campusOptions
                 .filter((option) => {
@@ -156,8 +156,8 @@ export function AdminTopNav({
                     className={cn(
                       'admin-fit-button h-7 rounded-full px-3 text-[11px] transition-premium',
                       campusValue === option.value
-                        ? 'bg-white hover:bg-white text-black shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-semibold border border-black/[0.02]'
-                        : 'text-slate-500 hover:bg-white/60 hover:text-black'
+                        ? 'bg-white dark:bg-white/10 hover:bg-white dark:hover:bg-white/10 text-black dark:text-slate-100 shadow-[0_2px_6px_rgba(0,0,0,0.05)] font-semibold border border-black/[0.02] dark:border-white/10'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-white/60 dark:hover:bg-white/5 hover:text-black dark:hover:text-slate-100'
                     )}
                   >
                     {option.label}
@@ -172,7 +172,7 @@ export function AdminTopNav({
             size="sm"
             variant="outline"
             onClick={() => router.replace('/admin/dashboard')}
-            className="admin-fit-button rounded-2xl border-black/[0.05] hover:bg-[#F5F5F7] text-xs h-9.5 bg-white px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
+            className="admin-fit-button rounded-2xl border-black/[0.05] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5 text-xs h-9.5 bg-white dark:bg-[#1c1c1e] px-3 shadow-[0_2px_8px_rgba(0,0,0,0.01)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.04)] transition-premium"
             title="홈"
           >
             <Home className="w-4 h-4 md:mr-1.5 text-[#0071E3]" />
@@ -184,7 +184,7 @@ export function AdminTopNav({
 
       {/* PC 고정 사이드바 — 데스크톱(lg+)에서 메뉴 고정 시 항상 노출 */}
       {isMenuPinned && (
-        <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-[280px] flex-col border-r border-black/[0.06] bg-white shadow-[2px_0_16px_rgba(0,0,0,0.04)]">
+        <aside className="hidden lg:flex fixed inset-y-0 left-0 z-40 w-[280px] flex-col border-r border-black/[0.06] dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-[2px_0_16px_rgba(0,0,0,0.04)]">
           <AdminMenuList
             pathname={pathname}
             adminSession={adminSession}
@@ -201,7 +201,7 @@ export function AdminTopNav({
 
       {/* 오버레이 메뉴 — 모바일 및 미고정 데스크톱 */}
       <Sheet open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-        <SheetContent side="left" className="w-[300px] bg-white p-0">
+        <SheetContent side="left" className="w-[300px] bg-white dark:bg-[#1c1c1e] p-0">
           <SheetTitle className="sr-only">관리자 메뉴</SheetTitle>
           <AdminMenuList
             pathname={pathname}

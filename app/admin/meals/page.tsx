@@ -466,13 +466,13 @@ export default function MealsPage() {
   }, [campusFilter, plans, students]);
 
   if (checkingAuth) {
-    return <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center"><Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" /></div>;
+    return <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0b0b0c] flex items-center justify-center"><Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" /></div>;
   }
 
   const past = selectedPlan ? isPastDeadline(selectedPlan) : false;
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <div className="no-print">
         <AdminTopNav title="도시락 신청" titleIcon={<Utensils className="w-4 h-4 text-[#0071E3]" />} onLogout={handleLogout} />
       </div>
@@ -481,52 +481,52 @@ export default function MealsPage() {
         {/* 헤더 (화면 전용) */}
         <div className="no-print flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => router.push('/admin/dashboard')}
-            className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 shrink-0">
+            className="h-9 w-9 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 shrink-0">
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div>
             <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
               <Utensils className="w-5 h-5 text-[#0071E3]" /> 도시락 신청
             </h1>
-            <p className="text-xs font-bold text-slate-400 mt-0.5">주차별 도시락 신청을 받고, A4 게시용 표를 인쇄합니다.</p>
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">주차별 도시락 신청을 받고, A4 게시용 표를 인쇄합니다.</p>
           </div>
           <Button variant="outline" size="sm" onClick={loadAll}
-            className="ml-auto shrink-0 rounded-xl text-xs h-9 bg-white border-slate-200 hover:bg-slate-50">
+            className="ml-auto shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5">
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} /> 새로고침
           </Button>
         </div>
 
         {/* 라운드 등록 (화면 전용) */}
-        <div className="no-print rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-3">
-          <p className="text-sm font-black text-slate-700">도시락 라운드 등록 (월~금)</p>
+        <div className="no-print rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-100 dark:border-white/10 shadow-sm p-5 space-y-3">
+          <p className="text-sm font-black text-slate-700 dark:text-slate-300">도시락 라운드 등록 (월~금)</p>
           <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+            <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               주 (월요일)
               <input type="date" value={newWeek} onChange={(e) => {
                 setNewWeek(e.target.value);
                 setNewDeadline(deadlineForMealWeek(e.target.value));
               }}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
             </label>
-            <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+            <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               제공 끼니
               <div className="flex gap-1.5">
                 {(['lunch', 'dinner'] as MealKind[]).map((k) => (
                   <button key={k} type="button" onClick={() => setNewMeals((m) => ({ ...m, [k]: !m[k] }))}
                     className={`rounded-xl px-3.5 py-2 text-xs font-black border transition active:scale-95 ${
-                      newMeals[k] ? 'border-[#0071E3] bg-[#0071E3] text-white' : 'border-slate-200 bg-white text-slate-400'
+                      newMeals[k] ? 'border-[#0071E3] bg-[#0071E3] text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-400'
                     }`}>
                     {MEAL_KIND_LABELS[k]}
                   </button>
                 ))}
               </div>
             </div>
-            <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+            <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               신청 마감 일시
               <input type="datetime-local" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
             </label>
-            <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+            <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               신청 안 받는 요일
               <div className="flex gap-1.5">
                 {MEAL_DAYS.map((day) => {
@@ -534,7 +534,7 @@ export default function MealsPage() {
                   return (
                     <button key={day} type="button" onClick={() => setNewClosedDays((cur) => off ? cur.filter((d) => d !== day) : [...cur, day])}
                       className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
-                        off ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400'
+                        off ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-400'
                       }`}>
                       {MEAL_DAY_LABELS[day]}
                     </button>
@@ -543,24 +543,24 @@ export default function MealsPage() {
               </div>
             </div>
             {newMeals.lunch && (
-              <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+              <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 점심 단가(원)
                 <input type="number" min={0} value={newLunchPrice} onChange={(e) => setNewLunchPrice(e.target.value)} placeholder="0"
-                  className="w-28 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                  className="w-28 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
               </label>
             )}
             {newMeals.dinner && (
-              <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+              <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 저녁 단가(원)
                 <input type="number" min={0} value={newDinnerPrice} onChange={(e) => setNewDinnerPrice(e.target.value)} placeholder="0"
-                  className="w-28 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                  className="w-28 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
               </label>
             )}
-            <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+            <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               대상 캠퍼스
               <select value={newCampus} onChange={(e) => setNewCampus(e.target.value)} disabled={adminCampus !== 'all'}
                 title={adminCampus !== 'all' ? '담당 캠퍼스로 자동 지정됩니다' : '대상 캠퍼스 선택'}
-                className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
+                className="rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
                 <option value="all">전체 캠퍼스</option>
                 {CAMPUSES.map((c) => <option key={c} value={c}>{getCampusLabel(c)}</option>)}
               </select>
@@ -570,7 +570,7 @@ export default function MealsPage() {
               {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} 등록
             </Button>
             <Button onClick={quickCreateNextWeek} disabled={adding} variant="outline"
-              className="rounded-xl border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-black h-10 px-4">
+              className="rounded-xl border-emerald-200 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 text-xs font-black h-10 px-4">
               다음 주 빠른 생성
             </Button>
           </div>
@@ -579,24 +579,24 @@ export default function MealsPage() {
             <div className="space-y-2 pt-1">
               {plans.map((plan) => (
                 <div key={plan.id} className={`flex items-center gap-2 rounded-2xl border px-3 py-2.5 transition ${
-                  selectedPlanId === plan.id ? 'border-[#0071E3]/30 bg-[#0071E3]/5' : 'border-slate-100 bg-slate-50/60'
+                  selectedPlanId === plan.id ? 'border-[#0071E3]/30 bg-[#0071E3]/5 dark:bg-[#0071E3]/15' : 'border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/5'
                 }`}>
                   <button type="button" onClick={() => setSelectedPlanId(plan.id)} className="flex-1 flex items-start gap-2 text-left">
                     <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
-                      <span className={`text-xs font-black ${selectedPlanId === plan.id ? 'text-[#0071E3]' : 'text-slate-700'}`}>
+                      <span className={`text-xs font-black ${selectedPlanId === plan.id ? 'text-[#0071E3]' : 'text-slate-700 dark:text-slate-300'}`}>
                         {weekRangeLabel(plan.weekStart)} 주
                       </span>
                       <span className="text-[11px] font-semibold text-slate-400">{plan.meals.map((m) => MEAL_KIND_LABELS[m]).join('·')}</span>
-                      <span className="rounded-lg bg-slate-200/70 text-slate-600 px-1.5 py-0.5 text-[9px] font-black">
+                      <span className="rounded-lg bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 text-[9px] font-black">
                         {plan.campus && plan.campus !== 'all' ? getCampusLabel(plan.campus) : '전체 캠퍼스'}
                       </span>
                       {plan.deadline && (
-                        <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${isPastDeadline(plan) ? 'bg-red-100 text-red-600' : 'bg-amber-50 text-amber-600'}`}>
+                        <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${isPastDeadline(plan) ? 'bg-red-100 dark:bg-red-500/10 text-red-600' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-600'}`}>
                           {isPastDeadline(plan) ? '마감됨' : `마감 ${formatDeadline(plan.deadline)}`}
                         </span>
                       )}
                       {plan.notifiedAt && (
-                        <span className="flex items-center gap-1 rounded-lg bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[9px] font-black">
+                        <span className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 text-[9px] font-black">
                           <Bell className="w-2 h-2" /> 알림됨
                         </span>
                       )}
@@ -605,13 +605,13 @@ export default function MealsPage() {
                   <button type="button" disabled={!!notifyingId} onClick={() => notifyToStudents(plan.id, plan.notifiedAt ? 'cancel' : 'send')}
                     title={plan.notifiedAt ? `발송: ${new Date(plan.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 신청 알림 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
-                      plan.notifiedAt ? 'border border-red-100 bg-red-50 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'
+                      plan.notifiedAt ? 'border border-red-100 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}>
                     {notifyingId === plan.id ? <Loader2 className="w-3 h-3 animate-spin" /> : plan.notifiedAt ? <X className="w-3 h-3" /> : <MessageSquare className="w-3 h-3" />}
                     {plan.notifiedAt ? '알림 취소' : '학생 알림'}
                   </button>
                   <button type="button" onClick={() => deletePlan(plan.id)}
-                    className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 transition shrink-0" title="삭제">
+                    className="rounded-lg p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition shrink-0" title="삭제">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
@@ -620,32 +620,32 @@ export default function MealsPage() {
           )}
         </div>
 
-        <div className="no-print rounded-2xl bg-white border border-slate-100 shadow-sm p-5 space-y-4">
+        <div className="no-print rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-100 dark:border-white/10 shadow-sm p-5 space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <div>
-              <h2 className="text-[17px] font-semibold tracking-tight text-slate-900">캠퍼스별 반복 템플릿</h2>
-              <p className="text-[12px] font-medium text-slate-500 mt-0.5">생성 · 마감 · 알림 시각</p>
+              <h2 className="text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">캠퍼스별 반복 템플릿</h2>
+              <p className="text-[12px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">생성 · 마감 · 알림 시각</p>
             </div>
             <Button onClick={runRoutinesNow} disabled={routineRunning} variant="outline"
-              className="ml-auto rounded-xl border-slate-200 bg-white text-xs font-black h-9">
+              className="ml-auto rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs font-black h-9">
               {routineRunning ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
               지금 실행
             </Button>
           </div>
 
           <div className="grid gap-3 lg:grid-cols-[1.1fr_1fr]">
-            <div className="rounded-2xl border border-black/[0.05] bg-[#FAFAFA] p-4 space-y-3">
+            <div className="rounded-2xl border border-black/[0.05] dark:border-white/10 bg-[#FAFAFA] dark:bg-white/5 p-4 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   템플릿명
                   <input value={routineForm.name} onChange={(e) => setRoutineForm((f) => ({ ...f, name: e.target.value }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   캠퍼스
                   <select value={routineForm.campus || 'all'} disabled={adminCampus !== 'all'}
                     onChange={(e) => setRoutineForm((f) => ({ ...f, campus: e.target.value === 'all' ? undefined : e.target.value }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none disabled:opacity-70">
                     <option value="all">전체 캠퍼스</option>
                     {CAMPUSES.map((c) => <option key={c} value={c}>{getCampusLabel(c)}</option>)}
                   </select>
@@ -653,22 +653,22 @@ export default function MealsPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3">
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   생성 요일
                   <select value={routineForm.createDay} onChange={(e) => setRoutineForm((f) => ({ ...f, createDay: Number(e.target.value) }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
                     {DAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   생성 시각
                   <input type="time" value={routineForm.createTime} onChange={(e) => setRoutineForm((f) => ({ ...f, createTime: e.target.value }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   대상 주
                   <select value={routineForm.targetWeekOffset} onChange={(e) => setRoutineForm((f) => ({ ...f, targetWeekOffset: Number(e.target.value) }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
                     <option value={0}>이번 주</option>
                     <option value={1}>다음 주</option>
                     <option value={2}>2주 뒤</option>
@@ -677,30 +677,30 @@ export default function MealsPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-4">
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   마감 기준
                   <select value={routineForm.deadlineBase} onChange={(e) => setRoutineForm((f) => ({ ...f, deadlineBase: e.target.value as MealPlanRoutineTemplate['deadlineBase'] }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
                     <option value="create">생성 주</option>
                     <option value="target">대상 주</option>
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   마감 요일
                   <select value={routineForm.deadlineDay} onChange={(e) => setRoutineForm((f) => ({ ...f, deadlineDay: Number(e.target.value) }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
                     {DAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   마감 시각
                   <input type="time" value={routineForm.deadlineTime} onChange={(e) => setRoutineForm((f) => ({ ...f, deadlineTime: e.target.value }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   알림
                   <select value={routineForm.notifyMode} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyMode: e.target.value as MealPlanRoutineTemplate['notifyMode'] }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
                     <option value="none">보내지 않음</option>
                     <option value="on_create">생성 즉시</option>
                     <option value="scheduled">예약 발송</option>
@@ -710,23 +710,23 @@ export default function MealsPage() {
 
               {routineForm.notifyMode === 'scheduled' && (
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                     알림 요일
                     <select value={routineForm.notifyDay ?? routineForm.createDay} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyDay: Number(e.target.value) }))}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none">
+                      className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
                       {DAY_OPTIONS.map((day) => <option key={day.value} value={day.value}>{day.label}</option>)}
                     </select>
                   </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                  <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                     알림 시각
                     <input type="time" value={routineForm.notifyTime || routineForm.createTime} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyTime: e.target.value }))}
-                      className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                      className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
                   </label>
                 </div>
               )}
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   끼니
                   <div className="flex gap-1.5">
                     {(['lunch', 'dinner'] as MealKind[]).map((kind) => {
@@ -737,7 +737,7 @@ export default function MealsPage() {
                           meals: on ? f.meals.filter((m) => m !== kind) : [...f.meals, kind],
                         }))}
                           className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
-                            on ? 'border-[#0071E3] bg-[#0071E3] text-white' : 'border-slate-200 bg-white text-slate-400'
+                            on ? 'border-[#0071E3] bg-[#0071E3] text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-400'
                           }`}>
                           {MEAL_KIND_LABELS[kind]}
                         </button>
@@ -745,7 +745,7 @@ export default function MealsPage() {
                     })}
                   </div>
                 </div>
-                <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <div className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   신청 안 받는 요일
                   <div className="flex gap-1.5">
                     {MEAL_DAYS.map((day) => {
@@ -756,7 +756,7 @@ export default function MealsPage() {
                           closedDays: off ? f.closedDays.filter((d) => d !== day) : [...f.closedDays, day],
                         }))}
                           className={`rounded-xl px-3 py-2 text-xs font-black border transition active:scale-95 ${
-                            off ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400'
+                            off ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-400'
                           }`}>
                           {MEAL_DAY_LABELS[day]}
                         </button>
@@ -767,15 +767,15 @@ export default function MealsPage() {
               </div>
 
               <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   점심 단가
                   <input type="number" min={0} value={routineForm.lunchPrice ?? ''} onChange={(e) => setRoutineForm((f) => ({ ...f, lunchPrice: e.target.value ? Number(e.target.value) : undefined }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
                 </label>
-                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500">
+                <label className="flex flex-col gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   저녁 단가
                   <input type="number" min={0} value={routineForm.dinnerPrice ?? ''} onChange={(e) => setRoutineForm((f) => ({ ...f, dinnerPrice: e.target.value ? Number(e.target.value) : undefined }))}
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none" />
+                    className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
                 </label>
                 <Button onClick={() => saveRoutineTemplate()} disabled={routineSaving}
                   className="self-end rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-10 px-4">
@@ -787,29 +787,29 @@ export default function MealsPage() {
 
             <div className="space-y-2">
               {routineTemplates.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-xs font-semibold text-slate-400">
+                <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-8 text-center text-xs font-semibold text-slate-400">
                   등록된 반복 템플릿이 없습니다.
                 </div>
               ) : routineTemplates.map((template) => (
-                <div key={template.id} className="rounded-2xl border border-slate-100 bg-white px-4 py-3 shadow-sm">
+                <div key={template.id} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-3 shadow-sm">
                   <div className="flex items-start gap-3">
                     <button type="button" onClick={() => toggleRoutineActive(template)}
                       className={`mt-0.5 h-6 w-11 rounded-full border p-0.5 transition ${
-                        template.active ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200 bg-slate-100'
+                        template.active ? 'border-emerald-500 bg-emerald-500' : 'border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10'
                       }`}>
                       <span className={`block h-4 w-4 rounded-full bg-white transition ${template.active ? 'translate-x-5' : ''}`} />
                     </button>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-xs font-black text-slate-800">{template.name}</p>
-                        <span className="rounded-lg bg-slate-100 px-1.5 py-0.5 text-[9px] font-black text-slate-500">
+                        <p className="text-xs font-black text-slate-800 dark:text-slate-200">{template.name}</p>
+                        <span className="rounded-lg bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-black text-slate-500 dark:text-slate-400">
                           {template.campus ? getCampusLabel(template.campus) : '전체 캠퍼스'}
                         </span>
-                        <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${template.active ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-400'}`}>
+                        <span className={`rounded-lg px-1.5 py-0.5 text-[9px] font-black ${template.active ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 dark:bg-white/10 text-slate-400'}`}>
                           {template.active ? '반복중' : '중지'}
                         </span>
                       </div>
-                      <p className="mt-1 text-[11px] font-semibold text-slate-500">
+                      <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                         {DAY_OPTIONS.find((d) => d.value === template.createDay)?.label} {template.createTime} 생성 · {template.targetWeekOffset === 1 ? '다음 주' : template.targetWeekOffset === 0 ? '이번 주' : `${template.targetWeekOffset}주 뒤`}
                       </p>
                       <p className="text-[11px] font-semibold text-slate-400">
@@ -821,7 +821,7 @@ export default function MealsPage() {
                       수정
                     </button>
                     <button type="button" onClick={() => deleteRoutineTemplate(template.id)}
-                      className="rounded-lg p-1.5 text-slate-300 hover:bg-red-50 hover:text-red-500">
+                      className="rounded-lg p-1.5 text-slate-300 dark:text-slate-600 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-500">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -837,39 +837,39 @@ export default function MealsPage() {
             return (
               <div key={summary.weekStart}
                 className={`rounded-2xl border px-5 py-4 shadow-sm ${
-                  isNext ? 'border-amber-200 bg-amber-50' : 'border-[#0071E3]/20 bg-[#0071E3]/[0.06]'
+                  isNext ? 'border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10' : 'border-[#0071E3]/20 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15'
                 }`}>
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className={`text-xs font-black ${isNext ? 'text-amber-700' : 'text-[#0071E3]'}`}>{summary.label}</p>
-                    <h2 className="mt-1 text-[17px] font-semibold tracking-tight text-slate-900">
+                    <p className={`text-xs font-black ${isNext ? 'text-amber-700 dark:text-amber-400' : 'text-[#0071E3]'}`}>{summary.label}</p>
+                    <h2 className="mt-1 text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                       {weekRangeLabel(summary.weekStart)} 주
                     </h2>
                   </div>
                   <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
                     summary.plans.length > 0
-                      ? isNext ? 'bg-amber-100 text-amber-700' : 'bg-[#0071E3]/10 text-[#0071E3]'
-                      : 'bg-slate-100 text-slate-400'
+                      ? isNext ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3]'
+                      : 'bg-slate-100 dark:bg-white/10 text-slate-400'
                   }`}>
                     {summary.plans.length > 0 ? `${summary.plans.length}개 라운드` : '아직 없음'}
                   </span>
                 </div>
                 <div className="mt-4 grid grid-cols-4 gap-2 text-center">
-                  <div className="rounded-xl bg-white px-2 py-2">
-                    <p className="text-[18px] font-semibold tabular-nums text-slate-900">{summary.responded}</p>
-                    <p className="text-[11px] font-medium text-slate-500">응답</p>
+                  <div className="rounded-xl bg-white dark:bg-white/5 px-2 py-2">
+                    <p className="text-[18px] font-semibold tabular-nums text-slate-900 dark:text-slate-100">{summary.responded}</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">응답</p>
                   </div>
-                  <div className="rounded-xl bg-white px-2 py-2">
+                  <div className="rounded-xl bg-white dark:bg-white/5 px-2 py-2">
                     <p className="text-[18px] font-semibold tabular-nums text-orange-600">{summary.missing}</p>
-                    <p className="text-[11px] font-medium text-slate-500">미응답</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">미응답</p>
                   </div>
-                  <div className="rounded-xl bg-white px-2 py-2">
+                  <div className="rounded-xl bg-white dark:bg-white/5 px-2 py-2">
                     <p className="text-[18px] font-semibold tabular-nums text-[#F56300]">{summary.lunch}</p>
-                    <p className="text-[11px] font-medium text-slate-500">점심</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">점심</p>
                   </div>
-                  <div className="rounded-xl bg-white px-2 py-2">
+                  <div className="rounded-xl bg-white dark:bg-white/5 px-2 py-2">
                     <p className="text-[18px] font-semibold tabular-nums text-[#0071E3]">{summary.dinner}</p>
-                    <p className="text-[11px] font-medium text-slate-500">저녁</p>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">저녁</p>
                   </div>
                 </div>
               </div>
@@ -884,7 +884,7 @@ export default function MealsPage() {
               {(selectedPlan.campus && selectedPlan.campus !== 'all' ? [selectedPlan.campus] : CAMPUS_FILTERS).map((c) => (
                 <button key={c} onClick={() => setCampusFilter(c)}
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
-                    campusFilter === c ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                    campusFilter === c ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                   }`}>
                   {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
                 </button>
@@ -896,8 +896,8 @@ export default function MealsPage() {
             </div>
 
             {/* 휴무 요일 설정 (화면 전용) — 공휴일/학원 휴무 수동 지정 */}
-            <div className="no-print rounded-2xl border border-slate-100 bg-white shadow-sm px-4 py-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black text-slate-600">휴무 요일</span>
+            <div className="no-print rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm px-4 py-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-black text-slate-600 dark:text-slate-300">휴무 요일</span>
               <span className="text-[11px] font-semibold text-slate-400">(공휴일/휴무일 — 신청·표·정산에서 제외)</span>
               <div className="ml-auto flex gap-1.5">
                 {MEAL_DAYS.map((day) => {
@@ -905,7 +905,7 @@ export default function MealsPage() {
                   return (
                     <button key={day} type="button" onClick={() => toggleClosedDay(day)}
                       className={`h-8 w-9 rounded-lg text-xs font-black border transition active:scale-90 ${
-                        closed ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 bg-white text-slate-400 hover:border-slate-300'
+                        closed ? 'border-red-500 bg-red-500 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-400 hover:border-slate-300'
                       }`} title={closed ? '휴무 해제' : '휴무로 지정'}>
                       {MEAL_DAY_LABELS[day]}
                     </button>
@@ -918,38 +918,38 @@ export default function MealsPage() {
             {settlement && (
               <div className="no-print grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {selectedPlan.meals.includes('lunch') && (
-                  <div className="rounded-2xl border border-[#F56300]/25 bg-[#F56300]/[0.07] px-4 py-3">
+                  <div className="rounded-2xl border border-[#F56300]/25 bg-[#F56300]/[0.07] dark:bg-[#F56300]/15 px-4 py-3">
                     <p className="text-[18px] font-semibold tracking-tight text-[#F56300]">{settlement.lunch}<span className="text-xs font-bold ml-0.5">끼</span></p>
                     <p className="text-[11px] font-bold text-[#F56300]/80 mt-0.5">점심 · {settlement.lunchAmt.toLocaleString()}원</p>
                   </div>
                 )}
                 {selectedPlan.meals.includes('dinner') && (
-                  <div className="rounded-2xl border border-[#0071E3]/25 bg-[#0071E3]/[0.06] px-4 py-3">
+                  <div className="rounded-2xl border border-[#0071E3]/25 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-4 py-3">
                     <p className="text-[18px] font-semibold tracking-tight text-[#0071E3]">{settlement.dinner}<span className="text-xs font-bold ml-0.5">끼</span></p>
                     <p className="text-[11px] font-bold text-[#0071E3]/80 mt-0.5">저녁 · {settlement.dinnerAmt.toLocaleString()}원</p>
                   </div>
                 )}
-                <div className="rounded-2xl border border-emerald-200/70 bg-emerald-50 px-4 py-3">
-                  <p className="text-[18px] font-semibold tracking-tight text-emerald-800">{settlement.total.toLocaleString()}<span className="text-xs font-bold ml-0.5">원</span></p>
-                  <p className="text-[11px] font-bold text-emerald-700/80 mt-0.5">총 정산액</p>
+                <div className="rounded-2xl border border-emerald-200/70 dark:border-emerald-500/20 bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3">
+                  <p className="text-[18px] font-semibold tracking-tight text-emerald-800 dark:text-emerald-400">{settlement.total.toLocaleString()}<span className="text-xs font-bold ml-0.5">원</span></p>
+                  <p className="text-[11px] font-bold text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">총 정산액</p>
                 </div>
-                <div className="rounded-2xl border border-slate-200/70 bg-slate-50 px-4 py-3">
-                  <p className="text-[18px] font-semibold tracking-tight text-slate-700">{settlement.rows.length}<span className="text-xs font-bold ml-0.5">명</span></p>
-                  <p className="text-[11px] font-bold text-slate-500 mt-0.5">신청 인원</p>
+                <div className="rounded-2xl border border-slate-200/70 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-3">
+                  <p className="text-[18px] font-semibold tracking-tight text-slate-700 dark:text-slate-200">{settlement.rows.length}<span className="text-xs font-bold ml-0.5">명</span></p>
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">신청 인원</p>
                 </div>
               </div>
             )}
 
             {/* 이름별 정산 내역 (화면 전용) */}
             {settlement && settlement.rows.length > 0 && (
-              <div className="no-print rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-                <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                  <p className="text-xs font-black text-slate-600">이름별 정산 내역</p>
+              <div className="no-print rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
+                <div className="px-5 py-3 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+                  <p className="text-xs font-black text-slate-600 dark:text-slate-300">이름별 정산 내역</p>
                   <p className="text-[11px] font-bold text-slate-400">점심 {settlement.lp.toLocaleString()}원 · 저녁 {settlement.dp.toLocaleString()}원</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse text-xs">
-                    <thead className="bg-slate-50/80 text-[10px] font-black text-slate-400">
+                    <thead className="bg-slate-50/80 dark:bg-white/5 text-[10px] font-black text-slate-400">
                       <tr>
                         <th className="px-4 py-2.5 text-left">이름</th>
                         {selectedPlan.meals.includes('lunch') && <th className="px-3 py-2.5 text-right">점심</th>}
@@ -957,22 +957,22 @@ export default function MealsPage() {
                         <th className="px-4 py-2.5 text-right">금액</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100/60">
+                    <tbody className="divide-y divide-slate-100/60 dark:divide-white/10">
                       {settlement.rows.map((r) => (
                         <tr key={r.id}>
-                          <td className="px-4 py-2 font-black text-slate-700 whitespace-nowrap">{r.name}</td>
-                          {selectedPlan.meals.includes('lunch') && <td className="px-3 py-2 text-right font-bold text-slate-500">{r.lunch}끼</td>}
-                          {selectedPlan.meals.includes('dinner') && <td className="px-3 py-2 text-right font-bold text-slate-500">{r.dinner}끼</td>}
-                          <td className="px-4 py-2 text-right font-black text-slate-800">{r.amount.toLocaleString()}원</td>
+                          <td className="px-4 py-2 font-black text-slate-700 dark:text-slate-200 whitespace-nowrap">{r.name}</td>
+                          {selectedPlan.meals.includes('lunch') && <td className="px-3 py-2 text-right font-bold text-slate-500 dark:text-slate-400">{r.lunch}끼</td>}
+                          {selectedPlan.meals.includes('dinner') && <td className="px-3 py-2 text-right font-bold text-slate-500 dark:text-slate-400">{r.dinner}끼</td>}
+                          <td className="px-4 py-2 text-right font-black text-slate-800 dark:text-slate-200">{r.amount.toLocaleString()}원</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr className="border-t-2 border-slate-200 bg-slate-50/60">
-                        <td className="px-4 py-2.5 font-black text-slate-700">합계</td>
-                        {selectedPlan.meals.includes('lunch') && <td className="px-3 py-2.5 text-right font-black text-slate-700">{settlement.lunch}끼</td>}
-                        {selectedPlan.meals.includes('dinner') && <td className="px-3 py-2.5 text-right font-black text-slate-700">{settlement.dinner}끼</td>}
-                        <td className="px-4 py-2.5 text-right font-black text-emerald-700">{settlement.total.toLocaleString()}원</td>
+                      <tr className="border-t-2 border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/5">
+                        <td className="px-4 py-2.5 font-black text-slate-700 dark:text-slate-200">합계</td>
+                        {selectedPlan.meals.includes('lunch') && <td className="px-3 py-2.5 text-right font-black text-slate-700 dark:text-slate-200">{settlement.lunch}끼</td>}
+                        {selectedPlan.meals.includes('dinner') && <td className="px-3 py-2.5 text-right font-black text-slate-700 dark:text-slate-200">{settlement.dinner}끼</td>}
+                        <td className="px-4 py-2.5 text-right font-black text-emerald-700 dark:text-emerald-400">{settlement.total.toLocaleString()}원</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -982,12 +982,12 @@ export default function MealsPage() {
 
             {/* 마감 후 추가신청 승인 대기 (화면 전용) */}
             {pendingRequests.length > 0 && (
-              <div className="no-print rounded-2xl border border-amber-200 bg-amber-50/60 p-4 space-y-2">
-                <p className="text-xs font-black text-amber-800 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> 마감 후 추가 신청 {pendingRequests.length}건 — 승인 시 도시락표에 반영됩니다</p>
+              <div className="no-print rounded-2xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/10 p-4 space-y-2">
+                <p className="text-xs font-black text-amber-800 dark:text-amber-400 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> 마감 후 추가 신청 {pendingRequests.length}건 — 승인 시 도시락표에 반영됩니다</p>
                 {pendingRequests.map(({ s, req }) => (
-                  <div key={req.id} className="flex items-center gap-2 rounded-xl bg-white border border-amber-100 px-3 py-2">
-                    <span className="text-xs font-black text-slate-700">{s.name}</span>
-                    <span className="text-[11px] font-bold text-slate-500">{MEAL_DAY_LABELS[req.day]} {MEAL_KIND_LABELS[req.meal]}</span>
+                  <div key={req.id} className="flex items-center gap-2 rounded-xl bg-white dark:bg-[#1c1c1e] border border-amber-100 dark:border-amber-500/20 px-3 py-2">
+                    <span className="text-xs font-black text-slate-700 dark:text-slate-200">{s.name}</span>
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{MEAL_DAY_LABELS[req.day]} {MEAL_KIND_LABELS[req.meal]}</span>
                     {req.reason && <span className="text-[11px] font-semibold text-slate-400 truncate">· {req.reason}</span>}
                     <div className="ml-auto flex gap-1.5">
                       <button type="button" disabled={updating === `req-${req.id}`} onClick={() => reviewAddRequest(s, req.id, true)}
@@ -995,7 +995,7 @@ export default function MealsPage() {
                         <Check className="w-3 h-3" /> 승인
                       </button>
                       <button type="button" disabled={updating === `req-${req.id}`} onClick={() => reviewAddRequest(s, req.id, false)}
-                        className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white text-slate-600 px-2.5 py-1.5 text-[11px] font-black active:scale-95 disabled:opacity-50">
+                        className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-600 dark:text-slate-300 px-2.5 py-1.5 text-[11px] font-black active:scale-95 disabled:opacity-50">
                         <X className="w-3 h-3" /> 반려
                       </button>
                     </div>
@@ -1005,16 +1005,16 @@ export default function MealsPage() {
             )}
 
             {/* 대리입력 그리드 (화면 전용) — 셀 클릭으로 먹음/안먹음 토글 */}
-            <div className="no-print rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
-              <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between">
-                <p className="text-xs font-black text-slate-600">신청 현황 · 대리 입력 <span className="font-bold text-slate-400">(셀 클릭 = 먹음/안먹음)</span></p>
+            <div className="no-print rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
+              <div className="px-5 py-3 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+                <p className="text-xs font-black text-slate-600 dark:text-slate-300">신청 현황 · 대리 입력 <span className="font-bold text-slate-400">(셀 클릭 = 먹음/안먹음)</span></p>
                 {past && <span className="text-[10px] font-bold text-red-500">마감됨 — 추가는 위 승인 흐름으로</span>}
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-center text-xs">
-                  <thead className="bg-slate-50/80 text-[10px] font-black text-slate-400">
+                  <thead className="bg-slate-50/80 dark:bg-white/5 text-[10px] font-black text-slate-400">
                     <tr>
-                      <th className="px-4 py-3 text-left sticky left-0 bg-slate-50/80">학생</th>
+                      <th className="px-4 py-3 text-left sticky left-0 bg-slate-50/80 dark:bg-[#1c1c1e]">학생</th>
                       {selectedPlan.meals.map((kind) => MEAL_DAYS.map((day) => (
                         <th key={`${kind}-${day}`} className={`px-2 py-3 ${isClosedDay(selectedPlan, day) ? 'text-red-300' : ''}`}>
                           <span className={kind === 'dinner' ? 'text-[#0071E3]/70' : 'text-[#F56300]/80'}>{MEAL_KIND_LABELS[kind][0]}</span>{MEAL_DAY_LABELS[day]}
@@ -1022,18 +1022,18 @@ export default function MealsPage() {
                       )))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100/60">
+                  <tbody className="divide-y divide-slate-100/60 dark:divide-white/10">
                     {scopedStudents.map((s) => {
                       const order = orderOf(s);
                       return (
                         <tr key={s.id}>
-                          <td className="px-4 py-2 text-left font-black text-slate-700 whitespace-nowrap sticky left-0 bg-white">{s.name}</td>
+                          <td className="px-4 py-2 text-left font-black text-slate-700 dark:text-slate-200 whitespace-nowrap sticky left-0 bg-white dark:bg-[#1c1c1e]">{s.name}</td>
                           {selectedPlan.meals.map((kind) => MEAL_DAYS.map((day) => {
                             const key = `${s.id}-${day}-${kind}`;
                             if (isClosedDay(selectedPlan, day)) {
                               return (
                                 <td key={key} className="px-1 py-1.5">
-                                  <div className="h-7 w-7 mx-auto rounded-lg bg-red-50 text-red-300 text-[9px] font-black grid place-items-center" title="휴무">휴</div>
+                                  <div className="h-7 w-7 mx-auto rounded-lg bg-red-50 dark:bg-red-500/10 text-red-300 text-[9px] font-black grid place-items-center" title="휴무">휴</div>
                                 </td>
                               );
                             }
@@ -1042,7 +1042,7 @@ export default function MealsPage() {
                               <td key={key} className="px-1 py-1.5">
                                 <button type="button" disabled={updating === key} onClick={() => toggleCell(s, day, kind)}
                                   className={`h-7 w-7 rounded-lg text-[11px] font-black transition active:scale-90 ${
-                                    on ? (kind === 'dinner' ? 'bg-[#0071E3] text-white' : 'bg-[#F56300] text-white') : 'bg-slate-100 text-slate-300 hover:bg-slate-200'
+                                    on ? (kind === 'dinner' ? 'bg-[#0071E3] text-white' : 'bg-[#F56300] text-white') : 'bg-slate-100 dark:bg-white/10 text-slate-300 dark:text-slate-500 hover:bg-slate-200'
                                   }`}>
                                   {updating === key ? '·' : on ? '○' : ''}
                                 </button>
@@ -1149,8 +1149,8 @@ export default function MealsPage() {
         )}
 
         {!selectedPlan && !(loading && students.length === 0) && (
-          <div className="no-print rounded-2xl bg-white border border-slate-100 p-12 text-center">
-            <Utensils className="w-10 h-10 text-slate-200 mx-auto mb-3" />
+          <div className="no-print rounded-2xl bg-white dark:bg-[#1c1c1e] border border-slate-100 dark:border-white/10 p-12 text-center">
+            <Utensils className="w-10 h-10 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
             <p className="text-sm font-bold text-slate-400">도시락 라운드를 먼저 등록해 주세요.</p>
           </div>
         )}

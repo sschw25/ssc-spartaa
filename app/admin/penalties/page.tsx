@@ -76,14 +76,14 @@ export default function PenaltiesPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0b0b0c] flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav title="벌점 · 상점 관리" onLogout={handleLogout} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-16 sm:px-6 space-y-5">
@@ -93,7 +93,7 @@ export default function PenaltiesPage() {
             variant="outline"
             size="icon"
             onClick={() => router.push('/admin/dashboard')}
-            className="h-9 w-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 transition active:scale-95 shrink-0"
+            className="h-9 w-9 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:bg-slate-50 dark:hover:bg-white/5 transition active:scale-95 shrink-0"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
@@ -102,7 +102,7 @@ export default function PenaltiesPage() {
               <Shield className="w-5 h-5 text-red-500" />
               벌점 · 상점 관리
             </h1>
-            <p className="text-xs font-bold text-slate-400 mt-0.5">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">
               학생 클릭 시 벌점/상점 부여 및 내역 확인
             </p>
           </div>
@@ -110,7 +110,7 @@ export default function PenaltiesPage() {
             variant="outline"
             size="sm"
             onClick={loadStudents}
-            className="shrink-0 rounded-xl text-xs h-9 bg-white border-slate-200 hover:bg-slate-50"
+            className="shrink-0 rounded-xl text-xs h-9 bg-white dark:bg-[#1c1c1e] border-slate-200 dark:border-white/10 hover:bg-slate-50 dark:hover:bg-white/5"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             새로고침
@@ -119,21 +119,21 @@ export default function PenaltiesPage() {
 
         {/* 요약 통계 */}
         <div className="grid grid-cols-3 gap-3">
-          <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+          <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
             <p className="text-[18px] leading-none font-semibold tracking-tight text-red-600">{withPenalty.length}</p>
-            <p className="text-[12px] font-medium text-slate-500 mt-2">벌점 보유 학생</p>
+            <p className="text-[12px] font-medium text-slate-500 dark:text-slate-400 mt-2">벌점 보유 학생</p>
           </div>
-          <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
-            <p className="text-[18px] leading-none font-semibold tracking-tight text-slate-900">
+          <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+            <p className="text-[18px] leading-none font-semibold tracking-tight text-slate-900 dark:text-slate-100">
               {filtered.reduce((s, st) => s + (st.penalties || []).filter((p) => p.type === 'penalty').reduce((a, p) => a + p.points, 0), 0)}
             </p>
-            <p className="text-[12px] font-medium text-slate-500 mt-2">총 벌점</p>
+            <p className="text-[12px] font-medium text-slate-500 dark:text-slate-400 mt-2">총 벌점</p>
           </div>
-          <div className="rounded-3xl border border-black/[0.05] bg-white px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
+          <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)]">
             <p className="text-[18px] leading-none font-semibold tracking-tight text-emerald-600">
               {filtered.reduce((s, st) => s + (st.penalties || []).filter((p) => p.type === 'bonus').reduce((a, p) => a + p.points, 0), 0)}
             </p>
-            <p className="text-[12px] font-medium text-slate-500 mt-2">총 상점</p>
+            <p className="text-[12px] font-medium text-slate-500 dark:text-slate-400 mt-2">총 상점</p>
           </div>
         </div>
 
@@ -147,7 +147,7 @@ export default function PenaltiesPage() {
                 className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                   campusFilter === c
                     ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                    : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
                 {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
@@ -160,7 +160,7 @@ export default function PenaltiesPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="이름 검색"
-              className="rounded-xl border border-slate-200 bg-white pl-8 pr-8 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-slate-400 w-36"
+              className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-8 pr-8 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:outline-none focus:border-slate-400 w-36"
             />
             {search && (
               <button
@@ -175,20 +175,20 @@ export default function PenaltiesPage() {
         </div>
 
         {/* 원생 목록 */}
-        <div className="rounded-3xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+        <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden">
           {loading && students.length === 0 ? (
             <div className="py-20 text-center flex flex-col items-center gap-3">
               <Loader2 className="w-6 h-6 animate-spin text-[#0071E3]" />
             </div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <Shield className="w-9 h-9 text-slate-200 mx-auto mb-3" />
+              <Shield className="w-9 h-9 text-slate-200 dark:text-slate-600 mx-auto mb-3" />
               <p className="text-sm font-bold text-slate-400">해당하는 학생이 없습니다.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600">
-                <thead className="bg-slate-50/80 border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+              <table className="w-full border-collapse text-left text-xs font-semibold text-slate-600 dark:text-slate-400">
+                <thead className="bg-slate-50/80 dark:bg-white/5 border-b border-slate-100 dark:border-white/10 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                   <tr>
                     <th className="px-5 py-4">학생</th>
                     <th className="px-5 py-4">담당 코멘터</th>
@@ -197,7 +197,7 @@ export default function PenaltiesPage() {
                     <th className="px-5 py-4"></th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100/60">
+                <tbody className="divide-y divide-slate-100/60 dark:divide-white/10">
                   {filtered.map((s) => {
                     const net = getNetScore(s);
                     const penaltyCount = (s.penalties || []).filter((p) => p.type === 'penalty').length;
@@ -205,18 +205,18 @@ export default function PenaltiesPage() {
                     return (
                       <tr
                         key={s.id}
-                        className="hover:bg-slate-50/60 cursor-pointer transition"
+                        className="hover:bg-slate-50/60 dark:hover:bg-white/5 cursor-pointer transition"
                         onClick={() => setSelected(s)}
                       >
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-2">
-                            <span className="font-black text-slate-800">{s.name}</span>
-                            <Badge className="bg-slate-100 text-slate-500 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
+                            <span className="font-black text-slate-800 dark:text-slate-200">{s.name}</span>
+                            <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
                               {getCampusLabel(s.campus)}
                             </Badge>
                           </div>
                         </td>
-                        <td className="px-5 py-3 font-bold text-slate-500">{s.manager || '미지정'}</td>
+                        <td className="px-5 py-3 font-bold text-slate-500 dark:text-slate-400">{s.manager || '미지정'}</td>
                         <td className="px-5 py-3">
                           <span className={`text-sm font-black ${
                             net > 0 ? 'text-red-600' : net < 0 ? 'text-emerald-600' : 'text-slate-400'
@@ -227,19 +227,19 @@ export default function PenaltiesPage() {
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-1.5">
                             {penaltyCount > 0 && (
-                              <span className="flex items-center gap-0.5 rounded-lg bg-red-50 text-red-600 px-2 py-0.5 text-[10px] font-black">
+                              <span className="flex items-center gap-0.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 px-2 py-0.5 text-[10px] font-black">
                                 <TrendingDown className="w-2.5 h-2.5" />
                                 {penaltyCount}건
                               </span>
                             )}
                             {bonusCount > 0 && (
-                              <span className="flex items-center gap-0.5 rounded-lg bg-emerald-50 text-emerald-600 px-2 py-0.5 text-[10px] font-black">
+                              <span className="flex items-center gap-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 px-2 py-0.5 text-[10px] font-black">
                                 <TrendingUp className="w-2.5 h-2.5" />
                                 {bonusCount}건
                               </span>
                             )}
                             {penaltyCount === 0 && bonusCount === 0 && (
-                              <span className="text-slate-300 font-bold">없음</span>
+                              <span className="text-slate-300 dark:text-slate-600 font-bold">없음</span>
                             )}
                           </div>
                         </td>
@@ -247,7 +247,7 @@ export default function PenaltiesPage() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); setSelected(s); }}
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-black text-slate-600 hover:border-red-300 hover:text-red-600 transition active:scale-95"
+                            className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-1.5 text-[11px] font-black text-slate-600 dark:text-slate-300 hover:border-red-300 hover:text-red-600 transition active:scale-95"
                           >
                             부여 / 조회
                           </button>
@@ -264,15 +264,15 @@ export default function PenaltiesPage() {
 
       {/* 원생별 벌점 관리 Sheet */}
       <Sheet open={!!selected} onOpenChange={(open) => { if (!open) setSelected(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto bg-white p-0">
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto bg-white dark:bg-[#1c1c1e] p-0">
           {selected && (
             <>
-              <SheetHeader className="border-b border-black/[0.05] px-5 py-4 sticky top-0 bg-white z-10">
-                <SheetTitle className="flex items-center gap-2 text-base font-black text-slate-900">
+              <SheetHeader className="border-b border-black/[0.05] dark:border-white/10 px-5 py-4 sticky top-0 bg-white dark:bg-[#1c1c1e] z-10">
+                <SheetTitle className="flex items-center gap-2 text-base font-black text-slate-900 dark:text-slate-100">
                   <Shield className="w-4 h-4 text-red-500" />
                   {selected.name} · 벌점 관리
                 </SheetTitle>
-                <SheetDescription className="text-xs font-semibold text-slate-500">
+                <SheetDescription className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   {getCampusLabel(selected.campus)} · {selected.manager || '담당 미지정'}
                 </SheetDescription>
               </SheetHeader>

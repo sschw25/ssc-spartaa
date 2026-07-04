@@ -32,13 +32,13 @@ const SOURCE_META: Record<'admin' | 'student', { label: string; short: string; d
     label: '대리 예약',
     short: '대리',
     dot: 'bg-sky-500',
-    chip: 'bg-sky-100 text-sky-700',
+    chip: 'bg-sky-100 text-sky-700 dark:bg-sky-500/10',
   },
   student: {
     label: '셀프 예약',
     short: '셀프',
     dot: 'bg-slate-400',
-    chip: 'bg-slate-100 text-slate-600',
+    chip: 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-400',
   },
 };
 
@@ -411,9 +411,9 @@ export default function AdminConsultationBookingsPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-black flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-slate-500">상담 예약 정보 로드 중...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">상담 예약 정보 로드 중...</p>
       </div>
     );
   }
@@ -430,7 +430,7 @@ export default function AdminConsultationBookingsPage() {
         onCampusChange={(v) => setCampus(v as Campus)}
         onLogout={handleLogout}
         actions={
-          <Button size="sm" variant="outline" onClick={loadData} className="rounded-2xl border-black/[0.05] text-xs h-9 bg-white px-3 shadow-sm" title="새로고침">
+          <Button size="sm" variant="outline" onClick={loadData} className="rounded-2xl border-black/[0.05] dark:border-white/10 text-xs h-9 bg-white dark:bg-[#1c1c1e] px-3 shadow-sm" title="새로고침">
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </Button>
         }
@@ -438,30 +438,30 @@ export default function AdminConsultationBookingsPage() {
 
       <main className="stagger-children max-w-5xl mx-auto p-4 md:p-8 space-y-6">
         {/* 추가/긴급 신청 */}
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
+        <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/[0.05] dark:border-white/10 shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h2 className="text-[17px] font-semibold text-slate-900">추가 · 긴급 상담 신청</h2>
-            <span className="text-[11px] font-bold text-slate-500">{extraRequests.length}건 대기</span>
+            <h2 className="text-[17px] font-semibold text-slate-900 dark:text-slate-100">추가 · 긴급 상담 신청</h2>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{extraRequests.length}건 대기</span>
           </div>
           {extraRequests.length === 0 ? (
-            <p className="text-[11px] text-slate-500 py-2">대기 중인 추가·긴급 신청이 없습니다.</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 py-2">대기 중인 추가·긴급 신청이 없습니다.</p>
           ) : (
             <div className="space-y-2">
               {extraRequests.map((b) => (
-                <div key={b.id} className="rounded-xl border border-amber-200/70 bg-amber-50/60 px-3 py-2.5 space-y-2">
+                <div key={b.id} className="rounded-xl border border-amber-200/70 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/10 px-3 py-2.5 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <button type="button" onClick={() => openStudentSheet(b.studentId)} className="text-[13px] font-extrabold text-[#0071E3] hover:underline">
                       {b.studentName}
                     </button>
-                    <span className="text-[10px] font-bold text-slate-500">{new Date(b.createdAt).toLocaleDateString('ko-KR')}</span>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{new Date(b.createdAt).toLocaleDateString('ko-KR')}</span>
                   </div>
-                  {b.reason && <p className="text-[11px] font-semibold text-slate-900 leading-relaxed break-words">{b.reason}</p>}
+                  {b.reason && <p className="text-[11px] font-semibold text-slate-900 dark:text-slate-100 leading-relaxed break-words">{b.reason}</p>}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     <Button size="sm" disabled={busy[`done_${b.id}`]} onClick={() => markDone(b)} className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3">
                       {busy[`done_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}처리완료
                     </Button>
-                    <Button size="sm" variant="outline" disabled={busy[`cancel_${b.id}`]} onClick={() => cancelBooking(b)} className="h-8 rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-[11px] font-bold px-3">
+                    <Button size="sm" variant="outline" disabled={busy[`cancel_${b.id}`]} onClick={() => cancelBooking(b)} className="h-8 rounded-lg border-red-200 dark:border-red-500/20 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 text-[11px] font-bold px-3">
                       <X className="w-3.5 h-3.5 mr-1" />취소
                     </Button>
                     {/* 빈 슬롯으로 배정 */}
@@ -475,18 +475,18 @@ export default function AdminConsultationBookingsPage() {
 
         {/* 상담 시간 변경 (양방향 승인) */}
         {rescheduleRequests.length > 0 && (
-          <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
+          <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/[0.05] dark:border-white/10 shadow-sm p-4 space-y-3">
             <div className="flex items-center gap-2">
               <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-              <h2 className="text-[17px] font-semibold text-slate-900">상담 시간 변경</h2>
-              <span className="text-[11px] font-bold text-slate-500">{rescheduleRequests.length}건</span>
+              <h2 className="text-[17px] font-semibold text-slate-900 dark:text-slate-100">상담 시간 변경</h2>
+              <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{rescheduleRequests.length}건</span>
             </div>
             <div className="space-y-2">
               {rescheduleRequests.map((b) => {
                 const rs = b.reschedule!;
                 const fromAdmin = rs.by === 'admin';
                 return (
-                  <div key={b.id} className={`rounded-xl border px-3 py-2.5 space-y-2 ${fromAdmin ? 'border-sky-200/70 bg-sky-50/60' : 'border-amber-200/70 bg-amber-50/60'}`}>
+                  <div key={b.id} className={`rounded-xl border px-3 py-2.5 space-y-2 ${fromAdmin ? 'border-sky-200/70 dark:border-sky-500/20 bg-sky-50/60 dark:bg-sky-500/10' : 'border-amber-200/70 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/10'}`}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <button type="button" onClick={() => openStudentSheet(b.studentId)} className="text-[13px] font-extrabold text-[#0071E3] hover:underline">
@@ -498,19 +498,19 @@ export default function AdminConsultationBookingsPage() {
                           </span>
                         ); })()}
                       </div>
-                      <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                      <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/10' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10'}`}>
                         {fromAdmin ? '학생 승인 대기' : '학생 변경 요청'}
                       </span>
                     </div>
-                    <p className="text-[11px] font-semibold text-slate-900">
+                    <p className="text-[11px] font-semibold text-slate-900 dark:text-slate-100">
                       {dateLabel(b.date, b.weekday)} {b.slot}
-                      <span className="mx-1 text-slate-500">→</span>
+                      <span className="mx-1 text-slate-500 dark:text-slate-400">→</span>
                       <span className="font-black text-[#0071E3]">{dateLabel(rs.date, rs.weekday)} {rs.slot}</span>
                     </p>
-                    {rs.reason && <p className="text-[11px] font-semibold text-slate-500 break-words">사유: {rs.reason}</p>}
+                    {rs.reason && <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 break-words">사유: {rs.reason}</p>}
                     <div className="flex flex-wrap items-center gap-2 pt-0.5">
                       {fromAdmin ? (
-                        <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => cancelRescheduleProposal(b)} className="h-8 rounded-lg border-black/[0.08] text-[11px] font-bold px-3">
+                        <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => cancelRescheduleProposal(b)} className="h-8 rounded-lg border-black/[0.08] dark:border-white/10 text-[11px] font-bold px-3">
                           {busy[`rs_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <X className="w-3.5 h-3.5 mr-1" />}제안 철회
                         </Button>
                       ) : (
@@ -518,7 +518,7 @@ export default function AdminConsultationBookingsPage() {
                           <Button size="sm" disabled={busy[`rs_${b.id}`]} onClick={() => approveReschedule(b)} className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold px-3">
                             {busy[`rs_${b.id}`] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}승인
                           </Button>
-                          <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => rejectReschedule(b)} className="h-8 rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-[11px] font-bold px-3">
+                          <Button size="sm" variant="outline" disabled={busy[`rs_${b.id}`]} onClick={() => rejectReschedule(b)} className="h-8 rounded-lg border-red-200 dark:border-red-500/20 text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 text-[11px] font-bold px-3">
                             <X className="w-3.5 h-3.5 mr-1" />거절
                           </Button>
                         </>
@@ -532,20 +532,20 @@ export default function AdminConsultationBookingsPage() {
         )}
 
         {/* 관리자 직접 예약 */}
-        <section className="bg-white rounded-2xl border border-black/[0.05] shadow-sm p-4 space-y-3">
+        <section className="bg-white dark:bg-[#1c1c1e] rounded-2xl border border-black/[0.05] dark:border-white/10 shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Plus className="w-4 h-4 text-[#0071E3]" />
-            <h2 className="text-[17px] font-semibold text-slate-900">관리자 직접 예약</h2>
+            <h2 className="text-[17px] font-semibold text-slate-900 dark:text-slate-100">관리자 직접 예약</h2>
           </div>
           <div className="grid gap-3 md:grid-cols-4">
             <div className="md:col-span-2 space-y-1.5">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <Input placeholder="학생 이름 검색" value={studentSearch} onChange={(e) => setStudentSearch(e.target.value)}
-                  className="pl-9 rounded-xl border-black/[0.08] text-xs h-9 bg-[#F5F5F7]" />
+                  className="pl-9 rounded-xl border-black/[0.08] dark:border-white/10 text-xs h-9 bg-[#F5F5F7] dark:bg-white/5" />
               </div>
               <select value={assignStudentId} onChange={(e) => setAssignStudentId(e.target.value)}
-                className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold">
+                className="w-full h-9 rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-xs font-semibold">
                 <option value="">학생 선택 ({campusLabel(campus)})</option>
                 {campusStudents.slice(0, 100).map((s) => (
                   <option key={s.id} value={s.id}>{s.name}{s.manager ? ` · ${s.manager}` : ''}</option>
@@ -553,9 +553,9 @@ export default function AdminConsultationBookingsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <span className="text-[11px] font-extrabold text-slate-500">날짜</span>
+              <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">날짜</span>
               <select value={assignDate} onChange={(e) => { setAssignDate(e.target.value); setAssignSlot(''); }}
-                className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold">
+                className="w-full h-9 rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-xs font-semibold">
                 <option value="">운영일 선택</option>
                 {assignDayOptions.map((d) => (
                   <option key={d.date} value={d.date}>{dateLabel(d.date, d.weekday)} · {d.counselor}</option>
@@ -563,9 +563,9 @@ export default function AdminConsultationBookingsPage() {
               </select>
             </div>
             <div className="space-y-1.5">
-              <span className="text-[11px] font-extrabold text-slate-500">시간</span>
+              <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">시간</span>
               <select value={assignSlot} onChange={(e) => setAssignSlot(e.target.value)} disabled={!assignDate}
-                className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold disabled:opacity-50">
+                className="w-full h-9 rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-xs font-semibold disabled:opacity-50">
                 <option value="">빈 슬롯 선택</option>
                 {assignFreeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
@@ -585,9 +585,9 @@ export default function AdminConsultationBookingsPage() {
             return (
               <div className="flex items-center gap-2 px-1 flex-wrap">
                 <CalendarClock className="w-4 h-4 text-[#0071E3]" />
-                <h2 className="text-[17px] font-semibold text-slate-900">{campusLabel(campus)} 상담 타임테이블</h2>
-                <span className="text-[11px] font-bold text-slate-500">앞 요일부터 채워집니다</span>
-                <span className="ml-auto text-[11px] font-bold text-slate-500">
+                <h2 className="text-[17px] font-semibold text-slate-900 dark:text-slate-100">{campusLabel(campus)} 상담 타임테이블</h2>
+                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">앞 요일부터 채워집니다</span>
+                <span className="ml-auto text-[11px] font-bold text-slate-500 dark:text-slate-400">
                   신청 {s.total} · 완료 {s.done} · 노쇼 {s.noshow} (노쇼율 {s.noshowRate}%)
                 </span>
               </div>
@@ -596,20 +596,20 @@ export default function AdminConsultationBookingsPage() {
 
 
           {loading && !today ? (
-            <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
+            <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-3xl flex flex-col items-center">
               <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-              <p className="text-xs text-slate-500">불러오는 중...</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">불러오는 중...</p>
             </div>
           ) : grid.length === 0 ? (
-            <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+            <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
               예정된 운영일이 없습니다.
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-black/[0.05] bg-white shadow-sm">
+            <div className="overflow-x-auto rounded-2xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm">
               <table className="w-full border-collapse text-center text-[11px]">
                 <thead>
-                  <tr className="bg-[#F5F5F7]">
-                    <th className="sticky left-0 z-10 bg-[#F5F5F7] px-3 py-2 text-left font-extrabold text-slate-500 border-b border-black/[0.05]">시간</th>
+                  <tr className="bg-[#F5F5F7] dark:bg-white/5">
+                    <th className="sticky left-0 z-10 bg-[#F5F5F7] dark:bg-[#1c1c1e] px-3 py-2 text-left font-extrabold text-slate-500 dark:text-slate-400 border-b border-black/[0.05] dark:border-white/10">시간</th>
                     {grid.map((d) => {
                       const full = d.slots.every((s) => s.booking);
                       const isToday = d.date === today;
@@ -617,15 +617,15 @@ export default function AdminConsultationBookingsPage() {
                       const bo = campusBlackouts.find((b) => b.date === d.date);
                       const isFulldayBlocked = bo?.scope === 'fullday';
                       return (
-                        <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-slate-900'}`}>
+                        <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] dark:border-white/10 min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-slate-900 dark:text-slate-100'}`}>
                           <div>{dateLabel(d.date, d.weekday)}</div>
-                          <div className="text-[10px] font-bold text-slate-500">{d.counselor}</div>
-                          {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 px-1.5 text-[9px] font-black text-red-600">만석</span>}
+                          <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{d.counselor}</div>
+                          {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 dark:bg-red-500/10 px-1.5 text-[9px] font-black text-red-600">만석</span>}
                           <button
                             type="button"
                             onClick={() => toggleFullday(campus, d.date, campusBlackouts)}
                             title={isFulldayBlocked ? '휴무 해제' : '종일 휴무 설정'}
-                            className={`mt-1 inline-block rounded-full px-1.5 text-[9px] font-black transition-colors ${isFulldayBlocked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200' : 'bg-[#F5F5F7] text-slate-500 hover:bg-amber-50 hover:text-amber-600'}`}
+                            className={`mt-1 inline-block rounded-full px-1.5 text-[9px] font-black transition-colors ${isFulldayBlocked ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/10 dark:hover:bg-amber-500/20' : 'bg-[#F5F5F7] text-slate-500 hover:bg-amber-50 hover:text-amber-600 dark:bg-white/5 dark:text-slate-400 dark:hover:bg-amber-500/10'}`}
                           >
                             {isFulldayBlocked ? '휴무중' : '휴무'}
                           </button>
@@ -638,14 +638,14 @@ export default function AdminConsultationBookingsPage() {
                   {(() => {
                     const nowHHMM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date());
                     return CONSULTATION_SLOT_TIMES.map((slot) => (
-                      <tr key={slot} className="border-b border-black/[0.03] last:border-0">
-                        <td className="sticky left-0 z-10 bg-white px-3 py-1.5 text-left font-bold text-slate-500 border-r border-black/[0.04]">{slot}</td>
+                      <tr key={slot} className="border-b border-black/[0.03] dark:border-white/10 last:border-0">
+                        <td className="sticky left-0 z-10 bg-white dark:bg-[#1c1c1e] px-3 py-1.5 text-left font-bold text-slate-500 dark:text-slate-400 border-r border-black/[0.04] dark:border-white/10">{slot}</td>
                         {grid.map((d) => {
                           const cell = d.slots.find((s) => s.slot === slot);
                           const bk = cell?.booking || null;
                           const isPast = bk ? (bk.date < today || (bk.date === today && bk.slot <= nowHHMM)) : false;
                           return (
-                            <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] align-middle">
+                            <td key={d.date + slot} className="px-1.5 py-1.5 border-l border-black/[0.03] dark:border-white/10 align-middle">
                               {bk ? (
                                 <div className="space-y-1">
                                   {(() => { const sm = sourceMeta(bk.source); return (
@@ -655,10 +655,10 @@ export default function AdminConsultationBookingsPage() {
                                     title={`학생 정보 보기 · ${sm.label}`}
                                     className={`relative w-full rounded-lg px-1.5 py-1 text-[11px] font-bold transition-colors ${
                                       bk.status === 'done'
-                                        ? 'bg-emerald-50 text-emerald-700'
+                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10'
                                         : bk.status === 'noshow'
-                                        ? 'bg-amber-50 text-amber-700'
-                                        : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-red-50 hover:text-red-600'
+                                        ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10'
+                                        : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-red-50 hover:text-red-600 dark:bg-[#0071E3]/15 dark:hover:bg-red-500/10'
                                     }`}
                                   >
                                     <span
@@ -675,10 +675,10 @@ export default function AdminConsultationBookingsPage() {
                                     </span>
                                   ); })()}
                                   {bk.status === 'done' && (
-                                    <span className="inline-block w-full rounded-full bg-emerald-100 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700">완료</span>
+                                    <span className="inline-block w-full rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700">완료</span>
                                   )}
                                   {bk.status === 'noshow' && (
-                                    <span className="inline-block w-full rounded-full bg-amber-100 px-1.5 py-0.5 text-center text-[9px] font-black text-amber-700">노쇼</span>
+                                    <span className="inline-block w-full rounded-full bg-amber-100 dark:bg-amber-500/10 px-1.5 py-0.5 text-center text-[9px] font-black text-amber-700">노쇼</span>
                                   )}
                                   {isPast && bk.status === 'booked' && (
                                     <div className="flex gap-0.5">
@@ -701,7 +701,7 @@ export default function AdminConsultationBookingsPage() {
                                     </div>
                                   )}
                                   {bk.reschedule && (
-                                    <span className={`inline-block w-full rounded-full px-1.5 py-0.5 text-center text-[9px] font-black ${bk.reschedule.by === 'admin' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700'}`}>
+                                    <span className={`inline-block w-full rounded-full px-1.5 py-0.5 text-center text-[9px] font-black ${bk.reschedule.by === 'admin' ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/10' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10'}`}>
                                       {bk.reschedule.by === 'admin' ? '학생승인대기' : '변경요청'}
                                     </span>
                                   )}
@@ -711,7 +711,7 @@ export default function AdminConsultationBookingsPage() {
                                         type="button"
                                         onClick={() => openReschedule(bk)}
                                         title="시간 변경 제안"
-                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-[#0071E3]/10 hover:text-[#0071E3] transition-colors"
+                                        className="flex-1 rounded-md bg-[#F5F5F7] dark:bg-white/5 px-1 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:bg-[#0071E3]/10 hover:text-[#0071E3] dark:hover:bg-[#0071E3]/15 transition-colors"
                                       >
                                         변경
                                       </button>
@@ -719,7 +719,7 @@ export default function AdminConsultationBookingsPage() {
                                         type="button"
                                         onClick={() => cancelBooking(bk)}
                                         title="클릭하여 예약 취소"
-                                        className="flex-1 rounded-md bg-[#F5F5F7] px-1 py-0.5 text-[9px] font-bold text-slate-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                        className="flex-1 rounded-md bg-[#F5F5F7] dark:bg-white/5 px-1 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 transition-colors"
                                       >
                                         취소
                                       </button>
@@ -727,7 +727,7 @@ export default function AdminConsultationBookingsPage() {
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-[#C7C7CC]">·</span>
+                                <span className="text-[#C7C7CC] dark:text-slate-600">·</span>
                               )}
                             </td>
                           );
@@ -863,18 +863,18 @@ function AssignSlotInline({
   return (
     <div className="flex items-center gap-1.5">
       <select value={date} onChange={(e) => { setDate(e.target.value); setSlot(''); }}
-        className="h-8 rounded-lg border border-black/[0.08] bg-white px-1.5 text-[10px] font-semibold">
+        className="h-8 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 text-[10px] font-semibold">
         <option value="">날짜</option>
         {grid.map((d) => <option key={d.date} value={d.date}>{dateLabel(d.date, d.weekday)}</option>)}
       </select>
       <select value={slot} onChange={(e) => setSlot(e.target.value)} disabled={!date}
-        className="h-8 rounded-lg border border-black/[0.08] bg-white px-1.5 text-[10px] font-semibold disabled:opacity-50">
+        className="h-8 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 text-[10px] font-semibold disabled:opacity-50">
         <option value="">시간</option>
         {freeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
       </select>
       <Button size="sm" variant="outline" disabled={disabled || !date || !slot}
         onClick={() => { onAssign(date, slot, day?.counselor || ''); setDate(''); setSlot(''); }}
-        className="h-8 rounded-lg border-black/[0.08] text-[10px] font-bold px-2">슬롯배정</Button>
+        className="h-8 rounded-lg border-black/[0.08] dark:border-white/10 text-[10px] font-bold px-2">슬롯배정</Button>
     </div>
   );
 }

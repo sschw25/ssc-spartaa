@@ -34,7 +34,7 @@ export function PendingAdminTasksPanel({
   if (totalRequestCount === 0) return null;
 
   return (
-    <div className={`admin-fit-box rounded-3xl border border-amber-500/15 bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] p-5 shadow-[0_2px_8px_rgba(245,99,0,0.02)] ${className}`}>
+    <div className={`admin-fit-box rounded-3xl border border-amber-500/15 dark:border-amber-500/20 bg-gradient-to-br from-amber-500/[0.03] to-amber-500/[0.07] dark:from-amber-500/[0.08] dark:to-amber-500/[0.12] p-5 shadow-[0_2px_8px_rgba(245,99,0,0.02)] ${className}`}>
       <div className="flex flex-col gap-3.5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="admin-fit-row flex items-start gap-3.5">
@@ -54,9 +54,9 @@ export function PendingAdminTasksPanel({
                 {description || `학생별 요청 수와 신청 종류를 확인한 뒤 기존 학생 상세 시트에서 답변 및 처리할 수 있습니다.`}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">학습 변경 {totalChangeCount}건</span>
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">반차/휴가 {totalLeaveCount}건</span>
-                <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-amber-800">건의사항 {totalSuggestionCount}건</span>
+                <span className="rounded-full bg-white/80 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">학습 변경 {totalChangeCount}건</span>
+                <span className="rounded-full bg-white/80 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">반차/휴가 {totalLeaveCount}건</span>
+                <span className="rounded-full bg-white/80 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">건의사항 {totalSuggestionCount}건</span>
               </div>
             </div>
           </div>
@@ -73,26 +73,26 @@ export function PendingAdminTasksPanel({
                 key={row.student.id}
                 type="button"
                 onClick={() => onOpenStudent(row.student.id)}
-                className="group flex min-w-0 flex-col gap-2 rounded-2xl border border-amber-100 bg-white p-3 text-left shadow-sm transition hover:border-amber-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+                className="group flex min-w-0 flex-col gap-2 rounded-2xl border border-amber-100 dark:border-amber-500/20 bg-white dark:bg-[#1c1c1e] p-3 text-left shadow-sm transition hover:border-amber-200 dark:hover:border-amber-500/30 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="font-semibold text-slate-900">{row.student.name}</span>
-                    <Badge className="rounded-md border border-black/[0.06] bg-[#F5F5F7] px-1.5 py-0.5 text-[9px] font-bold text-slate-500">
+                    <span className="font-semibold text-slate-900 dark:text-slate-100">{row.student.name}</span>
+                    <Badge className="rounded-md border border-black/[0.06] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400">
                       {getCampusLabel(row.student.campus)}
                     </Badge>
-                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                    <span className="rounded-full bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-800 dark:text-amber-300">
                       {rowCount}건
                     </span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {row.labels.map((label) => (
-                      <span key={label} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
+                      <span key={label} className="rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                         {label}
                       </span>
                     ))}
                   </div>
-                  <p className="truncate text-[11px] font-semibold text-slate-500">
+                  <p className="truncate text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                     {latestText}
                   </p>
                 </div>

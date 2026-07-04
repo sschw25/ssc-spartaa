@@ -256,15 +256,15 @@ export default function AdminApplicationsPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex flex-col items-center justify-center font-sans">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-white/5 flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-slate-500">가입신청 정보 로드 중...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">가입신청 정보 로드 중...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav
         title="가입신청 승인"
         titleIcon={<UserPlus className="w-4 h-4 text-[#0071E3]" />}
@@ -272,28 +272,28 @@ export default function AdminApplicationsPage() {
       />
 
       <main className="stagger-children max-w-5xl mx-auto p-4 md:p-8 space-y-5">
-        <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] p-4 text-[11px] font-semibold text-[#0071E3]">
+        <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 text-[11px] font-semibold text-[#0071E3]">
           학생이 직접 신청한 가입 건을 검토하고, 승인 정보(캠퍼스·담당자·좌석 등)를 입력해 원생으로 전환합니다. 반려 시 신청 내역은 삭제됩니다.
         </div>
 
         {/* 출결번호 변경 신청 */}
         <section className="space-y-3">
           <div>
-            <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-slate-900">
+            <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-slate-900 dark:text-slate-100">
               <KeyRound className="w-4 h-4 text-[#0071E3]" /> 출결번호 변경 신청
             </h2>
-            <p className="mt-1 text-[11px] font-semibold text-slate-500">
+            <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
               승인하면 학생이 신청한 새 출결번호로 즉시 변경됩니다.
             </p>
           </div>
 
           {pwLoading ? (
-            <div className="text-center py-12 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
+            <div className="text-center py-12 bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-3xl flex flex-col items-center">
               <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin mb-3" />
-              <p className="text-xs text-slate-500">불러오는 중...</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">불러오는 중...</p>
             </div>
           ) : pwRequests.length === 0 ? (
-            <div className="text-center py-12 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+            <div className="text-center py-12 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
               대기 중인 출결번호 변경 신청이 없습니다.
             </div>
           ) : (
@@ -301,16 +301,16 @@ export default function AdminApplicationsPage() {
               {pwRequests.map((req) => {
                 const isBusy = !!pwBusy[req.id];
                 return (
-                  <div key={req.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                  <div key={req.id} className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-semibold text-base text-slate-900">{req.name}</span>
-                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">
+                      <span className="font-semibold text-base text-slate-900 dark:text-slate-100">{req.name}</span>
+                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10">
                         ID {req.loginId}
                       </Badge>
-                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
+                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/15 text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
                         <Building2 className="w-3 h-3" /> {campusLabel(req.campus)}
                       </span>
-                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                         <Clock className="w-3 h-3" /> {formatDateTime(req.requestedAt)}
                       </span>
                     </div>
@@ -329,7 +329,7 @@ export default function AdminApplicationsPage() {
                         variant="outline"
                         disabled={isBusy}
                         onClick={() => rejectPassword(req)}
-                        className="h-9 rounded-xl border-black/[0.08] text-xs font-semibold px-4 text-red-600 bg-white"
+                        className="h-9 rounded-xl border-black/[0.08] dark:border-white/10 text-xs font-semibold px-4 text-red-600 bg-white dark:bg-[#1c1c1e]"
                       >
                         <X className="w-3.5 h-3.5 mr-1.5" /> 반려
                       </Button>
@@ -342,17 +342,17 @@ export default function AdminApplicationsPage() {
         </section>
 
         {/* 가입신청 */}
-        <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-slate-900 pt-2">
+        <h2 className="flex items-center gap-1.5 text-[17px] font-semibold text-slate-900 dark:text-slate-100 pt-2">
           <UserPlus className="w-4 h-4 text-[#0071E3]" /> 가입신청
         </h2>
 
         {loading && applications.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-black/[0.05] rounded-3xl flex flex-col items-center">
+          <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-3xl flex flex-col items-center">
             <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-            <p className="text-xs text-slate-500">불러오는 중...</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">불러오는 중...</p>
           </div>
         ) : applications.length === 0 ? (
-          <div className="text-center py-20 bg-white border border-dashed border-black/[0.08] rounded-3xl text-xs text-slate-500">
+          <div className="text-center py-20 bg-white dark:bg-[#1c1c1e] border border-dashed border-black/[0.08] dark:border-white/10 rounded-3xl text-xs text-slate-500 dark:text-slate-400">
             대기 중인 가입신청이 없습니다.
           </div>
         ) : (
@@ -362,52 +362,52 @@ export default function AdminApplicationsPage() {
               const isBusy = !!busy[app.id];
               if (!draft) return null;
               return (
-                <div key={app.id} className="bg-white border border-black/[0.05] rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
+                <div key={app.id} className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-4 md:p-5 shadow-sm space-y-4">
                   {/* 신청 정보 */}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <span className="font-semibold text-base text-slate-900">{app.name}</span>
-                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] text-slate-500 border-black/[0.06]">
+                      <span className="font-semibold text-base text-slate-900 dark:text-slate-100">{app.name}</span>
+                      <Badge className="rounded-md text-[11px] px-1.5 py-0.5 border bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10">
                         ID {app.loginId}
                       </Badge>
-                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
+                      <span className="flex items-center gap-1 rounded-lg bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/15 text-[#0071E3] px-2 py-0.5 text-[11px] font-semibold">
                         <Building2 className="w-3 h-3" /> 희망 {campusLabel(app.campus)}
                       </span>
                     </div>
-                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500">
+                    <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                       <Clock className="w-3 h-3" /> {formatDateTime(app.createdAt)}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-semibold text-slate-500">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                     {app.studentPhone && (
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3 h-3" /> 본인 <b className="text-slate-900">{app.studentPhone}</b>
+                        <Phone className="w-3 h-3" /> 본인 <b className="text-slate-900 dark:text-slate-100">{app.studentPhone}</b>
                       </span>
                     )}
                     {app.parentPhone && (
                       <span className="flex items-center gap-1.5">
-                        <Phone className="w-3 h-3" /> 학부모 <b className="text-slate-900">{app.parentPhone}</b>
+                        <Phone className="w-3 h-3" /> 학부모 <b className="text-slate-900 dark:text-slate-100">{app.parentPhone}</b>
                       </span>
                     )}
                     {app.contact && (
                       <span className="flex items-center gap-1.5">
-                        <Target className="w-3 h-3" /> 목표 시험 <b className="text-slate-900">{app.contact}</b>
+                        <Target className="w-3 h-3" /> 목표 시험 <b className="text-slate-900 dark:text-slate-100">{app.contact}</b>
                       </span>
                     )}
                   </div>
 
                   {/* 승인 정보 입력 */}
-                  <div className="rounded-xl border border-black/[0.06] bg-[#F9F9FB] p-4 space-y-3">
-                    <h4 className="text-xs font-semibold text-slate-900">승인 정보</h4>
+                  <div className="rounded-xl border border-black/[0.06] dark:border-white/10 bg-[#F9F9FB] dark:bg-white/5 p-4 space-y-3">
+                    <h4 className="text-xs font-semibold text-slate-900 dark:text-slate-100">승인 정보</h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-900">캠퍼스</Label>
+                        <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">캠퍼스</Label>
                         <Select value={draft.campus} onValueChange={(v) => updateDraft(app.id, { campus: v })}>
-                          <SelectTrigger className="rounded-xl border-black/[0.08] text-xs h-9 bg-white">
+                          <SelectTrigger className="rounded-xl border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-[#1c1c1e]">
                             <SelectValue placeholder="캠퍼스 선택" />
                           </SelectTrigger>
-                          <SelectContent className="bg-white">
+                          <SelectContent className="bg-white dark:bg-[#1c1c1e]">
                             {campusOptions.map((option) => (
                               <SelectItem key={option.value} value={option.value} className="text-xs">{option.label}</SelectItem>
                             ))}
@@ -415,46 +415,46 @@ export default function AdminApplicationsPage() {
                         </Select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-900">담당 상담자</Label>
+                        <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">담당 상담자</Label>
                         <Input
                           placeholder="원주센터장"
                           value={draft.manager}
                           onChange={(e) => updateDraft(app.id, { manager: e.target.value })}
-                          className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                          className="rounded-xl border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white dark:bg-[#1c1c1e]"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-900">좌석 번호</Label>
+                        <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">좌석 번호</Label>
                         <Input
                           type="number"
                           min={1}
                           placeholder="예: 104"
                           value={draft.seatNumber}
                           onChange={(e) => updateDraft(app.id, { seatNumber: e.target.value })}
-                          className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                          className="rounded-xl border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white dark:bg-[#1c1c1e]"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-900">이용 시작일</Label>
+                        <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">이용 시작일</Label>
                         <Input
                           type="date"
                           value={draft.enrollStartDate}
                           onChange={(e) => updateDraft(app.id, { enrollStartDate: e.target.value })}
-                          className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                          className="rounded-xl border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white dark:bg-[#1c1c1e]"
                         />
-                        <p className="text-[11px] text-slate-500">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400">비우면 즉시 이용 가능. 미래 날짜면 그 날부터 로그인 가능.</p>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-slate-900">등록 종료일</Label>
+                        <Label className="text-xs font-semibold text-slate-900 dark:text-slate-100">등록 종료일</Label>
                         <Input
                           type="date"
                           value={draft.enrollmentEndDate}
                           onChange={(e) => updateDraft(app.id, { enrollmentEndDate: e.target.value })}
-                          className="rounded-xl border-black/[0.08] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                          className="rounded-xl border-black/[0.08] dark:border-white/10 focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white dark:bg-[#1c1c1e]"
                         />
                       </div>
                     </div>
-                    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-900">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
                       <input
                         type="checkbox"
                         checked={draft.weeklyGradeCheck}
@@ -481,7 +481,7 @@ export default function AdminApplicationsPage() {
                       variant="outline"
                       disabled={isBusy}
                       onClick={() => reject(app)}
-                      className="h-9 rounded-xl border-black/[0.08] text-xs font-semibold px-4 text-red-600 bg-white"
+                      className="h-9 rounded-xl border-black/[0.08] dark:border-white/10 text-xs font-semibold px-4 text-red-600 bg-white dark:bg-[#1c1c1e]"
                     >
                       <X className="w-3.5 h-3.5 mr-1.5" /> 반려
                     </Button>

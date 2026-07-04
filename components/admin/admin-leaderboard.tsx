@@ -46,13 +46,13 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
 
   useEffect(() => { load(); }, [load, refreshSignal]);
 
-  const wrap = 'admin-fit-box bg-white/95 border border-black/[0.04] rounded-3xl shadow-premium backdrop-blur-md p-5 transition-premium hover:shadow-premium-hover';
+  const wrap = 'admin-fit-box bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.04] dark:border-white/10 rounded-3xl shadow-premium backdrop-blur-md p-5 transition-premium hover:shadow-premium-hover';
 
   if (loading && !data) {
     return (
       <div className={`${wrap} flex flex-col items-center justify-center py-12`}>
         <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin mb-2" />
-        <span className="text-xs text-slate-500 font-semibold">순공 랭킹 불러오는 중…</span>
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-semibold">순공 랭킹 불러오는 중…</span>
       </div>
     );
   }
@@ -67,8 +67,8 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
   if (data && data.configured === false) {
     return (
       <div className={`${wrap} flex items-center gap-3 py-6`}>
-        <Clock className="w-5 h-5 text-slate-500 shrink-0" />
-        <p className="text-xs text-slate-500 font-semibold">출결 연동(Supabase) 미설정 — 순공 랭킹을 표시할 수 없습니다.</p>
+        <Clock className="w-5 h-5 text-slate-500 dark:text-slate-400 shrink-0" />
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold">출결 연동(Supabase) 미설정 — 순공 랭킹을 표시할 수 없습니다.</p>
       </div>
     );
   }
@@ -83,16 +83,16 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
 
   // 랭킹 뱃지 스타일 헬퍼
   const getRankBadgeStyle = (rank: number, hasMinutes: boolean) => {
-    if (!hasMinutes) return 'bg-[#F5F5F7] text-slate-500 border border-black/[0.03]';
+    if (!hasMinutes) return 'bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-black/[0.03] dark:border-white/10';
     switch (rank) {
       case 1:
-        return 'bg-amber-100 text-amber-800 border border-amber-200 font-semibold shadow-sm';
+        return 'bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 font-semibold shadow-sm';
       case 2:
-        return 'bg-slate-100 text-slate-800 border border-slate-200 font-semibold shadow-sm';
+        return 'bg-slate-100 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-white/10 font-semibold shadow-sm';
       case 3:
-        return 'bg-orange-100 text-orange-800 border border-orange-200 font-semibold shadow-sm';
+        return 'bg-orange-100 dark:bg-orange-500/10 text-orange-800 dark:text-orange-300 border border-orange-200 dark:border-orange-500/20 font-semibold shadow-sm';
       default:
-        return 'bg-[#F5F5F7] text-slate-700 font-bold border border-black/[0.02]';
+        return 'bg-[#F5F5F7] dark:bg-white/5 text-slate-700 dark:text-slate-300 font-bold border border-black/[0.02] dark:border-white/10';
     }
   };
 
@@ -101,14 +101,14 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 min-w-0">
           <Trophy className="w-4 h-4 text-[#F56300]" />
-          <h3 className="admin-fit-text text-[15px] font-semibold text-slate-900 tracking-tight">주간 순공 랭킹 <span className="text-slate-500 font-normal">({selectedCampusLabel})</span></h3>
+          <h3 className="admin-fit-text text-[15px] font-semibold text-slate-900 dark:text-slate-100 tracking-tight">주간 순공 랭킹 <span className="text-slate-500 dark:text-slate-400 font-normal">({selectedCampusLabel})</span></h3>
           {campusFilter !== 'all' && (
-            <span className="text-[10px] font-semibold text-[#0071E3] bg-blue-50 border border-blue-100 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
+            <span className="text-[10px] font-semibold text-[#0071E3] bg-blue-50 dark:bg-[#0071E3]/15 border border-blue-100 dark:border-[#0071E3]/20 px-2 py-0.5 rounded-md">{campusLabel(campusFilter)}</span>
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {liveCount > 0 && (
-            <span className="inline-flex items-center gap-1.5 text-[9px] font-semibold text-emerald-800 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full mr-1">
+            <span className="inline-flex items-center gap-1.5 text-[9px] font-semibold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-emerald-500/20 px-2.5 py-1 rounded-full mr-1">
               <span className="relative flex h-1.5 w-1.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
@@ -118,33 +118,33 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
           )}
           <button
             onClick={() => router.push('/admin/leaderboard')}
-            className="text-[11px] font-bold text-slate-500 hover:text-slate-900 transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F5F7]"
+            className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors px-2 py-1 rounded-lg hover:bg-[#F5F5F7] dark:hover:bg-white/5"
           >
             자세히
           </button>
-          <button onClick={load} disabled={loading} className="text-slate-500 hover:text-slate-900 transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7]" title="랭킹 새로고침">
+          <button onClick={load} disabled={loading} className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors disabled:opacity-50 p-1 rounded-lg hover:bg-[#F5F5F7] dark:hover:bg-white/5" title="랭킹 새로고침">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-[10px] font-semibold text-slate-500 bg-[#F5F5F7]/80 rounded-xl px-3.5 py-2.5 border border-black/[0.02]">
-        <span>누적 학습 <span className="text-emerald-700">{studiedCount}명</span></span>
-        <span className="w-px h-3 bg-black/[0.08] self-center"></span>
-        <span>미학습 <span className="text-amber-600">{notStudiedCount}명</span></span>
-        <span className="w-px h-3 bg-black/[0.08] self-center"></span>
-        <span>평균 순공 <span className="text-slate-900">{fmt(avgWeekMin)}</span></span>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 mb-4 text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-[#F5F5F7]/80 dark:bg-white/5 rounded-xl px-3.5 py-2.5 border border-black/[0.02] dark:border-white/10">
+        <span>누적 학습 <span className="text-emerald-700 dark:text-emerald-300">{studiedCount}명</span></span>
+        <span className="w-px h-3 bg-black/[0.08] dark:bg-white/10 self-center"></span>
+        <span>미학습 <span className="text-amber-600 dark:text-amber-300">{notStudiedCount}명</span></span>
+        <span className="w-px h-3 bg-black/[0.08] dark:bg-white/10 self-center"></span>
+        <span>평균 순공 <span className="text-slate-900 dark:text-slate-100">{fmt(avgWeekMin)}</span></span>
       </div>
 
       <div className="max-h-[250px] overflow-y-auto custom-scrollbar -mx-1 px-1 space-y-1">
         {rows.length === 0 ? (
-          <p className="text-[11px] text-slate-500 font-semibold text-center py-8">표시할 학생이 없습니다.</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold text-center py-8">표시할 학생이 없습니다.</p>
         ) : rows.map((r) => (
           <button
             key={r.id}
             type="button"
             onClick={() => onSelectStudentId(r.id)}
-            className={`w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-[#F5F5F7]/85 hover:translate-x-0.5 active:translate-x-0 transition-premium text-left ${
+            className={`w-full flex items-center justify-between gap-3 px-3 py-3 rounded-xl hover:bg-[#F5F5F7]/85 dark:hover:bg-white/5 hover:translate-x-0.5 active:translate-x-0 transition-premium text-left ${
               r.weekMinutes === 0 ? 'opacity-55' : ''
             }`}
           >
@@ -152,10 +152,10 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
               <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] shrink-0 ${getRankBadgeStyle(r.rank, r.weekMinutes > 0)}`}>
                 {r.weekMinutes > 0 ? (r.rank <= 3 ? medal(r.rank) : r.rank) : '–'}
               </span>
-              <span className="text-xs font-semibold text-slate-900 truncate">{r.name}</span>
-              <span className="text-[9px] font-semibold text-slate-500 bg-[#F5F5F7] px-2 py-0.5 rounded-md border border-black/[0.03] shrink-0">{campusLabel(r.campus)}</span>
+              <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">{r.name}</span>
+              <span className="text-[9px] font-semibold text-slate-500 dark:text-slate-400 bg-[#F5F5F7] dark:bg-white/5 px-2 py-0.5 rounded-md border border-black/[0.03] dark:border-white/10 shrink-0">{campusLabel(r.campus)}</span>
               {r.isOpen && (
-                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100/80 px-1.5 py-0.5 rounded-md shrink-0">
+                <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100/80 dark:border-emerald-500/20 px-1.5 py-0.5 rounded-md shrink-0">
                   <span className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse"></span>
                   등원중
                 </span>
@@ -163,11 +163,11 @@ export function AdminLeaderboard({ campusFilter, refreshSignal, onSelectStudentI
             </span>
             <span className="flex items-center gap-2 shrink-0">
               {r.dayMinutes > 0 && (
-                <span className="text-[9px] font-medium text-slate-500 bg-black/[0.02] px-1.5 py-0.5 rounded-md border border-black/[0.01]">
+                <span className="text-[9px] font-medium text-slate-500 dark:text-slate-400 bg-black/[0.02] dark:bg-white/5 px-1.5 py-0.5 rounded-md border border-black/[0.01] dark:border-white/10">
                   오늘 {fmt(r.dayMinutes)}
                 </span>
               )}
-              <span className={`text-xs font-semibold ${r.weekMinutes === 0 ? 'text-amber-600' : 'text-slate-900'}`}>
+              <span className={`text-xs font-semibold ${r.weekMinutes === 0 ? 'text-amber-600 dark:text-amber-300' : 'text-slate-900 dark:text-slate-100'}`}>
                 {r.weekMinutes === 0 ? '미학습' : fmt(r.weekMinutes)}
               </span>
             </span>

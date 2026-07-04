@@ -102,16 +102,16 @@ export function SeatMoveRequestsPanel({
   }
 
   return (
-    <div className="mb-4 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] px-3 py-2.5 shadow-sm">
+    <div className="mb-4 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 px-3 py-2.5 shadow-sm">
       <p className="mb-2 flex items-center gap-1.5 text-[11px] font-black text-[#0071E3]">
         <Armchair className="h-3.5 w-3.5" />
         자리이동 신청 {pending.length}건
       </p>
       <div className="flex flex-wrap gap-2">
         {pending.map((r) => (
-          <div key={r.id} className="flex items-center gap-2 rounded-xl border border-black/[0.05] bg-white px-3 py-2 shadow-sm">
-            <span className="text-xs font-black text-slate-900">{r.studentName}</span>
-            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500">
+          <div key={r.id} className="flex items-center gap-2 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 shadow-sm">
+            <span className="text-xs font-black text-slate-900 dark:text-slate-100">{r.studentName}</span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
               {r.fromSeat != null ? `${r.fromSeat}번` : '미배정'}
               <ArrowRight className="h-3 w-3" />
               <span className="text-[#0071E3]">{r.toSeat}번</span>
@@ -130,7 +130,7 @@ export function SeatMoveRequestsPanel({
                 <button
                   type="button"
                   onClick={() => reject(r)}
-                  className="rounded-full border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-bold text-slate-500 transition hover:text-red-600"
+                  className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:text-red-600"
                 >
                   거절
                 </button>
