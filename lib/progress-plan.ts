@@ -41,7 +41,7 @@ export function toDateKey(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-// 승인된 결석성 휴가 날짜 집합(YYYY-MM-DD). 반차/휴식/병가/개인휴가 모두, 반차도 그날 전부 면제.
+// 승인된 결석성 휴가 날짜 집합(YYYY-MM-DD). (레거시: 하루 통째 면제용 — 호환 유지)
 export function getLeaveDates(student: Student): Set<string> {
   const dates = new Set<string>();
   for (const req of student.leaveRequests || []) {
@@ -49,6 +49,65 @@ export function getLeaveDates(student: Student): Set<string> {
     if (typeof req.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.date)) dates.add(req.date);
   }
   return dates;
+}
+
+// ── 휴가 → 슬롯 면제(부분면제) 유도 ──────────────────────────────────────────
+// 반차(오전/오후/야간)는 그 슬롯 분(min)만, 하루종일류(휴식권·병가fullday·개인휴가)는 100% 면제.
+// 슬롯 분은 getAvailableMinutes 근거: 오전190 + 오후210 + 야간250 = 하루 650.
+const SLOT_MINUTES: Record<'morning' | 'afternoon' | 'night', number> = { morning: 190, afternoon: 210, night: 250 };
+const FULL_DAY_MINUTES = SLOT_MINUTES.morning + SLOT_MINUTES.afternoon + SLOT_MINUTES.night; // 650
+
+type ExemptSlot = 'morning' | 'afternoon' | 'night';
+export interface LeaveExemption {
+  fraction: number;         // 그날 총 면제 비율 (0~1, 복수 반차 합산·캡 1)
+  slots: Set<ExemptSlot>;   // 반차로 면제된 슬롯들
+  full: boolean;            // 하루종일 면제 여부
+}
+
+// 승인된(자동승인 포함) 결석성 휴가를 날짜별 면제로 환산.
+export function getLeaveExemptions(student: Student): Map<string, LeaveExemption> {
+  const map = new Map<string, LeaveExemption>();
+  for (const req of student.leaveRequests || []) {
+    if (req.status !== 'approved') continue;
+    const date = req.date;
+    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const type = req.type as string;
+    const rawSlot = (req as unknown as { slot?: string }).slot;
+    let slot: ExemptSlot | 'fullday';
+    if (type === 'morning' || type === 'afternoon' || type === 'night') slot = type;
+    else if (type === 'fullday' || type === 'personal_fullday') slot = 'fullday';
+    else if (rawSlot === 'morning' || rawSlot === 'afternoon' || rawSlot === 'night') slot = rawSlot;
+    else slot = 'fullday'; // 병가(슬롯 미지정)·기타 → 하루종일
+    const cur = map.get(date) || { fraction: 0, slots: new Set<ExemptSlot>(), full: false };
+    if (slot === 'fullday') {
+      cur.full = true;
+      cur.fraction = 1;
+    } else {
+      cur.slots.add(slot);
+      cur.fraction = Math.min(1, cur.fraction + SLOT_MINUTES[slot] / FULL_DAY_MINUTES);
+      if (cur.slots.size >= 3) { cur.full = true; cur.fraction = 1; }
+    }
+    map.set(date, cur);
+  }
+  return map;
+}
+
+// 날짜별 총 면제 비율 맵(deadline % 축소용).
+export function getLeaveFractionByDate(student: Student): Map<string, number> {
+  const out = new Map<string, number>();
+  getLeaveExemptions(student).forEach((v, k) => out.set(k, v.fraction));
+  return out;
+}
+
+// 특정 자료(과목 studyTime 기준) 그날 면제 비율 — 일일계획 슬롯-특정용.
+// 슬롯 배정 과목: 그 슬롯이 반차면 전액(1), 다른 슬롯이면 0. studyTime 없으면 비율 폴백.
+export function materialLeaveFractionOnDate(exempt: LeaveExemption | undefined, subjectStudyTime?: string): number {
+  if (!exempt) return 0;
+  if (exempt.full) return 1;
+  if (subjectStudyTime === 'morning' || subjectStudyTime === 'afternoon' || subjectStudyTime === 'night') {
+    return exempt.slots.has(subjectStudyTime) ? 1 : 0;
+  }
+  return exempt.fraction;
 }
 
 function diffDays(from: Date, to?: string) {
@@ -336,6 +395,7 @@ export function getDeadlinePace(
   unitMinutes: number,
   today: Date,
   studyDays?: string[],
+  leaveByDate?: Map<string, number>, // 날짜별 총 면제비율(0~1) — 휴가일은 그만큼 경과에서 감산
 ): {
   totalStudyDays: number;
   elapsedStudyDays: number;
@@ -354,12 +414,19 @@ export function getDeadlinePace(
   day.setHours(0, 0, 0, 0);
 
   // 학습일 수를 세되 하한(Math.max(1,..)) 없이 — 기간 시작 전/당일이면 0 이 나와야 한다.
+  // 휴가일은 면제비율만큼 감산해 가중 경과(분수 가능)로 센다: 오후반차일=0.677, 병가(하루)=0.
   const countRaw = (a: Date, b: Date) => {
     if (b < a) return 0;
     const cur = new Date(a); cur.setHours(0, 0, 0, 0);
     const last = new Date(b); last.setHours(0, 0, 0, 0);
     let c = 0;
-    while (cur <= last) { if (isStudyDay(cur, studyDays)) c++; cur.setDate(cur.getDate() + 1); }
+    while (cur <= last) {
+      if (isStudyDay(cur, studyDays)) {
+        const ex = leaveByDate ? Math.min(1, Math.max(0, leaveByDate.get(toDateKey(cur)) || 0)) : 0;
+        c += 1 - ex;
+      }
+      cur.setDate(cur.getDate() + 1);
+    }
     return c;
   };
 
@@ -386,7 +453,9 @@ export function getDeadlinePace(
   let todayRecommend = 0;
   if (isStudyDay(day, studyDays) && day <= end) {
     const remainingStudyDays = Math.max(1, countStudyDaysInRange(day, end, studyDays));
-    todayRecommend = Math.ceil(remainingAmount / remainingStudyDays);
+    // 오늘이 휴가면 그 비율만큼 오늘 권장을 축소(온전한 학습일이 아님).
+    const todayExempt = leaveByDate ? Math.min(1, Math.max(0, leaveByDate.get(toDateKey(day)) || 0)) : 0;
+    todayRecommend = Math.ceil((remainingAmount / remainingStudyDays) * (1 - todayExempt));
   }
 
   return {

@@ -1,5 +1,5 @@
 import type { Student, DetailedPlan, SubjectProgress, BookProgress, LectureProgress } from '@/lib/types/student';
-import { getPlanUnitMinutes, getDeadlinePace, getActiveStudyDays } from '@/lib/progress-plan';
+import { getPlanUnitMinutes, getDeadlinePace, getActiveStudyDays, getLeaveFractionByDate } from '@/lib/progress-plan';
 
 // ── 기간 목표(모드 B) 미션 파생 — 서버(missions-hub)와 클라이언트(use-report-state)가 공유하는 단일 소스 ──
 // 자료별 deadline plan(periodType==='deadline')을 모아 분(min) 정규화로 집계하고,
@@ -85,6 +85,8 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
   let riskCount = 0;
 
   const subjects: SubjectProgress[] = student.subjects || [];
+  // 주간목표는 휴가를 슬롯 비율(%)로 반영 — 날짜별 총 면제비율 맵을 한 번 만들어 pace 에 넘긴다.
+  const leaveByDate = getLeaveFractionByDate(student);
 
   const handleMaterial = (
     subject: SubjectProgress,
@@ -99,7 +101,7 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
     (material.detailedPlans || [])
       .filter((plan) => plan.periodType === 'deadline' && isPlanActiveOnDate(plan, todayKey))
       .forEach((plan) => {
-        const pace = getDeadlinePace(plan, unitMinutes, today, studyDays);
+        const pace = getDeadlinePace(plan, unitMinutes, today, studyDays, leaveByDate);
         const targetAmount = Math.max(0, Number(plan.targetAmount || 0));
         const actualRatio = targetAmount > 0 ? Math.min(1, pace.actualAmount / targetAmount) : 0;
         // 위험 판정은 "어제까지 했어야 할" 기준(expectedRatioPrior) — 오늘 몫을 아직 안 했다고
