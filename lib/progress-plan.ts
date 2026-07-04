@@ -33,6 +33,24 @@ function parseDate(value?: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+// 반복 iteration 은 로컬 자정 Date 로 도니 로컬 Y-M-D 로 키를 만든다(leaveRequests.date 와 동일 캘린더 기준).
+export function toDateKey(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// 승인된 결석성 휴가 날짜 집합(YYYY-MM-DD). 반차/휴식/병가/개인휴가 모두, 반차도 그날 전부 면제.
+export function getLeaveDates(student: Student): Set<string> {
+  const dates = new Set<string>();
+  for (const req of student.leaveRequests || []) {
+    if (req.status !== 'approved') continue;
+    if (typeof req.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.date)) dates.add(req.date);
+  }
+  return dates;
+}
+
 function diffDays(from: Date, to?: string) {
   const date = parseDate(to);
   if (!date) return null;
@@ -54,7 +72,7 @@ function parsePlanBounds(plan: DetailedPlan) {
   return { start, end };
 }
 
-export function countStudyDaysInRange(start: Date, end: Date, studyDays?: string[]) {
+export function countStudyDaysInRange(start: Date, end: Date, studyDays?: string[], leaveDates?: Set<string>) {
   const cursor = new Date(start);
   cursor.setHours(0, 0, 0, 0);
   const last = new Date(end);
@@ -62,13 +80,13 @@ export function countStudyDaysInRange(start: Date, end: Date, studyDays?: string
 
   let count = 0;
   while (cursor <= last) {
-    if (isStudyDay(cursor, studyDays)) count++;
+    if (isStudyDay(cursor, studyDays) && !(leaveDates && leaveDates.has(toDateKey(cursor)))) count++;
     cursor.setDate(cursor.getDate() + 1);
   }
   return count;
 }
 
-function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false) {
+function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>) {
   const start = parseDate(plan.startDate);
   const end = parseDate(plan.endDate);
   if (!start || !end) return parsePlanEndAmount(plan);
@@ -84,7 +102,8 @@ function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays
   const effectiveStart = enrolledStart && enrolledStart > start ? enrolledStart : start;
   const upperBound = new Date(today);
   if (!inclusiveToday) upperBound.setDate(today.getDate() - 1);
-  const elapsedStudyDays = countStudyDaysInRange(effectiveStart, upperBound, studyDays);
+  // 경과 학습일에서만 휴가일 제외(분모 totalStudyDays 는 그대로 — 보강은 별도 어드바이저리).
+  const elapsedStudyDays = countStudyDaysInRange(effectiveStart, upperBound, studyDays, leaveDates);
   if (elapsedStudyDays <= 0) return beforePlanAmount;
 
   const totalStudyDays = Math.max(1, countStudyDaysInRange(start, end, studyDays));
@@ -96,7 +115,7 @@ function isSameDay(a: Date | null, b: Date) {
   return Boolean(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
 }
 
-export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false) {
+export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>) {
   if (!plans || plans.length === 0) return null;
 
   // 기간 목표(periodType) plan 은 일일 진도 기대치 계산에서 제외(요일 무관·별도 페이스로 판정).
@@ -116,7 +135,7 @@ export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: D
     }
 
     if (today <= end) {
-      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt, inclusiveToday);
+      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt, inclusiveToday, leaveDates);
     }
 
     latestPastPlan = plan;
@@ -132,6 +151,7 @@ function buildItem(
   type: ProgressItemType,
   today: Date,
   studyDays?: string[],
+  leaveDates?: Set<string>,
 ): ManagedProgressItem {
   const total = type === 'book'
     ? (material as BookProgress).totalPages
@@ -156,7 +176,7 @@ function buildItem(
   // 목표(계획) 미설정 자료는 달력 선형 추정(과거 getExpectedLinear 폴백)으로 뒤처짐을 만들지
   // 않는다 — 기대치 null → 판정 제외(no-plan). 기간 목표(deadline) 전용 자료도 여기서는 null
   // (deriveDeadlineGoals 가 마감 위험 판정의 단일 소스).
-  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate);
+  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates);
   const expectedToday = rawExpectedToday === null
     ? null
     : isFreshToday
@@ -199,16 +219,17 @@ export function getManagedProgressItems(students: Student[], today = new Date())
   today.setHours(0, 0, 0, 0);
 
   return students.flatMap((student) => {
+    const leaveDates = getLeaveDates(student);
     if (student.subjects && student.subjects.length > 0) {
       return student.subjects.flatMap((subject) => [
-        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today, subject.studyDays)),
-        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today, subject.studyDays)),
+        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today, subject.studyDays, leaveDates)),
+        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today, subject.studyDays, leaveDates)),
       ]);
     }
 
     return [
-      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', today)),
-      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', today)),
+      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', today, undefined, leaveDates)),
+      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', today, undefined, leaveDates)),
     ];
   });
 }
