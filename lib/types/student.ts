@@ -51,6 +51,7 @@ export interface BookProgress {
   incorrectTags?: Record<string, number>;
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
   detailedPlans?: DetailedPlan[];
+  inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
 }
 
 export interface LectureProgress {
@@ -70,6 +71,7 @@ export interface LectureProgress {
   speedMultiplier?: number;          // 개별 인강 배속 설정 (예: 1.2, 1.5 등)
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
   detailedPlans?: DetailedPlan[];
+  inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
 }
 
 export interface ProposedGoal {

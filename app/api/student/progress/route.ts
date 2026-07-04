@@ -23,6 +23,15 @@ const clampProgressValue = (value: number, total: number) => {
   return total > 0 ? Math.min(rounded, total) : rounded;
 };
 
+// 진도 입력한 날(KST)을 자료 inputLog 에 축적 — 중복제거·최근 120일 캡. 히트맵용.
+const kstToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+function appendInputLog(material: { inputLog?: string[] }) {
+  const today = kstToday();
+  const log = material.inputLog || [];
+  const next = log.includes(today) ? log : [...log, today];
+  material.inputLog = next.slice(-120);
+}
+
 const getPlanEndAmount = (plan: DetailedPlan) => {
   const values = (plan.rangeText || '').match(/\d+/g)?.map(Number) || [];
   if (values.length > 0) return values[values.length - 1];
@@ -83,7 +92,7 @@ function applyDeadlineMutation(
       nextCurrent = clampProgressValue(startAmount - 1 + actual, total);
     });
     if (!matchedPlan) return { ok: false, reason: 'plan-not-found' };
-    matchingBooks.forEach((book) => { book.currentPage = nextCurrent; book.updatedAt = nowIso; });
+    matchingBooks.forEach((book) => { book.currentPage = nextCurrent; book.updatedAt = nowIso; appendInputLog(book); });
     return { ok: true, updated: { value: nextCurrent, total, planId, isCompleted: completed, actualAmount: actual } };
   } else {
     const matchingLectures: LectureProgress[] = [
@@ -109,7 +118,7 @@ function applyDeadlineMutation(
       nextCurrent = clampProgressValue(startAmount - 1 + actual, total);
     });
     if (!matchedPlan) return { ok: false, reason: 'plan-not-found' };
-    matchingLectures.forEach((lecture) => { lecture.completedLectures = nextCurrent; lecture.updatedAt = nowIso; });
+    matchingLectures.forEach((lecture) => { lecture.completedLectures = nextCurrent; lecture.updatedAt = nowIso; appendInputLog(lecture); });
     return { ok: true, updated: { value: nextCurrent, total, planId, isCompleted: completed, actualAmount: actual } };
   }
 }
@@ -227,6 +236,7 @@ function applyProgressMutation(
       }
       book.currentPage = nextValue;
       book.updatedAt = nowIso;
+      appendInputLog(book);
     });
 
     return {
@@ -314,6 +324,7 @@ function applyProgressMutation(
     matchingLectures.forEach((lecture) => {
       lecture.completedLectures = nextValue;
       lecture.updatedAt = nowIso;
+      appendInputLog(lecture);
     });
 
     return {
