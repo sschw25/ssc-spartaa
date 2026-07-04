@@ -787,7 +787,7 @@ export function SubjectProgressTab({
                             </div>
                           )}
 
-                          {(() => {
+                          {isStudentReport && (() => {
                             const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
                             return (
                               <>
@@ -802,7 +802,7 @@ export function SubjectProgressTab({
                               </>
                             );
                           })()}
-                          <InputHeatmap inputLog={b.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />
+                          {isStudentReport && <InputHeatmap inputLog={b.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />}
 
                           {isStudentReport && (
                             <BenchmarkSection type="book" subject={sub.name} name={b.title} studentId={student.id} audience="student" />
@@ -1016,7 +1016,7 @@ export function SubjectProgressTab({
                             </div>
                           )}
 
-                          {(() => {
+                          {isStudentReport && (() => {
                             const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
                             return (
                               <>
@@ -1031,7 +1031,7 @@ export function SubjectProgressTab({
                               </>
                             );
                           })()}
-                          <InputHeatmap inputLog={l.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />
+                          {isStudentReport && <InputHeatmap inputLog={l.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />}
 
                           {isStudentReport && (
                             <BenchmarkSection type="lecture" subject={sub.name} name={l.name} studentId={student.id} audience="student" />
