@@ -13,6 +13,8 @@ import {
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 import { getManagedProgressItems } from '@/lib/progress-plan';
+import { buildAwayReplan } from '@/lib/away-impact';
+import { kstToday } from '@/lib/leave';
 import { isWeeklyGradeMissing, enrollmentDaysLeft } from '@/lib/student-flags';
 import { TodayAttendanceWidget } from '@/components/admin/today-attendance-widget';
 import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
@@ -233,6 +235,9 @@ export default function AdminDashboardPage() {
 
   // 매주 성적 입력 대상인데 이번 주(월~일) 성적이 아직 없는 학생들
   const weeklyGradeMissingStudents = campusScopedStudents.filter(s => isWeeklyGradeMissing(s));
+
+  // 정기 외출로 계획 재조정이 필요한(아직 미반영) 원생. buildAwayReplan 은 외출 영향 없으면 즉시 [] 반환.
+  const awayReplanStudents = campusScopedStudents.filter(s => buildAwayReplan(s, kstToday()).some(it => !it.blocked));
 
   // 대기중인 변경신청 + 건의사항 + 휴가신청 건수 (타입별 분리)
   const pendingChangeCount = campusScopedStudents.reduce((total, s) =>
@@ -728,6 +733,16 @@ export default function AdminDashboardPage() {
                 <BarChart3 className="w-3.5 h-3.5" />
                 평균진도 {averageProgress}%
               </button>
+              {awayReplanStudents.length > 0 && (
+                <button
+                  onClick={() => { handleCardClick('students'); handleShowAllStudents(); }}
+                  title="정기 외출로 학습 계획 재조정이 필요한 원생 — 상세 열어 '외출 영향' 패널에서 적용"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-amber-500/12 text-amber-700 hover:bg-amber-500/20 transition-colors"
+                >
+                  <CalendarClock className="w-3.5 h-3.5" />
+                  외출 조정 {awayReplanStudents.length}명
+                </button>
+              )}
               <button
                 onClick={() => router.push('/admin/calendar')}
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium bg-black/[0.04] dark:bg-white/5 text-[#0071E3] hover:bg-[#0071E3]/10 dark:hover:bg-[#0071E3]/15 transition-colors"
