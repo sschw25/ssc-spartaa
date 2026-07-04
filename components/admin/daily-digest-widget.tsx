@@ -99,7 +99,7 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
   const allRisk = campusDigests.flatMap((c) => c.riskBand);
 
   return (
-    <div className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
+    <div className="rounded-3xl glass p-5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900 dark:text-slate-100">
           <Sparkles className="w-4 h-4 text-[#0071E3]" /> 오늘의 브리핑

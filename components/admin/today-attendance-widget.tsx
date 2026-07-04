@@ -174,7 +174,7 @@ export function TodayAttendanceWidget({ campusFilter, refreshSignal, onSelectStu
   const left = byCampus(data?.leftToday);
   const absent = byCampus(data?.absent);
 
-  const wrap = 'admin-fit-box bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.04] dark:border-white/10 rounded-3xl shadow-premium backdrop-blur-md p-5 transition-premium hover:shadow-premium-hover';
+  const wrap = 'admin-fit-box glass rounded-3xl p-5 transition-premium hover:shadow-premium-hover';
 
   if (loading && !data) {
     return (

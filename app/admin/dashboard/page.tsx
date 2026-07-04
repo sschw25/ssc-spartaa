@@ -748,7 +748,7 @@ export default function AdminDashboardPage() {
 
             {/* 만료 경고 — 빨강 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card onClick={() => router.push('/admin/enrollment-expired')} className="admin-fit-box group border border-black/[0.05] dark:border-white/10 rounded-3xl bg-white dark:bg-[#1c1c1e] gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
+            <Card onClick={() => router.push('/admin/enrollment-expired')} className="admin-fit-box group glass rounded-3xl gap-0 p-5 hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${expiredStudents.length > 0 ? 'bg-red-500/12' : 'bg-black/[0.04] dark:bg-white/5'}`}>
                   <XCircle className={`w-[18px] h-[18px] ${expiredStudents.length > 0 ? 'text-red-500' : 'text-slate-500 dark:text-slate-400'}`} />
@@ -769,7 +769,7 @@ export default function AdminDashboardPage() {
 
             {/* 재등록 임박 — 주황 */}
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
-            <Card onClick={() => router.push('/admin/enrollment-warning')} className="admin-fit-box group border border-black/[0.05] dark:border-white/10 rounded-3xl bg-white dark:bg-[#1c1c1e] gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
+            <Card onClick={() => router.push('/admin/enrollment-warning')} className="admin-fit-box group glass rounded-3xl gap-0 p-5 hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full">
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${renewalWarnStudents.length > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04] dark:bg-white/5'}`}>
                   <Clock className={`w-[18px] h-[18px] ${renewalWarnStudents.length > 0 ? 'text-amber-500' : 'text-slate-500 dark:text-slate-400'}`} />
@@ -792,7 +792,7 @@ export default function AdminDashboardPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
             <Card
               onClick={() => { handleCardClick('consultation'); handleShowConsultationStudents(); }}
-              className="admin-fit-box group border border-black/[0.05] dark:border-white/10 rounded-3xl bg-white dark:bg-[#1c1c1e] gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
+              className="admin-fit-box group glass rounded-3xl gap-0 p-5 hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
             >
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${pendingConsultationStudents.length > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04] dark:bg-white/5'}`}>
@@ -814,7 +814,7 @@ export default function AdminDashboardPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
             <Card
               onClick={handleShowBehindMaterials}
-              className="admin-fit-box group border border-black/[0.05] dark:border-white/10 rounded-3xl bg-white dark:bg-[#1c1c1e] gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
+              className="admin-fit-box group glass rounded-3xl gap-0 p-5 hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
             >
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${behindStudentsCount > 0 ? 'bg-orange-500/12' : 'bg-black/[0.04] dark:bg-white/5'}`}>
@@ -838,7 +838,7 @@ export default function AdminDashboardPage() {
             <motion.div variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.16, 1, 0.3, 1] } } }}>
             <Card
               onClick={() => router.push('/admin/inbox')}
-              className="admin-fit-box group border border-black/[0.05] dark:border-white/10 rounded-3xl bg-white dark:bg-[#1c1c1e] gap-0 p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_6px_20px_rgba(0,0,0,0.04)] hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
+              className="admin-fit-box group glass rounded-3xl gap-0 p-5 hover:shadow-[0_10px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all duration-300 cursor-pointer text-left h-full"
             >
               <div className="flex items-start justify-between">
                 <div className={`w-9 h-9 rounded-2xl flex items-center justify-center ${pendingRequestsTotal > 0 ? 'bg-amber-500/12' : 'bg-black/[0.04] dark:bg-white/5'}`}>

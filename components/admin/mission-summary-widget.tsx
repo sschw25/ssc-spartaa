@@ -63,7 +63,7 @@ export function MissionSummaryWidget() {
   };
 
   return (
-    <div className="rounded-3xl border border-black/[0.04] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
+    <div className="rounded-3xl glass p-5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900 dark:text-slate-100">
           <Trophy className="w-4 h-4 text-amber-500" /> 쿠폰 미션 현황

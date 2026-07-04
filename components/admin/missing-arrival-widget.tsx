@@ -54,7 +54,7 @@ export function MissingArrivalWidget({
   if (!configured) return null;
 
   return (
-    <div className="admin-fit-box rounded-3xl border border-amber-500/20 bg-white dark:bg-[#1c1c1e] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
+    <div className="admin-fit-box rounded-3xl glass border-amber-500/20 p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2 text-left">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
