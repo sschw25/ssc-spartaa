@@ -1850,7 +1850,8 @@ export function useReportState() {
           priority: 5,
         }]
       : []),
-    ...(finishDateStr
+    // 이미 예약된 정기상담(예정일 이후)이 있으면 "다음 상담 예정 기간" 안내는 중복이라 숨긴다.
+    ...(finishDateStr && !(student.consultationBookings || []).some((b) => b.status === 'booked' && b.kind === 'regular' && b.date >= todayDateKey)
       ? [{
           id: 'next-consultation-window',
           tone: 'slate' as const,

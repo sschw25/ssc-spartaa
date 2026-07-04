@@ -250,10 +250,13 @@ export function HomeOverviewTab({
   const todayChecklistNote = getSpecialNoteObj();
   const todayChecklist = todayChecklistNote.daily_checklist?.[todayChecklistKey];
   const completedPlanCount = todayPlanEntries.filter((entry) => entry.isCompleted).length;
-  const todayMissionTotal = todayPlanEntries.length + 1;
-  const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0);
-  const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
   const activeDeadlineGoals = isStudentReport ? deadlineGoals.filter((goal) => goal.targetAmount > 0) : [];
+  // 기간목표도 '오늘 할 일'에 포함 — 오늘까지 기대치(예상목표치)를 채웠으면 완료로 집계(요약 배지와 동일 기준).
+  // (전엔 일일계획+점검표만 세어 "기간목표 다 했는데 진행률이 안 오른다" 혼동이 있었음)
+  const deadlineDoneToday = activeDeadlineGoals.filter((g) => g.expectedAmount <= 0 || g.actualAmount >= g.expectedAmount * 0.9).length;
+  const todayMissionTotal = todayPlanEntries.length + 1 + activeDeadlineGoals.length;
+  const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0) + deadlineDoneToday;
+  const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
 
   // 휴가 보강 총합 — 이번 주 승인 휴가로 이월된 자료별 보강량의 합.
   const totalMakeup = React.useMemo(() => {
@@ -262,9 +265,9 @@ export function HomeOverviewTab({
     const exemptions = getLeaveExemptions(student);
     if (leaveDates.size === 0) return 0;
     const now = new Date();
-    const subjects = student.subjects && student.subjects.length > 0
-      ? student.subjects
-      : [{ studyDays: undefined, books: student.books || [], lectures: student.lectures || [] }];
+    // subjects 단일소스와 정렬 — 과목별 진도 탭도 subjects 만 렌더하므로 홈 요약도 subjects 만 집계
+    // (레거시 최상위 books/lectures 폴백 제거: 홈엔 "보강 있음"인데 탭엔 배지가 없던 불일치 해소).
+    const subjects = student.subjects || [];
     let sum = 0;
     for (const s of subjects) {
       for (const m of [...(s.books || []), ...(s.lectures || [])]) {
@@ -448,8 +451,8 @@ export function HomeOverviewTab({
                   {todayMissionDone}/{todayMissionTotal}개 완료
                 </h2>
                 <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                  {/* 미션/보상 탭과 혼동되지 않게 집계 기준(계획+점검표)을 명시 */}
-                  오늘 계획 {todayPlanEntries.length}건 + 아침 점검표{todayDailyPlan ? ` · ${todayDailyPlan.dateLabel}` : ''}
+                  {/* 미션/보상 탭과 혼동되지 않게 집계 기준(계획+기간목표+점검표)을 명시 */}
+                  오늘 계획 {todayPlanEntries.length}건{activeDeadlineGoals.length > 0 ? ` + 기간목표 ${activeDeadlineGoals.length}개` : ''} + 아침 점검표{todayDailyPlan ? ` · ${todayDailyPlan.dateLabel}` : ''}
                 </p>
               </div>
               <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 text-[15px] font-semibold text-[#0071E3] tabular-nums">
