@@ -145,7 +145,7 @@ export function countStudyDaysInRange(start: Date, end: Date, studyDays?: string
   return count;
 }
 
-function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>) {
+function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>, leaveExemptions?: Map<string, LeaveExemption>, subjectStudyTime?: string) {
   const start = parseDate(plan.startDate);
   const end = parseDate(plan.endDate);
   if (!start || !end) return parsePlanEndAmount(plan);
@@ -161,20 +161,34 @@ function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays
   const effectiveStart = enrolledStart && enrolledStart > start ? enrolledStart : start;
   const upperBound = new Date(today);
   if (!inclusiveToday) upperBound.setDate(today.getDate() - 1);
-  // 경과 학습일에서만 휴가일 제외(분모 totalStudyDays 는 그대로 — 보강은 별도 어드바이저리).
-  const elapsedStudyDays = countStudyDaysInRange(effectiveStart, upperBound, studyDays, leaveDates);
+  // 경과 학습일에서 휴가분 제외(분모 totalStudyDays 는 그대로 — 면제분은 보강 어드바이저리로 남김).
+  // leaveExemptions 제공 시: 슬롯-특정 부분면제(반차는 그 슬롯 과목만/과목 studyTime 없으면 비율).
+  // 미제공 시: 레거시 leaveDates(하루 통째) 폴백.
+  let elapsedStudyDays: number;
+  if (leaveExemptions) {
+    let sum = 0;
+    const cur = new Date(effectiveStart); cur.setHours(0, 0, 0, 0);
+    const last = new Date(upperBound); last.setHours(0, 0, 0, 0);
+    while (cur <= last) {
+      if (isStudyDay(cur, studyDays)) sum += 1 - materialLeaveFractionOnDate(leaveExemptions.get(toDateKey(cur)), subjectStudyTime);
+      cur.setDate(cur.getDate() + 1);
+    }
+    elapsedStudyDays = sum;
+  } else {
+    elapsedStudyDays = countStudyDaysInRange(effectiveStart, upperBound, studyDays, leaveDates);
+  }
   if (elapsedStudyDays <= 0) return beforePlanAmount;
 
   const totalStudyDays = Math.max(1, countStudyDaysInRange(start, end, studyDays));
   const dailyAmount = Math.max(1, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / totalStudyDays)));
-  return Math.min(endAmount, beforePlanAmount + dailyAmount * elapsedStudyDays);
+  return Math.min(endAmount, Math.round(beforePlanAmount + dailyAmount * elapsedStudyDays));
 }
 
 function isSameDay(a: Date | null, b: Date) {
   return Boolean(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
 }
 
-export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>) {
+export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>, leaveExemptions?: Map<string, LeaveExemption>, subjectStudyTime?: string) {
   if (!plans || plans.length === 0) return null;
 
   // 기간 목표(periodType) plan 은 일일 진도 기대치 계산에서 제외(요일 무관·별도 페이스로 판정).
@@ -194,7 +208,7 @@ export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: D
     }
 
     if (today <= end) {
-      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt, inclusiveToday, leaveDates);
+      return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt, inclusiveToday, leaveDates, leaveExemptions, subjectStudyTime);
     }
 
     latestPastPlan = plan;
@@ -211,6 +225,8 @@ function buildItem(
   today: Date,
   studyDays?: string[],
   leaveDates?: Set<string>,
+  leaveExemptions?: Map<string, LeaveExemption>,
+  subjectStudyTime?: string,
 ): ManagedProgressItem {
   const total = type === 'book'
     ? (material as BookProgress).totalPages
@@ -235,7 +251,7 @@ function buildItem(
   // 목표(계획) 미설정 자료는 달력 선형 추정(과거 getExpectedLinear 폴백)으로 뒤처짐을 만들지
   // 않는다 — 기대치 null → 판정 제외(no-plan). 기간 목표(deadline) 전용 자료도 여기서는 null
   // (deriveDeadlineGoals 가 마감 위험 판정의 단일 소스).
-  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates);
+  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates, leaveExemptions, subjectStudyTime);
   const expectedToday = rawExpectedToday === null
     ? null
     : isFreshToday
@@ -279,16 +295,17 @@ export function getManagedProgressItems(students: Student[], today = new Date())
 
   return students.flatMap((student) => {
     const leaveDates = getLeaveDates(student);
+    const exemptions = getLeaveExemptions(student);
     if (student.subjects && student.subjects.length > 0) {
       return student.subjects.flatMap((subject) => [
-        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today, subject.studyDays, leaveDates)),
-        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today, subject.studyDays, leaveDates)),
+        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
+        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
       ]);
     }
 
     return [
-      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', today, undefined, leaveDates)),
-      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', today, undefined, leaveDates)),
+      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', today, undefined, leaveDates, exemptions)),
+      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', today, undefined, leaveDates, exemptions)),
     ];
   });
 }
@@ -300,6 +317,8 @@ export function getMakeupAmount(
   today: Date,
   studyDays: string[] | undefined,
   leaveDates: Set<string>,
+  leaveExemptions?: Map<string, LeaveExemption>,
+  subjectStudyTime?: string,
 ): { makeupTotal: number; perDay: number } {
   const day = new Date(today);
   day.setHours(0, 0, 0, 0);
@@ -318,16 +337,23 @@ export function getMakeupAmount(
 
   const yesterday = new Date(day);
   yesterday.setDate(day.getDate() - 1);
-  let leaveStudyDaysBefore = 0;
+  // 오늘 이전의 휴가 면제분을 합산 — leaveExemptions 제공 시 슬롯-특정 부분면제(반차는 그 슬롯만),
+  // 미제공 시 레거시 하루통째(leaveDates) 폴백.
+  let leaveDaysWeighted = 0;
   const cur = new Date(start);
   cur.setHours(0, 0, 0, 0);
   while (cur <= yesterday && cur <= end) {
-    if (isStudyDay(cur, studyDays) && leaveDates.has(toDateKey(cur))) leaveStudyDaysBefore++;
+    if (isStudyDay(cur, studyDays)) {
+      leaveDaysWeighted += leaveExemptions
+        ? materialLeaveFractionOnDate(leaveExemptions.get(toDateKey(cur)), subjectStudyTime)
+        : (leaveDates.has(toDateKey(cur)) ? 1 : 0);
+    }
     cur.setDate(cur.getDate() + 1);
   }
-  if (leaveStudyDaysBefore === 0) return { makeupTotal: 0, perDay: 0 };
+  if (leaveDaysWeighted <= 0) return { makeupTotal: 0, perDay: 0 };
 
-  const makeupTotal = leaveStudyDaysBefore * dailyAmount;
+  const makeupTotal = Math.round(leaveDaysWeighted * dailyAmount);
+  if (makeupTotal <= 0) return { makeupTotal: 0, perDay: 0 };
   const remaining = countStudyDaysInRange(day, end, studyDays, leaveDates); // 오늘~창끝, 휴가일 제외
   const perDay = remaining > 0 ? Math.ceil(makeupTotal / remaining) : makeupTotal;
   return { makeupTotal, perDay };

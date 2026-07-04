@@ -10,7 +10,7 @@ import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
-import { getLeaveDates, getMakeupAmount } from '@/lib/progress-plan';
+import { getLeaveDates, getLeaveExemptions, getMakeupAmount } from '@/lib/progress-plan';
 
 type DailyPlanEntry = {
   id: string;
@@ -264,6 +264,7 @@ export function HomeOverviewTab({
   const totalMakeup = React.useMemo(() => {
     if (!isStudentReport) return 0;
     const leaveDates = getLeaveDates(student);
+    const exemptions = getLeaveExemptions(student);
     if (leaveDates.size === 0) return 0;
     const now = new Date();
     const subjects = student.subjects && student.subjects.length > 0
@@ -272,7 +273,7 @@ export function HomeOverviewTab({
     let sum = 0;
     for (const s of subjects) {
       for (const m of [...(s.books || []), ...(s.lectures || [])]) {
-        sum += getMakeupAmount(m, now, s.studyDays, leaveDates).makeupTotal;
+        sum += getMakeupAmount(m, now, s.studyDays, leaveDates, exemptions, (s as { studyTime?: string }).studyTime).makeupTotal;
       }
     }
     return sum;

@@ -9,7 +9,7 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
-import { getExpectedFromPlans, getLeaveDates, getMakeupAmount, toDateKey, isStudyDay } from '@/lib/progress-plan';
+import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMakeupAmount, toDateKey, isStudyDay } from '@/lib/progress-plan';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
 
 // 과목별 진도 입력 히트맵 — 최근 35일. 파랑=입력한 날 / 옅은칸=학습일·미입력 / 점=비학습일·휴가일.
@@ -79,6 +79,8 @@ export function SubjectProgressTab({
   const [pendingAmount, setPendingAmount] = React.useState(0);
   // 휴가일 집합(히트맵 off 칸 + 보강량 계산). 학생당 1회.
   const leaveDates = React.useMemo(() => getLeaveDates(student), [student]);
+  // 슬롯-특정 부분면제(반차는 그 슬롯만) — 보강량 계산에 사용.
+  const leaveExemptions = React.useMemo(() => getLeaveExemptions(student), [student]);
 
   const getSeoulDateKey = () =>
     new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
@@ -714,7 +716,7 @@ export function SubjectProgressTab({
                           )}
 
                           {(() => {
-                            const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates);
+                            const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime);
                             return mk.makeupTotal > 0 ? (
                               <div className="mt-2.5">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
@@ -938,7 +940,7 @@ export function SubjectProgressTab({
                           )}
 
                           {(() => {
-                            const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates);
+                            const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime);
                             return mk.makeupTotal > 0 ? (
                               <div className="mt-2.5">
                                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-black text-amber-700">
