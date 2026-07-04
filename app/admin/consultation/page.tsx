@@ -646,7 +646,7 @@ function ConsultationContent() {
   };
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans selection:bg-black/10">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans selection:bg-black/10">
 
       {/* Navbar */}
       <AdminTopNav

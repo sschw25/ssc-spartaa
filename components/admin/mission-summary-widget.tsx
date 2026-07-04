@@ -63,16 +63,16 @@ export function MissionSummaryWidget() {
   };
 
   return (
-    <div className="rounded-3xl border border-black/[0.04] bg-white p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
+    <div className="rounded-3xl border border-black/[0.04] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-[0_4px_12px_rgba(0,0,0,0.015)]">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900">
+        <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900 dark:text-slate-100">
           <Trophy className="w-4 h-4 text-amber-500" /> 쿠폰 미션 현황
         </h3>
         <div className="flex items-center gap-1">
-          <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-slate-500 hover:bg-[#F5F5F7] transition">
+          <button onClick={load} title="새로고침" className="rounded-lg p-1.5 text-slate-500 hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition">
             <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
           </button>
-          <button onClick={() => router.push('/admin/missions')} className="flex items-center gap-0.5 rounded-lg px-2 py-1 text-[13px] font-medium text-[#0071E3] hover:bg-blue-50 transition">
+          <button onClick={() => router.push('/admin/missions')} className="flex items-center gap-0.5 rounded-lg px-2 py-1 text-[13px] font-medium text-[#0071E3] hover:bg-blue-50 dark:hover:bg-[#0071E3]/10 transition">
             설정 <ChevronRight className="w-3 h-3" />
           </button>
         </div>
@@ -84,7 +84,7 @@ export function MissionSummaryWidget() {
         <>
           <div className="mt-4 grid grid-cols-3 gap-2.5">
             {([
-              ['이번 달', data?.month, 'bg-black/[0.03] text-slate-900'],
+              ['이번 달', data?.month, 'bg-black/[0.03] dark:bg-white/5 text-slate-900 dark:text-slate-100'],
               ['이번 주', data?.week, 'bg-[#0071E3]/[0.08] text-[#0071E3]'],
               ['오늘', data?.today, 'bg-emerald-500/10 text-emerald-600'],
             ] as [string, Bucket | undefined, string][]).map(([label, b, cls]) => (

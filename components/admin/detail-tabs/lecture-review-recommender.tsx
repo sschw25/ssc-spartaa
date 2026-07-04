@@ -38,7 +38,7 @@ export function LectureReviewRecommender({
   const leftover = Math.max(0, sessionMin - usedMin);
 
   return (
-    <div className="rounded-lg border border-[#0071E3]/15 bg-[#F8FBFF] p-2.5 text-[10px]">
+    <div className="rounded-lg border border-[#0071E3]/15 bg-[#F8FBFF] dark:bg-white/5 p-2.5 text-[10px]">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
@@ -58,7 +58,7 @@ export function LectureReviewRecommender({
                 min={0}
                 value={reviewMin}
                 onChange={(e) => setReviewMin(Math.max(0, Number(e.target.value) || 0))}
-                className="h-7 w-full rounded-md border border-black/[0.08] bg-white px-2 text-[10px] focus:outline-none"
+                className="h-7 w-full rounded-md border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[10px] focus:outline-none"
               />
             </label>
             <label className="space-y-0.5">
@@ -68,7 +68,7 @@ export function LectureReviewRecommender({
                 min={1}
                 value={sessionMin}
                 onChange={(e) => setSessionMin(Math.max(1, Number(e.target.value) || 1))}
-                className="h-7 w-full rounded-md border border-black/[0.08] bg-white px-2 text-[10px] focus:outline-none"
+                className="h-7 w-full rounded-md border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[10px] focus:outline-none"
               />
             </label>
           </div>
@@ -82,7 +82,7 @@ export function LectureReviewRecommender({
                 className={`rounded-full border px-2 py-0.5 font-bold transition-colors ${
                   sessionMin === p.value
                     ? 'border-[#0071E3] bg-[#0071E3] text-white'
-                    : 'border-black/[0.08] bg-white text-slate-500 hover:border-[#0071E3]/40'
+                    : 'border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:border-[#0071E3]/40'
                 }`}
               >
                 {p.label} {p.value}
@@ -90,9 +90,9 @@ export function LectureReviewRecommender({
             ))}
           </div>
 
-          <div className="rounded-md border border-black/[0.05] bg-white p-2 space-y-1 text-slate-700">
+          <div className="rounded-md border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2 space-y-1 text-slate-700 dark:text-slate-300">
             <p>
-              <span className="font-bold text-slate-900">강의 {lectureMin}분 · {speed}배속</span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">강의 {lectureMin}분 · {speed}배속</span>
               {' '}→ 시청 {Math.round(watchMin)}분 + 복습 {reviewMin}분 = <span className="font-bold">{Math.round(perLecture)}분/강</span>
             </p>
             <p className="font-bold text-[#0071E3]">

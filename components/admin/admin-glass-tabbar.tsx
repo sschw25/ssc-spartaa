@@ -176,7 +176,7 @@ export function AdminGlassTabBar() {
                       'press-spring flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-colors',
                       active
                         ? 'bg-[#0071E3]/12 text-[#0071E3]'
-                        : 'text-slate-600 hover:bg-black/[0.04] hover:text-slate-900'
+                        : 'text-slate-600 hover:bg-black/[0.04] dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-slate-100'
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0 text-[#0071E3]" />

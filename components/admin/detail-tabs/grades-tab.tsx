@@ -44,9 +44,9 @@ export function GradesTab({
   return (
     <>
       {/* 성적 추이 그래프 */}
-      <div className="admin-fit-box p-4 rounded-xl border border-black/[0.05] bg-[#F5F5F7]">
+      <div className="admin-fit-box p-4 rounded-xl border border-black/[0.05] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5">
         <div className="admin-fit-row flex justify-between items-center mb-4 gap-2 admin-mobile-wrap">
-          <h4 className="admin-fit-text admin-fit-label font-bold text-slate-900">성적 향상도 추이</h4>
+          <h4 className="admin-fit-text admin-fit-label font-bold text-slate-900 dark:text-slate-100">성적 향상도 추이</h4>
           <div className="flex gap-1.5 min-w-0 overflow-hidden">
             {['전체', '국어', '영어', '수학', '한국사'].map((sub) => (
               <Button
@@ -125,24 +125,24 @@ export function GradesTab({
       </div>
 
       {/* 성적 등록 폼 */}
-      <form onSubmit={onAddGrade} className="admin-fit-box p-3.5 rounded-xl border border-black/[0.05] bg-white grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
+      <form onSubmit={onAddGrade} className="admin-fit-box p-3.5 rounded-xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] grid grid-cols-2 sm:grid-cols-5 gap-3 items-end">
         <div className="space-y-1">
           <Label className="text-[10px] font-semibold text-slate-500">시험명</Label>
           <Input
             placeholder="예: 6월 모의고사"
             value={gradeTestName}
             onChange={(e) => setGradeTestName(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9"
             required
           />
         </div>
         <div className="space-y-1">
           <Label className="text-[10px] font-semibold text-slate-500">과목</Label>
           <Select value={gradeSubject} onValueChange={setGradeSubject}>
-            <SelectTrigger className="rounded-lg border-black/[0.08] text-xs h-9 bg-white">
+            <SelectTrigger className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-[#1c1c1e]">
               <SelectValue placeholder="과목 선택" />
             </SelectTrigger>
-            <SelectContent className="bg-white">
+            <SelectContent className="bg-white dark:bg-[#1c1c1e]">
               {subjects.map(s => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
             </SelectContent>
           </Select>
@@ -155,7 +155,7 @@ export function GradesTab({
             max="100"
             value={gradeScore}
             onChange={(e) => setGradeScore(Number(e.target.value))}
-            className="rounded-lg border-black/[0.08] text-xs h-9"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9"
             required
           />
         </div>
@@ -165,7 +165,7 @@ export function GradesTab({
             type="date"
             value={gradeDate}
             onChange={(e) => setGradeDate(e.target.value)}
-            className="rounded-lg border-black/[0.08] text-xs h-9"
+            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9"
             required
           />
         </div>
@@ -180,13 +180,13 @@ export function GradesTab({
 
       {/* 성적 내역 리스트 */}
       <div className="space-y-3">
-        <h4 className="text-xs font-bold text-slate-900 border-b border-black/[0.05] pb-2">기록된 성적 내역</h4>
+        <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 border-b border-black/[0.05] dark:border-white/10 pb-2">기록된 성적 내역</h4>
         {student.grades.length === 0 ? (
           <div className="text-center py-4 text-xs text-slate-500">기록된 성적이 없습니다.</div>
         ) : (
           <div className="space-y-2">
             {[...student.grades].reverse().map((g) => (
-              <div key={g.id} className="admin-fit-box flex justify-between items-center gap-3 p-3 rounded-lg border border-black/[0.04] bg-white text-xs">
+              <div key={g.id} className="admin-fit-box flex justify-between items-center gap-3 p-3 rounded-lg border border-black/[0.04] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs">
                 <div className="admin-fit-row min-w-0">
                   <span className="font-bold mr-2">{g.subject}</span>
                   <span className="admin-fit-text text-slate-500 inline-block align-bottom max-w-[10rem]">{g.testName}</span>

@@ -71,7 +71,7 @@ export default function EnrollmentExpiredPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-white/5 flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" />
       </div>
     );
@@ -96,7 +96,7 @@ export default function EnrollmentExpiredPage() {
   );
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav title="만료 경고 학생 목록" onLogout={handleLogout} />
 
       <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:px-6 space-y-6">

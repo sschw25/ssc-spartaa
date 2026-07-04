@@ -207,14 +207,14 @@ export default function MessagesPage() {
 
   if (checkingAuth) {
     return (
-      <div className="min-h-screen bg-[#F8F9FA] flex items-center justify-center">
+      <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0b0b0c] flex items-center justify-center">
         <Loader2 className="w-7 h-7 text-[#0071E3] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-40 sm:px-6 space-y-6">

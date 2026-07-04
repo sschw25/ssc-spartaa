@@ -515,7 +515,7 @@ function AdminAttendanceContent() {
   const s = data?.summary;
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen font-sans text-slate-900">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen font-sans text-slate-900 dark:text-slate-100">
       <AdminTopNav
         title="출결 상세 표"
         campusOptions={['all', 'wonju', 'chuncheon', 'chungju'].map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}

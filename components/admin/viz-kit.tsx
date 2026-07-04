@@ -57,7 +57,7 @@ export function Gauge({
           {centerLabel ?? `${Math.round(clamped)}%`}
         </text>
       </svg>
-      {caption && <p className="-mt-2 text-[13px] font-medium text-slate-900 tracking-tight">{caption}</p>}
+      {caption && <p className="-mt-2 text-[13px] font-medium text-slate-900 dark:text-slate-100 tracking-tight">{caption}</p>}
     </div>
   );
 }
@@ -139,7 +139,7 @@ export function CompareBar({ label, value, max = 100, color, suffix = '%', delay
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
-        <span className="text-[13px] font-medium text-slate-700">{label}</span>
+        <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{label}</span>
         <span className="text-[13px] font-semibold tabular-nums" style={{ color }}>{value}{suffix}</span>
       </div>
       <div className="h-2.5 rounded-full overflow-hidden" style={{ background: TRACK }}>
