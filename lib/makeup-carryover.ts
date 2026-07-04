@@ -45,9 +45,10 @@ export function getCarryoverNet(
   return { out, in: incoming };
 }
 
-// 이번 주에 이미 이월을 썼는지(주당 1회 캡).
-export function hasCarryoverInWeek(carryovers: MakeupCarryover[] | undefined, weekKey: string): boolean {
-  return (carryovers || []).some((c) => c.weekKey === weekKey);
+// 이번 주에 이미 이월을 썼는지(주당 1회 캡) — 실제 캘린더 주(createdAt) 기준.
+// (record.weekKey 는 오버레이 정렬용으로 활성 계획 창 기준이라, 캡 판정엔 createdAt 을 쓴다.)
+export function hasCarryoverInRealWeek(carryovers: MakeupCarryover[] | undefined, realWeekKey: string): boolean {
+  return (carryovers || []).some((c) => weekKeyOf((c.createdAt || '').slice(0, 10)) === realWeekKey);
 }
 
 // 표시용 안내문: "7-3에 쓴 오후반차으로 소방학 백소나 12강 보강 (다음 주로 이월)"

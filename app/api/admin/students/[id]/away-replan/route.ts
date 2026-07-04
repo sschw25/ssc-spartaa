@@ -67,7 +67,8 @@ export async function POST(
       }
     }
     if (appliedCount === 0) return false;
-    student.awayReplanNotices = notices;
+    // append-only 무한증가 방지 — 최근 60개만 유지(UI는 최근 14일만 노출).
+    student.awayReplanNotices = notices.slice(-60);
     return true;
   });
 

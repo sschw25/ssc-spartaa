@@ -7,7 +7,7 @@ import { kstToday, getLeaveTypeLabel } from '@/lib/leave';
 import {
   CARRYOVER_COUPON_COST,
   canCarryLeaveType,
-  hasCarryoverInWeek,
+  hasCarryoverInRealWeek,
   weekKeyOf,
   nextWeekKey,
   formatCarryoverMessage,
@@ -58,8 +58,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: '이번 주에 발생한 휴가만 이월할 수 있어요.' }, { status: 403 });
     }
 
-    // 2) 주당 1회 캡
-    if (hasCarryoverInWeek(student.makeupCarryovers, thisWeek)) {
+    // 2) 주당 1회 캡 — 실제 캘린더 주(createdAt) 기준.
+    if (hasCarryoverInRealWeek(student.makeupCarryovers, thisWeek)) {
       return NextResponse.json({ success: false, code: 'WEEK_LIMIT', message: '이번 주 이월은 이미 사용했어요. (주 1회)' }, { status: 403 });
     }
 
@@ -76,32 +76,38 @@ export async function POST(req: NextRequest) {
     if (!subject || !material) {
       return NextResponse.json({ success: false, message: '대상 학습 자료를 찾을 수 없습니다.' }, { status: 404 });
     }
-    // 이월 상한(cap): 이번 주 활성 계획 기준. deadline=남은 목표, daily=이번 주 보강량.
+    // 이월 상한(cap): 오늘이 속한 활성 계획 창 기준. deadline=남은 목표, daily=이번 주 보강량.
+    // ⚠️ deadline 창은 월요일 정렬이 아니므로(생성일부터 7일), weekKey 는 반드시 활성 창 startDate 기준으로
+    //    잡아 오버레이(deriveDeadlineGoals·getMakeupAmount)와 정렬한다. (weekKeyOf(오늘)로 잡으면 어긋남)
     const plans = material.detailedPlans || [];
-    const deadlinePlan = plans.find((p) => p.periodType === 'deadline' && weekKeyOf(p.startDate) === thisWeek);
+    const todayKey = kstToday();
+    const inWindow = (p: { startDate: string; endDate: string }) => p.startDate <= todayKey && todayKey <= p.endDate;
+    const deadlinePlan = plans.find((p) => p.periodType === 'deadline' && inWindow(p));
+    const dailyActive = deadlinePlan ? undefined : plans.find((p) => !p.periodType && inWindow(p));
+    const activePlan = deadlinePlan || dailyActive;
+    if (!activePlan) {
+      return NextResponse.json({ success: false, message: '이번 주 이월할 활성 계획이 없어요.' }, { status: 400 });
+    }
     let cap = 0;
     if (deadlinePlan) {
       cap = Math.max(0, Number(deadlinePlan.targetAmount || 0) - Number(deadlinePlan.actualAmount || 0));
     } else {
-      const todayKey = kstToday();
-      const dailyActive = plans.find((p) => !p.periodType && p.startDate <= todayKey && todayKey <= p.endDate);
-      if (dailyActive) {
-        const todayDate = new Date(`${todayKey}T00:00:00`);
-        cap = getMakeupAmount(material, todayDate, subject.studyDays, getLeaveDates(student), getLeaveExemptions(student), subject.studyTime, student.makeupCarryovers).makeupTotal;
-      }
+      const todayDate = new Date(`${todayKey}T00:00:00`);
+      cap = getMakeupAmount(material, todayDate, subject.studyDays, getLeaveDates(student), getLeaveExemptions(student), subject.studyTime, student.makeupCarryovers).makeupTotal;
     }
     if (cap <= 0) {
       return NextResponse.json({ success: false, message: '이번 주 이월할 보강이 없어요.' }, { status: 400 });
     }
     const amount = Math.min(reqAmount, cap);
+    const carryWeekKey = weekKeyOf(activePlan.startDate);
     const unit = materialType === 'book' ? ((material as { unit?: string }).unit || 'p') : '강';
     const title = materialType === 'book' ? (material as { title?: string }).title || '' : (material as { name?: string }).name || '';
 
     const record: MakeupCarryover = {
       id: `carry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       createdAt: new Date().toISOString(),
-      weekKey: thisWeek,
-      nextWeekKey: nextWeekKey(thisWeek),
+      weekKey: carryWeekKey,
+      nextWeekKey: nextWeekKey(carryWeekKey),
       subjectId,
       subjectName: subject.name,
       materialId,
@@ -115,7 +121,8 @@ export async function POST(req: NextRequest) {
     };
 
     student.leaveCoupons = (student.leaveCoupons ?? 0) - CARRYOVER_COUPON_COST;
-    student.makeupCarryovers = [...(student.makeupCarryovers || []), record];
+    // append-only 무한증가 방지 — 최근 60개만 유지(오버레이는 최근 2주 창만 참조).
+    student.makeupCarryovers = [...(student.makeupCarryovers || []), record].slice(-60);
 
     const saved = await patchStudentProgress(student, originalUpdatedAt);
     if (saved === 'conflict') continue;

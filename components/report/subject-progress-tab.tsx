@@ -10,7 +10,7 @@ import {
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
 import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMakeupAmount, toDateKey, isStudyDay } from '@/lib/progress-plan';
-import { canCarryLeaveType, hasCarryoverInWeek, weekKeyOf, CARRYOVER_COUPON_COST, formatCarryoverMessage } from '@/lib/makeup-carryover';
+import { canCarryLeaveType, hasCarryoverInRealWeek, weekKeyOf, CARRYOVER_COUPON_COST, formatCarryoverMessage } from '@/lib/makeup-carryover';
 import { kstToday } from '@/lib/leave';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
@@ -95,7 +95,7 @@ export function SubjectProgressTab({
     () => (student.leaveRequests || []).find((r) => r.status === 'approved' && canCarryLeaveType(r.type) && weekKeyOf(r.date) === thisWeek),
     [student.leaveRequests, thisWeek],
   );
-  const alreadyCarried = hasCarryoverInWeek(student.makeupCarryovers, thisWeek);
+  const alreadyCarried = hasCarryoverInRealWeek(student.makeupCarryovers, thisWeek);
   const coupons = student.leaveCoupons ?? 0;
 
   const handleCarryover = async (subjectId: string, materialId: string, materialType: 'book' | 'lecture', amount: number, unit: string) => {
