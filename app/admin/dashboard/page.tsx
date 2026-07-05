@@ -21,6 +21,7 @@ import { AdminLeaderboard } from '@/components/admin/admin-leaderboard';
 import { MissionSummaryWidget } from '@/components/admin/mission-summary-widget';
 import { MissingArrivalWidget } from '@/components/admin/missing-arrival-widget';
 import { DailyDigestWidget } from '@/components/admin/daily-digest-widget';
+import { WorkQueueWidget } from '@/components/admin/work-queue-widget';
 import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
@@ -270,12 +271,13 @@ export default function AdminDashboardPage() {
 
   const shouldShowDot = (cardKey: string, lastUpdateTime: string) => {
     if (!lastUpdateTime) return false;
-    const midnight = new Date();
-    midnight.setHours(0, 0, 0, 0);
-    const midnightIso = midnight.toISOString();
 
-    // 조건 1: 마지막 업데이트가 오늘 자정 이후여야 함
-    if (lastUpdateTime < midnightIso) return false;
+    // 조건 1: 마지막 업데이트가 KST 기준 "오늘"이어야 함.
+    // (로컬 자정 Date의 toISOString()은 UTC로 변환되어 KST 오전 9시 이전 판정이 어긋난다 — 날짜 키로 비교)
+    const lastUpdateDate = new Date(lastUpdateTime);
+    if (Number.isNaN(lastUpdateDate.getTime())) return false; // 비ISO 값이 섞여도 렌더 크래시(Intl RangeError) 방지
+    const lastUpdateDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(lastUpdateDate);
+    if (lastUpdateDay < kstToday()) return false;
 
     // 조건 2: 사용자가 해당 카드를 마지막으로 조회한 시각이 마지막 업데이트 시각보다 이전이어야 함
     const viewedTime = viewedTimes[cardKey];
@@ -707,7 +709,8 @@ export default function AdminDashboardPage() {
             <h2 className="text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">알림 현황</h2>
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
-                onClick={() => router.push('/admin/inbox')}
+                onClick={() => document.getElementById('work-queue')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+                title="아래 '오늘의 작업 큐'에서 유형별 대기 건을 확인하세요"
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/[0.07] dark:hover:bg-white/10'}`}
               >
                 <ClipboardList className="w-3.5 h-3.5" />
@@ -876,6 +879,9 @@ export default function AdminDashboardPage() {
             </motion.div>
 
           </motion.div>
+
+          {/* 오늘의 작업 큐 — 인박스 밖(자리이동/가입/도시락/상담예약)까지 포함한 유형별 대기 딥링크 */}
+          <WorkQueueWidget students={campusScopedStudents} campusFilter={effectiveFilter} studentsLoading={loading} />
         </div>{/* /섹션1 알림현황 */}
 
         {/* ── 섹션 2: 오늘의 브리핑 (스마트화 Wave1 #2+#3: 연속결석·이탈급증·위험밴드) ── */}
@@ -1109,7 +1115,7 @@ export default function AdminDashboardPage() {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="bg-white/95 dark:bg-[#1c1c1e]/95 border border-black/[0.06] dark:border-white/10 shadow-2xl rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden backdrop-blur-md text-left animate-scale-in-up"
+            className="glass-strong rounded-3xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden text-left animate-scale-in-up"
           >
 
             {/* 모달 헤더 */}
