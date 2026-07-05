@@ -80,7 +80,7 @@ interface ExecutionPlanTabProps {
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
-  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
+  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
   updateDeadlineProgress: (materialType: 'book' | 'lecture', materialId: string, planId: string, amount: number) => Promise<boolean>;
   requestForm: RequestForm;
   setRequestForm: React.Dispatch<React.SetStateAction<RequestForm>>;
@@ -127,6 +127,8 @@ export function ExecutionPlanTab({
   const [showRealignBox, setShowRealignBox] = React.useState(false);
   const [validationError, setValidationError] = React.useState('');
   const [deadlineSavingId, setDeadlineSavingId] = React.useState<string | null>(null);
+  // 완료 확인 저장 — 성공 시에만 패널을 닫아 실패 시 입력값을 보존한다(실패 토스트는 훅 단일 경로).
+  const [completionSaving, setCompletionSaving] = React.useState(false);
   const [deadlineEditId, setDeadlineEditId] = React.useState<string | null>(null);
   const [deadlineEditAmount, setDeadlineEditAmount] = React.useState(0);
   const todayKey = React.useMemo(
@@ -1066,13 +1068,19 @@ export function ExecutionPlanTab({
                                 <div className="flex gap-2">
                                   <button
                                     type="button"
+                                    disabled={completionSaving}
                                     onClick={() => {
-                                      updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
-                                      setPendingPlanId(null);
+                                      if (completionSaving) return;
+                                      setCompletionSaving(true);
+                                      void updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey)
+                                        .then((ok) => {
+                                          if (ok) setPendingPlanId(null);
+                                        })
+                                        .finally(() => setCompletionSaving(false));
                                     }}
-                                    className="flex-1 rounded-full bg-emerald-500 py-1.5 text-[10px] font-black text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                    className="flex-1 rounded-full bg-emerald-500 py-1.5 text-[10px] font-black text-white hover:bg-emerald-600 active:scale-[0.97] disabled:opacity-60"
                                   >
-                                    완료 확인
+                                    {completionSaving ? '저장 중...' : '완료 확인'}
                                   </button>
                                   <button
                                     type="button"

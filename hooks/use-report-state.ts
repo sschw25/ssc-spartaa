@@ -441,6 +441,56 @@ export function useReportState() {
     };
   }, [isStudentReport]);
 
+  // 2-1. 탭 상태 ↔ URL 동기화 — setActiveTab 경로(클릭/스와이프/딥링크 소비) 전부를 한곳에서 커버.
+  // replaceState 만 사용(리렌더/스크롤/히스토리 오염 없음, push 금지) → 새로고침해도 현재 탭 유지.
+  useEffect(() => {
+    if (!isStudentReport || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const current = url.searchParams.get('tab');
+    if (current === activeTab) return;
+    // 최초 진입(파라미터 없음 + 기본 탭)에는 URL 을 건드리지 않는다.
+    if (current === null && activeTab === 'report-overview') return;
+    url.searchParams.set('tab', activeTab);
+    window.history.replaceState(window.history.state, '', url.toString());
+  }, [activeTab, isStudentReport]);
+
+  // 2-2. 포커스/가시성 복귀 시 조용한 재검증 — 다른 기기/관리자 변경분을 스피너 없이 반영.
+  // admin/dashboard 의 focus/visibilitychange 패턴 재사용, 과도 호출 방지 30초 스로틀.
+  const lastFocusRefreshRef = useRef(0);
+  // 재조회 발사 후 도착 전에 로컬 저장(진도/점검표)이 반영되면 stale 응답이 그걸 화면에서 되돌린다
+  // — 저장 성공 시마다 증가시키고, 발사 시점과 달라진 응답은 버린다.
+  const mutationSeqRef = useRef(0);
+  useEffect(() => {
+    if (!isStudentReport || shareTokenParam) return;
+    // 마운트 직후 첫 포커스에 곧바로 재조회하지 않도록 기준 시각을 지금으로 초기화
+    lastFocusRefreshRef.current = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastFocusRefreshRef.current < 30_000) return;
+      lastFocusRefreshRef.current = now;
+      const seqAtStart = mutationSeqRef.current;
+      fetch(`/api/report/${studentId}?audience=${audience}&scope=core`, { cache: 'no-store' })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((json) => {
+          if (mutationSeqRef.current !== seqAtStart) return; // 그 사이 저장 반영됨 — stale 응답 폐기
+          if (json?.success && json.data) {
+            setStudent(json.data);
+            setMockExams(json.mockExams || []);
+          }
+        })
+        .catch(() => {
+          // 조용한 갱신 실패는 무시 — 기존 화면 유지, 다음 포커스 때 재시도
+        });
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [isStudentReport, shareTokenParam, studentId, audience]);
+
   // 3. 탭 포커스/모션 이펙트
   useEffect(() => {
     const el = document.querySelector('[data-tab-active="true"]');
@@ -946,7 +996,7 @@ export function useReportState() {
     materialType: ProgressMaterialType,
     materialId: string,
     payload: { value?: number; planId?: string; isCompleted?: boolean; dateKey?: string; actualAmount?: number; solvedQuestions?: number; incorrectTags?: Record<string, number> },
-  ) => {
+  ): Promise<boolean> => {
     try {
       const res = await fetch('/api/student/progress', {
         method: 'PATCH',
@@ -955,6 +1005,7 @@ export function useReportState() {
       });
       const json = await res.json();
       if (res.ok && json.success && typeof json.value === 'number') {
+        mutationSeqRef.current += 1;
         applyProgressPatch(
           materialType,
           materialId,
@@ -966,9 +1017,15 @@ export function useReportState() {
           json.actualAmount ?? payload.actualAmount,
           json.dateKey ?? payload.dateKey,
         );
+        return true;
       }
+      // 서버 거절 — 낙관적 갱신을 하지 않았으므로 화면은 저장 전 상태 그대로. 사유만 안내.
+      toast.error(json?.message || '진도 저장에 실패했어요. 다시 시도해 주세요.');
+      return false;
     } catch {
-      // noop
+      // 네트워크 실패 — 입력값은 호출부(패널)에서 보존, 여기서는 재시도 안내만.
+      toast.error('네트워크 오류로 저장하지 못했어요. 다시 시도해 주세요.');
+      return false;
     }
   };
 
@@ -1006,6 +1063,7 @@ export function useReportState() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
+        mutationSeqRef.current += 1;
         applyDeadlineProgressPatch(
           materialType,
           materialId,
@@ -1044,6 +1102,7 @@ export function useReportState() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
+        mutationSeqRef.current += 1;
         setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote, leaveCoupons: json.leaveCoupons } : prev));
         if (json.rewardGranted) {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
@@ -1051,11 +1110,12 @@ export function useReportState() {
         } else {
           toast.success('오늘 컨디션을 기록했어요.');
         }
-      } else if (json?.message) {
-        toast.error(json.message);
+      } else {
+        toast.error(json?.message || '기록에 실패했어요. 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      // 네트워크 실패 — 입력한 폼 값은 그대로 남아 있어 재시도 가능
+      toast.error('네트워크 오류로 기록하지 못했어요. 다시 시도해 주세요.');
     } finally {
       setChecklistSubmitting(false);
     }
@@ -1111,9 +1171,11 @@ export function useReportState() {
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, changeRequests: (prev.changeRequests || []).filter((r) => r.id !== id) } : prev));
         toast.success('신청을 취소했어요.');
+      } else {
+        toast.error(json?.message || '신청 취소에 실패했어요. 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 취소하지 못했어요. 다시 시도해 주세요.');
     }
   };
 
@@ -1181,9 +1243,11 @@ export function useReportState() {
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, leaveRequests: (prev.leaveRequests || []).filter((r) => r.id !== id) } : prev));
         toast.success('신청을 취소했어요.');
+      } else {
+        toast.error(json?.message || '휴가 신청 취소에 실패했어요. 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 취소하지 못했어요. 다시 시도해 주세요.');
     }
   };
 
@@ -1245,9 +1309,11 @@ export function useReportState() {
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, suggestionRequests: (prev.suggestionRequests || []).filter((r) => r.id !== id) } : prev));
         toast.success('건의를 취소했어요.');
+      } else {
+        toast.error(json?.message || '건의 취소에 실패했어요. 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 취소하지 못했어요. 다시 시도해 주세요.');
     }
   };
 

@@ -62,7 +62,7 @@ interface SubjectProgressTabProps {
   updateProgress: (materialType: 'book' | 'lecture', materialId: string, value: number) => void;
   updateBookSolvedQuestions: (materialId: string, solvedQuestions: number) => void;
   incrementBookIncorrectTag: (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => void;
-  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
+  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
   onCarryoverApplied?: (record: MakeupCarryover) => void;
   materialBenchmarks: MaterialBenchmarkMap;
   activeTab: string;
@@ -186,6 +186,16 @@ export function SubjectProgressTab({
   const cancelPlanCompletion = () => {
     setPendingPlanKey(null);
     setPendingAmount(0);
+  };
+
+  // 완료 확인 저장 — 성공 시에만 패널을 닫아 실패 시 입력값을 보존한다(실패 토스트는 훅 단일 경로).
+  const [completionSaving, setCompletionSaving] = React.useState(false);
+  const confirmPlanCompletion = async (materialType: 'book' | 'lecture', materialId: string, planId: string) => {
+    if (completionSaving) return;
+    setCompletionSaving(true);
+    const ok = await updatePlanCompletion(materialType, materialId, planId, true, pendingAmount, todayKey);
+    setCompletionSaving(false);
+    if (ok) cancelPlanCompletion();
   };
 
   // 오늘 기준 1개월치 상세 계획 필터링 (지난 1주 ~ 향후 3주, 약 4~5주 분량)
@@ -640,11 +650,11 @@ export function SubjectProgressTab({
                                       </div>
                                     </div>
                                     {b.incorrectTags && Object.values(b.incorrectTags).some(v => Number(v) > 0) && (
-                                      <div className="flex flex-wrap gap-1 mt-1 text-[7px] font-black justify-end">
-                                        {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-0.2 bg-red-50 dark:bg-red-500/10 text-red-600 rounded">연산:{b.incorrectTags.calculation_error}</span>}
-                                        {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-0.2 bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded">시간:{b.incorrectTags.time_limit}</span>}
-                                        {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-0.2 bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded">오독:{b.incorrectTags.misread_condition}</span>}
-                                        {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-0.2 bg-blue-50 dark:bg-[#0071E3]/15 text-[#0071E3] rounded">개념:{b.incorrectTags.concept_leak}</span>}
+                                      <div className="flex flex-wrap gap-1 mt-1 text-[10px] font-black justify-end">
+                                        {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-[2px] bg-red-50 dark:bg-red-500/10 text-red-600 rounded leading-none">연산:{b.incorrectTags.calculation_error}</span>}
+                                        {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-[2px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded leading-none">시간:{b.incorrectTags.time_limit}</span>}
+                                        {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-[2px] bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded leading-none">오독:{b.incorrectTags.misread_condition}</span>}
+                                        {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-[2px] bg-blue-50 dark:bg-[#0071E3]/15 text-[#0071E3] rounded leading-none">개념:{b.incorrectTags.concept_leak}</span>}
                                       </div>
                                     )}
                                   </div>
@@ -721,8 +731,7 @@ export function SubjectProgressTab({
                                              onChange={(e) => setPendingAmount(Math.max(0, Math.round(Number(e.target.value) || 0)))}
                                              onKeyDown={(e) => {
                                                if (e.key === 'Enter') {
-                                                 updatePlanCompletion('book', b.id, plan.id, true, pendingAmount, todayKey);
-                                                 cancelPlanCompletion();
+                                                 void confirmPlanCompletion('book', b.id, plan.id);
                                                }
                                              }}
                                              className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
@@ -740,13 +749,13 @@ export function SubjectProgressTab({
                                          <div className="grid grid-cols-2 gap-1.5">
                                            <button
                                              type="button"
+                                             disabled={completionSaving}
                                              onClick={() => {
-                                               updatePlanCompletion('book', b.id, plan.id, true, pendingAmount, todayKey);
-                                               cancelPlanCompletion();
+                                               void confirmPlanCompletion('book', b.id, plan.id);
                                              }}
-                                             className="rounded-full bg-emerald-500 px-2 py-1.5 text-[8px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                             className="rounded-full bg-emerald-500 px-2 py-1.5 text-[8px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97] disabled:opacity-60"
                                            >
-                                             완료 확인
+                                             {completionSaving ? '저장 중...' : '완료 확인'}
                                            </button>
                                            <button
                                              type="button"
@@ -950,8 +959,7 @@ export function SubjectProgressTab({
                                              onChange={(e) => setPendingAmount(Math.max(0, Math.round(Number(e.target.value) || 0)))}
                                              onKeyDown={(e) => {
                                                if (e.key === 'Enter') {
-                                                 updatePlanCompletion('lecture', l.id, plan.id, true, pendingAmount, todayKey);
-                                                 cancelPlanCompletion();
+                                                 void confirmPlanCompletion('lecture', l.id, plan.id);
                                                }
                                              }}
                                              className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-1 text-center text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
@@ -969,13 +977,13 @@ export function SubjectProgressTab({
                                          <div className="grid grid-cols-2 gap-1.5">
                                            <button
                                              type="button"
+                                             disabled={completionSaving}
                                              onClick={() => {
-                                               updatePlanCompletion('lecture', l.id, plan.id, true, pendingAmount, todayKey);
-                                               cancelPlanCompletion();
+                                               void confirmPlanCompletion('lecture', l.id, plan.id);
                                              }}
-                                             className="rounded-full bg-emerald-500 px-2 py-1.5 text-[8px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                             className="rounded-full bg-emerald-500 px-2 py-1.5 text-[8px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97] disabled:opacity-60"
                                            >
-                                             완료 확인
+                                             {completionSaving ? '저장 중...' : '완료 확인'}
                                            </button>
                                            <button
                                              type="button"

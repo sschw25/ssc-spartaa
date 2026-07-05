@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { toast } from 'sonner';
 import { Utensils, CheckCircle2, Loader2, Lock, Clock, XCircle } from 'lucide-react';
 import type { MealPlan, MealOrder, MealKind, MealDay } from '@/lib/types/student';
 import {
@@ -43,8 +44,15 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
         setSel(nextSelections);
         setSavedAt(json.order?.updatedAt || new Date().toISOString());
         onSaved(plan.id, json.order);
+        toast.success('도시락 신청을 저장했어요.');
+      } else {
+        // 서버 거절 — 저장됨 표시를 갱신하지 않는다(선택값은 화면에 그대로 남아 재시도 가능).
+        toast.error(json.message || '저장에 실패했어요. 다시 시도해 주세요.');
       }
-    } catch {} finally { setSaving(false); }
+    } catch {
+      // 네트워크 실패 — 선택값 보존 + 재시도 안내
+      toast.error('네트워크 오류로 저장하지 못했어요. 선택한 내용은 그대로 있으니 다시 시도해 주세요.');
+    } finally { setSaving(false); }
   };
 
   const save = async () => {
@@ -68,8 +76,14 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
         setAddDone(true);
         onSaved(plan.id, json.order);
         setAddReason('');
+        toast.success('추가 신청을 보냈어요.', { description: '선생님 승인 후 도시락표에 반영돼요.' });
+      } else {
+        toast.error(json.message || '추가 신청에 실패했어요. 다시 시도해 주세요.');
       }
-    } catch {} finally { setAddSubmitting(false); }
+    } catch {
+      // 네트워크 실패 — 입력값(요일/끼니/사유) 보존 + 재시도 안내
+      toast.error('네트워크 오류로 추가 신청을 보내지 못했어요. 다시 시도해 주세요.');
+    } finally { setAddSubmitting(false); }
   };
 
   const pendingAdds = (plan.myOrder?.addRequests || []).filter((r) => r.status === 'pending');

@@ -45,7 +45,7 @@ interface HomeOverviewTabProps {
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
-  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => void;
+  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
   homeAttend: { loading: boolean; checkedIn: boolean; todayMinutes: number; since: string | null; sinceToday: boolean };
   homeTotalMin: number;
   currentSubjectText: string;
@@ -92,7 +92,6 @@ export function HomeOverviewTab({
   currentStudyLabel,
   timeGreeting,
   currentBriefingPhrase,
-  briefingSubMessage,
   rewardBanner,
   setRewardBanner,
   submitChecklist,
@@ -114,6 +113,8 @@ export function HomeOverviewTab({
   const [ddayDate, setDdayDate] = useState('');
   const [ddayAdding, setDdayAdding] = useState(false);
   const [ddayDeleting, setDdayDeleting] = useState<string | null>(null);
+  // '완료 확인' 저장 중 표시 — 저장 성공 전에는 패널을 닫지 않는다(입력값 보존).
+  const [completionSaving, setCompletionSaving] = useState(false);
 
   const ddays: DDayEvent[] = student.ddays || [];
 
@@ -174,7 +175,11 @@ export function HomeOverviewTab({
       if (json.success) {
         setStudent((s) => s ? { ...s, ddays: (s.ddays || []).filter((d) => d.id !== id) } : s);
         toast.success('D-Day를 삭제했어요.');
+      } else {
+        toast.error(json.message || 'D-Day 삭제에 실패했어요. 다시 시도해 주세요.');
       }
+    } catch {
+      toast.error('네트워크 오류로 D-Day를 삭제하지 못했어요.');
     } finally {
       setDdayDeleting(null);
     }
@@ -353,95 +358,18 @@ export function HomeOverviewTab({
               <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">학습계획 · 주간 계획 탭에서 조정된 일정을 확인하세요.</p>
             </div>
           )}
-          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-            <div className="min-w-0 space-y-3">
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/[0.07] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
-                <Sparkles className="h-3.5 w-3.5 text-[#0071E3]" />
-                오늘 브리핑
-              </div>
-              <div>
-                <p className="text-[13px] font-semibold text-[#0071E3]">
-                  오늘의 학습 브리핑
-                  <span className="ml-1.5 text-[11px] font-medium text-slate-400 dark:text-slate-400">· {new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' })} 발행</span>
-                </p>
-                <h1 className="mt-2 text-2xl font-semibold leading-[1.18] tracking-tight text-slate-900 dark:text-slate-100 md:text-4xl md:leading-[1.16]">
-                  {student.name}님, {timeGreeting} 👋
-                  <span className="block text-[#0071E3]">
-                    {currentBriefingPhrase}
-                  </span>
-                </h1>
-              </div>
-              <p className="max-w-2xl text-[13px] font-medium leading-6 text-slate-500 dark:text-slate-400">
-                {briefingSubMessage}
+          {/* 압축 히어로 — 1줄 인사 + 날짜. 390px 첫 화면에서 '오늘 할 일 요약'이 바로 보이게 낮췄다. */}
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <h1 className="min-w-0 truncate text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100 md:text-xl">
+                {student.name}님, {timeGreeting} 👋
+              </h1>
+              <p className="shrink-0 text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
               </p>
             </div>
-
-            <div className="shrink-0 md:min-w-[240px]">
-              <button
-                type="button"
-                onClick={() => setDdayOpen(true)}
-                className="no-print w-full rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3.5 text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)] transition hover:border-[#0071E3]/25 active:scale-[0.99]"
-                aria-label="D-Day 관리"
-              >
-                <span className="flex items-center justify-between gap-2">
-                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#0071E3]">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    D-Day
-                  </span>
-                  <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-400 shadow-sm">관리</span>
-                </span>
-                {primaryDday ? (
-                  <>
-                    <span className="mt-2 flex items-end justify-between gap-3">
-                      <span className="min-w-0">
-                        <span className="block truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{primaryDday.title}</span>
-                        <span className="mt-0.5 block text-[10px] font-medium text-slate-400 dark:text-slate-400">{primaryDday.date}</span>
-                      </span>
-                      <span className="shrink-0 text-[18px] font-semibold leading-none text-[#0071E3] tabular-nums">
-                        {calcDiff(primaryDday.date)}
-                      </span>
-                    </span>
-                    {secondaryDdays.length > 0 && (
-                      <span className="mt-2 flex flex-wrap gap-1.5">
-                        {secondaryDdays.map((d) => (
-                          <span key={d.id} className="max-w-full truncate rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 shadow-sm">
-                            {calcDiff(d.date)} · {d.title}
-                          </span>
-                        ))}
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <span className="mt-2 block rounded-xl border border-dashed border-[#0071E3]/20 bg-white/70 dark:bg-[#1c1c1e]/95 px-3 py-2 text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                    등록된 일정이 없습니다.
-                  </span>
-                )}
-              </button>
-            </div>
+            <p className="text-[12px] font-medium text-[#0071E3]">{currentBriefingPhrase}</p>
           </div>
-
-          {/* 🔵 리워드 달성 배너 알림 */}
-          {rewardBanner.show && (
-            <div className="no-print relative overflow-hidden rounded-3xl border border-emerald-300/60 bg-gradient-to-r from-emerald-50 to-teal-50 p-5 shadow-[0_8px_24px_rgba(16,185,129,0.12)] animate-fade-in-up">
-              <div className="absolute -right-4 -top-4 text-6xl opacity-10 select-none pointer-events-none">🎁</div>
-              <div className="flex items-start gap-3.5">
-                <div className="shrink-0 w-10 h-10 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-[0_4px_12px_rgba(16,185,129,0.35)]">
-                  <span className="text-lg">🎁</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-black text-emerald-800 tracking-tight">미션 달성! 쿠폰이 지급되었어요 🎉</p>
-                  <p className="text-[11px] font-bold text-emerald-700/80 mt-0.5">오늘 학습 미션을 완수하여 휴가/반차 쿠폰이 자동 적립되었습니다.</p>
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {rewardBanner.reasons.map((r, idx) => (
-                      <span key={idx} className="inline-flex items-center gap-1 bg-white/80 text-emerald-700 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200/60 shadow-sm">
-                        ✓ {r}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
 
           <div id="today-mission-card" className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm md:p-5">
             <div className="flex items-start justify-between gap-4">
@@ -471,7 +399,9 @@ export function HomeOverviewTab({
             {deadlineSummary && deadlineSummary.goalCount > 0 && (
               <div
                 className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-3.5 py-2.5 text-[11px] font-semibold break-keep ${
-                  deadlineSummary.metToday ? 'border-emerald-100 bg-emerald-50/60' : 'border-amber-200/60 bg-amber-50/70'
+                  deadlineSummary.metToday
+                    ? 'border-emerald-100 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10'
+                    : 'border-amber-200/60 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10'
                 }`}
               >
                 <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
@@ -479,16 +409,16 @@ export function HomeOverviewTab({
                   기간 목표 {deadlineSummary.goalCount}개
                 </span>
                 {deadlineSummary.metToday ? (
-                  <span className="text-emerald-600">
+                  <span className="text-emerald-600 dark:text-emerald-400">
                     오늘치 완료{deadlineSummary.aheadDays > 0 ? ` · 약 ${deadlineSummary.aheadDays}일치 앞섬` : ''}
                   </span>
                 ) : (
-                  <span className="text-amber-600 tabular-nums">
+                  <span className="text-amber-600 dark:text-amber-400 tabular-nums">
                     진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
                   </span>
                 )}
                 {deadlineSummary.riskCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-amber-600">
+                  <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
                     <AlertTriangle className="h-3.5 w-3.5" />
                     뒤처진 자료 {deadlineSummary.riskCount}개
                   </span>
@@ -526,7 +456,7 @@ export function HomeOverviewTab({
                           </p>
                         </div>
                         <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
-                          done ? 'bg-emerald-50 text-emerald-700' : goal.behind ? 'bg-amber-50 text-amber-700' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+                          done ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : goal.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
                         }`}>
                           {done ? '주간 완료' : `${goal.actualAmount}/${goal.targetAmount}${goal.unit}`}
                         </span>
@@ -534,7 +464,7 @@ export function HomeOverviewTab({
 
                       <div className="mt-2 grid gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 sm:grid-cols-2">
                         <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
-                          오늘 권장: <span className={metToday ? 'text-emerald-600' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
+                          오늘 권장: <span className={metToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
                         </p>
                         <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
                           예상목표치: <span className="text-slate-800 dark:text-slate-200">{goal.expectedAmount}{goal.unit}</span>
@@ -560,7 +490,7 @@ export function HomeOverviewTab({
                 }}
                 className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
                   todayChecklist
-                    ? 'border-emerald-100 bg-emerald-50/45'
+                    ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10'
                     : 'border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 hover:border-[#0071E3]/20 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15'
                 }`}
               >
@@ -570,7 +500,7 @@ export function HomeOverviewTab({
                   <CheckCircle2 className="h-4 w-4" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-[13px] font-semibold ${todayChecklist ? 'text-emerald-800' : 'text-slate-800 dark:text-slate-200'}`}>
+                  <span className={`block truncate text-[13px] font-semibold ${todayChecklist ? 'text-emerald-800 dark:text-emerald-300' : 'text-slate-800 dark:text-slate-200'}`}>
                     아침 자가 점검
                   </span>
                   <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
@@ -580,7 +510,7 @@ export function HomeOverviewTab({
                   </span>
                 </span>
                 <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
-                  todayChecklist ? 'bg-white text-emerald-700' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'
+                  todayChecklist ? 'bg-white text-emerald-700 dark:bg-white/10 dark:text-emerald-300' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'
                 }`}>
                   {todayChecklist ? '완료' : '기록'}
                 </span>
@@ -593,7 +523,7 @@ export function HomeOverviewTab({
                   const unit = _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
                   return (
                     <div key={entry.id} className={`rounded-2xl border p-3 transition ${
-                      entry.isCompleted ? 'border-emerald-100 bg-emerald-50/45' : isPending ? 'border-amber-200 bg-amber-50/60' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                      entry.isCompleted ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isPending ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
                     }`}>
                       <div className="flex items-start gap-3">
                         <button
@@ -611,7 +541,7 @@ export function HomeOverviewTab({
                             entry.isCompleted
                               ? 'border-emerald-200 bg-emerald-500 text-white'
                               : isPending
-                                ? 'border-amber-300 bg-white text-amber-500'
+                                ? 'border-amber-300 bg-white text-amber-500 dark:border-amber-500/40 dark:bg-[#1c1c1e] dark:text-amber-400'
                                 : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-300 dark:text-slate-600 hover:border-[#0071E3]/40 hover:text-[#0071E3]'
                           }`}
                         >
@@ -620,7 +550,7 @@ export function HomeOverviewTab({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className={`truncate text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 line-through decoration-emerald-500/40' : 'text-slate-900 dark:text-slate-100'}`}>
+                              <p className={`truncate text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 dark:text-emerald-300 line-through decoration-emerald-500/40' : 'text-slate-900 dark:text-slate-100'}`}>
                                 {entry.subject} · {entry.title}
                               </p>
                               <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
@@ -628,14 +558,14 @@ export function HomeOverviewTab({
                               </p>
                             </div>
                             <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
-                              entry.isCompleted ? 'bg-white text-emerald-700' : isPending ? 'bg-white text-amber-700' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+                              entry.isCompleted ? 'bg-white text-emerald-700 dark:bg-white/10 dark:text-emerald-300' : isPending ? 'bg-white text-amber-700 dark:bg-white/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
                             }`}>
                               {entry.isCompleted ? `완료 ${entry.actualAmount ?? '?'}${unit}` : `${index + 1}번`}
                             </span>
                           </div>
 
                           {isPending && (
-                            <div className="mt-3 rounded-2xl border border-amber-100 bg-white dark:bg-[#1c1c1e] p-3">
+                            <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
                               <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">실제로 얼마나 했나요?</p>
                               <div className="mt-2 flex items-center gap-2">
                                 <button
@@ -659,18 +589,27 @@ export function HomeOverviewTab({
                               <div className="mt-3 flex gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
-                                    setPendingPlanId(null);
+                                  disabled={completionSaving}
+                                  onClick={async () => {
+                                    if (completionSaving) return;
+                                    setCompletionSaving(true);
+                                    try {
+                                      const ok = await updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
+                                      // 성공 시에만 패널 닫기 — 실패하면 입력값 그대로 유지(실패 토스트는 저장 훅에서).
+                                      if (ok) setPendingPlanId(null);
+                                    } finally {
+                                      setCompletionSaving(false);
+                                    }
                                   }}
-                                  className="flex-1 rounded-full bg-emerald-500 py-2 text-[11px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97]"
+                                  className="flex-1 rounded-full bg-emerald-500 py-2 text-[11px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97] disabled:opacity-60"
                                 >
-                                  완료 확인
+                                  {completionSaving ? '저장 중...' : '완료 확인'}
                                 </button>
                                 <button
                                   type="button"
+                                  disabled={completionSaving}
                                   onClick={() => setPendingPlanId(null)}
-                                  className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97]"
+                                  className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] disabled:opacity-60"
                                 >
                                   취소
                                 </button>
@@ -690,6 +629,71 @@ export function HomeOverviewTab({
             </div>
 
           </div>
+
+          {/* 🔵 리워드 달성 배너 알림 */}
+          {rewardBanner.show && (
+            <div className="no-print relative overflow-hidden rounded-3xl border border-emerald-300/60 dark:border-emerald-500/30 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-500/15 dark:to-teal-500/10 p-5 shadow-[0_8px_24px_rgba(16,185,129,0.12)] animate-fade-in-up">
+              <div className="absolute -right-4 -top-4 text-6xl opacity-10 select-none pointer-events-none">🎁</div>
+              <div className="flex items-start gap-3.5">
+                <div className="shrink-0 w-10 h-10 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-[0_4px_12px_rgba(16,185,129,0.35)]">
+                  <span className="text-lg">🎁</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-black text-emerald-800 dark:text-emerald-300 tracking-tight">미션 달성! 쿠폰이 지급되었어요 🎉</p>
+                  <p className="text-[11px] font-bold text-emerald-700/80 dark:text-emerald-400/80 mt-0.5">오늘 학습 미션을 완수하여 휴가/반차 쿠폰이 자동 적립되었습니다.</p>
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    {rewardBanner.reasons.map((r, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 bg-white/80 dark:bg-white/10 text-emerald-700 dark:text-emerald-300 text-[10px] font-black px-2.5 py-1 rounded-full border border-emerald-200/60 dark:border-emerald-500/25 shadow-sm">
+                        ✓ {r}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* D-Day 요약 카드 — '오늘 할 일'보다 아래(정보위계) */}
+          <button
+            type="button"
+            onClick={() => setDdayOpen(true)}
+            className="no-print w-full rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3.5 text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)] transition hover:border-[#0071E3]/25 active:scale-[0.99]"
+            aria-label="D-Day 관리"
+          >
+            <span className="flex items-center justify-between gap-2">
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#0071E3]">
+                <CalendarDays className="h-3.5 w-3.5" />
+                D-Day
+              </span>
+              <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-400 shadow-sm">관리</span>
+            </span>
+            {primaryDday ? (
+              <>
+                <span className="mt-2 flex items-end justify-between gap-3">
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{primaryDday.title}</span>
+                    <span className="mt-0.5 block text-[10px] font-medium text-slate-400 dark:text-slate-400">{primaryDday.date}</span>
+                  </span>
+                  <span className="shrink-0 text-[18px] font-semibold leading-none text-[#0071E3] tabular-nums">
+                    {calcDiff(primaryDday.date)}
+                  </span>
+                </span>
+                {secondaryDdays.length > 0 && (
+                  <span className="mt-2 flex flex-wrap gap-1.5">
+                    {secondaryDdays.map((d) => (
+                      <span key={d.id} className="max-w-full truncate rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 shadow-sm">
+                        {calcDiff(d.date)} · {d.title}
+                      </span>
+                    ))}
+                  </span>
+                )}
+              </>
+            ) : (
+              <span className="mt-2 block rounded-xl border border-dashed border-[#0071E3]/20 bg-white/70 dark:bg-[#1c1c1e]/95 px-3 py-2 text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                등록된 일정이 없습니다.
+              </span>
+            )}
+          </button>
 
           {/* 🔵 뽀모도로 타이머 & 아침 자가 점검표 위젯 레이아웃 (가로 2열 그리드) */}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
@@ -760,7 +764,7 @@ export function HomeOverviewTab({
                             onChange={(e) => setChecklistForm(f => ({ ...f, phoneReason: e.target.value }))}
                             rows={2}
                             placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요 (관리자에게 전달돼요)"
-                            className="w-full rounded-xl border border-amber-200 bg-amber-50/40 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-amber-400 focus:outline-none resize-none"
+                            className="w-full rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/40 dark:bg-amber-500/10 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-amber-400 focus:outline-none resize-none"
                           />
                         )}
                         <p className="text-[11px] font-medium leading-5 text-slate-400 dark:text-slate-400">휴대폰은 원칙적으로 제출이에요. 부득이하면 임시보관함/전원끄고소지를 사유와 함께 신청해 주세요.</p>
@@ -784,13 +788,13 @@ export function HomeOverviewTab({
                 : (checklist.phone_status === 'submitted' || checklist.phone_submitted) ? '제출 완료' : '미제출';
               const isPhoneNotSubmitted = checklist.phone_status ? checklist.phone_status !== 'submitted' : !checklist.phone_submitted;
 
-              let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800';
+              let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/25 dark:text-emerald-300';
               let BannerIcon = CheckCircle2;
               let bannerTitle = '기분 좋은 출발이에요! 아침 공부를 시작해 볼까요?';
               let bannerTips = '어젯밤 잠도 충분히 잤고 스마트폰도 깔끔하게 정리했네요. 오늘 계획 100% 달성에 도전해 봐요!';
 
               if (isSleepShort || isPhoneNotSubmitted) {
-                bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900';
+                bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/25 dark:text-amber-300';
                 BannerIcon = AlertTriangle;
                 bannerTitle = '오전 집중을 방해할 요인이 있어요.';
 
@@ -807,8 +811,8 @@ export function HomeOverviewTab({
                 <div id="morning-checklist-card" className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
                   <div>
                     <div className="flex justify-between items-center">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">아침의 약속 & 코멘팅 팁</p>
-                      <span className="text-[8px] font-bold text-slate-400">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">아침의 약속 & 코멘팅 팁</p>
+                      <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
 
                     <div className="space-y-1 mt-2">
@@ -819,9 +823,9 @@ export function HomeOverviewTab({
                     </div>
                   </div>
 
-                  <div className="flex gap-4 text-[9px] font-black text-slate-500/80 border-t border-slate-100/50 pt-2.5">
-                    <span>어젯밤 수면: <strong className="text-slate-800">{checklist.sleep_hours}시간</strong></span>
-                    <span>휴대폰: <strong className="text-slate-800">{phoneStatusLabel}</strong></span>
+                  <div className="flex gap-4 text-[9px] font-black text-slate-500/80 dark:text-slate-400 border-t border-slate-100/50 dark:border-white/10 pt-2.5">
+                    <span>어젯밤 수면: <strong className="text-slate-800 dark:text-slate-200">{checklist.sleep_hours}시간</strong></span>
+                    <span>휴대폰: <strong className="text-slate-800 dark:text-slate-200">{phoneStatusLabel}</strong></span>
                   </div>
                 </div>
               );

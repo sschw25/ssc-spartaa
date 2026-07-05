@@ -139,13 +139,31 @@ export function ConsultationTab({
     );
   };
 
-  const applicationTabs = [
-    { id: 'leave', label: '휴식/반차', meta: `반차 ${homeHalfLeft}회`, icon: Calendar },
-    { id: 'consultation', label: '상담신청', meta: consultationAvailable ? '상담 예약' : '상담 요청', icon: CalendarClock },
+  // 서브탭 대기 건수 배지 — 이미 로드된 student 상태만 사용(추가 fetch 없음).
+  // 자리이동은 SeatMoveCard 가 자체 fetch(탭 진입 시)라 여기서는 건수를 알 수 없어 배지 제외.
+  const badgeToday = kstToday();
+  const pendingLeaveCount = (student.leaveRequests || []).filter((r) => r.status === 'pending').length;
+  const pendingConsultationCount = (student.consultationBookings || []).filter(
+    (b) => b.status === 'booked' && (!b.date || b.date >= badgeToday),
+  ).length;
+  const pendingSuggestionCount = (student.suggestionRequests || []).filter(
+    (r) => r.status !== 'resolved',
+  ).length;
+
+  const applicationTabs: Array<{
+    id: ApplicationSubTab;
+    label: string;
+    meta: string;
+    icon: React.ComponentType<{ className?: string }>;
+    badge?: number;
+    badgeLabel?: string;
+  }> = [
+    { id: 'leave', label: '휴식/반차', meta: `반차 ${homeHalfLeft}회`, icon: Calendar, badge: pendingLeaveCount, badgeLabel: '대기' },
+    { id: 'consultation', label: '상담신청', meta: consultationAvailable ? '상담 예약' : '상담 요청', icon: CalendarClock, badge: pendingConsultationCount, badgeLabel: '예정' },
     { id: 'seat', label: '자리이동', meta: '좌석 변경', icon: Armchair },
     { id: 'coupon', label: '쿠폰교환', meta: `쿠폰 ${homeLeaveCoupons}장`, icon: Ticket },
-    { id: 'suggestion', label: '건의사항', meta: '의견 남기기', icon: MessageSquare },
-  ] as const;
+    { id: 'suggestion', label: '건의사항', meta: '의견 남기기', icon: MessageSquare, badge: pendingSuggestionCount, badgeLabel: '대기' },
+  ];
 
   return (
     <>
@@ -182,8 +200,20 @@ export function ConsultationTab({
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0">
-                  <span className="block truncate text-[12px] font-black">{tab.label}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5 text-[12px] font-black">
+                    <span className="truncate">{tab.label}</span>
+                    {(tab.badge ?? 0) > 0 && (
+                      <span
+                        className={`inline-flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-[9px] font-black tabular-nums ${
+                          selected ? 'bg-white/25 text-white' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
+                        }`}
+                        aria-label={`${tab.badgeLabel || '대기'} ${tab.badge}건`}
+                      >
+                        {tab.badge}
+                      </span>
+                    )}
+                  </span>
                   <span className={`block truncate text-[10px] font-bold ${selected ? 'text-white/75' : 'text-slate-400 dark:text-slate-400'}`}>{tab.meta}</span>
                 </span>
               </button>
