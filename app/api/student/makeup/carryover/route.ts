@@ -3,13 +3,15 @@ import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, patchStudentProgress } from '@/lib/store';
 import type { MakeupCarryover } from '@/lib/types/student';
 import { getMakeupAmount, getLeaveDates, getLeaveExemptions } from '@/lib/progress-plan';
-import { kstToday, getLeaveTypeLabel } from '@/lib/leave';
+import { kstToday } from '@/lib/leave';
 import {
   CARRYOVER_COUPON_COST,
   canCarryLeaveType,
   hasCarryoverInRealWeek,
   weekKeyOf,
   nextWeekKey,
+  addDaysToDateKey,
+  getCarryoverNet,
   formatCarryoverMessage,
 } from '@/lib/makeup-carryover';
 
@@ -76,9 +78,6 @@ export async function POST(req: NextRequest) {
     if (!subject || !material) {
       return NextResponse.json({ success: false, message: '대상 학습 자료를 찾을 수 없습니다.' }, { status: 404 });
     }
-    // 이월 상한(cap): 오늘이 속한 활성 계획 창 기준. deadline=남은 목표, daily=이번 주 보강량.
-    // ⚠️ deadline 창은 월요일 정렬이 아니므로(생성일부터 7일), weekKey 는 반드시 활성 창 startDate 기준으로
-    //    잡아 오버레이(deriveDeadlineGoals·getMakeupAmount)와 정렬한다. (weekKeyOf(오늘)로 잡으면 어긋남)
     const plans = material.detailedPlans || [];
     const todayKey = kstToday();
     const inWindow = (p: { startDate: string; endDate: string }) => p.startDate <= todayKey && todayKey <= p.endDate;
@@ -88,9 +87,35 @@ export async function POST(req: NextRequest) {
     if (!activePlan) {
       return NextResponse.json({ success: false, message: '이번 주 이월할 활성 계획이 없어요.' }, { status: 400 });
     }
+    // ⚠️ weekKey 는 소비 측과 반드시 같은 키로 잡는다.
+    //    deadline: 오버레이(deriveDeadlineGoals)가 weekKeyOf(plan.startDate)로 대조하므로 활성 창 startDate 기준.
+    //      (deadline 창은 월요일 정렬이 아니라 생성일부터 7일 — weekKeyOf(오늘)로 잡으면 어긋남)
+    //    daily: 소비(getMakeupAmount)가 weekKeyOf(오늘)로 대조하므로 실제 캘린더 주(thisWeek) 기준.
+    //      (운영에 UTC 직렬화 산물인 일요일 시작 daily plan 이 있어 startDate 기준이면 out 이 전주 키로
+    //       저장돼 이번 주 보강이 안 줄고 쿠폰만 소모된다)
+    const carryWeekKey = deadlinePlan ? weekKeyOf(deadlinePlan.startDate) : thisWeek;
+    const destWeekKey = nextWeekKey(carryWeekKey);
+
+    // 5) 이월 도착지(다음 주) 계획 창이 실제로 존재해야 한다. 마지막 주에서 이월하면 도착 창이 없어
+    //    들어온 이월(carriedIn)이 오버레이에 다시 반영될 곳이 없고 → 보강량이 소실된다(쿠폰만 소모).
+    //    deadline: 각 창 startDate 가 7일 간격 체인이라 weekKey 동치로 대조.
+    //    daily: 창이 월요일 정렬이 아닐 수 있으므로(일요일 시작 데이터) "다음 실주를 덮는 창 존재"로 판정.
+    const destWeekEnd = addDaysToDateKey(destWeekKey, 6); // 다음 실주 일요일
+    const hasDestWindow = deadlinePlan
+      ? plans.some((p) => p.periodType === 'deadline' && weekKeyOf(p.startDate) === destWeekKey)
+      : plans.some((p) => !p.periodType && p.startDate <= destWeekEnd && destWeekKey <= p.endDate);
+    if (!hasDestWindow) {
+      return NextResponse.json({ success: false, code: 'NO_NEXT_WINDOW', message: '다음 주 계획이 없어 이월할 수 없어요. 이번 주 안에 보강해 주세요.' }, { status: 400 });
+    }
+
+    // 6) 이월 상한(cap): 오늘이 속한 활성 계획 창 기준.
+    //    deadline = 남은 목표 − 이미 이 창에서 이월해 나간 양(alreadyOut). 창이 두 실주(週)에 걸치면
+    //      주 1회 캡을 통과한 2건이 같은 창의 남은 목표를 각각 소진할 수 있어 alreadyOut 을 빼 이중집계를 막는다.
+    //    daily = 이번 주 보강량(getMakeupAmount 가 이미 net.out 을 차감하므로 추가 차감하지 않는다).
     let cap = 0;
     if (deadlinePlan) {
-      cap = Math.max(0, Number(deadlinePlan.targetAmount || 0) - Number(deadlinePlan.actualAmount || 0));
+      const alreadyOut = getCarryoverNet(student.makeupCarryovers, materialId, carryWeekKey).out;
+      cap = Math.max(0, Number(deadlinePlan.targetAmount || 0) - Number(deadlinePlan.actualAmount || 0) - alreadyOut);
     } else {
       const todayDate = new Date(`${todayKey}T00:00:00`);
       cap = getMakeupAmount(material, todayDate, subject.studyDays, getLeaveDates(student), getLeaveExemptions(student), subject.studyTime, student.makeupCarryovers).makeupTotal;
@@ -99,7 +124,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: '이번 주 이월할 보강이 없어요.' }, { status: 400 });
     }
     const amount = Math.min(reqAmount, cap);
-    const carryWeekKey = weekKeyOf(activePlan.startDate);
     const unit = materialType === 'book' ? ((material as { unit?: string }).unit || 'p') : '강';
     const title = materialType === 'book' ? (material as { title?: string }).title || '' : (material as { name?: string }).name || '';
 
@@ -107,7 +131,7 @@ export async function POST(req: NextRequest) {
       id: `carry_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
       createdAt: new Date().toISOString(),
       weekKey: carryWeekKey,
-      nextWeekKey: nextWeekKey(carryWeekKey),
+      nextWeekKey: destWeekKey,
       subjectId,
       subjectName: subject.name,
       materialId,

@@ -16,11 +16,15 @@ export function weekKeyOf(dateKey: string): string {
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
 }
 
-export function nextWeekKey(weekKey: string): string {
-  const [y, m, d] = weekKey.split('-').map(Number);
-  const dt = new Date(y, (m || 1) - 1, d || 1);
-  dt.setDate(dt.getDate() + 7);
+// 날짜 키(YYYY-MM-DD)에 n일 더한 키 — 로컬 캘린더 산술(달·연 경계 안전).
+export function addDaysToDateKey(dateKey: string, days: number): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  const dt = new Date(y, (m || 1) - 1, (d || 1) + days);
   return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+}
+
+export function nextWeekKey(weekKey: string): string {
+  return addDaysToDateKey(weekKey, 7);
 }
 
 // 이월 가능 휴가 타입? 반차(halfday)·휴식권(fullday) 계열만. 병가·개인사정은 불가.
@@ -46,9 +50,17 @@ export function getCarryoverNet(
 }
 
 // 이번 주에 이미 이월을 썼는지(주당 1회 캡) — 실제 캘린더 주(createdAt) 기준.
-// (record.weekKey 는 오버레이 정렬용으로 활성 계획 창 기준이라, 캡 판정엔 createdAt 을 쓴다.)
+// (record.weekKey 는 오버레이 정렬용 — deadline 은 활성 계획 창(startDate) 기준, daily 는 실주(오늘) 기준이라
+//  캡 판정엔 쓰지 않고 createdAt 을 쓴다.)
+// createdAt 은 UTC ISO 타임스탬프라 slice(0,10)로 자르면 KST 월요일 00:00~08:59 이월이 전주(일요일)로
+// 귀속돼 주 1회 캡이 우회된다 — 반드시 KST 캘린더 날짜로 변환 후 주 키를 만든다.
 export function hasCarryoverInRealWeek(carryovers: MakeupCarryover[] | undefined, realWeekKey: string): boolean {
-  return (carryovers || []).some((c) => weekKeyOf((c.createdAt || '').slice(0, 10)) === realWeekKey);
+  return (carryovers || []).some((c) => {
+    const t = new Date(c.createdAt || '');
+    if (Number.isNaN(t.getTime())) return false;
+    const kstDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(t);
+    return weekKeyOf(kstDate) === realWeekKey;
+  });
 }
 
 // 표시용 안내문: "7-3에 쓴 오후반차으로 소방학 백소나 12강 보강 (다음 주로 이월)"

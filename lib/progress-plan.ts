@@ -34,6 +34,11 @@ function parseDate(value?: string) {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+// Date → 서울(KST) 캘린더 날짜 문자열(YYYY-MM-DD). toISOString()은 UTC 라 KST 자정~09시 Date 가
+// 전날로 밀린다(관리자 브라우저에서 plan 생성 시 일요일 시작 plan 이 만들어지던 버그의 원인).
+// plan 날짜 직렬화는 반드시 이걸 쓴다.
+const seoulDateStr = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d);
+
 // 반복 iteration 은 로컬 자정 Date 로 도니 로컬 Y-M-D 로 키를 만든다(leaveRequests.date 와 동일 캘린더 기준).
 export function toDateKey(d: Date): string {
   const y = d.getFullYear();
@@ -292,21 +297,23 @@ function buildItem(
 }
 
 export function getManagedProgressItems(students: Student[], today = new Date()): ManagedProgressItem[] {
-  today.setHours(0, 0, 0, 0);
+  // 호출자가 넘긴 Date 를 파괴하지 않도록 복제본을 자정 정규화한다.
+  const day = new Date(today);
+  day.setHours(0, 0, 0, 0);
 
   return students.flatMap((student) => {
     const leaveDates = getLeaveDates(student);
     const exemptions = getLeaveExemptions(student);
     if (student.subjects && student.subjects.length > 0) {
       return student.subjects.flatMap((subject) => [
-        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', today, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
-        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', today, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
+        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', day, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
+        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', day, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
       ]);
     }
 
     return [
-      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', today, undefined, leaveDates, exemptions)),
-      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', today, undefined, leaveDates, exemptions)),
+      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', day, undefined, leaveDates, exemptions)),
+      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', day, undefined, leaveDates, exemptions)),
     ];
   });
 }
@@ -358,8 +365,23 @@ export function getMakeupAmount(
   const net = carryovers && carryovers.length ? getCarryoverNet(carryovers, material.id, wk) : { out: 0, in: 0 };
   const makeupTotal = Math.max(0, baseTotal - net.out + net.in);
   if (makeupTotal <= 0) return { makeupTotal: 0, perDay: 0 };
-  const remaining = countStudyDaysInRange(day, end, studyDays, leaveDates); // 오늘~창끝, 휴가일 제외
-  const perDay = remaining > 0 ? Math.ceil(makeupTotal / remaining) : makeupTotal;
+  // 남은 학습일(오늘~창끝) — 분자(leaveDaysWeighted)와 대칭이 되도록 반차는 부분(1−fraction)만 제외한다.
+  // leaveDates 로 통째 제외하면 미래 반차일이 통으로 빠져 remaining 이 과소집계→perDay 가 과대평가됨.
+  let remaining: number;
+  if (leaveExemptions) {
+    let sum = 0;
+    const rc = new Date(day); rc.setHours(0, 0, 0, 0);
+    while (rc <= end) {
+      if (isStudyDay(rc, studyDays)) sum += 1 - materialLeaveFractionOnDate(leaveExemptions.get(toDateKey(rc)), subjectStudyTime);
+      rc.setDate(rc.getDate() + 1);
+    }
+    remaining = sum;
+  } else {
+    remaining = countStudyDaysInRange(day, end, studyDays, leaveDates); // 레거시: 하루 통째 제외
+  }
+  // 부분면제 합산으로 remaining 이 0<remaining<1 인 분수가 될 수 있다 — 그대로 나누면
+  // perDay 가 makeupTotal 을 초과하므로 총량으로 캡한다.
+  const perDay = remaining > 0 ? Math.min(makeupTotal, Math.ceil(makeupTotal / remaining)) : makeupTotal;
   return { makeupTotal, perDay };
 }
 
@@ -503,7 +525,7 @@ export function getDeadlinePace(
 }
 
 export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: string): number {
-  const targetDateStr = todayStr || new Date().toISOString().split('T')[0];
+  const targetDateStr = todayStr || seoulDateStr(new Date()); // 기본 오늘 = KST 캘린더 (UTC 밀림 방지)
   let totalMin = 0;
 
   const checkPlan = (
@@ -533,7 +555,8 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
       }
 
       if (isStudyDay) {
-        const dailyAmount = todayPlan.dailyAmount || Math.ceil(todayPlan.targetAmount / 6);
+        // ?? — dailyAmount 가 명시적 0 이면 0 으로 존중(|| 는 0 을 미설정으로 오인해 폴백).
+        const dailyAmount = todayPlan.dailyAmount ?? Math.ceil(todayPlan.targetAmount / 6);
         let planMin = getEstimatedStudyTimeMin(unit, dailyAmount, type, estimatedMinutesPerUnit);
         if (type === 'lecture') {
           planMin = planMin / lectureSpeedMultiplier;
@@ -603,7 +626,7 @@ export function generateDetailedPlans(
   const planAmount = Math.max(0, totalAmount - safeCurrentAmount);
 
   if (planAmount <= 0 && reviewPasses.length === 0) {
-    return { plans, calculatedTargetDate: today.toISOString().split('T')[0] };
+    return { plans, calculatedTargetDate: seoulDateStr(today) };
   }
 
   const activeStudyDays = getActiveStudyDays(studyDays);
@@ -663,9 +686,8 @@ export function generateDetailedPlans(
     // 각 회독은 직전 창 다음날부터 이어붙인다.
     let phaseStart = new Date(today);
 
-    // 기간 목표 날짜는 서울(KST) 기준으로 직렬화한다. toISOString()은 UTC라 KST 자정이 전날로
+    // 날짜 직렬화는 모듈 상단 seoulDateStr(KST) 사용 — toISOString()은 UTC라 KST 자정이 전날로
     // 밀려(당일이 어제로 저장) 당일등록 학생이 하루 뒤처진 것으로 계산되던 문제를 막는다.
-    const seoulDateStr = (d: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d);
     const appendDeadlineWeeks = (
       passNumber: number,
       windowStart: Date,
@@ -747,7 +769,7 @@ export function generateDetailedPlans(
     });
 
     const lastDeadlinePlan = plans[plans.length - 1];
-    const calculatedTargetDate = lastDeadlinePlan?.endDate || today.toISOString().split('T')[0];
+    const calculatedTargetDate = lastDeadlinePlan?.endDate || seoulDateStr(today);
     return { plans, calculatedTargetDate };
   }
 
@@ -765,10 +787,11 @@ export function generateDetailedPlans(
     let currentStart = new Date(phaseStartWeek);
 
     for (let i = 0; i < totalWeeks; i++) {
-      const startStr = currentStart.toISOString().split('T')[0];
+      // KST 직렬화 — toISOString()은 KST 브라우저에서 하루 밀려 일요일 시작 plan 을 만들던 버그.
+      const startStr = seoulDateStr(currentStart);
       const currentEnd = new Date(currentStart);
       currentEnd.setDate(currentStart.getDate() + 6);
-      const endStr = currentEnd.toISOString().split('T')[0];
+      const endStr = seoulDateStr(currentEnd);
 
       const thisWeekAmount = i === 0
         ? Math.min(remainingAmount, firstWeekAmount)
@@ -868,6 +891,6 @@ export function generateDetailedPlans(
   });
 
   const lastPlan = plans[plans.length - 1];
-  const calculatedTargetDate = lastPlan?.endDate || today.toISOString().split('T')[0];
+  const calculatedTargetDate = lastPlan?.endDate || seoulDateStr(today);
   return { plans, calculatedTargetDate };
 }
