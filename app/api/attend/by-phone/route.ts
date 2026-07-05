@@ -93,8 +93,9 @@ export async function POST(request: Request) {
       ? await processAttendance(matches[0].id, targetAction, 'phone')
       : await toggleAttendance(matches[0].id, 'phone');
     return NextResponse.json({ success: true, ...result });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '번호 출결 처리 실패';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+  } catch (error) {
+    // 무인증 공개 라우트 — PG/Supabase 에러 원문 노출 방지. 상세는 서버 로그로만.
+    console.error('attend by-phone error:', error);
+    return NextResponse.json({ success: false, message: '번호 출결 처리에 실패했어요.' }, { status: 500 });
   }
 }

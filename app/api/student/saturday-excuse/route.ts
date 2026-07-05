@@ -2,9 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
 
-const getErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
-
 export async function POST(req: NextRequest) {
   const sessionStudentId = await getStudentSessionId();
   if (!sessionStudentId) {
@@ -64,8 +61,9 @@ export async function POST(req: NextRequest) {
       message: '사유 증빙 회신이 완료되었습니다.',
       saturdayLateExcuses: result.saturdayLateExcuses
     });
-  } catch (error: unknown) {
+  } catch (error) {
+    // 상세(PG/Supabase 에러 원문)는 서버 로그로만 남기고 클라이언트엔 고정 메시지만 반환
     console.error('saturday-excuse submit error:', error);
-    return NextResponse.json({ success: false, message: getErrorMessage(error, '처리 중 오류가 발생했습니다.') }, { status: 500 });
+    return NextResponse.json({ success: false, message: '처리 중 오류가 발생했습니다.' }, { status: 500 });
   }
 }

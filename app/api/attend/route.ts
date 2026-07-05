@@ -34,9 +34,10 @@ export async function GET() {
       todayMinutes: completedMin + openMin,
       todaySessions: todays.map((s) => ({ checkIn: s.check_in, checkOut: s.check_out })),
     });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '상태 조회 실패';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+  } catch (error) {
+    // 상세(PG/Supabase 에러 원문)는 서버 로그로만 남기고 클라이언트엔 고정 메시지만 반환
+    console.error('attend GET error:', error);
+    return NextResponse.json({ success: false, message: '상태 조회에 실패했어요.' }, { status: 500 });
   }
 }
 
@@ -61,8 +62,9 @@ export async function POST(request: Request) {
       ? await processAttendance(studentId, targetAction, 'qr')
       : await toggleAttendance(studentId, 'qr');
     return NextResponse.json({ success: true, ...result });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : '등하원 처리 실패';
-    return NextResponse.json({ success: false, message }, { status: 500 });
+  } catch (error) {
+    // 상세(PG/Supabase 에러 원문)는 서버 로그로만 남기고 클라이언트엔 고정 메시지만 반환
+    console.error('attend POST error:', error);
+    return NextResponse.json({ success: false, message: '등하원 처리에 실패했어요.' }, { status: 500 });
   }
 }

@@ -25,6 +25,13 @@ export interface AttendNotifyInput {
 
 const onlyDigits = (value?: string) => (value || '').replace(/\D/g, '');
 
+// PII 로깅 방지: 전화번호는 앞3·뒤4만 남기고 가운데 마스킹(010****1234).
+const maskPhone = (value?: string) => {
+  const digits = onlyDigits(value);
+  if (digits.length < 7) return '***';
+  return `${digits.slice(0, 3)}****${digits.slice(-4)}`;
+};
+
 function buildMessage(name: string, action: AttendAction, time: string, minutes?: number | null): string {
   if (action === 'in') {
     return `[SSC스파르타] ${name} 학생이 ${time}에 등원했습니다.`;
@@ -110,7 +117,7 @@ export async function sendCustomSms(
   const clean = Array.from(new Set(recipients.map((p) => p.replace(/\D/g, '')).filter((p) => p.length >= 10)));
   if (clean.length === 0) return { sent: 0, skipped: 'no-recipient' };
   if (TEST_MODE) {
-    console.log('[sms] SOLAPI_TEST_MODE=Y 발송 생략:', clean, message);
+    console.log('[sms] SOLAPI_TEST_MODE=Y 발송 생략, 수신자:', clean.map(maskPhone), '본문길이:', message.length);
     return { sent: clean.length, skipped: 'test-mode' };
   }
   try {
@@ -126,7 +133,7 @@ export async function sendCustomSms(
 // 등하원 알림 발송. 실패해도 등하원 처리는 막지 않도록 호출부에서 예외를 삼킵니다.
 export async function notifyAttendance(input: AttendNotifyInput): Promise<{ sent: number; skipped?: string }> {
   if (!API_KEY || !API_SECRET || !SENDER) {
-    console.log('[sms] 솔라피 환경변수 미설정으로 발송 생략:', input.studentName, input.action);
+    console.log('[sms] 솔라피 환경변수 미설정으로 발송 생략, action:', input.action);
     return { sent: 0, skipped: 'not-configured' };
   }
 
@@ -135,7 +142,7 @@ export async function notifyAttendance(input: AttendNotifyInput): Promise<{ sent
 
   const message = buildMessage(input.studentName, input.action, input.time, input.minutes);
   if (TEST_MODE) {
-    console.log('[sms] SOLAPI_TEST_MODE=Y 발송 생략:', recipients, message);
+    console.log('[sms] SOLAPI_TEST_MODE=Y 발송 생략, 수신자:', recipients.map(maskPhone), '본문길이:', message.length);
     return { sent: recipients.length, skipped: 'test-mode' };
   }
 
