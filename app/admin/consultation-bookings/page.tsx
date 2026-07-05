@@ -748,29 +748,22 @@ export default function AdminConsultationBookingsPage() {
       {/* 완료 처리 모달 */}
       {completeTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
-          <div
-            className="w-full max-w-lg rounded-3xl border border-white/20 shadow-2xl p-6 space-y-4"
-            style={{
-              background: 'rgba(255,255,255,0.82)',
-              backdropFilter: 'blur(28px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            }}
-          >
-            <h3 className="text-sm font-black text-slate-900 leading-snug">
+          <div className="w-full max-w-lg rounded-3xl glass-strong shadow-2xl p-6 space-y-4">
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 leading-snug">
               {completeTarget.studentName} · {completeTarget.date} {completeTarget.slot} 상담 완료
             </h3>
             <textarea
               value={noteDraft}
               onChange={(e) => setNoteDraft(e.target.value)}
               rows={6}
-              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-slate-900 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+              className="w-full rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/60 dark:bg-white/10 px-3 py-2.5 text-[12px] font-medium text-slate-900 dark:text-slate-100 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
               placeholder="상담 내용을 작성하세요"
             />
             <div className="flex gap-2 justify-end">
               <button
                 type="button"
                 onClick={() => { setCompleteTarget(null); setNoteDraft(''); }}
-                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-slate-900 hover:bg-[#E5E5EA] transition-colors"
+                className="h-9 rounded-2xl bg-[#F5F5F7] dark:bg-white/10 px-4 text-[12px] font-bold text-slate-900 dark:text-slate-100 hover:bg-[#E5E5EA] dark:hover:bg-white/15 transition-colors"
               >
                 닫기
               </button>
@@ -791,29 +784,26 @@ export default function AdminConsultationBookingsPage() {
       {/* 시간 변경 제안 모달 */}
       {rsTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
-          <div
-            className="w-full max-w-md rounded-3xl border border-white/20 shadow-2xl p-6 space-y-4"
-            style={{ background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)' }}
-          >
-            <h3 className="text-sm font-black text-slate-900 leading-snug">
+          <div className="w-full max-w-md rounded-3xl glass-strong shadow-2xl p-6 space-y-4">
+            <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 leading-snug">
               {rsTarget.studentName} · 시간 변경 제안
             </h3>
-            <p className="text-[12px] font-bold text-slate-500">
+            <p className="text-[12px] font-bold text-slate-500 dark:text-slate-400">
               현재 {dateLabel(rsTarget.date, rsTarget.weekday)} {rsTarget.slot} → 새 시간을 제안하면 학생 승인 후 확정됩니다.
             </p>
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <span className="text-[11px] font-extrabold text-slate-500">날짜</span>
+                <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">날짜</span>
                 <select value={rsDate} onChange={(e) => { setRsDate(e.target.value); setRsSlot(''); }}
-                  className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold">
+                  className="w-full h-9 rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-xs font-semibold text-slate-900 dark:text-slate-100">
                   <option value="">운영일 선택</option>
                   {grid.map((d) => <option key={d.date} value={d.date}>{dateLabel(d.date, d.weekday)} · {d.counselor}</option>)}
                 </select>
               </div>
               <div className="space-y-1">
-                <span className="text-[11px] font-extrabold text-slate-500">시간</span>
+                <span className="text-[11px] font-extrabold text-slate-500 dark:text-slate-400">시간</span>
                 <select value={rsSlot} onChange={(e) => setRsSlot(e.target.value)} disabled={!rsDate}
-                  className="w-full h-9 rounded-xl border border-black/[0.08] bg-white px-2 text-xs font-semibold disabled:opacity-50">
+                  className="w-full h-9 rounded-xl border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-xs font-semibold text-slate-900 dark:text-slate-100 disabled:opacity-50">
                   <option value="">빈 슬롯 선택</option>
                   {rsFreeSlots.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -825,11 +815,11 @@ export default function AdminConsultationBookingsPage() {
               rows={2}
               maxLength={300}
               placeholder="변경 사유(선택) — 예) 담당자 일정 조정"
-              className="w-full rounded-2xl border border-black/[0.08] bg-white/60 px-3 py-2.5 text-[12px] font-medium text-slate-900 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
+              className="w-full rounded-2xl border border-black/[0.08] dark:border-white/10 bg-white/60 dark:bg-white/10 px-3 py-2.5 text-[12px] font-medium text-slate-900 dark:text-slate-100 leading-relaxed resize-none focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30"
             />
             <div className="flex gap-2 justify-end">
               <button type="button" onClick={() => setRsTarget(null)}
-                className="h-9 rounded-2xl bg-[#F5F5F7] px-4 text-[12px] font-bold text-slate-900 hover:bg-[#E5E5EA] transition-colors">
+                className="h-9 rounded-2xl bg-[#F5F5F7] dark:bg-white/10 px-4 text-[12px] font-bold text-slate-900 dark:text-slate-100 hover:bg-[#E5E5EA] dark:hover:bg-white/15 transition-colors">
                 닫기
               </button>
               <button type="button" disabled={busy[`rs_${rsTarget.id}`] || !rsDate || !rsSlot} onClick={submitReschedule}

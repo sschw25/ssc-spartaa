@@ -252,7 +252,7 @@ export function LearningConsultationPanel() {
           type="date"
           value={cslNextDate}
           onChange={(e) => setCslNextDate(e.target.value)}
-          className="rounded-lg border-black/[0.08] text-xs bg-white h-9"
+          className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs bg-white dark:bg-[#1c1c1e] h-9"
         />
       </div>
 

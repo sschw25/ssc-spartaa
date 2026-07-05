@@ -102,9 +102,9 @@ export function MissionSummaryWidget() {
           {data && data.byMission.length > 0 && (
             <div className="mt-3 space-y-1">
               {data.byMission.slice(0, 4).map((m) => (
-                <div key={m.missionName} className="flex items-center justify-between text-[11px] font-semibold text-slate-600">
+                <div key={m.missionName} className="flex items-center justify-between text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                   <span className="truncate">{m.missionName}</span>
-                  <span className="flex items-center gap-1 shrink-0 text-amber-600 font-semibold">
+                  <span className="flex items-center gap-1 shrink-0 text-amber-600 dark:text-amber-400 font-semibold">
                     <Ticket className="w-3 h-3" /> {m.coupons}장 · {m.students}명
                   </span>
                 </div>
@@ -115,7 +115,7 @@ export function MissionSummaryWidget() {
           <button
             onClick={settleNow}
             disabled={settling}
-            className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold py-2.5 transition active:scale-[0.99] disabled:opacity-50"
+            className="mt-4 w-full flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 hover:bg-black dark:bg-white/10 dark:hover:bg-white/15 text-white text-xs font-bold py-2.5 transition active:scale-[0.99] disabled:opacity-50"
           >
             {settling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5" />}
             지금 정산 (이번 달·주)

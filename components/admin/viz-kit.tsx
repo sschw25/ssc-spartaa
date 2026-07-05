@@ -10,9 +10,10 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const EASE = [0.16, 1, 0.3, 1] as const;
-const TRACK = '#ECECEF';
-const INK = '#0F172A';
-const MUTE = '#64748B';
+// 트랙/잉크색은 하드코딩 hex 대신 클래스 기반 — 다크모드에서 숫자·트랙이 사라지지 않게 한다.
+const TRACK_CLASS = 'stroke-[#ECECEF] dark:stroke-white/10';
+const INK_CLASS = 'fill-slate-900 dark:fill-slate-100';
+const MUTE_CLASS = 'fill-slate-500 dark:fill-slate-400';
 
 export type VizSegment = { label: string; value: number; color: string };
 
@@ -40,7 +41,7 @@ export function Gauge({
     <div className="flex flex-col items-center">
       <svg viewBox="0 0 200 200" style={{ width: size, height: size }}>
         <circle
-          cx={cx} cy={cy} r={r} fill="none" stroke={TRACK} strokeWidth={16}
+          cx={cx} cy={cy} r={r} fill="none" className={TRACK_CLASS} strokeWidth={16}
           strokeLinecap="round" strokeDasharray={`${SWEEP * C} ${C}`}
           transform={`rotate(135 ${cx} ${cy})`}
         />
@@ -53,7 +54,7 @@ export function Gauge({
           viewport={{ once: true, margin: '-40px' }}
           transition={{ duration: 1.2, ease: EASE }}
         />
-        <text x={cx} y={cy + 2} textAnchor="middle" style={{ fontSize: 30, fontWeight: 600, fill: INK, letterSpacing: '-0.02em' }} className="tabular-nums">
+        <text x={cx} y={cy + 2} textAnchor="middle" style={{ fontSize: 30, fontWeight: 600, letterSpacing: '-0.02em' }} className={`tabular-nums ${INK_CLASS}`}>
           {centerLabel ?? `${Math.round(clamped)}%`}
         </text>
       </svg>
@@ -83,7 +84,7 @@ export function Donut({
   let acc = 0;
   return (
     <svg viewBox="0 0 200 200" style={{ width: size, height: size }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke={TRACK} strokeWidth={thickness} />
+      <circle cx={cx} cy={cy} r={r} fill="none" className={TRACK_CLASS} strokeWidth={thickness} />
       {segments.map((seg, i) => {
         const f = seg.value / total;
         const startDeg = -90 + (acc / total) * 360;
@@ -102,12 +103,12 @@ export function Donut({
         );
       })}
       {centerTop && (
-        <text x={cx} y={centerBottom ? cy - 3 : cy + 4} textAnchor="middle" style={{ fontSize: 22, fontWeight: 600, fill: INK, letterSpacing: '-0.02em' }} className="tabular-nums">
+        <text x={cx} y={centerBottom ? cy - 3 : cy + 4} textAnchor="middle" style={{ fontSize: 22, fontWeight: 600, letterSpacing: '-0.02em' }} className={`tabular-nums ${INK_CLASS}`}>
           {centerTop}
         </text>
       )}
       {centerBottom && (
-        <text x={cx} y={cy + 17} textAnchor="middle" style={{ fontSize: 12, fontWeight: 500, fill: MUTE }}>
+        <text x={cx} y={cy + 17} textAnchor="middle" style={{ fontSize: 12, fontWeight: 500 }} className={MUTE_CLASS}>
           {centerBottom}
         </text>
       )}
@@ -122,7 +123,7 @@ export function VizLegend({ segments }: { segments: VizSegment[] }) {
       {segments.map((s) => (
         <div key={s.label} className="flex items-center gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
-          <span className="text-[12px] font-medium text-slate-600">
+          <span className="text-[12px] font-medium text-slate-600 dark:text-slate-300">
             {s.label} <b className="tabular-nums font-semibold" style={{ color: s.color }}>{s.value}</b>
           </span>
         </div>
@@ -142,7 +143,7 @@ export function CompareBar({ label, value, max = 100, color, suffix = '%', delay
         <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{label}</span>
         <span className="text-[13px] font-semibold tabular-nums" style={{ color }}>{value}{suffix}</span>
       </div>
-      <div className="h-2.5 rounded-full overflow-hidden" style={{ background: TRACK }}>
+      <div className="h-2.5 rounded-full overflow-hidden bg-[#ECECEF] dark:bg-white/10">
         <motion.div
           className="h-full rounded-full" style={{ backgroundColor: color }}
           initial={{ width: 0 }} whileInView={{ width: `${pct}%` }}

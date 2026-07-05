@@ -125,16 +125,16 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
               <p className="mt-1 text-[16px] font-semibold text-slate-900 dark:text-slate-100">{totals.yesterdayAbsences}명</p>
             </div>
             <div className="rounded-2xl bg-amber-500/[0.08] px-3 py-2.5">
-              <p className="text-[11px] font-medium text-amber-700 flex items-center gap-1"><TrendingDown className="w-3 h-3" /> 이탈 급증</p>
-              <p className="mt-1 text-[16px] font-semibold text-amber-700">{totals.leftSpikes}명</p>
+              <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1"><TrendingDown className="w-3 h-3" /> 이탈 급증</p>
+              <p className="mt-1 text-[16px] font-semibold text-amber-700 dark:text-amber-400">{totals.leftSpikes}명</p>
             </div>
             <div className="rounded-2xl bg-orange-500/[0.08] px-3 py-2.5">
-              <p className="text-[11px] font-medium text-orange-700 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> 연속 결석</p>
-              <p className="mt-1 text-[16px] font-semibold text-orange-700">{totals.consecutiveAbsences}명</p>
+              <p className="text-[11px] font-medium text-orange-700 dark:text-orange-400 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> 연속 결석</p>
+              <p className="mt-1 text-[16px] font-semibold text-orange-700 dark:text-orange-400">{totals.consecutiveAbsences}명</p>
             </div>
             <div className="rounded-2xl bg-red-500/[0.08] px-3 py-2.5">
-              <p className="text-[11px] font-medium text-red-700 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> 위험 밴드</p>
-              <p className="mt-1 text-[16px] font-semibold text-red-700">
+              <p className="text-[11px] font-medium text-red-700 dark:text-red-400 flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> 위험 밴드</p>
+              <p className="mt-1 text-[16px] font-semibold text-red-700 dark:text-red-400">
                 {totals.riskBand}명 {totals.riskBandNew > 0 && <span className="text-[11px] font-semibold">(신규 {totals.riskBandNew})</span>}
               </p>
             </div>
@@ -143,12 +143,12 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
           {/* 연속 결석 명단 */}
           {allConsecutive.length > 0 && (
             <div>
-              <p className="text-[12px] font-semibold text-orange-700 mb-1.5">연속 결석</p>
+              <p className="text-[12px] font-semibold text-orange-700 dark:text-orange-400 mb-1.5">연속 결석</p>
               <NameChips
                 entries={allConsecutive}
                 onSelectStudentId={onSelectStudentId}
                 renderSuffix={(e: ConsecutiveAbsenceEntry) => (
-                  <span className="text-orange-600">· {getCampusLabel(e.campus)} · {e.consecutiveDays}일째</span>
+                  <span className="text-orange-600 dark:text-orange-400">· {getCampusLabel(e.campus)} · {e.consecutiveDays}일째</span>
                 )}
               />
             </div>
@@ -157,12 +157,12 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
           {/* 이탈 급증 명단 */}
           {allSpikes.length > 0 && (
             <div>
-              <p className="text-[12px] font-semibold text-amber-700 mb-1.5">이탈 급증</p>
+              <p className="text-[12px] font-semibold text-amber-700 dark:text-amber-400 mb-1.5">이탈 급증</p>
               <NameChips
                 entries={allSpikes}
                 onSelectStudentId={onSelectStudentId}
                 renderSuffix={(e: StreakBrokenEntry) => (
-                  <span className="text-amber-600">· {getCampusLabel(e.campus)} · {e.recentLeftDays}일(이전 {e.priorLeftDays}일)</span>
+                  <span className="text-amber-600 dark:text-amber-400">· {getCampusLabel(e.campus)} · {e.recentLeftDays}일(이전 {e.priorLeftDays}일)</span>
                 )}
               />
             </div>
@@ -185,15 +185,15 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
           {/* 위험 밴드 명단 */}
           {allRisk.length > 0 && (
             <div>
-              <p className="text-[12px] font-semibold text-red-700 mb-1.5">위험 밴드</p>
+              <p className="text-[12px] font-semibold text-red-700 dark:text-red-400 mb-1.5">위험 밴드</p>
               <NameChips
                 entries={allRisk}
                 onSelectStudentId={onSelectStudentId}
                 renderSuffix={(e: RiskBandEntry) => (
-                  <span className="flex items-center gap-1 text-red-600">
+                  <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
                     · {getCampusLabel(e.campus)} · {e.score}점
                     {e.isNew && (
-                      <span className="ml-0.5 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-700">신규</span>
+                      <span className="ml-0.5 rounded-full bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-700 dark:text-red-400">신규</span>
                     )}
                   </span>
                 )}

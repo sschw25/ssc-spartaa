@@ -340,7 +340,7 @@ export default function AdminLeaveRequestsPage() {
                           </span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{campusLabel(ev.student.campus)} · {ev.student.manager || '담당 없음'}
                             {ev.request.urgent && <span className="ml-1.5 rounded bg-red-50 dark:bg-red-500/10 text-red-600 px-1 py-0.5 text-[9px] font-black">긴급</span>}
-                            {ev.request.usedCoupon && <span className="ml-1.5 rounded bg-violet-50 dark:bg-violet-500/10 text-violet-600 px-1 py-0.5 text-[9px] font-black">쿠폰추가</span>}
+                            {ev.request.usedCoupon && <span className="ml-1.5 rounded bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 px-1 py-0.5 text-[9px] font-black">쿠폰추가</span>}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">{statusLabel}<ChevronDown className={`w-3.5 h-3.5 text-slate-300 dark:text-slate-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`} /></div>

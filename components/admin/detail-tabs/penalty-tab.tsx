@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Loader2, Plus, Trash2, Shield, TrendingUp, TrendingDown } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Student } from '@/lib/types/student';
@@ -14,6 +15,7 @@ interface PenaltyTabProps {
 const TODAY = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
 
 export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
+  const confirm = useConfirm();
   const [date, setDate] = useState(TODAY);
   const [points, setPoints] = useState(1);
   const [reason, setReason] = useState('');
@@ -57,6 +59,12 @@ export function PenaltyTab({ student, onUpdate }: PenaltyTabProps) {
   };
 
   const handleDelete = async (penaltyId: string) => {
+    if (!(await confirm({
+      title: '이 벌점 · 상점 기록을 삭제할까요?',
+      description: '누적 점수에서도 함께 제외됩니다.',
+      tone: 'danger',
+      confirmText: '삭제',
+    }))) return;
     setDeleting(penaltyId);
     try {
       const res = await fetch(

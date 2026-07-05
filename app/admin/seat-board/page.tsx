@@ -1096,6 +1096,12 @@ export default function SeatBoardPage() {
 
   async function clearPeriodOverrides() {
     if (!isDemoMode && !ensureEditableToday()) return;
+    if (!(await confirm({
+      title: '수동변경을 모두 초기화할까요?',
+      description: '오늘 수동으로 표시한 출결 마크가 모두 삭제됩니다.',
+      tone: 'danger',
+      confirmText: '초기화',
+    }))) return;
     if (isDemoMode) {
       setPeriodOverrides(new Map(demoSeatBoardData.periodOverrides));
       setPhoneNoSubmitMap(new Map(demoSeatBoardData.phoneNoSubmitMap));
