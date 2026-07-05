@@ -47,10 +47,10 @@ function EventCard({ event, onResponded }: { event: CampusEvent; onResponded: (i
 
   if (done) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3.5 border border-slate-100">
+      <div className="flex items-center gap-3 rounded-2xl bg-slate-50 dark:bg-white/5 px-4 py-3.5 border border-slate-100 dark:border-white/10">
         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-        <p className="text-xs font-bold text-slate-500">
-          <span className="font-black text-slate-700">{event.title}</span>{' '}
+        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span className="font-black text-slate-700 dark:text-slate-200">{event.title}</span>{' '}
           {doneStatus === 'accepted' ? '참여 신청 완료 — 행사 후 쿠폰이 지급돼요!' : '불참으로 응답했어요'}
         </p>
       </div>
@@ -58,20 +58,20 @@ function EventCard({ event, onResponded }: { event: CampusEvent; onResponded: (i
   }
 
   return (
-    <div className="rounded-2xl border border-[#D9E8FF] bg-[#F2F8FF] overflow-hidden">
+    <div className="rounded-2xl border border-[#D9E8FF] bg-[#F2F8FF] dark:border-[#0071E3]/25 dark:bg-[#0071E3]/10 overflow-hidden">
       <div className="flex items-start gap-3 px-4 py-3.5">
-        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-[#CFE4FF] text-[#0071E3]">
+        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-[#CFE4FF] text-[#0071E3] dark:bg-[#0071E3]/20 dark:text-blue-300">
           <CalendarHeart className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-900">
+          <p className="text-xs font-black text-slate-900 dark:text-slate-100">
             {event.title} · {dateLabel}{timeLabel} 참여하실래요?
           </p>
           {event.memo && (
-            <p className="text-[11px] font-semibold text-slate-500 mt-0.5 whitespace-pre-wrap break-words">{event.memo}</p>
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5 whitespace-pre-wrap break-words">{event.memo}</p>
           )}
           {(event.couponReward || 0) > 0 && (
-            <p className="text-[11px] font-bold text-[#0071E3] mt-1 inline-flex items-center gap-1">
+            <p className="text-[11px] font-bold text-[#0071E3] dark:text-blue-300 mt-1 inline-flex items-center gap-1">
               <Ticket className="w-3 h-3" /> 참여하면 행사 후 쿠폰 {event.couponReward}장 지급!
             </p>
           )}
@@ -85,7 +85,7 @@ function EventCard({ event, onResponded }: { event: CampusEvent; onResponded: (i
             disabled={submitting}
             onClick={() => submit('accepted')}
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black border transition active:scale-[0.98] ${
-              chosen === 'accepted' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700'
+              chosen === 'accepted' ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-200 text-slate-600 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 hover:border-emerald-300 hover:text-emerald-700 dark:hover:text-emerald-400'
             }`}
           >
             {submitting && chosen === 'accepted' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
@@ -96,7 +96,7 @@ function EventCard({ event, onResponded }: { event: CampusEvent; onResponded: (i
             disabled={submitting}
             onClick={() => submit('declined')}
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black border transition active:scale-[0.98] ${
-              chosen === 'declined' ? 'bg-slate-500 border-slate-500 text-white' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+              chosen === 'declined' ? 'bg-slate-500 border-slate-500 text-white' : 'bg-white border-slate-200 text-slate-600 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/20'
             }`}
           >
             {submitting && chosen === 'declined' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}

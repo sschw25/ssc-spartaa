@@ -2,7 +2,7 @@
 
 import React, { Suspense, useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { AlertCircle, CalendarClock, CheckCircle2, ClipboardList, Loader2, LogIn, LogOut, Coffee } from 'lucide-react';
+import { AlertCircle, CalendarClock, CheckCircle2, Circle, ClipboardList, Loader2, LogIn, LogOut, Coffee } from 'lucide-react';
 
 type Phase = 'loading' | 'need-login' | 'select-action' | 'processing' | 'checked-in' | 'checked-out' | 'outing' | 'return' | 'error';
 
@@ -176,7 +176,8 @@ function AttendInner() {
             
             <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#F5F5F7] px-3.5 py-1.5 text-xs font-bold text-[#1D1D1F]">
               <span className="text-[#86868B]">현재 상태:</span>
-              <span>{checkedIn ? '공부 중 🟢' : '외출·미등원 🔴'}</span>
+              <Circle className={`size-2 ${checkedIn ? 'fill-emerald-500 text-emerald-500' : 'fill-red-500 text-red-500'}`} aria-hidden />
+              <span>{checkedIn ? '공부 중' : '외출·미등원'}</span>
             </div>
 
             <p className="mt-4 text-xs text-[#86868B] leading-5">원하는 행동 버튼을 눌러서<br />출결 상태를 기록해 주세요.</p>

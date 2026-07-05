@@ -238,7 +238,7 @@ export function StudentLayout({
                     exit={{ opacity: 0, y: -10, scale: 0.94 }}
                     transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <span className="max-w-[42vw] truncate text-[13px] font-black tracking-tight text-slate-900">
+                    <span className="max-w-[42vw] truncate text-[13px] font-black tracking-tight text-slate-900 dark:text-slate-100">
                       {student.name}
                     </span>
                   </motion.div>
@@ -249,7 +249,7 @@ export function StudentLayout({
                 <button
                   type="button"
                   onClick={() => { setMobileMenuOpen((open) => !open); setNotificationPanelOpen(false); }}
-                  className="grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+                  className="glass-strong grid h-12 w-12 place-items-center rounded-2xl text-[#0071E3] transition-colors active:bg-[#0071E3]/10"
                   aria-expanded={mobileMenuOpen}
                   aria-label="학습 메뉴 열기"
                 >
@@ -259,7 +259,7 @@ export function StudentLayout({
                 <AnimatePresence>
                 {mobileMenuOpen && (
                   <motion.div
-                    className="mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                    className="glass-strong mt-2 flex max-h-[calc(100dvh-88px)] w-[min(82vw,320px)] flex-col overflow-y-auto overscroll-contain rounded-3xl p-3"
                     style={{ transformOrigin: 'top left' }}
                     initial={{ opacity: 0, scale: 0.96, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -320,7 +320,7 @@ export function StudentLayout({
                 <button
                   type="button"
                   onClick={() => { setNotificationPanelOpen((open) => !open); setMobileMenuOpen(false); }}
-                  className="relative grid h-12 w-12 place-items-center rounded-2xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 text-[#0071E3] shadow-[0_10px_30px_rgba(15,23,42,0.14)] backdrop-blur-xl transition-colors active:bg-[#0071E3]/10"
+                  className="glass-strong relative grid h-12 w-12 place-items-center rounded-2xl text-[#0071E3] transition-colors active:bg-[#0071E3]/10"
                   aria-expanded={notificationPanelOpen}
                   aria-label={`알림 열기, 현재 ${notificationCount}개`}
                 >
@@ -335,7 +335,7 @@ export function StudentLayout({
                 <AnimatePresence>
                 {notificationPanelOpen && (
                   <motion.div
-                    className="mt-2 w-[min(86vw,360px)] rounded-3xl border border-slate-200/80 dark:border-white/10 bg-white/95 dark:bg-[#1c1c1e]/95 p-3 shadow-[0_18px_50px_rgba(15,23,42,0.18)] backdrop-blur-xl"
+                    className="glass-strong mt-2 w-[min(86vw,360px)] rounded-3xl p-3"
                     style={{ transformOrigin: 'top right' }}
                     initial={{ opacity: 0, scale: 0.96, y: -8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -345,7 +345,7 @@ export function StudentLayout({
                     <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
                       <div>
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Notifications</p>
-                        <p className="mt-0.5 text-sm font-black text-slate-900">학생 알림</p>
+                        <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-slate-100">학생 알림</p>
                       </div>
                       <button
                         type="button"
@@ -379,7 +379,7 @@ export function StudentLayout({
                                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${toneClass.label}`}>{notification.label}</span>
                                     <span className="shrink-0 text-[10px] font-bold text-slate-400">{formatNotificationDate(notification.date)}</span>
                                   </span>
-                                  <span className="mt-1.5 block text-xs font-black leading-4 text-slate-900">{notification.title}</span>
+                                  <span className="mt-1.5 block text-xs font-black leading-4 text-slate-900 dark:text-slate-100">{notification.title}</span>
                                   <span className="mt-1 block text-[10px] font-semibold leading-4 text-slate-500">{truncateNotificationText(notification.body, 70)}</span>
                                 </span>
                               </div>
@@ -433,7 +433,7 @@ export function StudentLayout({
                           {item.label}
                         </span>
                         {item.tabId === 'student-notifications' && notificationCount > 0 && (
-                          <span className="absolute right-2.5 top-1.5 grid h-3 min-w-3 place-items-center rounded-full bg-red-500 px-[3px] text-[7px] font-semibold leading-none text-white">
+                          <span className="absolute right-1.5 top-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white">
                             {notificationCount > 9 ? '9+' : notificationCount}
                           </span>
                         )}

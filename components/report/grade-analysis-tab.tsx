@@ -293,7 +293,7 @@ export function GradeAnalysisTab({
                       <div className="min-w-0 flex items-center gap-1.5">
                         <span className="font-extrabold text-slate-700 bg-slate-100 dark:bg-white/10 dark:text-slate-300 px-1.5 py-0.5 rounded-lg shrink-0">{g.subject}</span>
                         <span className="text-slate-500 font-semibold truncate max-w-[80px]">{g.testName}</span>
-                        {g.source === 'student' && <span className="shrink-0 text-[7px] font-black text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.5 rounded-full">직접</span>}
+                        {g.source === 'student' && <span className="shrink-0 text-[10px] font-black text-[#0071E3] bg-[#0071E3]/10 px-1.5 py-0.5 rounded-full leading-none">직접</span>}
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="font-black text-[#0071E3]">{g.score}점</span>

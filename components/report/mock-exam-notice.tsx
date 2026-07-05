@@ -47,10 +47,10 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
 
   if (done) {
     return (
-      <div className="flex items-center gap-3 rounded-2xl bg-slate-50 px-4 py-3.5 border border-slate-100">
+      <div className="flex items-center gap-3 rounded-2xl bg-slate-50 dark:bg-white/5 px-4 py-3.5 border border-slate-100 dark:border-white/10">
         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-        <p className="text-xs font-bold text-slate-500">
-          <span className="font-black text-slate-700">{exam.name}</span>{' '}
+        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+          <span className="font-black text-slate-700 dark:text-slate-200">{exam.name}</span>{' '}
           {doneAbsent ? '불참 신청 접수 — 관리자 승인 대기' : '응답 완료'}
         </p>
       </div>
@@ -58,16 +58,16 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
   }
 
   return (
-    <div className="rounded-2xl border border-[#E8F0FE] bg-[#F0F4FF] overflow-hidden">
+    <div className="rounded-2xl border border-[#E8F0FE] bg-[#F0F4FF] dark:border-[#0071E3]/25 dark:bg-[#0071E3]/10 overflow-hidden">
       <div className="flex items-start gap-3 px-4 py-3.5">
-        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-[#DCE7FF] text-[#1D4ED8]">
+        <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-xl bg-[#DCE7FF] text-[#1D4ED8] dark:bg-[#0071E3]/20 dark:text-blue-300">
           <ClipboardCheck className="w-4 h-4" />
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-black text-slate-900">
+          <p className="text-xs font-black text-slate-900 dark:text-slate-100">
             {exam.name} · {exam.date} 참여 여부를 알려주세요
           </p>
-          <p className="text-[11px] font-semibold text-slate-500 mt-0.5">
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             참여 여부를 선택해 주세요. 불참은 사유를 적어 신청하면 선생님이 확인 후 처리해요.
           </p>
         </div>
@@ -82,7 +82,7 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black border transition active:scale-[0.98] ${
               status === 'attending'
                 ? 'bg-emerald-600 border-emerald-600 text-white'
-                : 'bg-white border-slate-200 text-slate-600 hover:border-emerald-300 hover:text-emerald-700'
+                : 'bg-white border-slate-200 text-slate-600 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 hover:border-emerald-300 hover:text-emerald-700 dark:hover:text-emerald-400'
             }`}
           >
             {submitting && status === 'attending'
@@ -97,7 +97,7 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
             className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black border transition active:scale-[0.98] ${
               status === 'absent'
                 ? 'bg-red-500 border-red-500 text-white'
-                : 'bg-white border-slate-200 text-slate-600 hover:border-red-300 hover:text-red-600'
+                : 'bg-white border-slate-200 text-slate-600 dark:bg-white/5 dark:border-white/10 dark:text-slate-300 hover:border-red-300 hover:text-red-600 dark:hover:text-red-400'
             }`}
           >
             {submitting && status === 'absent'
@@ -115,7 +115,7 @@ function ExamCard({ exam, onResponded }: { exam: MockExam; onResponded: (id: str
               placeholder="불참 사유를 반드시 적어주세요"
               rows={2}
               maxLength={200}
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 focus:border-red-300 focus:outline-none resize-none"
+              className="w-full rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c1c1e] px-3 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:border-red-300 focus:outline-none resize-none"
             />
             <button
               type="button"

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildWelcomeStepIds, type WelcomeStepId } from '@/lib/onboarding';
 import { getCampusLabel } from '@/lib/meal';
@@ -19,6 +19,8 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
   const stepIds = useMemo(() => buildWelcomeStepIds(showMock), [showMock]);
   const [idx, setIdx] = useState(0);
   const [busy, setBusy] = useState(false);
+  // 터치 스와이프 — 시작 좌표를 기억해 touchend에서 델타로 좌/우 이동 판정.
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const stepContent: Record<WelcomeStepId, { title: string; body: string }> = {
     welcome: { title: `${name}님, 환영해요!`, body: `${getCampusLabel(campus)} 센터${enrollStartDate ? ` · 이용 시작일 ${enrollStartDate}` : ''}. SSC스파르타와 함께 시작해요.` },
@@ -46,22 +48,52 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
     }
   }
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const start = touchStart.current;
+    touchStart.current = null;
+    if (!start || busy) return;
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
+    // 수평 이동이 충분히 크고(48px+), 세로 스크롤보다 뚜렷할 때만 단계 이동.
+    if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0 && !isLast) setIdx((v) => v + 1);
+    else if (dx > 0 && idx > 0) setIdx((v) => v - 1);
+  };
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-sm rounded-3xl bg-white/80 backdrop-blur p-6 shadow-sm">
+    <div className="ios-app-bg min-h-screen flex flex-col items-center justify-center p-6">
+      <div
+        className="w-full max-w-sm rounded-3xl border border-black/5 bg-white dark:border-white/10 dark:bg-[#1c1c1e] p-6 shadow-sm"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         <div className="flex justify-end">
-          <button onClick={finish} className="text-xs text-slate-500" disabled={busy}>건너뛰기</button>
+          <button onClick={finish} className="text-xs text-slate-500 dark:text-slate-400" disabled={busy}>건너뛰기</button>
         </div>
-        <h2 className="text-xl font-semibold mt-2">{current.title}</h2>
-        <p className="text-sm text-slate-900/80 mt-3 leading-relaxed">{current.body}</p>
+        <h2 className="text-xl font-semibold mt-2 text-slate-900 dark:text-slate-100">{current.title}</h2>
+        <p className="text-sm text-slate-900/80 dark:text-slate-300 mt-3 leading-relaxed">{current.body}</p>
         <div className="flex gap-1.5 justify-center mt-6">
           {stepIds.map((s, i) => (
-            <span key={s} className={`h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-[#0071E3]' : 'w-1.5 bg-[#D2D2D7]'}`} />
+            <button
+              key={s}
+              type="button"
+              onClick={() => setIdx(i)}
+              disabled={busy}
+              aria-label={`${i + 1}단계로 이동`}
+              aria-current={i === idx ? 'step' : undefined}
+              className="p-1 -m-0.5"
+            >
+              <span className={`block h-1.5 rounded-full transition-all ${i === idx ? 'w-4 bg-[#0071E3]' : 'w-1.5 bg-[#D2D2D7] dark:bg-white/20'}`} />
+            </button>
           ))}
         </div>
         <div className="flex gap-2 mt-6">
           {idx > 0 && (
-            <button onClick={() => setIdx((v) => v - 1)} className="flex-1 rounded-full py-2.5 text-sm bg-[#F5F5F7]" disabled={busy}>이전</button>
+            <button onClick={() => setIdx((v) => v - 1)} className="flex-1 rounded-full py-2.5 text-sm bg-[#F5F5F7] dark:bg-white/10 dark:text-slate-200" disabled={busy}>이전</button>
           )}
           {!isLast ? (
             <button onClick={() => setIdx((v) => v + 1)} className="flex-1 rounded-full py-2.5 text-sm bg-[#0071E3] text-white">다음</button>

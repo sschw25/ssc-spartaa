@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from 'react';
 import { toast } from 'sonner';
-import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles, CalendarDays, Presentation, PenLine, PartyPopper, Target, AlertTriangle } from 'lucide-react';
+import { Flame, Loader2, CheckCircle2, Circle, Moon, Smartphone, ChevronLeft, ListChecks, Timer, BookOpen, Sparkles, CalendarDays, Presentation, PenLine, PartyPopper, Target, AlertTriangle, RefreshCw } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { MissionsCard } from '@/components/report/missions-card';
@@ -137,7 +137,7 @@ const PHONE_LABEL: Record<string, string> = {
   off_hold: '전원끄고 소지',
 };
 
-const SECTION_SURFACE = 'rounded-xl border border-black/5 bg-white p-5 shadow-sm sm:p-6';
+const SECTION_SURFACE = 'rounded-xl border border-black/5 bg-white p-5 shadow-sm sm:p-6 dark:border-white/10 dark:bg-[#1c1c1e]';
 
 // embedded: 리포트 탭 안에서 렌더될 때 — 풀스크린 배경/뒤로가기 없이 섹션만 출력한다.
 // onGoToExchange: '쿠폰 교환소' 탭으로 이동(리포트 임베드 시 setActiveTab 연결).
@@ -181,7 +181,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
         }
       }
     } catch {
-      // noop
+      // 실패 시 data가 null로 남아 아래 로드 실패 상태(재시도 버튼)로 표시된다.
     }
   }, []);
 
@@ -193,6 +193,13 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
     })();
     return () => { cancelled = true; };
   }, [load]);
+
+  // 로드 실패 상태에서 재시도 — 스피너를 다시 띄우고 재요청.
+  const retryLoad = async () => {
+    setLoading(true);
+    await load();
+    setLoading(false);
+  };
 
   const togglePlanEntry = async (entry: PlanEntry) => {
     if (togglingId) return;
@@ -223,9 +230,11 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           setJustCompletedId(entry.id);
           setTimeout(() => setJustCompletedId((cur) => (cur === entry.id ? null : cur)), 900);
         }
+      } else {
+        toast.error(json?.message || '계획 완료 처리에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 계획을 저장하지 못했어요.');
     } finally {
       setTogglingId(null);
     }
@@ -256,11 +265,11 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           return next;
         });
         toast.success('진행량을 기록했어요.');
-      } else if (json?.message) {
-        toast.error(json.message);
+      } else {
+        toast.error(json?.message || '진행량 기록에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 진행량을 기록하지 못했어요.');
     } finally {
       setSavingDeadlineId(null);
     }
@@ -284,11 +293,11 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
       if (res.ok && json.success) {
         await load();
         toast.success('오늘 컨디션을 기록했어요.');
-      } else if (json?.message) {
-        toast.error(json.message);
+      } else {
+        toast.error(json?.message || '컨디션 기록에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 컨디션을 기록하지 못했어요.');
     } finally {
       setChecklistSubmitting(false);
     }
@@ -315,11 +324,11 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           actionPlan: '',
         }));
         toast.success('오답분석을 제출했어요.');
-      } else if (json?.message) {
-        toast.error(json.message);
+      } else {
+        toast.error(json?.message || '오답분석 제출에 실패했어요. 잠시 후 다시 시도해 주세요.');
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 오답분석을 제출하지 못했어요.');
     } finally {
       setMockReviewSubmitting(false);
     }
@@ -350,7 +359,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
         await load();
       }
     } catch {
-      // noop
+      toast.error('네트워크 오류로 연속출석을 잇지 못했어요.');
     } finally {
       setRepairing(false);
     }
@@ -359,7 +368,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
   if (loading) {
     if (embedded) {
       return (
-        <div className="flex items-center justify-center rounded-[28px] border border-slate-100 bg-white/70 py-16">
+        <div className="flex items-center justify-center rounded-[28px] border border-slate-100 bg-white/70 py-16 dark:border-white/10 dark:bg-[#1c1c1e]/70">
           <Loader2 className="w-6 h-6 text-[#0071E3] animate-spin" />
         </div>
       );
@@ -367,6 +376,33 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
     return (
       <div className="ios-app-bg min-h-screen flex items-center justify-center">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin" />
+      </div>
+    );
+  }
+
+  // 허브 로드 실패 — "0일 연속출석" 같은 기본값(거짓 데이터)을 보여주는 대신 실패 상태 + 재시도 버튼.
+  if (!data) {
+    const errorCard = (
+      <div className="flex flex-col items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-5 py-12 text-center dark:border-red-500/25 dark:bg-red-500/10">
+        <AlertTriangle className="h-6 w-6 text-red-500" />
+        <p className="mt-1 text-sm font-semibold text-slate-900 dark:text-slate-100">미션 허브를 불러오지 못했어요</p>
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">네트워크 상태를 확인한 뒤 다시 시도해 주세요.</p>
+        <button
+          type="button"
+          onClick={retryLoad}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white transition active:scale-95 dark:bg-white/10"
+        >
+          <RefreshCw className="h-3.5 w-3.5" />
+          다시 시도
+        </button>
+      </div>
+    );
+    if (embedded) {
+      return <div className="w-full">{errorCard}</div>;
+    }
+    return (
+      <div className="ios-app-bg min-h-screen px-4 py-6 sm:px-6">
+        <div className="mx-auto w-full max-w-[680px]">{errorCard}</div>
       </div>
     );
   }
@@ -392,27 +428,27 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           {!embedded && (
             <a
               href={`/report/${studentId}?audience=student`}
-              className="mb-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 transition hover:text-slate-600"
+              className="mb-2 inline-flex w-fit items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 transition hover:text-slate-600 dark:hover:text-slate-300"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
               학생 홈으로 돌아가기
             </a>
           )}
-          <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
+          <div className="inline-flex items-center gap-2 rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
             <Flame className="h-3.5 w-3.5" />
             Today Missions
           </div>
           {/* embedded(리포트 탭 내부)에서는 h1 중복을 피해 h2 사용 */}
           {embedded ? (
-            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 md:text-4xl">
               {studentName}님, 오늘도 화이팅이에요
             </h2>
           ) : (
-            <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 md:text-4xl">
+            <h1 className="mt-3 text-2xl font-black tracking-tight text-slate-900 dark:text-slate-100 md:text-4xl">
               {studentName}님, 오늘도 화이팅이에요
             </h1>
           )}
-          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500">
+          <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-slate-500 dark:text-slate-400">
             연속출석, 오늘 계획, 아침 점검표, 쿠폰 미션까지 오늘 할 일을 한곳에 모았습니다.
           </p>
         </header>
@@ -422,30 +458,30 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           <div className="flex items-center gap-4">
             <div className="relative flex h-16 w-16 shrink-0 items-center justify-center">
               <Flame
-                className={`h-14 w-14 drop-shadow-[0_2px_6px_rgba(249,115,22,0.35)] ${streakCurrent > 0 ? 'text-orange-500 animate-streak-flame' : 'text-slate-300'}`}
+                className={`h-14 w-14 drop-shadow-[0_2px_6px_rgba(249,115,22,0.35)] ${streakCurrent > 0 ? 'text-orange-500 animate-streak-flame' : 'text-slate-300 dark:text-slate-600'}`}
                 fill={streakCurrent > 0 ? 'currentColor' : 'none'}
                 strokeWidth={streakCurrent > 0 ? 1.5 : 1.8}
               />
             </div>
             <div className="min-w-0 flex-1">
               <p className="flex items-baseline gap-1.5">
-                <span className="text-3xl font-semibold tabular-nums text-slate-900">{streakCurrent}</span>
-                <span className="text-sm font-semibold text-slate-500">일 연속 출석</span>
+                <span className="text-3xl font-semibold tabular-nums text-slate-900 dark:text-slate-100">{streakCurrent}</span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">일 연속 출석</span>
               </p>
-              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold text-slate-400">
+              <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                 {streakCurrent > 0 ? '오늘도 이어가는 중이에요' : '오늘 등원하면 연속출석이 시작돼요'}
                 {typeof streakBest === 'number' && streakBest > streakCurrent && (
                   <span className="text-orange-500">· 최고 기록 {streakBest}일</span>
                 )}
               </p>
-              <p className="mt-1 text-xs font-semibold text-slate-400">일요일은 센터 휴무일이라 연속출석에 포함하지 않아요</p>
+              <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-500">일요일은 센터 휴무일이라 연속출석에 포함하지 않아요</p>
             </div>
           </div>
           {streakRepair && (
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200/70 bg-orange-50 px-3.5 py-3">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200/70 bg-orange-50 dark:border-orange-500/25 dark:bg-orange-500/10 px-3.5 py-3">
               <span className="min-w-0 flex-1">
-                <span className="block text-xs font-semibold text-slate-900">아깝게 끊긴 연속출석이 있어요</span>
-                <span className="mt-0.5 block text-[11px] font-semibold text-slate-500">
+                <span className="block text-xs font-semibold text-slate-900 dark:text-slate-100">아깝게 끊긴 연속출석이 있어요</span>
+                <span className="mt-0.5 block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                   쿠폰 {streakRepair.cost}개로 이으면 {streakRepair.restoredStreak}일 연속으로 복구돼요 · 보유 쿠폰 {coupons}개
                 </span>
               </span>
@@ -464,14 +500,14 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
 
         {/* 2. 아침 자가 점검표 (휴대폰 제출 · 수면) — 하루 시작 루틴이라 계획보다 먼저 */}
         <section className={SECTION_SURFACE}>
-          <h2 className="text-sm font-semibold text-slate-800">아침 자가 점검표</h2>
+          <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">아침 자가 점검표</h2>
           {checklist ? (
             <div className="mt-3 flex flex-wrap gap-3">
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
                 <Moon className="h-3.5 w-3.5 text-slate-400" />
                 수면 {checklist.sleep_hours}시간
               </span>
-              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
                 <Smartphone className="h-3.5 w-3.5 text-slate-400" />
                 휴대폰 {PHONE_LABEL[checklist.phone_status || (checklist.phone_submitted ? 'submitted' : 'locker')] || '미제출'}
               </span>
@@ -479,12 +515,12 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           ) : (
             <form onSubmit={submitChecklist} className="mt-3 flex flex-col gap-3">
               <div className="flex items-center justify-between gap-2">
-                <label htmlFor="hub-sleep-hours" className="text-xs font-semibold text-slate-600">어젯밤 수면 시간</label>
+                <label htmlFor="hub-sleep-hours" className="text-xs font-semibold text-slate-600 dark:text-slate-300">어젯밤 수면 시간</label>
                 <select
                   id="hub-sleep-hours"
                   value={checklistForm.sleepHours}
                   onChange={(e) => setChecklistForm((f) => ({ ...f, sleepHours: Number(e.target.value) }))}
-                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 focus:border-[#0071E3] focus:outline-none"
+                  className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
                 >
                   {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map((h) => (
                     <option key={h} value={h}>{h}시간</option>
@@ -492,7 +528,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <span className="text-xs font-semibold text-slate-600">등원 시 휴대폰</span>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">등원 시 휴대폰</span>
                 <div className="grid grid-cols-3 gap-1.5">
                   {(['submitted', 'locker', 'off_hold'] as const).map((val) => (
                     <button
@@ -502,7 +538,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                       className={`rounded-lg px-1.5 py-2 text-[11px] font-semibold border transition active:scale-95 leading-tight ${
                         checklistForm.phoneStatus === val
                           ? 'border-[#0071E3] bg-[#0071E3]/[0.06] text-[#0071E3]'
-                          : 'border-slate-200 bg-white text-slate-500'
+                          : 'border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400'
                       }`}
                     >
                       {PHONE_LABEL[val]}
@@ -515,14 +551,14 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                     onChange={(e) => setChecklistForm((f) => ({ ...f, phoneReason: e.target.value }))}
                     rows={2}
                     placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요"
-                    className="w-full resize-none rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-300 focus:border-amber-400 focus:outline-none"
+                    className="w-full resize-none rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-amber-400 focus:outline-none"
                   />
                 )}
               </div>
               <button
                 type="submit"
                 disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
-                className="w-full rounded-lg bg-slate-900 py-2.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
+                className="w-full rounded-lg bg-slate-900 dark:bg-white/10 py-2.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-50"
               >
                 {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
               </button>
@@ -533,15 +569,15 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
         {/* 3. 오늘 계획(진도) */}
         <section className={SECTION_SURFACE}>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold text-slate-800">오늘 계획</h2>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">오늘 계획</h2>
             {entries.length > 0 && (
-              <span className="rounded-full bg-[#0071E3]/10 px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
+              <span className="rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
                 {completedCount}/{entries.length} 완료
               </span>
             )}
           </div>
           {entries.length === 0 && deadlineGoals.length === 0 ? (
-            <p className="mt-3 text-xs font-semibold text-slate-400">오늘 배정된 진도 항목이 없어요.</p>
+            <p className="mt-3 text-xs font-semibold text-slate-400 dark:text-slate-500">오늘 배정된 진도 항목이 없어요.</p>
           ) : (
             <div className="mt-3 flex flex-col gap-2">
               {entries.map((entry) => (
@@ -551,23 +587,23 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                   onClick={() => togglePlanEntry(entry)}
                   disabled={togglingId === entry.id}
                   className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 text-left transition active:scale-[0.99] ${
-                    entry.isCompleted ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
+                    entry.isCompleted ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/5'
                   } ${justCompletedId === entry.id ? 'animate-scale-in-up' : ''}`}
                 >
                   <span className="shrink-0">
                     {togglingId === entry.id ? (
-                      <Loader2 className="h-5 w-5 animate-spin text-slate-300" />
+                      <Loader2 className="h-5 w-5 animate-spin text-slate-300 dark:text-slate-600" />
                     ) : entry.isCompleted ? (
                       <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                     ) : (
-                      <Circle className="h-5 w-5 text-slate-300" />
+                      <Circle className="h-5 w-5 text-slate-300 dark:text-slate-600" />
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-1.5">
-                      <span className="truncate text-xs font-semibold text-slate-900">{entry.subject} · {entry.title}</span>
+                      <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{entry.subject} · {entry.title}</span>
                     </span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                       <span>{entry.type}</span>
                       <span>·</span>
                       <span>{entry.dailyLabel}</span>
@@ -586,7 +622,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                   <div
                     key={`dl_${goal.id}`}
                     className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 ${
-                      done || metToday ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200 bg-white'
+                      done || metToday ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/5'
                     }`}
                   >
                     <span className="shrink-0">
@@ -598,10 +634,10 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-xs font-semibold text-slate-900">{goal.subject} · {goal.title}</span>
-                        <span className="rounded-full bg-[#0071E3]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#0071E3] break-keep">기간목표</span>
+                        <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{goal.subject} · {goal.title}</span>
+                        <span className="rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-1.5 py-0.5 text-[10px] font-semibold text-[#0071E3] break-keep">기간목표</span>
                       </span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
+                      <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                         {done ? (
                           <span className="text-emerald-600">목표 달성</span>
                         ) : metToday ? (
@@ -620,7 +656,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                         type="button"
                         onClick={() => saveDeadlineProgress(goal, Math.min(goal.targetAmount, Math.round(goal.expectedAmount)))}
                         disabled={saving}
-                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-semibold text-white transition active:scale-95 disabled:opacity-40 break-keep"
+                        className="shrink-0 inline-flex items-center gap-1 rounded-full bg-slate-900 dark:bg-white/10 px-3 py-1.5 text-[11px] font-semibold text-white transition active:scale-95 disabled:opacity-40 break-keep"
                       >
                         {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                         오늘 완료
@@ -638,9 +674,9 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           <section className={SECTION_SURFACE}>
             <div className="flex items-center gap-2">
               <Target className="h-4 w-4 text-[#0071E3]" />
-              <h2 className="text-sm font-semibold text-slate-800 break-keep">기간 목표</h2>
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 break-keep">기간 목표</h2>
             </div>
-            <p className="mt-1 text-[11px] font-semibold text-slate-400 break-keep">
+            <p className="mt-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500 break-keep">
               기간 안에 끝내면 되는 목표예요. 요일에 얽매이지 말고 원하는 만큼 몰아서 해도 좋아요.
             </p>
 
@@ -648,11 +684,11 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
             {deadlineSummary && (
               <div
                 className={`mt-3 rounded-xl border px-4 py-3.5 ${
-                  deadlineSummary.metToday ? 'border-emerald-200 bg-emerald-50' : 'border-amber-200/70 bg-amber-50'
+                  deadlineSummary.metToday ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10' : 'border-amber-200/70 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10'
                 }`}
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-bold text-slate-900 break-keep">오늘 기간 목표 집계</span>
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100 break-keep">오늘 기간 목표 집계</span>
                   {deadlineSummary.metToday ? (
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500 px-2.5 py-1 text-[11px] font-semibold text-white break-keep">
                       <CheckCircle2 className="h-3.5 w-3.5" />
@@ -662,7 +698,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                     <span className="rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-semibold text-white break-keep">오늘치 미달</span>
                   )}
                 </div>
-                <p className="mt-1.5 text-[11px] font-semibold text-slate-600 tabular-nums">
+                <p className="mt-1.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
                   진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
                 </p>
                 <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] font-semibold break-keep">
@@ -693,14 +729,14 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                     : null;
                 const done = goal.targetAmount > 0 && goal.actualAmount >= goal.targetAmount;
                 return (
-                  <div key={goal.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3.5">
+                  <div key={goal.id} className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 px-4 py-3.5">
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
-                      <span className="min-w-0 text-xs font-bold text-slate-900 break-keep">
+                      <span className="min-w-0 text-xs font-bold text-slate-900 dark:text-slate-100 break-keep">
                         {goal.subject} · {goal.title}
                       </span>
                       <span className="flex items-center gap-1.5">
                         {done && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 break-keep">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 break-keep">
                             <CheckCircle2 className="h-3 w-3" />
                             달성
                           </span>
@@ -712,12 +748,12 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                         )}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400 break-keep">
+                    <p className="mt-0.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500 break-keep">
                       {goal.rangeText} · {goal.periodWeeks}주 안에
                     </p>
 
                     {/* 진행바 + 예상목표치 마커(오늘 도달 지점) */}
-                    <div className="relative mt-4 h-2.5 w-full rounded-full bg-slate-100">
+                    <div className="relative mt-4 h-2.5 w-full rounded-full bg-slate-100 dark:bg-white/10">
                       <div
                         className={`h-2.5 rounded-full ${done ? 'bg-emerald-500' : goal.behind ? 'bg-amber-400' : 'bg-[#0071E3]'}`}
                         style={{ width: `${Math.min(100, actualPct)}%` }}
@@ -728,11 +764,11 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                         style={{ left: `${Math.min(100, expectedPct)}%` }}
                         title={`예상목표치 ${expectedPct}%`}
                       >
-                        <span className="h-1.5 w-1.5 rotate-45 rounded-[1px] bg-slate-900" />
-                        <span className="-mt-0.5 h-[18px] w-[2.5px] rounded-b bg-slate-900" />
+                        <span className="h-1.5 w-1.5 rotate-45 rounded-[1px] bg-slate-900 dark:bg-slate-200" />
+                        <span className="-mt-0.5 h-[18px] w-[2.5px] rounded-b bg-slate-900 dark:bg-slate-200" />
                       </div>
                     </div>
-                    <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-slate-400 tabular-nums">
+                    <div className="mt-1 flex items-center justify-between text-[10px] font-semibold text-slate-400 dark:text-slate-500 tabular-nums">
                       <span>{goal.actualAmount}/{goal.targetAmount}{goal.unit} ({actualPct}%)</span>
                       <span>예상목표치 {expectedPct}%</span>
                     </div>
@@ -751,15 +787,15 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                         max={goal.targetAmount}
                         value={draft}
                         onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [goal.id]: e.target.value }))}
-                        className="w-24 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none tabular-nums"
+                        className="w-24 rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none tabular-nums"
                         aria-label="누적 진행량"
                       />
-                      <span className="text-xs font-semibold text-slate-400">{goal.unit} 까지 완료</span>
+                      <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">{goal.unit} 까지 완료</span>
                       <button
                         type="button"
                         onClick={() => saveDeadlineProgress(goal, Number(draft))}
                         disabled={savingDeadlineId === goal.id || draft === String(goal.actualAmount)}
-                        className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-40"
+                        className="ml-auto inline-flex items-center gap-1.5 rounded-full bg-slate-900 dark:bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white transition active:scale-95 disabled:opacity-40"
                       >
                         {savingDeadlineId === goal.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
                         기록
@@ -777,12 +813,12 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           <section className={SECTION_SURFACE}>
             <div className="flex items-center gap-2">
               <Sparkles className={`h-4 w-4 ${isCelebrate ? 'text-emerald-500' : 'text-amber-500'}`} />
-              <h2 className="text-sm font-semibold text-slate-800">
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                 {isCelebrate ? '지금 아주 잘하고 있어요' : '이번 주 집중 포인트'}
               </h2>
             </div>
             {!isCelebrate && (
-              <p className="mt-1 text-[11px] font-semibold text-slate-400">최근 학습 데이터를 보고 골라봤어요</p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">최근 학습 데이터를 보고 골라봤어요</p>
             )}
             <div className="mt-3 flex flex-col gap-2">
               {recommendations.map((rec) => {
@@ -791,18 +827,18 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                 return (
                   <div
                     key={rec.key}
-                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white px-3.5 py-3"
+                    className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-white/5 px-3.5 py-3"
                   >
                     <span
                       className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                        celebrate ? 'bg-emerald-100 text-emerald-600' : 'bg-amber-100 text-amber-600'
+                        celebrate ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400' : 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400'
                       }`}
                     >
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
-                      <span className="block text-xs font-semibold text-slate-900">{rec.title}</span>
-                      <span className="mt-0.5 block text-[11px] font-semibold leading-relaxed text-slate-500">{rec.detail}</span>
+                      <span className="block text-xs font-semibold text-slate-900 dark:text-slate-100">{rec.title}</span>
+                      <span className="mt-0.5 block text-[11px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">{rec.detail}</span>
                     </span>
                   </div>
                 );
@@ -816,9 +852,9 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           <section className={SECTION_SURFACE}>
             <div className="flex items-center gap-2">
               <CalendarDays className="h-4 w-4 text-[#0071E3]" />
-              <h2 className="text-sm font-semibold text-slate-800">학원 일정</h2>
+              <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">학원 일정</h2>
             </div>
-            <p className="mt-1 text-[11px] font-semibold text-slate-400">앞으로 한 달 안에 참여할 일정이에요</p>
+            <p className="mt-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">앞으로 한 달 안에 참여할 일정이에요</p>
             <div className="mt-3 flex flex-col gap-2">
               {schedule.map((item) => {
                 const kind = SCHEDULE_KIND[item.kind];
@@ -828,22 +864,22 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                   <div
                     key={item.id}
                     className={`flex items-center gap-3 rounded-lg border px-3.5 py-3 ${
-                      urgent ? 'border-amber-200/70 bg-amber-50' : 'border-slate-200 bg-white'
+                      urgent ? 'border-amber-200/70 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10' : 'border-slate-200 bg-white dark:border-white/10 dark:bg-white/5'
                     }`}
                   >
                     <span
                       className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${
-                        urgent ? 'bg-amber-100 text-amber-600' : 'bg-[#0071E3]/10 text-[#0071E3]'
+                        urgent ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/15 dark:text-amber-400' : 'bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3]'
                       }`}
                     >
                       <KindIcon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-1.5">
-                        <span className="truncate text-xs font-semibold text-slate-900">{item.title}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">{kind.label}</span>
+                        <span className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{item.title}</span>
+                        <span className="rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">{kind.label}</span>
                       </span>
-                      <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400">
+                      <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
                         <span>{formatScheduleDate(item.date)}</span>
                         {item.endDate && item.endDate !== item.date && <span>~ {formatScheduleDate(item.endDate)}</span>}
                         {item.startTime && <span>{item.startTime}</span>}
@@ -854,7 +890,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                     </span>
                     <span
                       className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold tabular-nums ${
-                        urgent ? 'bg-amber-500 text-white' : 'bg-[#0071E3]/10 text-[#0071E3]'
+                        urgent ? 'bg-amber-500 text-white' : 'bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3]'
                       }`}
                     >
                       {item.dday === 0 ? 'D-Day' : `D-${item.dday}`}
@@ -870,35 +906,35 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
         <section className={SECTION_SURFACE}>
           <div className="flex items-center gap-2">
             <PenLine className="h-4 w-4 text-[#0071E3]" />
-            <h2 className="text-sm font-semibold text-slate-800">모의고사 오답분석</h2>
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200">모의고사 오답분석</h2>
           </div>
           <form onSubmit={submitMockReview} className="mt-3 flex flex-col gap-3">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_150px]">
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-slate-500">시험명</span>
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">시험명</span>
                 <input
                   type="text"
                   value={mockReviewForm.testName}
                   onChange={(e) => setMockReviewForm((prev) => ({ ...prev, testName: e.target.value }))}
                   maxLength={80}
                   placeholder="예: 7월 전국모의고사"
-                  className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                  className="min-h-11 rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                   required
                 />
               </label>
               <label className="flex flex-col gap-1.5">
-                <span className="text-[11px] font-semibold text-slate-500">시험일</span>
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">시험일</span>
                 <input
                   type="date"
                   value={mockReviewForm.testDate}
                   onChange={(e) => setMockReviewForm((prev) => ({ ...prev, testDate: e.target.value }))}
-                  className="min-h-11 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-800 focus:border-[#0071E3] focus:outline-none"
+                  className="min-h-11 rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
                   required
                 />
               </label>
             </div>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500">오답/약점 요약</span>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">오답/약점 요약</span>
               <textarea
                 value={mockReviewForm.wrongNotes}
                 onChange={(e) => setMockReviewForm((prev) => ({ ...prev, wrongNotes: e.target.value }))}
@@ -906,12 +942,12 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                 minLength={5}
                 maxLength={1000}
                 placeholder="틀린 유형, 실수 패턴, 시간이 부족했던 영역"
-                className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold leading-relaxed text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                className="w-full resize-none rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                 required
               />
             </label>
             <label className="flex flex-col gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-500">보완계획</span>
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">보완계획</span>
               <textarea
                 value={mockReviewForm.actionPlan}
                 onChange={(e) => setMockReviewForm((prev) => ({ ...prev, actionPlan: e.target.value }))}
@@ -919,7 +955,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                 minLength={5}
                 maxLength={1000}
                 placeholder="다시 풀 문제, 복습 범위, 다음 시험 전 점검할 기준"
-                className="w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold leading-relaxed text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                className="w-full resize-none rounded-lg border border-slate-200 bg-white dark:border-white/10 dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold leading-relaxed text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                 required
               />
             </label>
@@ -932,7 +968,7 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
                 mockReviewForm.wrongNotes.trim().length < 5 ||
                 mockReviewForm.actionPlan.trim().length < 5
               }
-              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-slate-900 dark:bg-white/10 px-4 py-2.5 text-xs font-semibold text-white transition active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {mockReviewSubmitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
               제출 완료
@@ -940,16 +976,16 @@ export function MissionsHub({ studentId, studentName, embedded = false, onGoToEx
           </form>
 
           {mockReviews.length > 0 && (
-            <div className="mt-4 border-t border-slate-100 pt-3">
+            <div className="mt-4 border-t border-slate-100 dark:border-white/10 pt-3">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-[#0071E3]">최근 제출</p>
               <div className="mt-2 flex flex-col gap-2">
                 {mockReviews.map((review) => (
-                  <div key={review.id} className="rounded-lg border border-slate-100 bg-slate-50 px-3.5 py-3">
+                  <div key={review.id} className="rounded-lg border border-slate-100 bg-slate-50 dark:border-white/10 dark:bg-white/5 px-3.5 py-3">
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
-                      <span className="text-xs font-semibold text-slate-800">{review.testName}</span>
-                      <span className="text-[11px] font-semibold text-slate-400">{formatScheduleDate(review.testDate)}</span>
+                      <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{review.testName}</span>
+                      <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">{formatScheduleDate(review.testDate)}</span>
                     </div>
-                    <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-relaxed text-slate-500">
+                    <p className="mt-1 line-clamp-2 text-[11px] font-semibold leading-relaxed text-slate-500 dark:text-slate-400">
                       {review.wrongNotes}
                     </p>
                   </div>
