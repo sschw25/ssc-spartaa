@@ -387,6 +387,9 @@ export async function setStudentNotifyInfoSupabase(studentId: string, info: Noti
       parent_phone: info.parentPhone || null,
       student_phone: info.studentPhone || null,
       sms_targets: normalizeSmsTargets(info.smsTargets),
+      // 이 컬럼들은 studentToRow(전체 행 저장)에도 포함되므로, updated_at을 함께 올려
+      // stale 스냅샷을 든 전체 저장이 낙관적 락 충돌로 감지되게 한다(옛값 롤백 방지).
+      updated_at: new Date().toISOString(),
     })
     .eq('id', studentId);
   if (error) throw error;
@@ -418,14 +421,18 @@ function seoulDate(d: Date): string {
 }
 
 export async function getOpenSessionSupabase(studentId: string): Promise<StudySession | null> {
+  // 이중 체크인 레이스로 open 세션이 2건 이상 남아도 최신 1건을 반환한다.
+  // (.maybeSingle()은 다중 행이면 에러 → 그 학생의 등하원 전부 500이 되는 사고 방지.
+  //  근본 차단은 migration-open-session-unique.sql 의 부분 유니크 인덱스.)
   const { data, error } = await getClient()
     .from('study_sessions')
     .select('*')
     .eq('student_id', studentId)
     .is('check_out', null)
-    .maybeSingle();
+    .order('check_in', { ascending: false })
+    .limit(1);
   if (error) throw error;
-  return (data as StudySession) || null;
+  return (data && data.length > 0 ? (data[0] as StudySession) : null);
 }
 
 export async function checkInSupabase(studentId: string, source = 'qr', now = new Date()): Promise<StudySession> {
@@ -439,7 +446,15 @@ export async function checkInSupabase(studentId: string, source = 'qr', now = ne
     source,
   };
   const { data, error } = await getClient().from('study_sessions').insert(row).select().single();
-  if (error) throw error;
+  if (error) {
+    // 부분 유니크 인덱스(open 세션 학생당 1건) 충돌 = 동시 이중 체크인의 패자 —
+    // 이미 열린 세션을 반환해 멱등 체크인으로 처리한다.
+    if ((error as { code?: string }).code === '23505') {
+      const existing = await getOpenSessionSupabase(studentId);
+      if (existing) return existing;
+    }
+    throw error;
+  }
   return data as StudySession;
 }
 
@@ -831,12 +846,24 @@ export async function notifyMealPlanSupabase(id: string, notifiedAt: string | nu
 
 export async function saveSharedMaterialSupabase(material: SharedMaterial): Promise<SharedMaterial> {
   const client = getClient();
-  // 기존 db.ts 동작 유지: id 또는 (name+type) 동일하면 갱신, 아니면 신규
-  const { data: existing } = await client
+  // 기존 db.ts 동작 유지: id 또는 (name+type) 동일하면 갱신, 아니면 신규.
+  // .or() 필터는 사용자 입력(교재명)의 쉼표/괄호가 PostgREST 문법을 깨뜨리므로
+  // (예: "수학의 정석(상)") 쿼리를 2회로 분리해 값이 항상 안전하게 전달되게 한다.
+  const { data: byId } = await client
     .from('shared_materials')
     .select('id')
-    .or(`id.eq.${material.id},and(name.eq.${material.name},type.eq.${material.type})`)
+    .eq('id', material.id)
     .limit(1);
+  let existing = byId;
+  if (!existing || existing.length === 0) {
+    const { data: byNameType } = await client
+      .from('shared_materials')
+      .select('id')
+      .eq('name', material.name)
+      .eq('type', material.type)
+      .limit(1);
+    existing = byNameType;
+  }
 
   const targetId = existing && existing.length > 0 ? existing[0].id : material.id;
   const row = {

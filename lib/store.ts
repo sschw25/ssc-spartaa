@@ -172,16 +172,19 @@ export async function getStudentApplications(): Promise<StudentApplication[]> {
 }
 
 export async function addStudentApplication(application: StudentApplication): Promise<void> {
-  const list = await getStudentApplications();
-  list.push(application);
-  await setAppSetting(STUDENT_APPLICATIONS_KEY, list);
+  // 낙관적 잠금 read-modify-write — 동시 신청/승인이 겹쳐도 목록 유실(TOCTOU) 없음.
+  await mutateAppSetting<StudentApplication[]>(STUDENT_APPLICATIONS_KEY, [], (list) => [...list, application]);
 }
 
 // 신청 제거 후 제거된 신청을 반환(없으면 null). 승인/반려 공통 사용.
 export async function removeStudentApplication(id: string): Promise<StudentApplication | null> {
-  const list = await getStudentApplications();
-  const found = list.find((a) => a.id === id) || null;
-  if (found) await setAppSetting(STUDENT_APPLICATIONS_KEY, list.filter((a) => a.id !== id));
+  let found: StudentApplication | null = null;
+  await mutateAppSetting<StudentApplication[]>(STUDENT_APPLICATIONS_KEY, [], (list) => {
+    // 재시도마다 fresh 목록에서 다시 찾는다 — 다른 요청이 먼저 지웠으면 변경 없이 종료.
+    found = list.find((a) => a.id === id) || null;
+    if (!found) return false;
+    return list.filter((a) => a.id !== id);
+  });
   return found;
 }
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfile, updateStudentById, removeConsultationBookingsForStudent } from '@/lib/store';
+import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfile, updateStudentById, removeConsultationBookingsForStudent, getStudentAuthRecords } from '@/lib/store';
 import { Student } from '@/lib/types/student';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
@@ -61,6 +61,16 @@ export async function PUT(
     if (scope === 'profile') {
       const updated = await patchStudentProfile(studentData);
       return NextResponse.json({ success: true, data: updated });
+    }
+
+    // loginId 변경 시 중복 확인 — 다른 학생과 겹치면 로그인 시 verified가 2건이 되어
+    // 두 학생 모두 로그인 불가가 되므로 저장 전에 차단한다(applications 승인과 동일 패턴).
+    if ('loginId' in studentData && String(studentData.loginId ?? '').trim()) {
+      const nextLoginId = String(studentData.loginId).trim().toLowerCase();
+      const authRecords = await getStudentAuthRecords();
+      if (authRecords.some((r) => r.id !== id && (r.login_id || '').toLowerCase() === nextLoginId)) {
+        return NextResponse.json({ success: false, message: '이미 동일한 아이디를 사용하는 원생이 있습니다. 다른 아이디를 입력해 주세요.' }, { status: 409 });
+      }
     }
 
     // scope 미지정(detail-sheet 전체 저장): 화이트리스트 필드만 fresh 행에 덮어쓴다.
