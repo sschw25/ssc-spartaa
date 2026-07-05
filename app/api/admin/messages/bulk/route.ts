@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
 import { getStudentById, updateStudentById } from '@/lib/store';
 import { sendCustomSms } from '@/lib/sms';
+import { sharedRateLimit } from '@/lib/rate-limit';
 import type { SmsLog } from '@/lib/types/student';
 
 // 관리자: 여러 학생에게 일괄 SMS 발송
@@ -11,6 +12,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
+  // 대량 발송 남용 방지: 관리자 개별 세션 기준 5분에 20회 제한.
+  // (캠퍼스는 super 가 'all' 로 고정돼 여러 super 가 한 버킷을 공유하므로 세션 id 로만 키를 잡는다.)
+  const rl = await sharedRateLimit(`messages-bulk:${session.id}`, 20, 5 * 60 * 1000);
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { success: false, message: `일괄 발송 요청이 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },
+      { status: 429 }
+    );
+  }
+
   let body: { studentIds?: unknown; message?: unknown; targets?: unknown; sentBy?: unknown };
   try {
     body = await request.json();
@@ -18,12 +29,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: '잘못된 요청입니다.' }, { status: 400 });
   }
 
-  const studentIds = Array.isArray(body?.studentIds) ? (body.studentIds as string[]) : [];
+  // 1회 발송 대상 상한(500명) — 과도한 대량 발송/오작동 방지.
+  const studentIds = (Array.isArray(body?.studentIds) ? (body.studentIds as string[]) : []).slice(0, 500);
   if (studentIds.length === 0) {
     return NextResponse.json({ success: false, message: '발송 대상 학생을 선택해주세요.' }, { status: 400 });
   }
 
-  const message = String(body?.message ?? '').trim();
+  // 메시지 길이 상한(500자).
+  const message = String(body?.message ?? '').trim().slice(0, 500);
   if (!message) {
     return NextResponse.json({ success: false, message: '메시지 내용이 필요합니다.' }, { status: 400 });
   }

@@ -54,16 +54,6 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   const value = store.get('admin-session')?.value;
   if (!value) return null;
 
-  // 레거시 세션 폴백 (쿠키가 환경 변수의 세션 시크릿과 완전히 일치하면 마스터 관리자 세션으로 처리)
-  if (value === secret) {
-    return {
-      id: 'super_admin',
-      username: 'admin',
-      campus: 'all',
-      role: 'super',
-    };
-  }
-
   const dot = value.lastIndexOf('.');
   if (dot <= 0) return null;
   const payload = value.slice(0, dot);

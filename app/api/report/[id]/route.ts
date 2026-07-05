@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { compare } from 'bcryptjs';
+import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
 import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams, getConsultationBookings } from '@/lib/store';
 import type { ConsultationBooking } from '@/lib/types/student';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
@@ -96,10 +98,14 @@ export async function GET(
     try {
       const student = await getStudentById(id);
       const now = new Date().toISOString();
+      // 토큰 비교는 상수시간(timingSafeEqual)으로 — 길이 선비교 후 동일 길이일 때만 비교.
+      const tokenOk =
+        !!student?.shareToken &&
+        student.shareToken.length === shareToken.length &&
+        timingSafeEqual(Buffer.from(student.shareToken), Buffer.from(shareToken));
       if (
         !student ||
-        !student.shareToken ||
-        student.shareToken !== shareToken ||
+        !tokenOk ||
         !student.shareTokenExpiresAt ||
         student.shareTokenExpiresAt < now
       ) {
@@ -110,10 +116,19 @@ export async function GET(
       }
       // 비밀번호 검증
       if (!sharePasswordInput) {
-        // pw 파라미터 없음 → 비밀번호 입력 요구
+        // pw 파라미터 없음 → 비밀번호 입력 요구 (실제 시도가 아니므로 레이트리밋 미소모)
         return NextResponse.json(
           { success: false, requirePassword: true },
           { status: 403 }
+        );
+      }
+      // 공유 비밀번호(6자리 숫자)는 무차별 대입 대상 — 실제 비번 제출 시에만 리포트+IP당 시도를 제한한다.
+      // (정상 학부모의 반복 열람/새로고침은 requirePassword 단계라 여기 도달 전이므로 영향 없음.)
+      const rl = await sharedRateLimit(`report-pw:${id}:${clientIp(request)}`, 20, 10 * 60 * 1000);
+      if (!rl.allowed) {
+        return NextResponse.json(
+          { success: false, message: `시도가 너무 많습니다. ${rl.retryAfterSec}초 후 다시 시도해 주세요.` },
+          { status: 429 }
         );
       }
       // hash가 없으면(레거시/부분저장) 무검사 통과가 아니라 안전 실패(deny)로 처리

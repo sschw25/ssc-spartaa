@@ -21,9 +21,15 @@ export async function POST(req: NextRequest) {
     : 0;
 
   const todayKey = getSeoulDateKey();
+  const nowMs = Date.now();
+  // 직전 세션과 최소 간격 미만이면 카운트 제외 — 더블클릭·즉시 2연타 방지.
+  // 고정 하한 5분을 둔다: minutes=1 로 임계를 30초까지 줄여 연타 우회하는 것을 차단.
+  // (정상 세션은 최소 5분이라 두 세션이 5분 이내에 완료될 수 없어 회귀 없음.)
+  const minGapMs = Math.max(5 * 60 * 1000, minutes * 0.5 * 60 * 1000);
   let pomodoroCount = 0;
   let pomodoroMinutes = 0;
   let pomodoroDistractions = 0;
+  let counted = false;
 
   const result = await updateStudentById(studentId, (student) => {
     const noteObj = readActivityEnvelope(student);
@@ -32,13 +38,21 @@ export async function POST(req: NextRequest) {
     if (!noteObj.pomodoro_minutes) noteObj.pomodoro_minutes = {};
     if (!noteObj.pomodoro_distractions) noteObj.pomodoro_distractions = {};
 
-    noteObj.pomodoro_sessions[todayKey] = (noteObj.pomodoro_sessions[todayKey] || 0) + 1;
-    noteObj.pomodoro_minutes[todayKey] = (noteObj.pomodoro_minutes[todayKey] || 0) + minutes;
-    noteObj.pomodoro_distractions[todayKey] = (noteObj.pomodoro_distractions[todayKey] || 0) + distractions;
+    // 마지막 세션 기록 시각(epoch ms). 최소 간격 미만 재요청이면 적립 없이 현재 누계만 반환.
+    const lastAt = Number(noteObj.pomodoro_last_at);
+    const tooSoon = Number.isFinite(lastAt) && nowMs - lastAt < minGapMs;
 
-    pomodoroCount = noteObj.pomodoro_sessions[todayKey];
-    pomodoroMinutes = noteObj.pomodoro_minutes[todayKey];
-    pomodoroDistractions = noteObj.pomodoro_distractions[todayKey];
+    if (!tooSoon) {
+      noteObj.pomodoro_sessions[todayKey] = (noteObj.pomodoro_sessions[todayKey] || 0) + 1;
+      noteObj.pomodoro_minutes[todayKey] = (noteObj.pomodoro_minutes[todayKey] || 0) + minutes;
+      noteObj.pomodoro_distractions[todayKey] = (noteObj.pomodoro_distractions[todayKey] || 0) + distractions;
+      noteObj.pomodoro_last_at = nowMs;
+      counted = true;
+    }
+
+    pomodoroCount = noteObj.pomodoro_sessions[todayKey] || 0;
+    pomodoroMinutes = noteObj.pomodoro_minutes[todayKey] || 0;
+    pomodoroDistractions = noteObj.pomodoro_distractions[todayKey] || 0;
 
     writeActivityEnvelope(student, noteObj);
   });
@@ -58,6 +72,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     success: true,
+    counted,
     pomodoroCount,
     pomodoroMinutes,
     pomodoroDistractions,

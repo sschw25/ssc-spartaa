@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
-import { getStudentById, patchStudentProgress } from '@/lib/store';
+import { getStudentById, getOtEvents, patchStudentProgress } from '@/lib/store';
 import { grantOtAttendance } from '@/lib/mission-engine';
+import { isOtEventVisibleToStudent } from '@/lib/upcoming-schedule';
+import { getSeoulDateKey } from '@/lib/student-activity';
 import type { OtParticipation } from '@/lib/types/student';
 
 // 학생: OT 참여/불참 응답 제출. '참여' 시 OT 참여 쿠폰 즉시 지급(멱등).
@@ -41,6 +43,16 @@ export async function POST(req: NextRequest) {
     respondedBy: 'student',
   };
 
+  // 실재하는 OT 이벤트인지 조회 (임의 eventId로 쿠폰 무한 자가 적립 차단).
+  // ot_events 테이블 미생성 등으로 throw 시엔 이벤트를 못 찾은 것으로 간주(지급 skip).
+  let otEvent: Awaited<ReturnType<typeof getOtEvents>>[number] | undefined;
+  try {
+    otEvent = (await getOtEvents()).find((e) => e.id === eventId);
+  } catch {
+    otEvent = undefined;
+  }
+  const todayKey = getSeoulDateKey();
+
   // optimistic locking: conflict 시 fresh 재조회·재시도 (OT 적립 쿠폰 동시 저장 유실 방지). grant 는 rewards_log 멱등.
   for (let attempt = 0; attempt < 2; attempt++) {
     const student = await getStudentById(studentId);
@@ -52,7 +64,8 @@ export async function POST(req: NextRequest) {
 
     let couponsGranted = 0;
     entry.rewarded = false;
-    if (status === 'attending') {
+    // 캠퍼스/가시성 검증을 통과한 실재 이벤트에만 쿠폰 지급 (GET /ot-events 방어 로직과 동일 기준).
+    if (status === 'attending' && otEvent && isOtEventVisibleToStudent(otEvent, student, todayKey)) {
       couponsGranted = await grantOtAttendance(student, eventId);
       if (couponsGranted > 0) entry.rewarded = true;
     }
