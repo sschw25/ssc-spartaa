@@ -19,6 +19,15 @@ function normalizeSeatNumber(value: unknown): number | undefined {
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
 }
 
+// 저장 오염/DoS 방어: 문자열/배열 상한을 넉넉히 건다(PUT 경로와 동일 정책).
+function capStr(value: unknown, max: number): string {
+  return typeof value === 'string' ? value.slice(0, max) : '';
+}
+function capArr<T>(value: T[] | undefined, max: number): T[] {
+  if (!Array.isArray(value)) return [];
+  return value.length > max ? value.slice(0, max) : value;
+}
+
 // 1. 전체 학생 및 진도/상담/성적 일괄 조회
 export async function GET() {
   const session = await getAdminSession();
@@ -67,14 +76,14 @@ export async function POST(request: Request) {
 
     const newStudent: Student = {
       id,
-      name: studentData.name,
+      name: capStr(studentData.name, 200),
       loginId: studentData.loginId?.trim().toLowerCase() || undefined,
       campus: studentData.campus,
-      manager: studentData.manager || '',
-      contact: studentData.contact || '',
-      lifeComment: studentData.lifeComment || '',
-      studentLifeComment: studentData.studentLifeComment || '',
-      specialNote: studentData.specialNote || '',
+      manager: capStr(studentData.manager, 200),
+      contact: capStr(studentData.contact, 200),
+      lifeComment: capStr(studentData.lifeComment, 20000),
+      studentLifeComment: capStr(studentData.studentLifeComment, 20000),
+      specialNote: capStr(studentData.specialNote, 20000),
       nextConsultationDate: studentData.nextConsultationDate || undefined,
       parentPhone: onlyDigits(studentData.parentPhone),
       studentPhone: onlyDigits(studentData.studentPhone),
@@ -82,14 +91,14 @@ export async function POST(request: Request) {
       seatNumber: normalizeSeatNumber(studentData.seatNumber),
       createdAt: now,
       updatedAt: now,
-      books: studentData.books || [],
-      lectures: studentData.lectures || [],
-      consultationLogs: studentData.consultationLogs || [],
-      grades: studentData.grades || [],
-      subjects: studentData.subjects || [],
+      books: capArr(studentData.books, 500),
+      lectures: capArr(studentData.lectures, 500),
+      consultationLogs: capArr(studentData.consultationLogs, 500),
+      grades: capArr(studentData.grades, 500),
+      subjects: capArr(studentData.subjects, 500),
       enrollmentEndDate: studentData.enrollmentEndDate || undefined,
       weeklyGradeCheck: Boolean(studentData.weeklyGradeCheck),
-      awaySchedules: studentData.awaySchedules || [],
+      awaySchedules: capArr(studentData.awaySchedules, 500),
     };
 
     const saved = await saveStudent(newStudent);

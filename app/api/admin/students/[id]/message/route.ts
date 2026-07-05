@@ -21,7 +21,7 @@ export async function POST(
     return NextResponse.json({ success: false, message: '잘못된 요청입니다.' }, { status: 400 });
   }
 
-  const message = String(body?.message ?? '').trim();
+  const message = String(body?.message ?? '').trim().slice(0, 500);
   if (!message) {
     return NextResponse.json({ success: false, message: '메시지 내용이 필요합니다.' }, { status: 400 });
   }

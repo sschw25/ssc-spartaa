@@ -19,14 +19,15 @@ export async function POST(req: NextRequest) {
 
     const newDday = {
       id: `dday_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-      title: title.trim(),
+      title: title.trim().slice(0, 100),
       date,
       createdAt: new Date().toISOString(),
     };
 
     const result = await updateStudentById(studentId, (student) => {
       const currentDdays = student.ddays || [];
-      student.ddays = [...currentDdays, newDday];
+      // 무한 누적(DoS) 방지: 최근 40개만 유지. away-replan 알림 트리밍(slice(-60)) 관례를 따름.
+      student.ddays = [...currentDdays, newDday].slice(-40);
     });
 
     if (result === 'not_found') {

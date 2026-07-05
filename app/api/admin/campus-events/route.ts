@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     targetMode = body?.targetMode === 'students' ? 'students' : 'campus';
     if (targetMode === 'students') {
       targetStudentIds = Array.isArray(body?.targetStudentIds)
-        ? (body.targetStudentIds as unknown[]).filter((t): t is string => typeof t === 'string')
+        ? (body.targetStudentIds as unknown[]).filter((t): t is string => typeof t === 'string').slice(0, 1000)
         : [];
     }
   }

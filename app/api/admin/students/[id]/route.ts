@@ -80,32 +80,46 @@ export async function PUT(
     // detail-sheet 가 실제 편집하는 프로필/진도/기본정보 필드만 골라 적용하고 나머지
     // (leaveCoupons/penalties/rewardRedemptions/eventParticipations/seatAlerts/studentState 등
     // 서버가 자체 관리하는 적립성 데이터)는 fresh 재조회 값을 그대로 보존한다.
+    // 저장 오염/DoS 방어: 관리자 경로지만 문자열/배열 상한을 넉넉히 건다.
+    // 상한은 정상 사용량의 수 배(문자열은 이름류 200 / 코멘트·오버로드 필드 20000,
+    // 배열은 500)로 잡아 정상 편집이 걸리지 않게 한다.
+    const capStr = (v: unknown, max: number): string | undefined =>
+      typeof v === 'string' ? v.slice(0, max) : (v as string | undefined);
+    const capArr = <T,>(v: T[] | undefined, max: number): T[] | undefined =>
+      Array.isArray(v) ? (v.length > max ? v.slice(0, max) : v) : v;
+
     const result = await updateStudentById(id, (student) => {
       const assign = <K extends keyof Student>(key: K) => {
         if (key in studentData) student[key] = studentData[key];
       };
+      const assignStr = <K extends keyof Student>(key: K, max: number) => {
+        if (key in studentData) student[key] = capStr(studentData[key], max) as Student[K];
+      };
+      const assignArr = <K extends keyof Student>(key: K, max: number) => {
+        if (key in studentData) student[key] = capArr(studentData[key] as unknown[], max) as Student[K];
+      };
       // 기본 정보 / 프로필
-      assign('name');
+      assignStr('name', 200);
       assign('loginId');
       assign('campus');
-      assign('manager');
-      assign('contact');
+      assignStr('manager', 200);
+      assignStr('contact', 200);
       assign('seatNumber');
       assign('parentPhone');
       assign('studentPhone');
       assign('smsTargets');
-      // 상담/생활 코멘트 및 일정
-      assign('lifeComment');
-      assign('studentLifeComment');
-      assign('specialNote');
+      // 상담/생활 코멘트 및 일정 (specialNote는 오버로드 필드라 넉넉히)
+      assignStr('lifeComment', 20000);
+      assignStr('studentLifeComment', 20000);
+      assignStr('specialNote', 20000);
       assign('nextConsultationDate');
       assign('enrollmentEndDate');
       assign('weeklyGradeCheck');
       // 진도·성적·면담 로그·외출 일정 (detail-sheet 편집 대상)
-      assign('subjects');
-      assign('grades');
-      assign('consultationLogs');
-      assign('awaySchedules');
+      assignArr('subjects', 500);
+      assignArr('grades', 500);
+      assignArr('consultationLogs', 500);
+      assignArr('awaySchedules', 500);
     });
     if (result === 'not_found') {
       return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });

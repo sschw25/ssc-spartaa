@@ -45,7 +45,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: false, message: '날짜 형식이 올바르지 않습니다.' }, { status: 400 });
   }
   const targetExamTypes: string[] = Array.isArray(body?.targetExamTypes)
-    ? (body.targetExamTypes as unknown[]).filter((t): t is string => typeof t === 'string')
+    ? (body.targetExamTypes as unknown[])
+        .filter((t): t is string => typeof t === 'string')
+        .slice(0, 50)
+        .map((t) => t.slice(0, 100))
     : [];
 
   // 센터: 범위 관리자는 자기 센터로 강제, 전체 관리자는 body 값(미지정/all = 전체)

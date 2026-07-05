@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   }
 
   const studentIds = Array.isArray(body?.studentIds)
-    ? (body.studentIds as unknown[]).filter((v): v is string => typeof v === 'string')
+    ? (body.studentIds as unknown[]).filter((v): v is string => typeof v === 'string').slice(0, 1000)
     : [];
   if (studentIds.length === 0) {
     return NextResponse.json({ success: false, message: '대상 학생이 없습니다.' }, { status: 400 });
