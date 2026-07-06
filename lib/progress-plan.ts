@@ -306,8 +306,8 @@ export function getManagedProgressItems(students: Student[], today = new Date())
     const exemptions = getLeaveExemptions(student);
     if (student.subjects && student.subjects.length > 0) {
       return student.subjects.flatMap((subject) => [
-        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', day, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
-        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', day, subject.studyDays, leaveDates, exemptions, subject.studyTime)),
+        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', day, getMaterialStudyDays(subject.studyDays, book.studyDays), leaveDates, exemptions, subject.studyTime)),
+        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', day, getMaterialStudyDays(subject.studyDays, lecture.studyDays), leaveDates, exemptions, subject.studyTime)),
       ]);
     }
 
@@ -545,12 +545,18 @@ export function getStudentTodayTotalStudyTimeMin(student: Student, todayStr?: st
       
       let isStudyDay = todayKey !== 'sun';
       if (student.subjects) {
-        const parentSubject = student.subjects.find(sub => 
+        const parentSubject = student.subjects.find(sub =>
           (sub.books || []).some(b => b.id === todayPlan.materialId) ||
           (sub.lectures || []).some(l => l.id === todayPlan.materialId)
         );
-        if (parentSubject && parentSubject.studyDays && parentSubject.studyDays.length > 0) {
-          isStudyDay = parentSubject.studyDays.includes(todayKey);
+        // 자료별 요일 우선, 없으면 과목 요일 폴백.
+        const material = parentSubject && (
+          (parentSubject.books || []).find(b => b.id === todayPlan.materialId) ||
+          (parentSubject.lectures || []).find(l => l.id === todayPlan.materialId)
+        );
+        const effectiveDays = getMaterialStudyDays(parentSubject?.studyDays, material?.studyDays);
+        if (effectiveDays && effectiveDays.length > 0) {
+          isStudyDay = effectiveDays.includes(todayKey);
         }
       }
 
@@ -584,6 +590,16 @@ export function getActiveStudyDays(studyDays?: string[]) {
   return studyDays && studyDays.length > 0 ? studyDays : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 }
 
+// 자료(교재/강의)의 유효 학습 요일 — 자료별 요일이 있으면 그걸, 없으면 과목 요일로 폴백(레거시 호환).
+// 요일 계획이 과목 단위에서 자료 단위로 내려온 뒤의 단일 진입점. 둘 다 없으면 undefined(→ getActiveStudyDays 기본 월~토).
+export function getMaterialStudyDays<T extends string>(
+  subjectStudyDays?: T[],
+  materialStudyDays?: T[],
+): T[] | undefined {
+  if (materialStudyDays && materialStudyDays.length > 0) return materialStudyDays;
+  return subjectStudyDays;
+}
+
 export function isStudyDay(date: Date, studyDays?: string[]) {
   const dayMap: Record<number, string> = {
     0: 'sun',
@@ -608,7 +624,7 @@ export function generateDetailedPlans(
   materialId: string,
   totalAmount: number,
   type: 'book' | 'lecture',
-  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks',
+  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced',
   goalValue: number,
   currentAmount = 0,
   customUnit?: string,
@@ -622,6 +638,13 @@ export function generateDetailedPlans(
   const plans: DetailedPlan[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  // 자율 입력(selfPaced): 목표 분량·마감·계획이 없다. 계획을 만들지 않고 빈 목록을 돌려준다
+  // (학생이 그날 한 만큼 누적 입력만 하며, 뒤처짐/마감 판정에서 제외된다).
+  if (goalType === 'selfPaced') {
+    return { plans, calculatedTargetDate: seoulDateStr(today) };
+  }
+
   const safeCurrentAmount = Math.min(totalAmount, Math.max(0, Math.round(currentAmount)));
   const planAmount = Math.max(0, totalAmount - safeCurrentAmount);
 
@@ -697,17 +720,36 @@ export function generateDetailedPlans(
       weeklyLimit?: number,
     ) => {
       const safeWeeks = Math.max(1, Math.min(12, Math.round(weeks)));
-      let remainingAmount = Math.max(0, Math.round(amount));
+      const totalAmount = Math.max(0, Math.round(amount));
       let currentStart = new Date(windowStart);
       currentStart.setHours(0, 0, 0, 0);
+      if (totalAmount <= 0) return currentStart;
 
-      for (let i = 0; i < safeWeeks; i++) {
-        if (remainingAmount <= 0) break;
+      // 주별 목표량을 미리 계산해 앞 주 몰림을 없앤다.
+      // - weeklyLimit(레거시 weeklyAmount): 매주 limit 을 채우고 남는 만큼만 마지막 주에.
+      // - 그 외(deadlineWeeks): 균등 분배(floor)하고 나머지는 뒤쪽 주에 +1 씩.
+      //   과거엔 매주 ceil(남은량/남은주수)라 나머지가 첫 주들로 쏠려, "주 1회인데 첫 주만 2회"로 보였다.
+      //   분량이 주수보다 적으면 그만큼의 주만 써서(빈 주 없이) 조기 완료한다.
+      const weekAmounts: number[] = [];
+      if (weeklyLimit) {
+        const limit = Math.max(1, Math.round(weeklyLimit));
+        let rem = totalAmount;
+        while (rem > 0 && weekAmounts.length < safeWeeks) {
+          const take = Math.min(rem, limit);
+          weekAmounts.push(take);
+          rem -= take;
+        }
+      } else {
+        const effectiveWeeks = Math.max(1, Math.min(safeWeeks, totalAmount));
+        const base = Math.floor(totalAmount / effectiveWeeks);
+        const extra = totalAmount - base * effectiveWeeks; // 뒤 extra개 주에 +1
+        for (let i = 0; i < effectiveWeeks; i++) {
+          weekAmounts.push(base + (i >= effectiveWeeks - extra ? 1 : 0));
+        }
+      }
 
-        const weeksLeft = safeWeeks - i;
-        const thisWeekAmount = weeklyLimit
-          ? Math.min(remainingAmount, Math.max(1, Math.round(weeklyLimit)))
-          : Math.ceil(remainingAmount / weeksLeft);
+      let completed = 0;
+      for (const thisWeekAmount of weekAmounts) {
         const currentEnd = new Date(currentStart);
         currentEnd.setDate(currentStart.getDate() + 6);
 
@@ -715,8 +757,7 @@ export function generateDetailedPlans(
         const endStr = seoulDateStr(currentEnd);
         const studyDaysInWeek = Math.max(1, countStudyDaysInRange(currentStart, currentEnd, studyDays));
         const dailyAmount = Math.max(1, Math.ceil(thisWeekAmount / studyDaysInWeek));
-        const completedBeforeWeek = amount - remainingAmount;
-        const fromNum = baseAmount + completedBeforeWeek + 1;
+        const fromNum = baseAmount + completed + 1;
         const toNum = fromNum + thisWeekAmount - 1;
 
         plans.push({
@@ -734,7 +775,7 @@ export function generateDetailedPlans(
           isCompleted: false,
         });
 
-        remainingAmount -= thisWeekAmount;
+        completed += thisWeekAmount;
         currentStart = new Date(currentEnd);
         currentStart.setDate(currentEnd.getDate() + 1);
       }

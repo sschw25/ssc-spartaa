@@ -14,7 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest, AwaySchedule } from '@/lib/types/student';
-import { getStudentTodayTotalStudyTimeMin, generateDetailedPlans as generateDetailedPlansLib } from '@/lib/progress-plan';
+import { getStudentTodayTotalStudyTimeMin, getMaterialStudyDays, generateDetailedPlans as generateDetailedPlansLib } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
@@ -1403,6 +1403,63 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     toast.success('요일별 학습 시간표가 변경되었습니다. (자동 저장됨)');
   };
 
+  // 자료별 학습 요일 토글 — 과목 요일과 별개로 이 교재/강의만의 요일을 지정한다.
+  // 최초 토글 시 현재 유효요일(자료 미설정이면 과목/기본 폴백)을 실체화한 뒤 편집하며,
+  // 목표가 있는 자료(selfPaced 제외)는 새 요일로 주간 계획을 즉시 재생성한다.
+  const handleToggleMaterialStudyDay = (
+    subId: string,
+    materialId: string,
+    type: 'book' | 'lecture',
+    day: NonNullable<SubjectProgress['studyDays']>[number],
+  ) => {
+    setSubjectsState(prev => prev.map(sub => {
+      if (sub.id !== subId) return sub;
+      const toggle = (cur?: string[]) => {
+        const base = (cur && cur.length > 0) ? cur : getActiveStudyDays(sub.studyDays);
+        return (base.includes(day) ? base.filter(d => d !== day) : [...base, day]) as NonNullable<SubjectProgress['studyDays']>;
+      };
+      if (type === 'book') {
+        return {
+          ...sub,
+          books: sub.books.map(b => {
+            if (b.id !== materialId) return b;
+            const studyDays = toggle(b.studyDays);
+            const updated: BookProgress = { ...b, studyDays };
+            if (b.goalType && b.goalType !== 'selfPaced' && (b.goalValue || 0) > 0) {
+              const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+                materialId, b.totalPages, 'book', b.goalType, b.goalValue || 0, b.currentPage,
+                b.unit, b.reviewPasses || [], getMaterialStudyDays(sub.studyDays, studyDays),
+                1.0, b.estimatedMinutesPerUnit, sub.studyTime, b.category,
+              );
+              updated.detailedPlans = plans;
+              updated.targetDate = calculatedTargetDate;
+            }
+            return updated;
+          }),
+        };
+      }
+      return {
+        ...sub,
+        lectures: sub.lectures.map(l => {
+          if (l.id !== materialId) return l;
+          const studyDays = toggle(l.studyDays);
+          const updated: LectureProgress = { ...l, studyDays };
+          if (l.goalType && l.goalType !== 'selfPaced' && (l.goalValue || 0) > 0) {
+            const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+              materialId, l.totalLectures, 'lecture', l.goalType, l.goalValue || 0, l.completedLectures,
+              undefined, l.reviewPasses || [], getMaterialStudyDays(sub.studyDays, studyDays),
+              Number(l.speedMultiplier || 1.0), l.estimatedMinutesPerUnit, sub.studyTime, l.category,
+            );
+            updated.detailedPlans = plans;
+            updated.targetDate = calculatedTargetDate;
+          }
+          return updated;
+        }),
+      };
+    }));
+    setIsAutoSaving(true);
+  };
+
   // 3. 과목 삭제
   const handleDeleteSubject = async (subId: string, subName: string) => {
     if (!(await confirm({
@@ -1481,7 +1538,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     materialId: string,
     totalAmount: number,
     type: 'book' | 'lecture',
-    goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks',
+    goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced',
     goalValue: number,
     currentAmount = 0,
     customUnit?: string,
@@ -1498,7 +1555,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       const hasLecture = s.lectures?.some((l) => l.id === materialId);
       return hasBook || hasLecture;
     }) ?? parentSubjectHint ?? undefined;
-    const studyDays = parentSubject?.studyDays;
+    const parentMaterial = parentSubject
+      ? (type === 'book'
+        ? parentSubject.books.find(b => b.id === materialId)
+        : parentSubject.lectures.find(l => l.id === materialId))
+      : undefined;
+    // 자료별 요일 우선, 없으면 과목 요일 폴백.
+    const studyDays = getMaterialStudyDays(parentSubject?.studyDays, parentMaterial?.studyDays);
     let speedMultiplier = overrideSpeedMultiplier ?? 1.0;
     if (overrideSpeedMultiplier === undefined && type === 'lecture' && parentSubject) {
       const lec = parentSubject.lectures.find(l => l.id === materialId);
@@ -1562,7 +1625,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               updatedBook.currentPage,
               updatedBook.unit,
               updatedBook.reviewPasses || [],
-              sub.studyDays,
+              getMaterialStudyDays(sub.studyDays, updatedBook.studyDays),
               1.0,
               updatedBook.estimatedMinutesPerUnit,
               sub.studyTime,
@@ -1570,6 +1633,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             );
             updatedBook.detailedPlans = plans;
             updatedBook.targetDate = calculatedTargetDate;
+          } else if (goalType === 'selfPaced' && field === 'goalType') {
+            // 자율 입력으로 전환: 기존 계획·목표일을 비운다(누적 로그만 유지).
+            updatedBook.detailedPlans = [];
+            updatedBook.targetDate = '';
           }
           return updatedBook;
         })
@@ -1600,7 +1667,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               updatedLec.completedLectures,
               undefined,
               updatedLec.reviewPasses || [],
-              sub.studyDays,
+              getMaterialStudyDays(sub.studyDays, updatedLec.studyDays),
               Number(updatedLec.speedMultiplier || 1.0),
               updatedLec.estimatedMinutesPerUnit,
               sub.studyTime,
@@ -1608,6 +1675,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             );
             updatedLec.detailedPlans = plans;
             updatedLec.targetDate = calculatedTargetDate;
+          } else if (goalType === 'selfPaced' && field === 'goalType') {
+            // 자율 입력으로 전환: 기존 계획·목표일을 비운다(누적 로그만 유지).
+            updatedLec.detailedPlans = [];
+            updatedLec.targetDate = '';
           }
           return updatedLec;
         })
@@ -1657,7 +1728,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 b.currentPage,
                 b.unit,
                 newPasses,
-                sub.studyDays,
+                getMaterialStudyDays(sub.studyDays, b.studyDays),
                 1.0,
                 b.estimatedMinutesPerUnit,
                 sub.studyTime,
@@ -1689,7 +1760,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               l.completedLectures,
               undefined,
               newPasses,
-              sub.studyDays,
+              getMaterialStudyDays(sub.studyDays, l.studyDays),
               Number(l.speedMultiplier || 1.0),
               l.estimatedMinutesPerUnit,
               sub.studyTime,
@@ -1753,7 +1824,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const customUnit = type === 'book' ? (targetMaterial as BookProgress).unit : undefined;
 
     // 하루당 평균 소화해야 할 학습량 추정 및 완료일 조정 가이드 팝업
-    const daysCount = getActiveStudyDayCount(sub.studyDays);
+    const daysCount = getActiveStudyDayCount(getMaterialStudyDays(sub.studyDays, targetMaterial.studyDays));
 
     let estimatedDailyAmount = 0;
     const remainingAmount = totalAmount - currentAmount;
@@ -2809,6 +2880,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       ? (material as BookProgress).currentPage
       : (material as LectureProgress).completedLectures;
     const remainingAmount = Math.max(0, totalAmount - currentAmount);
+    // 자율 입력(selfPaced) 자료는 목표·계획이 없어 재조정 대상이 아니다.
+    if (material.goalType === 'selfPaced') {
+      return { goalType: 'selfPaced' as const, goalValue: 0, targetDate: material.targetDate || '', plans: [], reviewPasses: [] };
+    }
+    // 위 early-return 으로 이 아래부터 goalType 은 selfPaced 가 아님(TS 흐름 좁힘).
     const fallbackGoalType = material.goalType || 'weeks';
     const fallbackGoalValue = Number(material.goalValue) || 0;
     const reviewPasses = (material.reviewPasses || []).filter((pass) => pass.days > 0);
@@ -2827,7 +2903,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const parentSubject = findSubjectByMaterialId(material.id);
 
     if (mode === 'keepTargetDate' && material.targetDate) {
-      const learningDays = getLearningDaysUntil(material.targetDate, parentSubject?.studyDays);
+      const learningDays = getLearningDaysUntil(material.targetDate, getMaterialStudyDays(parentSubject?.studyDays, material.studyDays));
       if (learningDays > 0) {
         const speed = (material as LectureProgress).speedMultiplier || 1.0;
         goalType = 'dailyAmount';
@@ -2863,9 +2939,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const getConsultationPlanPreview = (overrideDrafts?: Record<string, number>) => {
     const activeDrafts = overrideDrafts || progressDrafts;
     return subjectsState.flatMap((subject) => {
-      const daysCount = getActiveStudyDayCount(subject.studyDays);
-
       const bookItems = (subject.books || []).map((book) => {
+        const daysCount = getActiveStudyDayCount(getMaterialStudyDays(subject.studyDays, book.studyDays));
         const draftProgress = activeDrafts[book.id];
         const currentBook = draftProgress !== undefined ? { ...book, currentPage: draftProgress } : book;
         const selectionKey = `book:${book.id}`;
@@ -2921,6 +2996,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       });
 
       const lectureItems = (subject.lectures || []).map((lecture) => {
+        const daysCount = getActiveStudyDayCount(getMaterialStudyDays(subject.studyDays, lecture.studyDays));
         const draftProgress = activeDrafts[lecture.id];
         const currentLecture = draftProgress !== undefined ? { ...lecture, completedLectures: draftProgress } : lecture;
         const selectionKey = `lecture:${lecture.id}`;
@@ -4335,6 +4411,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 handleDeleteSubject,
                 handleSaveMaterial,
                 handleToggleSubjectStudyDay,
+                handleToggleMaterialStudyDay,
                 handleUpdateSubjectStudyTime,
                 hasSearchedIntegrated,
                 integratedSearchResults,

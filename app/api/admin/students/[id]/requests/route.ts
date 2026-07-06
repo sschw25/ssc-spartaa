@@ -4,7 +4,7 @@ import { updateStudentById } from '@/lib/store';
 import { generateDetailedPlans } from '@/lib/progress-plan';
 import { appendThreadMessage } from '@/lib/thread';
 
-type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
 const kstDateKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
 

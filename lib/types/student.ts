@@ -68,9 +68,13 @@ export interface BookProgress {
   updatedAt: string;
   category?: '기본' | '문제풀이' | '요약강의' | string; // 학습 자료 유형 분류
   unit?: string;           // 개편 추가: 학습 단위 (예: '페이지', '회')
-  
+  // 자료별 학습 요일 — 미설정(undefined)이면 과목(SubjectProgress.studyDays)으로 폴백(레거시 호환).
+  // getMaterialStudyDays(subject, material) 가 단일 진입점.
+  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+
   // 개편 추가: 교재별 학습 목표 및 세부 계획
-  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+  // selfPaced = 자율 입력(목표 분량·계획 없음). 학생이 그날 한 만큼 누적 입력만 한다(뒤처짐/마감 판정 제외).
+  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
   goalValue?: number;
   goalDescription?: string;
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
@@ -89,9 +93,12 @@ export interface LectureProgress {
   targetDate?: string;     // 완강 목표일 (YYYY-MM-DD)
   updatedAt: string;
   category?: '기본' | '문제풀이' | '요약강의' | string; // 학습 자료 유형 분류
+  // 자료별 학습 요일 — 미설정(undefined)이면 과목(SubjectProgress.studyDays)으로 폴백(레거시 호환).
+  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
 
   // 개편 추가: 인강별 학습 목표 및 세부 계획
-  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+  // selfPaced = 자율 입력(목표 분량·계획 없음).
+  goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
   goalValue?: number;
   goalDescription?: string;
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
@@ -104,7 +111,7 @@ export interface LectureProgress {
 export interface ProposedGoal {
   materialId: string;
   materialType: 'book' | 'lecture';
-  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+  goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
   goalValue: number;
   targetDate?: string;
   currentProgress?: number;
@@ -113,7 +120,7 @@ export interface ProposedGoal {
   speedMultiplier?: number;
   // 변경 전 현재 상태 (관리자가 before/after 비교에 사용)
   currentGoal?: {
-    goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+    goalType?: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
     goalValue?: number;
     speedMultiplier?: number;
   };

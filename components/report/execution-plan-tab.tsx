@@ -6,7 +6,7 @@ import { Calendar, MessageSquare, Plus, Trash2, CheckCircle2, Target, Clock, Rab
 import { ProposedGoal, Student } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 
-type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
 type RequestForm = {
   requestType: string;

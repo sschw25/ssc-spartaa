@@ -48,4 +48,30 @@ assert.deepEqual(legacyWeeklyAmount.plans.map((plan) => plan.rangeText), [
   '1회독 49강 ~ 50강',
 ]);
 
+// 회귀: "주 1회(공부 요일 1일)인데 총량이 주수로 안 나눠떨어질 때" 나머지가 앞 주로 몰리면 안 된다.
+// 과거엔 매주 ceil(남은량/남은주수)라 [2,2,2,1,1,1,1](첫 주들이 2회)로 나왔다 — 이제 뒤로 몰아 [1,1,1,1,2,2,2].
+const oncePerWeek = generateDetailedPlans(
+  'book_weekly',
+  10,
+  'book',
+  'deadlineWeeks',
+  7,
+  0,
+  '회',
+  [],
+  ['sat'],
+);
+assert.equal(oncePerWeek.plans.length, 7);
+assert.deepEqual(oncePerWeek.plans.map((p) => p.targetAmount), [1, 1, 1, 1, 2, 2, 2]);
+// 첫 주는 반드시 1회(사용자가 "주 1회"로 의도) — 앞 주 과다배정 금지.
+assert.equal(oncePerWeek.plans[0].targetAmount, 1);
+assert.equal(oncePerWeek.plans[0].dailyAmount, 1);
+// 나눠떨어지면 그대로 균등.
+const evenSplit = generateDetailedPlans('book_even', 12, 'book', 'deadlineWeeks', 4, 0, 'p', [], ['mon', 'wed', 'fri']);
+assert.deepEqual(evenSplit.plans.map((p) => p.targetAmount), [3, 3, 3, 3]);
+// 분량 < 주수: 빈 주 없이 분량만큼의 주만 사용(조기 완료).
+const shortAmount = generateDetailedPlans('book_short', 3, 'book', 'deadlineWeeks', 8, 0, 'p', [], ['mon']);
+assert.equal(shortAmount.plans.length, 3);
+assert.deepEqual(shortAmount.plans.map((p) => p.targetAmount), [1, 1, 1]);
+
 console.log('progress-plan checks passed');

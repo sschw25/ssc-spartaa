@@ -12,7 +12,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting } from '@/lib/types/student';
-import { getStudentTodayTotalStudyTimeMin, getEstimatedStudyTimeMin } from '@/lib/progress-plan';
+import { getStudentTodayTotalStudyTimeMin, getEstimatedStudyTimeMin, getActiveStudyDays, getMaterialStudyDays } from '@/lib/progress-plan';
 import {
   formatMaterialBenchmarkSummary,
   getMaterialBenchmark,
@@ -24,6 +24,54 @@ import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, 
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
 import { LearningConsultationPanel } from '@/components/admin/detail-tabs/learning-consultation-panel';
 import { LectureReviewRecommender } from '@/components/admin/detail-tabs/lecture-review-recommender';
+
+const WEEKDAY_OPTIONS: Array<['mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun', string]> = [
+  ['mon', '월'], ['tue', '화'], ['wed', '수'], ['thu', '목'], ['fri', '금'], ['sat', '토'], ['sun', '일'],
+];
+
+// 자료별 학습 요일 선택기 — 과목 요일과 별개로 이 교재/강의만의 요일을 지정한다.
+// 자료에 개별 요일이 없으면 과목 요일(없으면 기본 월~토)을 폴백으로 보여준다.
+function MaterialStudyDayPicker({
+  subId,
+  materialId,
+  type,
+  subjectStudyDays,
+  materialStudyDays,
+  onToggle,
+}: {
+  subId: string;
+  materialId: string;
+  type: 'book' | 'lecture';
+  subjectStudyDays?: string[];
+  materialStudyDays?: string[];
+  onToggle: (subId: string, materialId: string, type: 'book' | 'lecture', day: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun') => void;
+}) {
+  const active = getActiveStudyDays(getMaterialStudyDays(subjectStudyDays, materialStudyDays));
+  const hasOwn = !!(materialStudyDays && materialStudyDays.length > 0);
+  return (
+    <div className="space-y-1">
+      <Label className="text-[9px] text-slate-500 dark:text-slate-400">
+        이 자료 학습 요일 <span className="font-semibold text-[#0071E3]">{hasOwn ? '개별 지정' : '과목 기본'}</span>
+      </Label>
+      <div className="grid grid-cols-7 gap-1">
+        {WEEKDAY_OPTIONS.map(([day, label]) => {
+          const on = active.includes(day);
+          return (
+            <Button
+              key={day}
+              type="button"
+              variant={on ? 'default' : 'outline'}
+              onClick={() => onToggle(subId, materialId, type, day)}
+              className={`h-6 rounded-md text-[9px] px-0 ${on ? 'bg-[#0071E3] text-white' : 'bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400'}`}
+            >
+              {label}
+            </Button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export function ProgressTab() {
   const {
@@ -52,6 +100,7 @@ export function ProgressTab() {
     handleDeleteSubject,
     handleSaveMaterial,
     handleToggleSubjectStudyDay,
+    handleToggleMaterialStudyDay,
     handleUpdateSubjectStudyTime,
     hasSearchedIntegrated,
     integratedSearchResults,
@@ -1129,9 +1178,9 @@ export function ProgressTab() {
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-slate-500 dark:text-slate-400">설정 방식</Label>
                                             <Select
-                                              // 2택(기간/일일)만 노출. 레거시(weeks/weeklyAmount) 저장값은 placeholder로 재선택 유도.
-                                              value={book.goalType === 'deadlineWeeks' || book.goalType === 'dailyAmount' ? book.goalType : ''}
-                                              onValueChange={(val: 'dailyAmount' | 'deadlineWeeks') => updateBookGoalField(sub.id, book.id, 'goalType', val)}
+                                              // 3택(기간/일일/자율). 레거시(weeks/weeklyAmount) 저장값은 placeholder로 재선택 유도.
+                                              value={book.goalType === 'deadlineWeeks' || book.goalType === 'dailyAmount' || book.goalType === 'selfPaced' ? book.goalType : ''}
+                                              onValueChange={(val: 'dailyAmount' | 'deadlineWeeks' | 'selfPaced') => updateBookGoalField(sub.id, book.id, 'goalType', val)}
                                             >
                                               <SelectTrigger className="admin-fit-text h-8 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10 goal-type-select-book">
                                                 <SelectValue placeholder="목표 방식 선택" />
@@ -1139,10 +1188,13 @@ export function ProgressTab() {
                                               <SelectContent>
                                                 <SelectItem value="deadlineWeeks">기간 목표 (N주 안에 완주)</SelectItem>
                                                 <SelectItem value="dailyAmount">일일 목표 (하루 Np, 공부 요일만)</SelectItem>
+                                                <SelectItem value="selfPaced">자율 입력 (목표 없음 · 누적 로그)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
 
+                                          {book.goalType !== 'selfPaced' && (
+                                          <>
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-slate-500 dark:text-slate-400">
                                               {book.goalType === 'deadlineWeeks' ? '기간(주, 1~12)' : book.goalType === 'dailyAmount' ? '하루 페이지' : '목표 값'}
@@ -1177,7 +1229,24 @@ export function ProgressTab() {
                                               )}
                                             </Button>
                                           </div>
+                                          </>
+                                          )}
                                         </div>
+
+                                        {book.goalType === 'selfPaced' && (
+                                          <div className="rounded-lg bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 border border-[#0071E3]/15 px-2.5 py-2 text-[10px] font-semibold text-[#0071E3] leading-relaxed">
+                                            자율 입력 자료예요. 목표·계획 없이 학생이 그날 한 만큼 누적으로 입력합니다. 현재 누적 <b>{book.currentPage}{book.unit || 'p'}</b>.
+                                          </div>
+                                        )}
+
+                                        <MaterialStudyDayPicker
+                                          subId={sub.id}
+                                          materialId={book.id}
+                                          type="book"
+                                          subjectStudyDays={sub.studyDays}
+                                          materialStudyDays={book.studyDays}
+                                          onToggle={handleToggleMaterialStudyDay}
+                                        />
                                       </div>
                                     </div>
 
@@ -1533,9 +1602,9 @@ export function ProgressTab() {
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-slate-500 dark:text-slate-400">설정 방식</Label>
                                             <Select
-                                              // 2택(기간/일일)만 노출. 레거시(weeks/weeklyAmount) 저장값은 placeholder로 재선택 유도.
-                                              value={lec.goalType === 'deadlineWeeks' || lec.goalType === 'dailyAmount' ? lec.goalType : ''}
-                                              onValueChange={(val: 'dailyAmount' | 'deadlineWeeks') => updateLectureGoalField(sub.id, lec.id, 'goalType', val)}
+                                              // 3택(기간/일일/자율). 레거시(weeks/weeklyAmount) 저장값은 placeholder로 재선택 유도.
+                                              value={lec.goalType === 'deadlineWeeks' || lec.goalType === 'dailyAmount' || lec.goalType === 'selfPaced' ? lec.goalType : ''}
+                                              onValueChange={(val: 'dailyAmount' | 'deadlineWeeks' | 'selfPaced') => updateLectureGoalField(sub.id, lec.id, 'goalType', val)}
                                             >
                                               <SelectTrigger className="admin-fit-text h-8 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10 goal-type-select-lecture">
                                                 <SelectValue placeholder="목표 방식 선택" />
@@ -1543,10 +1612,12 @@ export function ProgressTab() {
                                               <SelectContent>
                                                 <SelectItem value="deadlineWeeks">기간 목표 (N주 안에 완주)</SelectItem>
                                                 <SelectItem value="dailyAmount">일일 목표 (하루 N강, 공부 요일만)</SelectItem>
+                                                <SelectItem value="selfPaced">자율 입력 (목표 없음 · 누적 로그)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
 
+                                          {lec.goalType !== 'selfPaced' && (
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-slate-500 dark:text-slate-400">
                                               {lec.goalType === 'deadlineWeeks' ? '기간(주, 1~12)' : lec.goalType === 'dailyAmount' ? '하루 강의' : '목표 값'}
@@ -1559,6 +1630,7 @@ export function ProgressTab() {
                                               className="h-8 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10 goal-value-input-lecture"
                                             />
                                           </div>
+                                          )}
 
                                           <div className="space-y-1 min-w-0">
                                             <Label className="text-[9px] text-slate-500 dark:text-slate-400">평균 시간(분)</Label>
@@ -1592,6 +1664,7 @@ export function ProgressTab() {
                                             </select>
                                           </div>
 
+                                          {lec.goalType !== 'selfPaced' && (
                                           <div className="flex items-end col-span-2 sm:col-span-1">
                                             <Button
                                               type="button"
@@ -1613,7 +1686,23 @@ export function ProgressTab() {
                                               )}
                                             </Button>
                                           </div>
+                                          )}
                                         </div>
+
+                                        {lec.goalType === 'selfPaced' && (
+                                          <div className="rounded-lg bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 border border-[#0071E3]/15 px-2.5 py-2 text-[10px] font-semibold text-[#0071E3] leading-relaxed">
+                                            자율 입력 자료예요. 목표·계획 없이 학생이 그날 들은 만큼 누적으로 입력합니다. 현재 누적 <b>{lec.completedLectures}강</b>.
+                                          </div>
+                                        )}
+
+                                        <MaterialStudyDayPicker
+                                          subId={sub.id}
+                                          materialId={lec.id}
+                                          type="lecture"
+                                          subjectStudyDays={sub.studyDays}
+                                          materialStudyDays={lec.studyDays}
+                                          onToggle={handleToggleMaterialStudyDay}
+                                        />
                                       </div>
 
                                       <div className="mt-2">

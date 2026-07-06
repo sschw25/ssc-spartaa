@@ -1,5 +1,5 @@
 import type { Student, DetailedPlan, SubjectProgress, BookProgress, LectureProgress } from '@/lib/types/student';
-import { getPlanUnitMinutes, getDeadlinePace, getActiveStudyDays, getLeaveFractionByDate } from '@/lib/progress-plan';
+import { getPlanUnitMinutes, getDeadlinePace, getActiveStudyDays, getMaterialStudyDays, getLeaveFractionByDate } from '@/lib/progress-plan';
 import { getCarryoverNet, weekKeyOf } from '@/lib/makeup-carryover';
 
 // ── 기간 목표(모드 B) 미션 파생 — 서버(missions-hub)와 클라이언트(use-report-state)가 공유하는 단일 소스 ──
@@ -97,7 +97,7 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
     materialType: 'book' | 'lecture',
   ) => {
     const title = materialType === 'book' ? (material as BookProgress).title : (material as LectureProgress).name;
-    const studyDays = getActiveStudyDays(subject.studyDays);
+    const studyDays = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, material.studyDays));
     const unitMinutes = unitMinutesFor(material, materialType);
     const unit = unitLabelFor(material, materialType);
 
