@@ -10,6 +10,7 @@ import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
+import { TabHero } from './tab-hero';
 import { getLeaveDates, getLeaveExemptions, getMakeupAmount } from '@/lib/progress-plan';
 
 type DailyPlanEntry = {
@@ -940,10 +941,19 @@ export function HomeOverviewTab({
     </section>
 
     <section id="coach-feedback" className={`scroll-mt-24 space-y-4 print-card ${!isStudentReport || activeTab === 'coach-feedback' ? '' : 'hidden print:block'}`}>
-      <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 tracking-widest uppercase flex items-center gap-2">
-        <MessageSquare className="w-4 h-4 text-[#0071E3]" />
-        코멘팅 소견 및 생활 관리 피드백
-      </h3>
+      {isStudentReport ? (
+        <TabHero
+          eyebrow="Feedback"
+          icon={MessageSquare}
+          title="코멘팅 소견"
+          description="담당 코멘터가 남긴 학습·생활 피드백이에요."
+        />
+      ) : (
+        <h3 className="text-xs font-black text-slate-900 dark:text-slate-100 tracking-widest uppercase flex items-center gap-2">
+          <MessageSquare className="w-4 h-4 text-[#0071E3]" />
+          코멘팅 소견 및 생활 관리 피드백
+        </h3>
+      )}
 
       {isStudentReport ? (
         student.studentLifeComment ? (

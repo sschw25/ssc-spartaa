@@ -21,7 +21,8 @@ import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MissionsHub } from '@/components/student/missions-hub';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
-import { Loader2, AlertCircle } from 'lucide-react';
+import { Loader2, AlertCircle, BookOpen, Shield, Flame } from 'lucide-react';
+import { TabHero } from '@/components/report/tab-hero';
 import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
 type LearningSubTab = 'timetable' | 'execution-plan' | 'subject-progress' | 'grade-analysis';
@@ -519,6 +520,14 @@ function StudentReportInner() {
             id="student-missions"
             className={`no-print scroll-mt-24 mx-auto w-full max-w-[680px] px-4 sm:px-5 ${activeTab === 'student-missions' ? 'block' : 'hidden'}`}
           >
+            <div className="mb-4">
+              <TabHero
+                eyebrow="Missions"
+                icon={Flame}
+                title="미션"
+                description="오늘 할 일을 해내고 미션을 달성하면 쿠폰이 쌓여요."
+              />
+            </div>
             <MissionsHub
               studentId={student.id}
               studentName={student.name}
@@ -535,6 +544,12 @@ function StudentReportInner() {
 
         {isStudentReport && activeTab === 'learning' && (
           <section id="learning" className="scroll-mt-24 space-y-4">
+            <TabHero
+              eyebrow="Learning"
+              icon={BookOpen}
+              title="학습"
+              description="오늘 계획·주간 계획·과목별 진도·성적을 한곳에서 확인해요."
+            />
             {renderSubTabs(
               LEARNING_SUB_TABS,
               learningSubTab,
@@ -546,6 +561,12 @@ function StudentReportInner() {
 
         {isStudentReport && activeTab === 'life' && (
           <section id="life" className="scroll-mt-24 space-y-4">
+            <TabHero
+              eyebrow="Life"
+              icon={Shield}
+              title="생활"
+              description="등하원·순공 랭킹·벌점·쿠폰을 한곳에서 확인해요."
+            />
             {renderSubTabs(
               LIFE_SUB_TABS,
               lifeSubTab,
