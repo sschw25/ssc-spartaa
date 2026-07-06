@@ -10,12 +10,35 @@ export function Footer() {
       <div className="max-w-[72rem] mx-auto px-4 sm:px-6">
         
         {/* SEO Internal Links */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-8 text-[12px] font-semibold text-[#434345] border-b border-black/5 pb-6">
-          <Link href="/wonju/gongmuwon" className="text-[#007AFF] hover:underline">원주 공무원학원</Link>
-          <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
-          <Link href="/chuncheon/gongmuwon" className="hover:text-[#007AFF] hover:underline">춘천 공무원학원</Link>
-          <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
-          <Link href="/chungju/gongmuwon" className="hover:text-[#007AFF] hover:underline">충주 공무원학원</Link>
+        <div className="mb-8 border-b border-black/5 pb-6 space-y-2 text-[12px] font-semibold text-[#434345]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/wonju/gongmuwon" className="text-[#007AFF] hover:underline">원주 공무원학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chuncheon/gongmuwon" className="hover:text-[#007AFF] hover:underline">춘천 공무원학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chungju/gongmuwon" className="hover:text-[#007AFF] hover:underline">충주 공무원학원</Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/wonju/police" className="hover:text-[#007AFF] hover:underline">원주 경찰학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chuncheon/police" className="hover:text-[#007AFF] hover:underline">춘천 경찰학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chungju/police" className="hover:text-[#007AFF] hover:underline">충주 경찰학원</Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/wonju/fire" className="hover:text-[#007AFF] hover:underline">원주 소방학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chuncheon/fire" className="hover:text-[#007AFF] hover:underline">춘천 소방학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chungju/fire" className="hover:text-[#007AFF] hover:underline">충주 소방학원</Link>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Link href="/wonju/interview" className="hover:text-[#007AFF] hover:underline">원주 공무원 면접학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chuncheon/interview" className="hover:text-[#007AFF] hover:underline">춘천 공무원 면접학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 hidden sm:block" />
+            <Link href="/chungju/interview" className="hover:text-[#007AFF] hover:underline">충주 공무원 면접학원</Link>
+          </div>
         </div>
 
         {/* Company Info Block */}

@@ -1,0 +1,23 @@
+# SSC스파르타 (SSC Sparta)
+
+> 원주·춘천·충주 3개 캠퍼스에서 운영하는 시간 관리형 학습관. 공무원·경찰·소방·임용·독학재수(수능)·전문자격 수험생을 2중 출결, 교시제 자습, 순공시간 집계, 스마트폰 통제로 밀착 관리하며, 지방직·교육행정직 공무원 면접반을 별도 운영한다.
+
+## 캠퍼스
+
+- [원주캠퍼스](https://www.sscsparta.com/wonju): 강원 원주시 치악로 1793 농협건물 4층, 0507-1424-7999
+- [춘천캠퍼스](https://www.sscsparta.com/chuncheon): 강원 춘천시 퇴계로 249 5층, 0507-1366-8881
+- [충주캠퍼스](https://www.sscsparta.com/chungju): 충북 충주시 계명대로 283 4층, 0507-1492-5574
+
+## 직렬별 안내 (캠퍼스별 페이지: /wonju, /chuncheon, /chungju 하위)
+
+- [원주 공무원학원](https://www.sscsparta.com/wonju/gongmuwon): 국가직·지방직 9급 대비 합격관리반. 춘천·충주도 동일 경로(/chuncheon/gongmuwon, /chungju/gongmuwon)
+- [원주 경찰학원](https://www.sscsparta.com/wonju/police): 순경 공채 필기(헌법·형사법·경찰학) 및 순환식 체력검사 대비 관리반. 춘천·충주 동일(/chuncheon/police, /chungju/police)
+- [원주 소방학원](https://www.sscsparta.com/wonju/fire): 소방공무원 필기(소방학개론·소방관계법규·행정법총론) 대비 관리학습관. 춘천·충주 동일(/chuncheon/fire, /chungju/fire)
+- [원주 공무원 면접학원](https://www.sscsparta.com/wonju/interview): 지방직·교육행정직 필기합격자 대상 면접반(정규수업 4회 12시간 + 1:1 코멘팅). 춘천·충주 동일(/chuncheon/interview, /chungju/interview)
+- [독학재수](https://www.sscsparta.com/wonju/suneung), [임용고시](https://www.sscsparta.com/wonju/imyong), [전문자격](https://www.sscsparta.com/wonju/professional), [취업준비](https://www.sscsparta.com/wonju/job), [관리형독서실](https://www.sscsparta.com/wonju/managed)
+
+## 특징
+
+- 노량진 커넥츠프랩 프로그램 기반의 전국 단위 모의 평가와 학습 데이터 관리
+- 2중 출결 시스템, 교시제 자습, 순공시간 집계, 1:1 학습 관리
+- 면접반은 외부 수강생도 등록 가능하며 강원·충북·인근 경기 지역 수험생을 대상으로 함

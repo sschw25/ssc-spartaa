@@ -94,6 +94,15 @@ export default function ChungjuInterviewPage() {
         'addressRegion': '충청북도',
         'addressCountry': 'KR',
       },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      'mainEntity': FAQ_LIST.map((faq) => ({
+        '@type': 'Question',
+        'name': faq.question,
+        'acceptedAnswer': { '@type': 'Answer', 'text': faq.answer },
+      })),
     }
   ]
 

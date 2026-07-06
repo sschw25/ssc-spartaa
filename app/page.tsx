@@ -17,7 +17,7 @@ import { CAMPUS_CONFIG } from '@/lib/campus-config'
 
 export const metadata: Metadata = {
   title: 'SSC 스파르타 | 압도적 합격을 위한 스파르타식 통제 시스템',
-  description: '원주, 춘천, 충주 전국의 단기합격을 증명하는 독학재수, 공무원, 임용고시 관리형 독서실. 철저한 통제와 노량진 관리 시스템으로 순공 시간을 극대화하세요.',
+  description: '원주, 춘천, 충주 전국의 단기합격을 증명하는 공무원·경찰·소방·임용·독학재수 관리형 학습관. 철저한 통제와 노량진 관리 시스템, 공무원 면접반까지 순공 시간을 극대화하세요.',
   keywords: [
     'SSC 스파르타',
     '관리형 독서실',
@@ -25,6 +25,14 @@ export const metadata: Metadata = {
     '원주 독학재수',
     '춘천 임용고시',
     '충주 공무원학원',
+    '원주 경찰학원',
+    '춘천 경찰학원',
+    '충주 경찰학원',
+    '원주 소방학원',
+    '춘천 소방학원',
+    '충주 소방학원',
+    '원주 면접학원',
+    '공무원 면접학원',
     '스파르타식 통제',
     '순공시간 확보',
     '커넥츠프랩',
@@ -298,6 +306,24 @@ export default function SelectLocation() {
             <Link href="/chuncheon/gongmuwon" className="text-[#434345] hover:text-[#007AFF] hover:underline">춘천 공무원학원</Link>
             <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
             <Link href="/chungju/gongmuwon" className="text-[#434345] hover:text-[#007AFF] hover:underline">충주 공무원학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/wonju/police" className="text-[#434345] hover:text-[#007AFF] hover:underline">원주 경찰학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chuncheon/police" className="text-[#434345] hover:text-[#007AFF] hover:underline">춘천 경찰학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chungju/police" className="text-[#434345] hover:text-[#007AFF] hover:underline">충주 경찰학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/wonju/fire" className="text-[#434345] hover:text-[#007AFF] hover:underline">원주 소방학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chuncheon/fire" className="text-[#434345] hover:text-[#007AFF] hover:underline">춘천 소방학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chungju/fire" className="text-[#434345] hover:text-[#007AFF] hover:underline">충주 소방학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/wonju/interview" className="text-[#434345] hover:text-[#007AFF] hover:underline">원주 공무원 면접학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chuncheon/interview" className="text-[#434345] hover:text-[#007AFF] hover:underline">춘천 공무원 면접학원</Link>
+            <span className="w-[1px] h-3 bg-black/10 self-center hidden sm:inline" />
+            <Link href="/chungju/interview" className="text-[#434345] hover:text-[#007AFF] hover:underline">충주 공무원 면접학원</Link>
           </div>
         </div>
 

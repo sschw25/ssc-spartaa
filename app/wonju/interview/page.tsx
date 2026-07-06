@@ -94,6 +94,15 @@ export default function WonjuInterviewPage() {
         'addressRegion': '강원특별자치도',
         'addressCountry': 'KR',
       },
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      'mainEntity': FAQ_LIST.map((faq) => ({
+        '@type': 'Question',
+        'name': faq.question,
+        'acceptedAnswer': { '@type': 'Answer', 'text': faq.answer },
+      })),
     }
   ]
 
