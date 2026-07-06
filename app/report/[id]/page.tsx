@@ -8,6 +8,7 @@ import { HomeOverviewTab } from '@/components/report/home-overview-tab';
 import { TimetableTab } from '@/components/report/timetable-tab';
 import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
+import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
@@ -634,12 +635,19 @@ function StudentReportInner() {
           student={student}
           isStudentReport={isStudentReport}
           updateBookSolvedQuestions={updateBookSolvedQuestions}
-          incrementBookIncorrectTag={incrementBookIncorrectTag}
           updatePlanCompletion={updatePlanCompletion}
           onCarryoverApplied={applyCarryover}
           materialBenchmarks={materialBenchmarks}
           activeTab={learningActiveTab}
           setActiveTab={selectReportTab}
+        />
+
+        {/* 오답 노트 (독립 탭) — 과목별 진도에서 분리한 교재별 오답 사유 태깅 */}
+        <WrongAnswerTab
+          student={student}
+          isStudentReport={isStudentReport}
+          incrementBookIncorrectTag={incrementBookIncorrectTag}
+          activeTab={activeTab}
         />
 
         {/* 5. 성적 분석 탭 */}

@@ -60,7 +60,6 @@ interface SubjectProgressTabProps {
   student: Student;
   isStudentReport: boolean;
   updateBookSolvedQuestions: (materialId: string, solvedQuestions: number) => void;
-  incrementBookIncorrectTag: (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => void;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
   onCarryoverApplied?: (record: MakeupCarryover) => void;
   materialBenchmarks: MaterialBenchmarkMap;
@@ -72,7 +71,6 @@ export function SubjectProgressTab({
   student,
   isStudentReport,
   updateBookSolvedQuestions,
-  incrementBookIncorrectTag,
   updatePlanCompletion,
   onCarryoverApplied,
   materialBenchmarks,
@@ -620,36 +618,15 @@ export function SubjectProgressTab({
                                     </span>
                                   </span>
 
-                                  <div className="flex flex-col gap-1 mt-1.5 text-[9px] font-semibold text-slate-400 max-w-[150px]">
-                                    <div className="flex flex-col gap-1 items-end">
-                                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-wider">오답 사유 추가:</span>
-                                      <div className="flex flex-wrap gap-1 justify-end">
-                                        {[
-                                          { key: 'calculation_error', label: '연산' },
-                                          { key: 'time_limit', label: '시간' },
-                                          { key: 'misread_condition', label: '오독' },
-                                          { key: 'concept_leak', label: '개념' }
-                                        ].map(tag => (
-                                          <button
-                                            key={tag.key}
-                                            type="button"
-                                            onClick={() => incrementBookIncorrectTag(b.id, tag.key, b.incorrectTags)}
-                                            className="px-1 py-0.5 rounded bg-slate-100 dark:bg-white/10 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 transition-all text-[8px] font-black text-slate-500 dark:text-slate-400 active:scale-95"
-                                          >
-                                            {tag.label} +1
-                                          </button>
-                                        ))}
-                                      </div>
+                                  {/* 오답 사유 태그는 '오답 노트' 독립 탭으로 이동함 (과목별 진도에서는 진도만) */}
+                                  {b.incorrectTags && Object.values(b.incorrectTags).some(v => Number(v) > 0) && (
+                                    <div className="flex flex-wrap gap-1 mt-1 text-[10px] font-black justify-end max-w-[150px]">
+                                      {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-[2px] bg-red-50 dark:bg-red-500/10 text-red-600 rounded leading-none">연산:{b.incorrectTags.calculation_error}</span>}
+                                      {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-[2px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded leading-none">시간:{b.incorrectTags.time_limit}</span>}
+                                      {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-[2px] bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded leading-none">오독:{b.incorrectTags.misread_condition}</span>}
+                                      {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-[2px] bg-blue-50 dark:bg-[#0071E3]/15 text-[#0071E3] rounded leading-none">개념:{b.incorrectTags.concept_leak}</span>}
                                     </div>
-                                    {b.incorrectTags && Object.values(b.incorrectTags).some(v => Number(v) > 0) && (
-                                      <div className="flex flex-wrap gap-1 mt-1 text-[10px] font-black justify-end">
-                                        {Number(b.incorrectTags.calculation_error || 0) > 0 && <span className="px-1 py-[2px] bg-red-50 dark:bg-red-500/10 text-red-600 rounded leading-none">연산:{b.incorrectTags.calculation_error}</span>}
-                                        {Number(b.incorrectTags.time_limit || 0) > 0 && <span className="px-1 py-[2px] bg-amber-50 dark:bg-amber-500/10 text-amber-600 rounded leading-none">시간:{b.incorrectTags.time_limit}</span>}
-                                        {Number(b.incorrectTags.misread_condition || 0) > 0 && <span className="px-1 py-[2px] bg-orange-50 dark:bg-orange-500/10 text-orange-600 rounded leading-none">오독:{b.incorrectTags.misread_condition}</span>}
-                                        {Number(b.incorrectTags.concept_leak || 0) > 0 && <span className="px-1 py-[2px] bg-blue-50 dark:bg-[#0071E3]/15 text-[#0071E3] rounded leading-none">개념:{b.incorrectTags.concept_leak}</span>}
-                                      </div>
-                                    )}
-                                  </div>
+                                  )}
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-end gap-0.5">

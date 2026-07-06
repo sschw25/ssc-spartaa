@@ -99,6 +99,55 @@ interface ExecutionPlanTabProps {
   realigningPlans?: boolean;
 }
 
+// 가로 스와이프 캐러셀 — 넘길 게 남은 쪽 끝을 mask-image로 페이드해 "더 밀어볼 수 있다"는 힌트를 준다.
+// 카드 배경이 반투명이라 그라데이션 색 매칭 대신 콘텐츠 자체를 마스크로 페이드(테마 무관하게 정확).
+// 스크롤이 끝에 닿으면 그쪽 페이드는 사라진다.
+function SwipeCarousel({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [edges, setEdges] = React.useState({ atStart: true, atEnd: true });
+
+  const update = React.useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const atStart = el.scrollLeft <= 1;
+    const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+    setEdges((prev) => (prev.atStart === atStart && prev.atEnd === atEnd ? prev : { atStart, atEnd }));
+  }, []);
+
+  React.useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => {
+      el.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [update]);
+
+  const FADE = 44; // 페이드 폭(px)
+  const maskStyle: React.CSSProperties = (() => {
+    const left = !edges.atStart;
+    const right = !edges.atEnd;
+    if (!left && !right) return {};
+    const startStop = left ? `transparent, #000 ${FADE}px` : '#000';
+    const endStop = right ? `#000 calc(100% - ${FADE}px), transparent` : '#000';
+    const value = `linear-gradient(to right, ${startStop}, ${endStop})`;
+    return { WebkitMaskImage: value, maskImage: value };
+  })();
+
+  return (
+    <div
+      ref={ref}
+      style={maskStyle}
+      className={`flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function ExecutionPlanTab({
   student,
   isStudentReport,
@@ -846,7 +895,7 @@ export function ExecutionPlanTab({
                   </span>
                 </div>
 
-                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+                <SwipeCarousel>
             {group.entries.map((entry) => {
               const progressPercent = entry.targetAmount > 0
                 ? Math.min(100, Math.round((entry.actualAmount / entry.targetAmount) * 100))
@@ -997,7 +1046,7 @@ export function ExecutionPlanTab({
                 </article>
               );
             })}
-                </div>
+                </SwipeCarousel>
               </div>
             ))}
           </div>
@@ -1074,11 +1123,11 @@ export function ExecutionPlanTab({
                                 : 'border-white dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
                             }`}
                           >
-                            <div className="mb-1 flex items-center gap-1.5">
+                            <div className="mb-1 flex items-start gap-1.5">
                               <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-black text-white ${entry.isCompleted ? 'bg-emerald-600' : 'bg-slate-900'}`}>
                                 {index + 1}
                               </span>
-                              <span className="rounded-lg bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[8px] font-black text-slate-500 dark:text-slate-400">
+                              <span className="min-w-0 break-keep rounded-lg bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[8px] font-black leading-tight text-slate-500 dark:text-slate-400">
                                 {studyTimeLabels[entry.studyTime] || '미지정'}
                               </span>
                             </div>
