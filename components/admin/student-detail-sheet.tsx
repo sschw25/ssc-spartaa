@@ -20,7 +20,7 @@ import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { getStudyTimeSlot } from '@/lib/academy-timetable';
 import { getPendingChangeRequests, getPendingSuggestions, getRequestTypeLabel } from '@/lib/student-requests';
 import { LEAVE_TYPES, getLeaveTypeLabel } from '@/lib/leave';
-import { getDailyChecklist, getPomodoroStats, getPomodoroStatsFromStudent, getSeoulDateKey } from '@/lib/student-activity';
+import { getDailyChecklist, getPomodoroStats, getPomodoroStatsFromStudent, getSeoulDateKey, getRewardGrantsFromStudent } from '@/lib/student-activity';
 import { toast } from 'sonner';
 import { useConfirm, usePrompt } from '@/components/ui/confirm-dialog';
 import {
@@ -4439,6 +4439,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 todayChecklist={todayChecklist}
                 leaveRequests={leaveRequestsLocal}
                 leaveCoupons={leaveCouponsLocal}
+                couponGrants={student ? getRewardGrantsFromStudent(student, 50) : []}
                 leaveActionBusy={leaveActionBusy}
                 leaveReplyDrafts={leaveReplyDrafts}
                 setLeaveReplyDrafts={setLeaveReplyDrafts}

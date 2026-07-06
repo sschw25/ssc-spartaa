@@ -12,7 +12,15 @@ interface Mission {
   earned: boolean;
   progress: string | null;
 }
-interface RecentReward { missionName: string; rewardGranted: number; date: string }
+interface RecentReward { missionName: string; rewardGranted: number; date: string; grantedAt?: string }
+
+// 지급 시각(grantedAt) 우선 표시, 없으면 periodKey(date) 폴백. YYYY-MM-DD 또는 'M월 D일'.
+const fmtGrantDate = (r: RecentReward): string => {
+  const iso = r.grantedAt || r.date || '';
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${Number(m[2])}월 ${Number(m[3])}일`;
+  return ''; // OT:/EVENT: 등 기간키는 날짜 표시 생략
+};
 interface MissionsData {
   missions: Mission[];
   coupons: number;
@@ -132,13 +140,17 @@ export function MissionsCard({ onGoToExchange }: { onGoToExchange?: () => void }
       {data.recent.length > 0 && (
         <div className="border-t border-slate-100 dark:border-white/10 pt-3 space-y-1.5">
           <p className="text-[10px] font-semibold text-[#0071E3] uppercase tracking-wider">최근 적립</p>
-          {data.recent.filter((r) => r.rewardGranted > 0).slice(0, 4).map((r, i) => (
-            <div key={i} className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
-              <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-              <span className="font-semibold text-slate-700 dark:text-slate-300">{r.missionName}</span>
-              <span className="text-[#0071E3] font-semibold">+{r.rewardGranted}장</span>
-            </div>
-          ))}
+          {data.recent.filter((r) => r.rewardGranted > 0).slice(0, 4).map((r, i) => {
+            const when = fmtGrantDate(r);
+            return (
+              <div key={i} className="flex items-center gap-2 text-[11px] font-semibold text-slate-600">
+                <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                <span className="font-semibold text-slate-700 dark:text-slate-300">{r.missionName}</span>
+                <span className="text-[#0071E3] font-semibold">+{r.rewardGranted}장</span>
+                {when && <span className="ml-auto text-[10px] font-medium text-slate-400 dark:text-slate-500">{when}</span>}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

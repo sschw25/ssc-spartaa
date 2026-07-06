@@ -1,4 +1,6 @@
-import type { DetailedPlan } from '@/lib/types/student';
+import type { DetailedPlan, RewardGrant } from '@/lib/types/student';
+
+export type { RewardGrant };
 
 export type PhoneStatus = 'submitted' | 'locker' | 'off_hold'; // 제출완료 / 임시보관함 / 전원종료후소지
 export type DailyChecklistEntry = {
@@ -156,6 +158,27 @@ export function writeActivityEnvelope(student: StudentLike, env: SpecialNoteEnve
 
 export function serializeClientActivityNoteFromStudent(student: StudentLike): string | undefined {
   return buildClientNote(readActivityEnvelope(student));
+}
+
+// 학생의 쿠폰 지급 내역을 최근순으로 반환(grantedAt 우선, 없으면 periodKey 로 정렬).
+// 지급 0장(status 만 기록된 레거시)·형식 불명 항목은 제외한다.
+export function getRewardGrantsFromStudent(student: StudentLike, limit = 30): RewardGrant[] {
+  const log = readActivityEnvelope(student).rewards_log;
+  if (!Array.isArray(log)) return [];
+  const grants: RewardGrant[] = log.flatMap((raw) => {
+    if (!raw || typeof raw !== 'object') return [];
+    const it = raw as Record<string, unknown>;
+    const coupons = Number(it.rewardGranted) || 0;
+    if (coupons <= 0) return [];
+    return [{
+      missionName: typeof it.missionName === 'string' ? it.missionName : '미션 보상',
+      coupons,
+      periodKey: typeof it.date === 'string' ? it.date : '',
+      grantedAt: typeof it.grantedAt === 'string' ? it.grantedAt : undefined,
+    }];
+  });
+  grants.sort((a, b) => (b.grantedAt || b.periodKey).localeCompare(a.grantedAt || a.periodKey));
+  return grants.slice(0, limit);
 }
 
 export function getPomodoroStatsFromStudent(student: StudentLike, dateKey = getSeoulDateKey()) {

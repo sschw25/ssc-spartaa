@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Trophy, Loader2, Save, Sparkles, Ticket, PlayCircle, CalendarClock } from 'lucide-react';
+import { ChevronLeft, Trophy, Loader2, Save, Sparkles, Ticket, PlayCircle, CalendarClock, RefreshCw, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -15,6 +15,18 @@ import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 
 type ConfigMap = Record<MissionId, MissionConfig>;
 
+// settle?dry=1 미리보기 응답 항목 (lib/mission-engine MissionPreviewEntry와 동일 구조)
+interface PreviewEntry {
+  id: MissionId;
+  periodKey: string;
+  coupons: number;
+  eligible: number;
+  already: number;
+  pending: number;
+  pendingNames: string[];
+  skippedReason?: string;
+}
+
 export default function MissionsPage() {
   const confirm = useConfirm();
   const router = useRouter();
@@ -26,6 +38,11 @@ export default function MissionsPage() {
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [settling, setSettling] = useState(false);
+  // 항목별 정산 — 대상자 미리보기 + 체크 선택
+  const [preview, setPreview] = useState<PreviewEntry[] | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [selectedMissions, setSelectedMissions] = useState<Set<MissionId>>(new Set());
+  const [settlingKey, setSettlingKey] = useState<string | null>(null); // missionId | 'selected'
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -46,19 +63,35 @@ export default function MissionsPage() {
     }
   }, []);
 
+  // 항목별 지급 대상 미리보기 — 저장된 설정 기준 dryRun 평가(지급 없음).
+  const loadPreview = useCallback(async () => {
+    setPreviewLoading(true);
+    try {
+      const res = await fetch('/api/admin/missions/settle?dry=1', { method: 'POST' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setPreview(json.preview || []);
+        setSelectedMissions(new Set());
+      }
+    } catch { /* 미리보기 실패는 치명적이지 않음 — 새로고침으로 재시도 */ } finally {
+      setPreviewLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
         const res = await fetch('/api/admin/auth/me');
         if (!res.ok) { router.replace('/admin'); return; }
         await load();
+        loadPreview();
       } catch {
         router.replace('/admin');
       } finally {
         setCheckingAuth(false);
       }
     })();
-  }, [router, load]);
+  }, [router, load, loadPreview]);
 
   const handleLogout = async () => {
     await fetch('/api/admin/auth/logout', { method: 'POST' });
@@ -95,6 +128,7 @@ export default function MissionsPage() {
         setEnabled(json.enabled !== false);
         setDirty(false);
         toast.success('미션 설정이 저장되었습니다.');
+        loadPreview(); // 설정 변경이 지급 대상에 반영되도록 미리보기 갱신
       } else {
         toast.error(json.message || '저장에 실패했습니다.');
       }
@@ -105,6 +139,18 @@ export default function MissionsPage() {
     }
   };
 
+  const showSettleResult = (json: any) => {
+    const lines = MISSION_ORDER
+      .filter((id) => json.granted?.[id] > 0)
+      .map((id) => `${MISSION_META[id].name} ${json.granted[id]}명`);
+    toast.success(
+      `정산 완료 — ${json.totalStudents}명에게 쿠폰 ${json.totalCoupons}장 지급` +
+      (lines.length ? ` (${lines.join(', ')})` : ' (신규 지급 없음)'),
+      { duration: 6000 },
+    );
+    if (json.skipped?.length) toast.message('일부 건너뜀: ' + json.skipped.join(' / '), { duration: 6000 });
+  };
+
   const settleNow = async () => {
     if (dirty && !(await confirm({ title: '저장하지 않은 변경사항이 있습니다. 계속하시겠어요?', description: '현재 저장된 설정 기준으로 정산됩니다.', confirmText: '계속' }))) return;
     if (!(await confirm({ title: '지금 미션을 정산하고 쿠폰을 지급할까요?', description: '조건을 충족한 학생에게 쿠폰을 지급합니다. 같은 기간 중복 지급은 자동 방지됩니다.', tone: 'danger', confirmText: '정산·지급' }))) return;
@@ -113,15 +159,8 @@ export default function MissionsPage() {
       const res = await fetch('/api/admin/missions/settle', { method: 'POST' });
       const json = await res.json();
       if (res.ok && json.success) {
-        const lines = MISSION_ORDER
-          .filter((id) => json.granted?.[id] > 0)
-          .map((id) => `${MISSION_META[id].name} ${json.granted[id]}명`);
-        toast.success(
-          `정산 완료 — ${json.totalStudents}명에게 쿠폰 ${json.totalCoupons}장 지급` +
-          (lines.length ? ` (${lines.join(', ')})` : ' (신규 지급 없음)'),
-          { duration: 6000 },
-        );
-        if (json.skipped?.length) toast.message('일부 건너뜀: ' + json.skipped.join(' / '), { duration: 6000 });
+        showSettleResult(json);
+        loadPreview();
       } else {
         toast.error(json.message || '정산에 실패했습니다.');
       }
@@ -129,6 +168,34 @@ export default function MissionsPage() {
       toast.error('네트워크 오류로 정산에 실패했습니다.');
     } finally {
       setSettling(false);
+    }
+  };
+
+  // 항목별/선택 정산 — 지정한 미션만 평가·지급
+  const settleByIds = async (ids: MissionId[]) => {
+    if (ids.length === 0) return;
+    if (dirty && !(await confirm({ title: '저장하지 않은 변경사항이 있습니다. 계속하시겠어요?', description: '현재 저장된 설정 기준으로 정산됩니다.', confirmText: '계속' }))) return;
+    const names = ids.map((id) => MISSION_META[id].name).join(', ');
+    if (!(await confirm({
+      title: ids.length === 1 ? `'${names}' 미션을 정산할까요?` : `선택한 ${ids.length}개 미션을 정산할까요?`,
+      description: `${ids.length === 1 ? '' : `${names} — `}조건 충족 학생에게 쿠폰을 지급합니다. 같은 기간 중복 지급은 자동 방지됩니다.`,
+      tone: 'danger',
+      confirmText: '정산·지급',
+    }))) return;
+    setSettlingKey(ids.length === 1 ? ids[0] : 'selected');
+    try {
+      const res = await fetch(`/api/admin/missions/settle?missions=${ids.join(',')}`, { method: 'POST' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        showSettleResult(json);
+        loadPreview();
+      } else {
+        toast.error(json.message || '정산에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류로 정산에 실패했습니다.');
+    } finally {
+      setSettlingKey(null);
     }
   };
 
@@ -203,24 +270,139 @@ export default function MissionsPage() {
           </div>
         </div>
 
-        {/* 정산 실행 */}
-        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-          <div className="flex items-start gap-2.5 min-w-0">
-            <CalendarClock className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
-              <b className="text-slate-800 dark:text-slate-100">정산하기</b> — 활성 미션을 지금 평가해 조건 충족 학생에게 쿠폰을 지급합니다.
-              주간 미션은 매주, 월간 미션은 월말에 실행하세요. <span className="text-slate-400">(같은 기간 중복 지급은 자동 방지)</span>
-            </p>
+        {/* 정산 실행 — 항목별 지급 대상 미리보기 + 체크 선택 정산 (반차 승인과 동일한 다중선택 패턴) */}
+        <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-start gap-2.5 min-w-0">
+              <CalendarClock className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
+                <b className="text-slate-800 dark:text-slate-100">정산하기</b> — 항목별 지급 대상 확인 후 개별·선택·전체 정산.
+                <span className="text-slate-400"> 저장된 설정 기준 평가 · 같은 기간 중복 지급 자동 방지</span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={loadPreview}
+                title="지급 대상 미리보기 새로고침"
+                className="rounded-lg p-2 text-slate-500 dark:text-slate-400 hover:bg-[#F5F5F7] dark:hover:bg-white/5 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${previewLoading ? 'animate-spin' : ''}`} />
+              </button>
+              <Button
+                size="sm"
+                disabled={settling || loading || settlingKey !== null}
+                onClick={settleNow}
+                className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 px-3.5 font-bold"
+              >
+                {settling ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5 mr-1" />}
+                전체 정산
+              </Button>
+            </div>
           </div>
-          <Button
-            size="sm"
-            disabled={settling || loading}
-            onClick={settleNow}
-            className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 px-3.5 font-bold shrink-0"
-          >
-            {settling ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <PlayCircle className="w-3.5 h-3.5 mr-1" />}
-            지금 정산하기
-          </Button>
+
+          {previewLoading && !preview ? (
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => <div key={i} className="h-[52px] rounded-xl bg-black/[0.03] dark:bg-white/5 animate-pulse" />)}
+            </div>
+          ) : !preview || preview.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 px-4 py-5 text-center text-[11px] font-bold text-slate-400">
+              정산형 미션 없음 — 쿠폰 미션 전체 스위치 또는 아래 개별 미션이 꺼져 있습니다.
+            </p>
+          ) : (
+            <>
+              {/* 선택 정산 바 — 신규 지급 대상이 있는 항목만 선택 가능 */}
+              {(() => {
+                const selectable = preview.filter((p) => p.pending > 0 && !p.skippedReason);
+                const selCount = selectable.filter((p) => selectedMissions.has(p.id)).length;
+                const allSel = selectable.length > 0 && selCount === selectable.length;
+                return (
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-50 dark:bg-white/5 px-3.5 py-2">
+                    <label className={`flex items-center gap-2 text-[11px] font-bold select-none ${selectable.length === 0 ? 'text-slate-300 dark:text-slate-600' : 'text-slate-600 dark:text-slate-300 cursor-pointer'}`}>
+                      <input
+                        type="checkbox"
+                        disabled={selectable.length === 0}
+                        checked={allSel}
+                        onChange={() => setSelectedMissions(allSel ? new Set() : new Set(selectable.map((p) => p.id)))}
+                        className="h-4 w-4 rounded border-slate-300 dark:border-white/20 accent-[#0071E3] cursor-pointer disabled:cursor-not-allowed"
+                      />
+                      지급 대상 있는 항목 전체 선택 <span className="text-slate-400 dark:text-slate-500 font-semibold">({selCount}/{selectable.length})</span>
+                    </label>
+                    <Button
+                      size="sm"
+                      disabled={selCount === 0 || settlingKey !== null || settling}
+                      onClick={() => settleByIds(Array.from(selectedMissions))}
+                      className="rounded-lg bg-[#0071E3] hover:bg-[#0077ED] text-white text-[11px] h-8 px-3 font-bold disabled:opacity-40"
+                    >
+                      {settlingKey === 'selected' ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <Check className="w-3.5 h-3.5 mr-1" />}
+                      선택 {selCount}개 정산
+                    </Button>
+                  </div>
+                );
+              })()}
+
+              {/* 항목별 행 */}
+              <div className="divide-y divide-slate-100 dark:divide-white/10 rounded-xl border border-slate-100 dark:border-white/10 overflow-hidden">
+                {preview.map((p) => {
+                  const meta = MISSION_META[p.id];
+                  const actionable = p.pending > 0 && !p.skippedReason;
+                  return (
+                    <div key={p.id} className={`px-3.5 py-3 space-y-1.5 ${actionable ? 'bg-white dark:bg-[#1c1c1e]' : 'bg-slate-50/50 dark:bg-white/[0.02]'}`}>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <input
+                          type="checkbox"
+                          disabled={!actionable}
+                          checked={selectedMissions.has(p.id)}
+                          onChange={() => setSelectedMissions((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(p.id)) next.delete(p.id); else next.add(p.id);
+                            return next;
+                          })}
+                          className="h-4 w-4 rounded border-slate-300 dark:border-white/20 accent-[#0071E3] cursor-pointer disabled:cursor-not-allowed disabled:opacity-40 shrink-0"
+                        />
+                        <span className="text-xs font-black text-slate-800 dark:text-slate-200">{meta.name}</span>
+                        <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${meta.period === 'weekly' ? 'bg-blue-50 dark:bg-blue-500/10 text-blue-600' : 'bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300'}`}>
+                          {meta.period === 'weekly' ? '주간' : '월간'}
+                        </span>
+                        {/* 조건 충족/지급 상태 — 명사형 */}
+                        {p.skippedReason ? (
+                          <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400">{p.skippedReason}</span>
+                        ) : p.pending > 0 ? (
+                          <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            신규 지급 대상 {p.pending}명 · 쿠폰 {p.coupons}장씩{p.already > 0 ? ` · 기지급 ${p.already}명` : ''}
+                          </span>
+                        ) : p.eligible > 0 ? (
+                          <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">충족 {p.eligible}명 전원 지급 완료</span>
+                        ) : (
+                          <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">조건 충족자 없음</span>
+                        )}
+                        <button
+                          onClick={() => settleByIds([p.id])}
+                          disabled={!actionable || settlingKey !== null || settling}
+                          className="ml-auto shrink-0 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 dark:disabled:bg-white/10 disabled:text-slate-400 dark:disabled:text-slate-500 text-white text-[11px] font-bold px-2.5 h-7 transition inline-flex items-center gap-1"
+                        >
+                          {settlingKey === p.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <PlayCircle className="w-3 h-3" />}
+                          정산
+                        </button>
+                      </div>
+                      {/* 신규 지급 대상 명단 */}
+                      {p.pending > 0 && (
+                        <div className="flex flex-wrap gap-1 pl-6">
+                          {p.pendingNames.slice(0, 12).map((name, i) => (
+                            <span key={`${name}_${i}`} className="rounded-full bg-black/[0.03] dark:bg-white/5 px-2 py-0.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300">
+                              {name}
+                            </span>
+                          ))}
+                          {p.pending > 12 && (
+                            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-bold text-slate-400">+{p.pending - 12}명</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         {/* 자동 정산 예약 — 미션 관련 잡(주간/월간 정산)만. 전체 잡은 /admin/schedules 에서 관리 */}

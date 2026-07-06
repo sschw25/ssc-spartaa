@@ -7,7 +7,7 @@ import type { ConsultationBooking } from '@/lib/types/student';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
-import { serializeClientActivityNoteFromStudent } from '@/lib/student-activity';
+import { serializeClientActivityNoteFromStudent, getRewardGrantsFromStudent } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
 import { buildConsultationDigest } from '@/lib/consultation-digest';
 import { filterMockExamsForStudent } from '@/lib/mock-exam-scope';
@@ -72,6 +72,8 @@ function buildMaskedStudent(
           // 반차/휴식권 잔여에 교환 추가권을 합산(getLeaveCredits)하려면 본인 교환 내역이 필요 —
           // 누락 시 서버는 신청을 허용하는데 화면은 '0회 남음'으로 보이는 불일치가 난다.
           rewardRedemptions: student.rewardRedemptions || [],
+          // 쿠폰 지급 내역(최근순 30건) — 학생 홈 알림 '쿠폰 지급'과 언제/왜 받았는지 표시용.
+          couponGrants: getRewardGrantsFromStudent(student, 30),
         }
       : {}),
     ddays: audience === 'student' ? (student.ddays || []) : [],

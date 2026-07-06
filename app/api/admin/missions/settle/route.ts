@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import { isAdmin } from '@/lib/auth';
 import { settleMissions, type SettleOptions } from '@/lib/mission-engine';
+import { MISSION_ORDER, type MissionId } from '@/lib/missions';
 
 // 쿠폰 미션 정산 — 활성 미션 조건을 평가하고 쿠폰을 지급(멱등).
 // 관리자 '지금 정산' 버튼(POST) 또는 Vercel/외부 크론(GET, Authorization: Bearer CRON_SECRET).
 // 쿼리: ?scope=all|weekly|monthly, ?prev=1 (월간 미션을 지난 달 기준으로 평가)
+//      ?missions=id1,id2 (항목별 정산 — scope 대신 지정 미션만), ?dry=1 (지급 없이 대상자 미리보기)
 function isCronRequest(request: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) return false;
@@ -18,7 +20,12 @@ function parseOptions(request: Request): SettleOptions {
   const scopeRaw = sp.get('scope');
   const scope = scopeRaw === 'weekly' || scopeRaw === 'monthly' ? scopeRaw : 'all';
   const monthOffset = sp.get('prev') === '1' ? -1 : 0;
-  return { scope, monthOffset };
+  const missionIds = (sp.get('missions') || '')
+    .split(',')
+    .map((m) => m.trim())
+    .filter((m): m is MissionId => (MISSION_ORDER as string[]).includes(m));
+  const dryRun = sp.get('dry') === '1';
+  return { scope, monthOffset, ...(missionIds.length ? { missionIds } : {}), dryRun };
 }
 
 async function handle(request: Request) {

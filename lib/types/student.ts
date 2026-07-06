@@ -553,6 +553,16 @@ export interface Student {
   consultationBookings?: ConsultationBooking[];
   // 최근 관리자/시스템 취소 상담 (리포트 API가 추려 전달 — 학생 알림용, 본인 취소 제외)
   consultationCancellations?: ConsultationBooking[];
+  // 쿠폰 지급 내역 (리포트 API가 rewards_log에서 정규화해 전달 — 학생 홈 '쿠폰 지급' 알림/내역용)
+  couponGrants?: RewardGrant[];
+}
+
+// 쿠폰 지급 1건 (student_state.rewards_log 정규화). 미션 달성/OT/행사 참여로 지급될 때 기록.
+export interface RewardGrant {
+  missionName: string;   // 지급 사유(미션명 또는 '참여 미션 — 행사명')
+  coupons: number;       // 지급 쿠폰 수
+  periodKey: string;     // 멱등 키(주 시작일/YYYY-MM/OT:id/EVENT:id) — 지급시각 없을 때 표시 폴백
+  grantedAt?: string;    // 실제 지급 시각(ISO). 레거시 항목은 없을 수 있음
 }
 
 // 출결판에서 관리자가 "자리에 없음"으로 확인해 학생에게 보낸 알림

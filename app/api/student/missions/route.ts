@@ -150,11 +150,18 @@ export async function GET() {
       progress: progressOf(id),
     }));
 
+  // 최근 적립 — grantedAt(실제 지급 시각) 우선 표시, 레거시(없음)는 periodKey(date) 폴백.
   const recent = rewardsLog
     .filter((l) => (l.rewardGranted || 0) > 0)
-    .slice(-6)
-    .reverse()
-    .map((l) => ({ missionName: l.missionName, rewardGranted: l.rewardGranted || 0, date: l.date }));
+    .slice()
+    .sort((a, b) => String(b.grantedAt || b.date || '').localeCompare(String(a.grantedAt || a.date || '')))
+    .slice(0, 6)
+    .map((l) => ({
+      missionName: l.missionName,
+      rewardGranted: l.rewardGranted || 0,
+      date: l.date,
+      grantedAt: typeof l.grantedAt === 'string' ? l.grantedAt : undefined,
+    }));
 
   // 쿠폰 교환 카탈로그(3=반차권/6=휴식권/9=상품권·플래너) + 내 교환 신청/내역
   const redemptions = (student.rewardRedemptions || [])

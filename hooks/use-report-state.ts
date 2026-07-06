@@ -1811,7 +1811,23 @@ export function useReportState() {
     id: string; date: string; slot: string; status: 'done' | 'noshow'; counselor: string; note?: string;
   }> | undefined) || [];
 
+  // 쿠폰 지급 알림은 최근 3일 이내 지급 건만 노출(오래된 내역 홍수 방지). 전체 이력은 미션 카드 '최근 적립'에서.
+  const couponGrantCutoffIso = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString();
+
   const systemNotifications = [
+    // 쿠폰 지급(미션 달성·OT·행사 참여) — 언제/왜 받았는지 학생 홈 알림으로 즉시 노출.
+    // grantedAt(실제 지급 시각)이 있는 신규 지급만 대상(레거시 항목은 오래됐고 시각이 없어 제외).
+    ...((student.couponGrants || [])
+      .filter((g) => (g.grantedAt || '') >= couponGrantCutoffIso)
+      .map((g) => ({
+        id: `coupon-grant-${g.grantedAt || g.periodKey}-${g.missionName}`,
+        tone: 'emerald' as const,
+        label: '쿠폰 지급',
+        title: `쿠폰 ${g.coupons}장이 지급됐어요`,
+        body: `'${g.missionName}' 달성으로 쿠폰 ${g.coupons}장을 받았어요. 쿠폰 교환소에서 반차·휴식 추가권 등으로 바꿀 수 있어요.`,
+        date: g.grantedAt || g.periodKey,
+        priority: 2,
+      }))),
     // 정기 외출 반영으로 관리자가 계획을 조정했을 때 — 학생 홈 알림으로 노출.
     ...((student.awayReplanNotices || []).map((n) => ({
       id: `away-replan-${n.id}`,

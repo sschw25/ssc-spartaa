@@ -51,6 +51,7 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
       missionName: pomodoroMissionName,
       status: 'completed',
       rewardGranted: pomodoroCfg.coupons,
+      grantedAt: new Date().toISOString(),
     });
     grantedMissions.push(pomodoroMissionName);
   }
@@ -110,6 +111,7 @@ export async function checkAndGrantRewards(studentId: string): Promise<{ granted
         missionName: attendanceMissionName,
         status: 'completed',
         rewardGranted: checkinCfg.coupons,
+        grantedAt: new Date().toISOString(),
       });
       grantedMissions.push(attendanceMissionName);
     }

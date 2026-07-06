@@ -64,11 +64,24 @@ function weekdayOfYmd(ymd: string): number {
   return new Date(`${ymd}T12:00:00Z`).getUTCDay();
 }
 
+// 항목별 정산 미리보기(dryRun) 결과 — 미션별 조건 충족/기지급/신규 지급 대상.
+export interface MissionPreviewEntry {
+  id: MissionId;
+  periodKey: string;       // 이번 평가 기간 키 (주 시작일 또는 YYYY-MM)
+  coupons: number;         // 달성 시 지급 쿠폰
+  eligible: number;        // 조건 충족 총원
+  already: number;         // 같은 기간에 이미 지급된 인원
+  pending: number;         // 지금 정산 시 새로 지급될 인원
+  pendingNames: string[];  // 신규 지급 대상 이름 (최대 100명)
+  skippedReason?: string;  // 판정 불가 사유 (예: 출결 백엔드 미설정)
+}
+
 export interface SettleResult {
   granted: Record<MissionId, number>; // 미션별 지급 학생 수
   totalCoupons: number;
   totalStudents: number; // 쿠폰을 1장이라도 받은 학생 수
   skipped: string[];     // 건너뛴 사유(예: 세션 백엔드 미설정)
+  preview?: MissionPreviewEntry[]; // dryRun=true 일 때만
 }
 
 export interface SettleOptions {
@@ -78,15 +91,34 @@ export interface SettleOptions {
   monthOffset?: number;
   // 예약 스케줄러가 지연 실행될 때 "실행됐어야 하는 날짜" 기준으로 주간 범위를 고정한다.
   now?: Date;
+  // 항목별 정산 — 지정하면 scope 대신 이 미션들만 평가한다(정산형 weekly/monthly 만 유효).
+  missionIds?: MissionId[];
+  // true 면 지급 없이 미션별 대상자 미리보기(preview)만 반환한다.
+  dryRun?: boolean;
 }
+
+// 세션(출결 Supabase) 데이터가 필요한 미션 — 백엔드 미설정 시 판정 불가.
+const SESSION_DEPENDENT: ReadonlySet<MissionId> = new Set(['weekend_study', 'weekly_top_rank', 'weekly_growth']);
 
 export async function settleMissions(opts: SettleOptions = {}): Promise<SettleResult> {
   const scope = opts.scope ?? 'all';
   const monthOffset = opts.monthOffset ?? 0;
   const runWeekly = scope === 'all' || scope === 'weekly';
   const runMonthly = scope === 'all' || scope === 'monthly';
+  const requested = opts.missionIds?.length ? new Set(opts.missionIds) : null;
 
   const config = await getActiveMissionConfig();
+
+  // 이 미션을 이번 호출에서 평가할지 — missionIds 지정 시 scope 대신 지정 목록만.
+  // 정산형(weekly/monthly)이 아닌 미션(event/daily)은 settle 대상이 아니다.
+  const runs = (id: MissionId): boolean => {
+    const period = MISSION_META[id].period;
+    if (period !== 'weekly' && period !== 'monthly') return false;
+    if (!config[id].enabled) return false;
+    if (requested) return requested.has(id);
+    return period === 'weekly' ? runWeekly : runMonthly;
+  };
+
   const { todayStr, weekStart, monthStart } = getPeriodBounds(opts.now);
   const weekKey = weekStart;             // 주 시작일(YYYY-MM-DD)
   const previousWeekStart = addDateDays(weekStart, -7);
@@ -134,14 +166,14 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   let previousWeekMin: Record<string, number> = {};
   const monthDailyByStudent = new Map<string, Map<string, number>>(); // studentId -> (date -> minutes)
   if (sessionsAvailable) {
-    if (runWeekly && config.weekly_top_rank.enabled) {
+    if (runs('weekly_top_rank')) {
       weekMin = await getStudyMinutesByStudent(weekStart, todayStr);
     }
-    if (runWeekly && config.weekly_growth.enabled) {
+    if (runs('weekly_growth')) {
       if (Object.keys(weekMin).length === 0) weekMin = await getStudyMinutesByStudent(weekStart, todayStr);
       previousWeekMin = await getStudyMinutesByStudent(previousWeekStart, previousWeekEnd);
     }
-    if (runMonthly && config.weekend_study.enabled) {
+    if (runs('weekend_study')) {
       const monthSessions = await getSessionsInRange(monthRangeStart, monthRangeEnd);
       for (const s of monthSessions) {
         if (s.minutes == null) continue;
@@ -151,20 +183,23 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
       }
     }
   } else {
-    if (runMonthly && config.weekend_study.enabled) skipped.push('주말 집중 학습: 출결(Supabase) 미설정으로 건너뜀');
-    if (runWeekly && config.weekly_top_rank.enabled) skipped.push('주간 순공 랭킹: 출결(Supabase) 미설정으로 건너뜀');
-    if (runWeekly && config.weekly_growth.enabled) skipped.push('전주 대비 순공 성장: 출결(Supabase) 미설정으로 건너뜀');
+    if (runs('weekend_study')) skipped.push('주말 집중 학습: 출결(Supabase) 미설정으로 건너뜀');
+    if (runs('weekly_top_rank')) skipped.push('주간 순공 랭킹: 출결(Supabase) 미설정으로 건너뜀');
+    if (runs('weekly_growth')) skipped.push('전주 대비 순공 성장: 출결(Supabase) 미설정으로 건너뜀');
   }
 
-  // 지급 대상 결정 — 학생ID -> [{missionId, periodKey, coupons}]
+  // 지급 대상 결정 — 학생ID -> [{missionId, periodKey, coupons}] (+미션별 대상 목록: 미리보기용)
   const grants = new Map<string, Array<{ id: MissionId; periodKey: string; coupons: number }>>();
+  const eligibleByMission = new Map<MissionId, string[]>();
   const addGrant = (sid: string, id: MissionId, periodKey: string, coupons: number) => {
     if (!grants.has(sid)) grants.set(sid, []);
     grants.get(sid)!.push({ id, periodKey, coupons });
+    if (!eligibleByMission.has(id)) eligibleByMission.set(id, []);
+    eligibleByMission.get(id)!.push(sid);
   };
 
   // 1) 월 벌점 0점
-  if (runMonthly && config.monthly_no_penalty.enabled) {
+  if (runs('monthly_no_penalty')) {
     for (const s of students) {
       const monthPenalty = (s.penalties || [])
         .filter((p) => p.type === 'penalty' && (p.date || '').startsWith(monthKey))
@@ -174,7 +209,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 2) 주말 N시간↑ M회 (한 달)
-  if (runMonthly && config.weekend_study.enabled && sessionsAvailable) {
+  if (runs('weekend_study') && sessionsAvailable) {
     const needMin = (config.weekend_study.weekendHours ?? 3) * 60;
     const needCount = config.weekend_study.weekendCount ?? 2;
     for (const s of students) {
@@ -190,7 +225,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 3) 주간 순공 상위 N명
-  if (runWeekly && config.weekly_top_rank.enabled && sessionsAvailable) {
+  if (runs('weekly_top_rank') && sessionsAvailable) {
     const topN = config.weekly_top_rank.topN ?? 3;
     const ranked = Object.entries(weekMin)
       .filter(([, min]) => min > 0)
@@ -201,7 +236,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 4) 주간 계획 실행률
-  if (runWeekly && config.weekly_plan_completion.enabled) {
+  if (runs('weekly_plan_completion')) {
     const needRate = (config.weekly_plan_completion.planCompletionRate ?? 85) / 100;
     for (const s of students) {
       const stats = getWeeklyPlanCompletionStats(s, weekStart, todayStr);
@@ -212,7 +247,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 5) 휴대폰 제출/보관 루틴
-  if (runWeekly && config.phone_focus_week.enabled) {
+  if (runs('phone_focus_week')) {
     const needDays = config.phone_focus_week.phoneFocusDays ?? 5;
     for (const s of students) {
       const stats = getPhoneFocusStats(s, weekStart, todayStr);
@@ -221,7 +256,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 6) 전주 대비 순공 성장
-  if (runWeekly && config.weekly_growth.enabled && sessionsAvailable) {
+  if (runs('weekly_growth') && sessionsAvailable) {
     const needGrowth = (config.weekly_growth.growthPercent ?? 15) / 100;
     const minCurrent = (config.weekly_growth.growthMinHours ?? 20) * 60;
     for (const s of students) {
@@ -235,7 +270,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 7) 기간 목표 지연 0건
-  if (runWeekly && config.deadline_zero_overdue.enabled) {
+  if (runs('deadline_zero_overdue')) {
     const today = opts.now ?? new Date();
     for (const s of students) {
       const stats = getDeadlineZeroOverdueStats(s, today, todayStr);
@@ -244,7 +279,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   }
 
   // 8) 모의고사 오답분석/보완계획 제출
-  if (runWeekly && config.mock_review_complete.enabled) {
+  if (runs('mock_review_complete')) {
     const minChars = config.mock_review_complete.mockReviewMinChars ?? 10;
     for (const s of students) {
       const stats = getMockReviewStats(s, weekStart, todayStr, minChars);
@@ -252,11 +287,46 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
     }
   }
 
+  // dryRun — 지급 없이 미션별 대상자 미리보기만 반환 (항목별 정산 UI용).
+  // 기지급 여부는 로드해 둔 students 스냅샷의 rewards_log 로 판정한다(미리보기 목적상 충분).
+  if (opts.dryRun) {
+    const studentById = new Map(students.map((s) => [s.id, s]));
+    const preview: MissionPreviewEntry[] = [];
+    for (const id of MISSION_ORDER) {
+      if (!runs(id)) continue;
+      const periodKey = MISSION_META[id].period === 'weekly' ? weekKey : monthKey;
+      const skippedReason = SESSION_DEPENDENT.has(id) && !sessionsAvailable
+        ? '출결(Supabase) 미설정 — 판정 불가'
+        : undefined;
+      const missionName = MISSION_META[id].name;
+      let already = 0;
+      const pendingNames: string[] = [];
+      for (const sid of eligibleByMission.get(id) || []) {
+        const st = studentById.get(sid);
+        if (!st) continue;
+        if (hasReward(readActivityEnvelope(st), periodKey, missionName)) already += 1;
+        else pendingNames.push(st.name);
+      }
+      preview.push({
+        id,
+        periodKey,
+        coupons: config[id].coupons,
+        eligible: (eligibleByMission.get(id) || []).length,
+        already,
+        pending: pendingNames.length,
+        pendingNames: pendingNames.slice(0, 100),
+        ...(skippedReason ? { skippedReason } : {}),
+      });
+    }
+    return { granted, totalCoupons: 0, totalStudents: 0, skipped, preview };
+  }
+
   // 지급 적용 (멱등) — 받을 게 있는 학생만, 학생별로 fresh 재조회 후 낙관적 잠금 저장.
   // settle 시작 시점의 students 스냅샷이 stale 해져 동시 저장으로 쿠폰이 유실되던 문제 방지
   // (patchStudentProgress = updated_at 조건부 update, conflict 시 fresh 재조회로 재시도). 카운트는 실제 저장 성공 후 집계.
   let totalCoupons = 0;
   let totalStudents = 0;
+  const grantNowIso = new Date().toISOString();
 
   for (const [sid, list] of grants) {
     for (let attempt = 0; attempt < 2; attempt++) {
@@ -276,6 +346,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
           missionName,
           status: 'completed',
           rewardGranted: g.coupons,
+          grantedAt: grantNowIso,
         });
         couponsForStudent += g.coupons;
         newlyGranted.push(g.id);
@@ -309,7 +380,7 @@ export async function grantOtAttendance(student: Student, eventId: string): Prom
   const periodKey = `OT:${eventId}`;
   const missionName = MISSION_META.ot_attendance.name;
   if (hasReward(noteObj, periodKey, missionName)) return 0;
-  noteObj.rewards_log.push({ date: periodKey, missionName, status: 'completed', rewardGranted: m.coupons });
+  noteObj.rewards_log.push({ date: periodKey, missionName, status: 'completed', rewardGranted: m.coupons, grantedAt: new Date().toISOString() });
   student.leaveCoupons = (student.leaveCoupons || 0) + m.coupons;
   writeActivityEnvelope(student, noteObj);
   return m.coupons;
@@ -325,7 +396,7 @@ export function grantCampusEventReward(student: Student, eventId: string, coupon
   const periodKey = `EVENT:${eventId}`;
   const missionName = `참여 미션 — ${eventTitle}`;
   if (hasReward(noteObj, periodKey, missionName)) return 0;
-  noteObj.rewards_log.push({ date: periodKey, missionName, status: 'completed', rewardGranted: coupons });
+  noteObj.rewards_log.push({ date: periodKey, missionName, status: 'completed', rewardGranted: coupons, grantedAt: new Date().toISOString() });
   student.leaveCoupons = (student.leaveCoupons || 0) + coupons;
   writeActivityEnvelope(student, noteObj);
   return coupons;
