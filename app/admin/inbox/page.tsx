@@ -415,7 +415,7 @@ export default function AdminInboxPage() {
             type: 'reward',
             category: 'living',
             title: `리워드 지급 대기: ${getRewardLabel(rwd.type)}`,
-            content: `쿠폰 ${rwd.cost}장으로 ${getRewardLabel(rwd.type)}을(를) 교환했습니다. 휴가쿠폰관리 > 리워드 지급내역에서 지급 처리해 주세요.`,
+            content: `쿠폰 ${rwd.cost}장으로 ${getRewardLabel(rwd.type)}을(를) 교환했습니다. 쿠폰 관리 > 리워드 지급내역에서 지급 처리해 주세요.`,
             date: (rwd.createdAt || '').slice(0, 10),
             status: 'pending',
             statusText: '접수중',
@@ -1301,7 +1301,7 @@ export default function AdminInboxPage() {
                         onClick={() => router.push('/admin/leave?tab=rewards')}
                         className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
                       >
-                        <ArrowLeft className="w-3.5 h-3.5 mr-1 rotate-180" /> 휴가쿠폰관리 지급내역에서 처리
+                        <ArrowLeft className="w-3.5 h-3.5 mr-1 rotate-180" /> 쿠폰 관리 지급내역에서 처리
                       </Button>
                     )
                   ) : selectedItem.type === 'meal_add' ? (

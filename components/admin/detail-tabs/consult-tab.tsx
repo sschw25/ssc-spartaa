@@ -3,8 +3,8 @@
 import React from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Calendar, Check, X, Ticket, Minus, Plus, Loader2, Clock, Timer, ClipboardCheck, Gift } from 'lucide-react';
-import { ConsultationLog, LeaveRequest, RewardGrant } from '@/lib/types/student';
+import { Calendar, Check, X, Loader2, Clock, Timer, ClipboardCheck } from 'lucide-react';
+import { ConsultationLog, LeaveRequest } from '@/lib/types/student';
 import { StudyStatsCard } from '@/components/report/study-stats-card';
 import { LEAVE_TYPES } from '@/lib/leave';
 import type { DailyChecklistEntry } from '@/lib/student-activity';
@@ -38,13 +38,10 @@ interface ConsultTabProps {
   todayChecklist?: DailyChecklistEntry | null;
   // 휴가 신청
   leaveRequests?: LeaveRequest[];
-  leaveCoupons?: number;
-  couponGrants?: RewardGrant[];
   leaveActionBusy?: Record<string, boolean>;
   leaveReplyDrafts?: Record<string, string>;
   setLeaveReplyDrafts?: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   onLeaveAction?: (requestId: string, payload: { status?: 'approved' | 'rejected' | 'pending'; reply?: string }) => Promise<void>;
-  onCouponAdjust?: (delta: number) => Promise<void>;
 }
 
 // 생활 관리 탭 (프레젠테이셔널). 코멘트 저장은 부모의 마스터 저장/자동저장 경로에서 처리.
@@ -58,13 +55,10 @@ export function ConsultTab({
   todayPomodoroStats = { sessions: 0, minutes: 0 },
   todayChecklist = null,
   leaveRequests = [],
-  leaveCoupons = 0,
-  couponGrants = [],
   leaveActionBusy = {},
   leaveReplyDrafts = {},
   setLeaveReplyDrafts,
   onLeaveAction,
-  onCouponAdjust,
 }: ConsultTabProps) {
   const fmtMin = (min?: number | null) => {
     if (min == null) return '-';
@@ -187,65 +181,7 @@ export function ConsultTab({
             <Calendar className="w-3.5 h-3.5 text-[#0071E3]" />
             휴가·반차 신청 내역
           </h4>
-          {/* 쿠폰 잔액 및 조정 */}
-          <div className="flex items-center gap-1.5">
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
-              <Ticket className="inline w-3 h-3 mr-0.5 text-amber-500" />
-              쿠폰 {leaveCoupons}개
-            </span>
-            {onCouponAdjust && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => onCouponAdjust(-1)}
-                  className="rounded-md border border-black/[0.08] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 px-1.5 py-0.5 text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-white/10"
-                >
-                  <Minus className="w-2.5 h-2.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCouponAdjust(1)}
-                  className="rounded-md border border-black/[0.08] dark:border-white/10 bg-[#F5F5F7] dark:bg-white/5 px-1.5 py-0.5 text-[10px] font-bold hover:bg-slate-200 dark:hover:bg-white/10"
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onCouponAdjust(3)}
-                  className="rounded-md border border-[#0071E3]/20 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2 py-0.5 text-[10px] font-bold text-[#0071E3] hover:bg-[#0071E3]/10"
-                >
-                  +3
-                </button>
-              </>
-            )}
-          </div>
         </div>
-
-        {/* 쿠폰 지급 이력 — 언제·무슨 사유로 지급됐는지(미션 정산/OT/행사/일일). 최근순. */}
-        {couponGrants.length > 0 && (
-          <details className="rounded-xl border border-black/[0.06] dark:border-white/10 bg-[#F9F9FB] dark:bg-white/5 px-3 py-2.5">
-            <summary className="flex items-center gap-1.5 cursor-pointer text-[11px] font-bold text-slate-600 dark:text-slate-300 select-none">
-              <Gift className="w-3.5 h-3.5 text-amber-500" />
-              쿠폰 지급 이력 {couponGrants.length}건
-              <span className="ml-1 text-[10px] font-semibold text-slate-400">(펼치기)</span>
-            </summary>
-            <div className="mt-2.5 space-y-1.5 max-h-56 overflow-y-auto pr-1">
-              {couponGrants.map((g, i) => {
-                const iso = g.grantedAt || '';
-                const when = iso
-                  ? new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: '2-digit', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
-                  : (/^\d{4}-\d{2}-\d{2}$/.test(g.periodKey) ? g.periodKey : '시각 미기록');
-                return (
-                  <div key={`${g.grantedAt || g.periodKey}_${i}`} className="flex items-center gap-2 text-[11px]">
-                    <span className="shrink-0 rounded-md bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/15 px-1.5 py-0.5 font-bold text-[#0071E3]">+{g.coupons}장</span>
-                    <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">{g.missionName}</span>
-                    <span className="ml-auto shrink-0 text-[10px] font-medium text-slate-400 dark:text-slate-500">{when}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </details>
-        )}
 
         {leaveRequests.length === 0 ? (
           <p className="text-center py-4 text-[11px] text-slate-500 dark:text-slate-400">신청 내역이 없습니다.</p>

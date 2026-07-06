@@ -290,6 +290,7 @@ const STUDENT_TAB_IDS = [
   'clinic-booking',
   'student-missions',
   'coupon-exchange',
+  'student-coupons',
   'subject-progress',
   'grade-analysis',
   'student-penalties',

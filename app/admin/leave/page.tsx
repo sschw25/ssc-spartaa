@@ -11,6 +11,7 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import { Student, RewardRedemption } from '@/lib/types/student';
 import { REWARD_CATALOG, getRewardLabel } from '@/lib/leave';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { getRewardGrantsFromStudent } from '@/lib/student-activity';
 
 type LeaveTab = 'coupons' | 'rewards';
 
@@ -90,7 +91,7 @@ export default function AdminLeavePage() {
         const reqs = s.leaveRequests || [];
         const pending = reqs.filter((r) => r.status === 'pending').length;
         const approvedThisMonth = reqs.filter((r) => r.status === 'approved' && (r.date || '').startsWith(monthPrefix)).length;
-        return { student: s, pending, approvedThisMonth };
+        return { student: s, pending, approvedThisMonth, recentGrants: getRewardGrantsFromStudent(s, 3) };
       })
       .sort((a, b) => b.pending - a.pending || a.student.name.localeCompare(b.student.name, 'ko'));
   }, [students, campusFilter, search, monthPrefix]);
@@ -111,7 +112,7 @@ export default function AdminLeavePage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setStudents((prev) => prev.map((s) => s.id === student.id ? { ...s, leaveCoupons: json.leaveCoupons } : s));
+        setStudents((prev) => prev.map((s) => s.id === student.id ? (json.student || { ...s, leaveCoupons: json.leaveCoupons }) : s));
         toast.success(delta > 0 ? `쿠폰 ${delta}개를 지급했습니다.` : `쿠폰 ${Math.abs(delta)}개를 차감했습니다.`);
       } else {
         toast.error(json.message || '쿠폰 조정에 실패했습니다.');
@@ -227,7 +228,7 @@ export default function AdminLeavePage() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0b0b0c] flex flex-col items-center justify-center font-sans">
         <Loader2 className="w-8 h-8 text-[#0071E3] animate-spin mb-4" />
-        <p className="text-sm text-slate-500 dark:text-slate-400">휴가 쿠폰 정보 로드 중...</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">쿠폰 정보 로드 중...</p>
       </div>
     );
   }
@@ -235,7 +236,7 @@ export default function AdminLeavePage() {
   return (
     <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav
-        title="휴가 쿠폰 관리"
+        title="쿠폰 관리"
         titleIcon={<Ticket className="w-4 h-4 text-[#0071E3]" />}
         campusOptions={CAMPUS_FILTERS.map((c) => ({ value: c, label: c === 'all' ? '전체' : campusLabel(c) }))}
         campusValue={campusFilter}
@@ -263,7 +264,7 @@ export default function AdminLeavePage() {
                 {pendingCount > 0 ? `대기 중인 휴가·반차 신청 ${pendingCount}건` : '휴가·반차 신청 승인'}
               </span>
               <span className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                신청 승인·반려는 통합 인박스에서 처리합니다. 이 화면은 쿠폰(반차 추가권) 관리 전용입니다.
+                신청 승인·반려는 통합 인박스에서 처리합니다. 이 화면은 쿠폰 잔액·지급 이력·교환 내역 관리 전용입니다.
               </span>
             </span>
           </span>
@@ -272,14 +273,14 @@ export default function AdminLeavePage() {
           </span>
         </button>
 
-        {/* 탭: 쿠폰 관리 / 리워드 지급내역 */}
+        {/* 탭: 쿠폰 지급 / 리워드 지급내역 */}
         <div className="flex items-center gap-1 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-2xl border border-black/[0.02] dark:border-white/10 w-fit">
           <button
             type="button"
             onClick={() => setActiveTab('coupons')}
             className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${activeTab === 'coupons' ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'}`}
           >
-            쿠폰 관리
+            쿠폰 지급
           </button>
           <button
             type="button"
@@ -296,7 +297,7 @@ export default function AdminLeavePage() {
         {activeTab === 'coupons' && (<>
         {/* 리워드 교환 안내 */}
         <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 text-[11px] font-semibold text-[#0071E3]">
-          쿠폰 교환은 <b>학생이 본인 리포트에서 직접</b> 합니다 — 반차권/휴식권은 즉시 교환(쿠폰 즉시 차감), 상품권·플래너는 신청 시 통합 인박스로 알림이 와요. 이 화면은 쿠폰 지급/차감과 <b>리워드 지급내역</b> 관리 전용입니다.
+          쿠폰 교환은 <b>학생이 본인 리포트에서 직접</b> 합니다 — 반차권/휴식권은 즉시 교환(쿠폰 즉시 차감), 상품권·플래너는 신청 시 통합 인박스로 알림이 와요. 이 화면은 쿠폰 지급/차감, 지급 이력, <b>리워드 지급내역</b> 관리 전용입니다.
         </div>
 
         {/* 검색 */}
@@ -324,21 +325,34 @@ export default function AdminLeavePage() {
           </div>
         ) : (
           <div className="space-y-2.5">
-            {studentRows.map(({ student, pending, approvedThisMonth }) => {
+            {studentRows.map(({ student, pending, approvedThisMonth, recentGrants }) => {
               const cpKey = `cp_${student.id}`;
               return (
-                <div key={student.id} className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="font-black text-sm text-slate-900 dark:text-slate-100">{student.name}</span>
-                    <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] dark:bg-white/10 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10">{campusLabel(student.campus)}</Badge>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{student.manager || '담당 코멘터'}</span>
-                    {pending > 0 && (
-                      <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400">대기 {pending}건</span>
+                <div key={student.id} className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-4 md:p-5 shadow-sm flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2 min-w-0">
+                      <span className="font-black text-sm text-slate-900 dark:text-slate-100">{student.name}</span>
+                      <Badge className="rounded-md text-[9px] px-1.5 py-0.5 border bg-[#F5F5F7] dark:bg-white/10 text-slate-500 dark:text-slate-400 border-black/[0.06] dark:border-white/10">{campusLabel(student.campus)}</Badge>
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">{student.manager || '담당 코멘터'}</span>
+                      {pending > 0 && (
+                        <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-400">대기 {pending}건</span>
+                      )}
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">이번 달 사용 {approvedThisMonth}회</span>
+                    </div>
+                    {recentGrants.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {recentGrants.map((grant, index) => (
+                          <span key={`${grant.grantedAt || grant.periodKey}_${index}`} className="inline-flex max-w-full items-center gap-1 rounded-full bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2 py-0.5 text-[10px] font-semibold text-[#0071E3]">
+                            <Gift className="h-2.5 w-2.5 shrink-0" />
+                            <span className="truncate">{grant.missionName}</span>
+                            <span className="shrink-0">+{grant.coupons}</span>
+                          </span>
+                        ))}
+                      </div>
                     )}
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold">이번 달 사용 {approvedThisMonth}회</span>
                   </div>
 
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col items-end gap-2 shrink-0">
                     <div className="flex items-center gap-1.5">
                       <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400">
                         <Ticket className="w-3.5 h-3.5" /> 쿠폰

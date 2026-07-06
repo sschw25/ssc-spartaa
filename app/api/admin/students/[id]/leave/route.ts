@@ -3,6 +3,7 @@ import { canAdminAccessStudent } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
 import { isLeaveType } from '@/lib/leave';
 import { appendThreadMessage } from '@/lib/thread';
+import { readActivityEnvelope, writeActivityEnvelope } from '@/lib/student-activity';
 import type { LeaveRequest } from '@/lib/types/student';
 
 // 관리자: 학생 대신 휴가/반차 수기 등록 (쿼터 무시, 즉시 승인 가능)
@@ -89,9 +90,24 @@ export async function PATCH(
         errorResponse = NextResponse.json({ success: false, message: '쿠폰 변경값이 올바르지 않습니다.' }, { status: 400 });
         return false;
       }
-      const next = Math.max(0, (student.leaveCoupons ?? 0) + delta);
+      const current = student.leaveCoupons ?? 0;
+      const next = Math.max(0, current + delta);
+      const actualDelta = next - current;
       student.leaveCoupons = next;
       couponBalance = next;
+      if (actualDelta > 0) {
+        const nowIso = new Date().toISOString();
+        const noteObj: any = readActivityEnvelope(student);
+        if (!Array.isArray(noteObj.rewards_log)) noteObj.rewards_log = [];
+        noteObj.rewards_log.push({
+          date: nowIso.slice(0, 10),
+          missionName: '관리자 수동 지급',
+          status: 'completed',
+          rewardGranted: actualDelta,
+          grantedAt: nowIso,
+        });
+        writeActivityEnvelope(student, noteObj);
+      }
       return;
     }
 
@@ -143,7 +159,7 @@ export async function PATCH(
   }
 
   if (couponBalance !== null) {
-    return NextResponse.json({ success: true, leaveCoupons: couponBalance });
+    return NextResponse.json({ success: true, leaveCoupons: couponBalance, student: result });
   }
 
   return NextResponse.json({ success: true });

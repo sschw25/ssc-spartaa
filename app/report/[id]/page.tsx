@@ -13,6 +13,7 @@ import { ConsultationTab, type ApplicationSubTab } from '@/components/report/con
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
+import { CouponTab } from '@/components/report/coupon-tab';
 import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
@@ -23,7 +24,7 @@ import { Loader2, AlertCircle } from 'lucide-react';
 import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
 type LearningSubTab = 'timetable' | 'execution-plan' | 'subject-progress' | 'grade-analysis';
-type LifeSubTab = 'attendance-status' | 'study-stats' | 'student-penalties';
+type LifeSubTab = 'attendance-status' | 'study-stats' | 'student-penalties' | 'student-coupons';
 
 const LEARNING_SUB_TABS: Array<{ id: LearningSubTab; label: string; meta: string }> = [
   { id: 'timetable', label: '오늘 계획', meta: '시간표 기준' },
@@ -36,6 +37,7 @@ const LIFE_SUB_TABS: Array<{ id: LifeSubTab; label: string; meta: string }> = [
   { id: 'attendance-status', label: '등하원', meta: '오늘 출결' },
   { id: 'study-stats', label: '순공/랭킹', meta: '학습 시간' },
   { id: 'student-penalties', label: '벌점', meta: '생활 기록' },
+  { id: 'student-coupons', label: '쿠폰', meta: '지급·교환' },
 ];
 
 const LEARNING_TAB_IDS = LEARNING_SUB_TABS.map((tab) => tab.id);
@@ -706,6 +708,17 @@ function StudentReportInner() {
         <PenaltiesTab
           student={student}
           activeTab={lifeActiveTab}
+        />
+
+        <CouponTab
+          student={student}
+          activeTab={lifeActiveTab}
+          onGoToExchange={() => {
+            slideDirRef.current = 1;
+            setRequestSubTab('coupon');
+            setActiveTab('student-requests');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
       </div>
 

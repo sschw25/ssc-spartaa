@@ -27,7 +27,7 @@ import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Printer, Loader2, Save,
   ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X,
-  CalendarDays, Plus, Trash2, Send
+  CalendarDays, Plus, Trash2, Send, Ticket
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -35,6 +35,7 @@ import { AwayReplanPanel } from '@/components/admin/away-replan-panel';
 import { ProgressTab } from '@/components/admin/detail-tabs/progress-tab';
 import { ConsultTab } from '@/components/admin/detail-tabs/consult-tab';
 import { PenaltyTab } from '@/components/admin/detail-tabs/penalty-tab';
+import { CouponTab } from '@/components/admin/detail-tabs/coupon-tab';
 import { DetailSheetProvider, type QuickPlanPreviewItem } from '@/components/admin/detail-tabs/detail-sheet-context';
 
 interface StudentDetailSheetProps {
@@ -2742,8 +2743,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setLeaveCouponsLocal(json.leaveCoupons);
-        onUpdate({ ...student!, leaveCoupons: json.leaveCoupons });
+        const updatedStudent = json.student || { ...student!, leaveCoupons: json.leaveCoupons };
+        setLeaveCouponsLocal(updatedStudent.leaveCoupons ?? json.leaveCoupons);
+        onUpdate(updatedStudent);
         toast.success(`쿠폰 ${delta > 0 ? '+' : ''}${delta}개 처리됐습니다.`);
       } else {
         toast.error(json.message || '처리에 실패했습니다.');
@@ -4261,7 +4263,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           })()}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-6 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
+            <TabsList className="grid grid-cols-7 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger id="admin-tab-progress" value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학습 관리</span>
@@ -4281,6 +4283,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 <Shield className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">벌점 관리</span>
                 <span className="sm:hidden">벌점</span>
+              </TabsTrigger>
+              <TabsTrigger id="admin-tab-coupon" value="coupon" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+                <Ticket className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">쿠폰</span>
+                <span className="sm:hidden">쿠폰</span>
               </TabsTrigger>
               <TabsTrigger id="admin-tab-info" value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <User className="w-3.5 h-3.5" />
@@ -4438,13 +4445,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 todayPomodoroStats={todayPomodoroStats}
                 todayChecklist={todayChecklist}
                 leaveRequests={leaveRequestsLocal}
-                leaveCoupons={leaveCouponsLocal}
-                couponGrants={student ? getRewardGrantsFromStudent(student, 50) : []}
                 leaveActionBusy={leaveActionBusy}
                 leaveReplyDrafts={leaveReplyDrafts}
                 setLeaveReplyDrafts={setLeaveReplyDrafts}
                 onLeaveAction={handleLeaveAction}
-                onCouponAdjust={handleCouponAdjust}
               />
             </TabsContent>
 
@@ -4477,6 +4481,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 onUpdate={(updated) => {
                   if (onUpdate) onUpdate(updated);
                 }}
+              />
+            </TabsContent>
+
+            <TabsContent value="coupon" className="space-y-5 outline-none">
+              <CouponTab
+                leaveCoupons={leaveCouponsLocal}
+                couponGrants={student ? getRewardGrantsFromStudent(student, 50) : []}
+                rewardRedemptions={student?.rewardRedemptions || []}
+                onCouponAdjust={handleCouponAdjust}
               />
             </TabsContent>
 

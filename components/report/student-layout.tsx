@@ -154,7 +154,7 @@ export function StudentLayout({
   if (learningNavItem) quickTabItems.push({ ...learningNavItem, label: '학습', meta: '오늘·진도·성적', key: 'learning', tabId: 'learning' });
   if (missionsNavItem) quickTabItems.push({ ...missionsNavItem, label: '미션', meta: '보상', key: 'student-missions', tabId: 'student-missions' });
   if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '신청', meta: '상담·반차', key: 'student-requests', tabId: 'student-requests' });
-  if (lifeNavItem) quickTabItems.push({ ...lifeNavItem, label: '생활', meta: '등하원·벌점', key: 'life', tabId: 'life' });
+  if (lifeNavItem) quickTabItems.push({ ...lifeNavItem, label: '생활', meta: '등하원·쿠폰', key: 'life', tabId: 'life' });
   if (notificationNavItem) quickTabItems.push({ ...notificationNavItem, key: 'student-notifications', tabId: 'student-notifications' });
   const selectedQuickItem = quickNavActiveKey
     ? quickTabItems.find((item) => item.key === quickNavActiveKey)

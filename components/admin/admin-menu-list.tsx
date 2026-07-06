@@ -4,7 +4,6 @@ import React from 'react';
 import {
   AlarmClock,
   BookOpen,
-  Calendar,
   CalendarDays,
   CalendarClock,
   CalendarHeart,
@@ -22,6 +21,7 @@ import {
   Trophy,
   Inbox,
   Sparkles,
+  Ticket,
   UserPlus,
   Utensils,
   PinOff,
@@ -117,7 +117,7 @@ export function AdminMenuList({
         { key: 'meals', icon: Utensils, label: '도시락 신청', href: '/admin/meals' },
         { key: 'penalties', icon: Shield, label: '벌점 · 상점 관리', href: '/admin/penalties' },
         { key: 'leave-requests', icon: CalendarHeart, label: '휴식 · 반차 관리', href: '/admin/leave-requests' },
-        { key: 'leave', icon: Calendar, label: '휴가 쿠폰 관리', href: '/admin/leave' },
+        { key: 'leave', icon: Ticket, label: '쿠폰 관리', href: '/admin/leave' },
       ],
     },
     {

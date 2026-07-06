@@ -17,12 +17,12 @@ import {
   Utensils,
   Shield,
   CalendarHeart,
-  Calendar,
   CalendarDays,
   AlarmClock,
   Inbox,
   Trophy,
   Sparkles,
+  Ticket,
   HeartPulse,
   type LucideIcon,
 } from 'lucide-react';
@@ -66,7 +66,7 @@ const GROUPS: TabGroup[] = [
       { icon: Utensils, label: '도시락 신청', href: '/admin/meals' },
       { icon: Shield, label: '벌점·상점', href: '/admin/penalties' },
       { icon: CalendarHeart, label: '휴식·반차', href: '/admin/leave-requests' },
-      { icon: Calendar, label: '휴가 쿠폰', href: '/admin/leave' },
+      { icon: Ticket, label: '쿠폰', href: '/admin/leave' },
     ],
   },
   {

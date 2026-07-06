@@ -275,7 +275,7 @@ export default function MissionsPage() {
           <div className="text-xs font-semibold text-slate-600 dark:text-slate-300 leading-relaxed">
             <b className="text-[#0071E3]">쿠폰 {COUPONS_PER_EXTRA_HALFDAY}장 = 반차 추가권 1회.</b> 미션으로 모은 쿠폰은
             월 한도를 초과한 반차/휴식 추가 신청에 사용됩니다. 지급 내역·잔액은{' '}
-            <button className="underline font-bold text-[#0071E3]" onClick={() => router.push('/admin/leave')}>휴가 쿠폰 관리</button>
+            <button className="underline font-bold text-[#0071E3]" onClick={() => router.push('/admin/leave')}>쿠폰 관리</button>
             에서 확인/조정할 수 있습니다.
           </div>
         </div>
