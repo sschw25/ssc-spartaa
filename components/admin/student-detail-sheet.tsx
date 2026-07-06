@@ -3979,6 +3979,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         <p className="font-bold text-slate-600 dark:text-slate-300">
                           • 대상: {req.proposedGoal.materialType === 'book' ? '교재' : '인강'}
                         </p>
+                        {req.proposedGoal.currentProgress !== undefined && (
+                          <p className="font-bold text-slate-600 dark:text-slate-300">
+                            • 현재 진도 정정: <span className="text-[#0071E3] font-semibold">{req.proposedGoal.currentProgress}{req.proposedGoal.materialType === 'book' ? 'p' : '강'}</span>
+                          </p>
+                        )}
                         {req.proposedGoal.proposedWeekNumber && req.proposedGoal.proposedRangeText && (
                           <p className="font-bold text-slate-600 dark:text-slate-300">
                             • {req.proposedGoal.proposedWeekNumber}주차 범위: <span className="text-[#0071E3] font-semibold">{req.proposedGoal.proposedRangeText}</span>

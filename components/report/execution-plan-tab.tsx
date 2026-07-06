@@ -15,6 +15,7 @@ type RequestForm = {
   materialType: 'book' | 'lecture';
   goalType: GoalType;
   goalValue: string;
+  currentProgress: string;
   proposedWeekNumber: string;
   proposedRangeText: string;
   speedMultiplier: string;
@@ -183,6 +184,7 @@ export function ExecutionPlanTab({
       message: message,
       materialId: '',
       goalValue: '',
+      currentProgress: '',
       proposedWeekNumber: '',
       proposedRangeText: '',
     }));
@@ -494,6 +496,7 @@ export function ExecutionPlanTab({
                     materialType: requestForm.materialType,
                     goalType: requestForm.goalType,
                     goalValue: requestForm.goalValue ? Number(requestForm.goalValue) : 0,
+                    currentProgress: requestForm.requestType === 'progress' && requestForm.currentProgress ? Number(requestForm.currentProgress) : undefined,
                     proposedWeekNumber: requestForm.proposedWeekNumber ? Number(requestForm.proposedWeekNumber) : undefined,
                     proposedRangeText: requestForm.proposedRangeText || undefined,
                     speedMultiplier: requestForm.materialType === 'lecture' ? (requestForm.speedMultiplier ? Number(requestForm.speedMultiplier) : 1.0) : undefined,
@@ -540,6 +543,9 @@ export function ExecutionPlanTab({
                           materialType: isBook ? 'book' : 'lecture',
                           goalType: material?.goalType === 'dailyAmount' ? 'dailyAmount' : 'deadlineWeeks',
                           goalValue: material?.goalValue ? String(material.goalValue) : '',
+                          currentProgress: material
+                            ? String(isBook ? (book?.currentPage || 0) : (lecture?.completedLectures || 0))
+                            : '',
                           speedMultiplier: !isBook && lecture?.speedMultiplier ? String(lecture.speedMultiplier) : '1.0',
                           currentGoalSnapshot: material ? {
                             goalType: material.goalType,
@@ -628,6 +634,22 @@ export function ExecutionPlanTab({
 
                       {requestForm.requestType === 'progress' && (
                         <div className="space-y-2 border-t border-slate-200/60 dark:border-white/10 pt-2">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">현재 진도 정정</label>
+                            <div className="flex items-center gap-1">
+                              <input
+                                type="number"
+                                min={0}
+                                value={requestForm.currentProgress}
+                                onChange={(e) => setRequestForm((f) => ({ ...f, currentProgress: e.target.value }))}
+                                placeholder={requestForm.materialType === 'book' ? '예: 39' : '예: 36'}
+                                className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-current-progress-input"
+                              />
+                              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                {requestForm.materialType === 'book' ? 'p' : '강'}
+                              </span>
+                            </div>
+                          </div>
                           <p className="text-[10px] font-bold text-slate-400">특정 주차 범위 정정 (선택사항)</p>
                           <div className="grid grid-cols-2 gap-2">
                             <div className="space-y-1">
@@ -767,7 +789,7 @@ export function ExecutionPlanTab({
             </span>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
             {deadlinePlanEntries.map((entry) => {
               const progressPercent = entry.targetAmount > 0
                 ? Math.min(100, Math.round((entry.actualAmount / entry.targetAmount) * 100))
@@ -789,7 +811,7 @@ export function ExecutionPlanTab({
                   : 'border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/5';
 
               return (
-                <article key={entry.id} className={`rounded-2xl border p-3 ${cardTone}`}>
+                <article key={entry.id} className={`w-[320px] shrink-0 snap-start rounded-2xl border p-3 sm:w-[380px] lg:w-[420px] ${cardTone}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="text-[10px] font-black text-slate-400">

@@ -4,6 +4,43 @@ import { updateStudentById } from '@/lib/store';
 import { generateDetailedPlans } from '@/lib/progress-plan';
 import { appendThreadMessage } from '@/lib/thread';
 
+type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
+
+const kstDateKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+
+const clampProgress = (value: unknown, total: unknown) => {
+  const progress = Number(value);
+  const max = Math.max(0, Number(total) || 0);
+  if (!Number.isFinite(progress)) return null;
+  return Math.max(0, Math.min(max, Math.round(progress)));
+};
+
+const appendInputLog = (inputLog: unknown, dateKey: string) => {
+  const prev = Array.isArray(inputLog) ? inputLog.filter((d): d is string => typeof d === 'string') : [];
+  return Array.from(new Set([...prev, dateKey])).slice(-120);
+};
+
+const applyWeekRangeOverride = (plans: unknown, weekNumber?: number, rangeText?: string) => {
+  if (!weekNumber || !rangeText || !Array.isArray(plans)) return plans;
+  return plans.map((plan: any) => (plan.weekNumber === weekNumber ? { ...plan, rangeText } : plan));
+};
+
+const resolveGoalType = (material: any, proposedGoalType: GoalType, proposedGoalValue: number): GoalType => {
+  if (proposedGoalValue > 0) return proposedGoalType;
+  return material.goalType || proposedGoalType || 'deadlineWeeks';
+};
+
+const resolveGoalValue = (material: any, proposedGoalValue: number) => {
+  if (proposedGoalValue > 0) return proposedGoalValue;
+  const current = Number(material.goalValue);
+  if (Number.isFinite(current) && current > 0) return current;
+  if ((!material.goalType || material.goalType === 'weeks' || material.goalType === 'deadlineWeeks') && Array.isArray(material.detailedPlans)) {
+    const planWeeks = Math.max(0, ...material.detailedPlans.map((plan: any) => Number(plan.weekNumber) || 0));
+    if (planWeeks > 0) return planWeeks;
+  }
+  return 0;
+};
+
 // 관리자: 학생 변경 신청 처리 상태 변경 (pending <-> resolved)
 export async function PATCH(
   request: Request,
@@ -51,10 +88,20 @@ export async function PATCH(
     target.resolvedAt = status === 'resolved' ? nowIso : undefined;
     target.acknowledgedAt = status === 'pending' ? nowIso : undefined;
 
-    // 승인(resolved) 시 제안된 변경 계획 데이터가 있다면 실제 학생 계획에 연동
+    // 승인(resolved) 시 제안된 현재 진도/계획 값을 실제 학생 계획에 연동한다.
     if (status === 'resolved' && target.proposedGoal) {
-      const { materialId, materialType, goalType, goalValue, targetDate, proposedWeekNumber, proposedRangeText } = target.proposedGoal;
-      
+      const {
+        materialId,
+        materialType,
+        goalType,
+        goalValue,
+        currentProgress,
+        proposedWeekNumber,
+        proposedRangeText,
+      } = target.proposedGoal;
+      const hasCurrentProgress = currentProgress !== undefined && Number.isFinite(Number(currentProgress));
+      const inputDate = kstDateKey();
+
       const parentSubject = (student.subjects || []).find((s: any) => {
         const hasBook = s.books?.some((b: any) => b.id === materialId);
         const hasLecture = s.lectures?.some((l: any) => l.id === materialId);
@@ -62,164 +109,115 @@ export async function PATCH(
       });
       const studyDays = parentSubject?.studyDays;
 
+      const updateBook = (book: any) => {
+        if (book.id !== materialId) return book;
+        const updated = { ...book };
+        const clampedProgress = hasCurrentProgress ? clampProgress(currentProgress, updated.totalPages) : null;
+        if (clampedProgress !== null) {
+          updated.currentPage = clampedProgress;
+          updated.inputLog = appendInputLog(updated.inputLog, inputDate);
+          updated.updatedAt = nowIso;
+        }
+
+        const nextGoalType = resolveGoalType(updated, goalType, goalValue);
+        const nextGoalValue = resolveGoalValue(updated, goalValue);
+        if (goalValue > 0) {
+          updated.goalType = goalType;
+          updated.goalValue = goalValue;
+          updated.updatedAt = nowIso;
+        }
+
+        if ((hasCurrentProgress || goalValue > 0) && nextGoalValue > 0) {
+          const { plans, calculatedTargetDate } = generateDetailedPlans(
+            materialId,
+            updated.totalPages,
+            'book',
+            nextGoalType,
+            nextGoalValue,
+            updated.currentPage,
+            updated.unit,
+            updated.reviewPasses || [],
+            studyDays,
+            1.0,
+            updated.estimatedMinutesPerUnit,
+            parentSubject?.studyTime,
+            updated.category
+          );
+          updated.detailedPlans = plans;
+          updated.targetDate = calculatedTargetDate;
+          updated.goalType = nextGoalType;
+          updated.goalValue = nextGoalValue;
+        }
+
+        updated.detailedPlans = applyWeekRangeOverride(updated.detailedPlans, proposedWeekNumber, proposedRangeText);
+        return updated;
+      };
+
+      const updateLecture = (lecture: any) => {
+        if (lecture.id !== materialId) return lecture;
+        const proposedSpeed = Number(target.proposedGoal?.speedMultiplier);
+        const hasProposedSpeed = Number.isFinite(proposedSpeed) && proposedSpeed > 0;
+        const updated = { ...lecture };
+        const clampedProgress = hasCurrentProgress ? clampProgress(currentProgress, updated.totalLectures) : null;
+        if (clampedProgress !== null) {
+          updated.completedLectures = clampedProgress;
+          updated.inputLog = appendInputLog(updated.inputLog, inputDate);
+          updated.updatedAt = nowIso;
+        }
+        if (hasProposedSpeed) {
+          updated.speedMultiplier = Math.min(4, proposedSpeed);
+          updated.updatedAt = nowIso;
+        }
+
+        const nextGoalType = resolveGoalType(updated, goalType, goalValue);
+        const nextGoalValue = resolveGoalValue(updated, goalValue);
+        const nextSpeed = Number(updated.speedMultiplier || 1.0);
+        if (goalValue > 0) {
+          updated.goalType = goalType;
+          updated.goalValue = goalValue;
+          updated.updatedAt = nowIso;
+        }
+
+        if ((hasCurrentProgress || goalValue > 0 || hasProposedSpeed) && nextGoalValue > 0) {
+          const { plans, calculatedTargetDate } = generateDetailedPlans(
+            materialId,
+            updated.totalLectures,
+            'lecture',
+            nextGoalType,
+            nextGoalValue,
+            updated.completedLectures,
+            undefined,
+            updated.reviewPasses || [],
+            studyDays,
+            nextSpeed,
+            updated.estimatedMinutesPerUnit,
+            parentSubject?.studyTime,
+            updated.category
+          );
+          updated.detailedPlans = plans;
+          updated.targetDate = calculatedTargetDate;
+          updated.goalType = nextGoalType;
+          updated.goalValue = nextGoalValue;
+        }
+
+        updated.detailedPlans = applyWeekRangeOverride(updated.detailedPlans, proposedWeekNumber, proposedRangeText);
+        return updated;
+      };
+
       if (materialType === 'book') {
-        // 1. 과목 정보(subjects)에 적용
         if (student.subjects) {
-          student.subjects = student.subjects.map((sub: any) => {
-            if (sub.id !== parentSubject?.id) return sub;
-            return {
-              ...sub,
-              books: (sub.books || []).map((b: any) => {
-                if (b.id !== materialId) return b;
-                const updated = { ...b };
-                if (proposedWeekNumber && proposedRangeText) {
-                  updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
-                    if (p.weekNumber === proposedWeekNumber) {
-                      return { ...p, rangeText: proposedRangeText };
-                    }
-                    return p;
-                  });
-                }
-                if (goalValue > 0) {
-                  updated.goalType = goalType;
-                  updated.goalValue = goalValue;
-                  const { plans, calculatedTargetDate } = generateDetailedPlans(
-                    materialId,
-                    updated.totalPages,
-                    'book',
-                    goalType,
-                    goalValue,
-                    updated.currentPage,
-                    updated.unit,
-                    updated.reviewPasses || [],
-                    studyDays,
-                    1.0,
-                    updated.estimatedMinutesPerUnit,
-                    parentSubject?.studyTime,
-                    updated.category
-                  );
-                  updated.detailedPlans = plans;
-                  updated.targetDate = calculatedTargetDate;
-                }
-                return updated;
-              })
-            };
-          });
+          student.subjects = student.subjects.map((sub: any) => (
+            sub.id !== parentSubject?.id ? sub : { ...sub, books: (sub.books || []).map(updateBook) }
+          ));
         }
-        // 2. 루트 레벨의 books 필드에도 싱크 (필요시)
-        student.books = (student.books || []).map((b: any) => {
-          if (b.id !== materialId) return b;
-          const updated = { ...b };
-          if (proposedWeekNumber && proposedRangeText) {
-            updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
-              if (p.weekNumber === proposedWeekNumber) {
-                return { ...p, rangeText: proposedRangeText };
-              }
-              return p;
-            });
-          }
-          if (goalValue > 0) {
-            updated.goalType = goalType;
-            updated.goalValue = goalValue;
-            const { plans, calculatedTargetDate } = generateDetailedPlans(
-              materialId,
-              updated.totalPages,
-              'book',
-              goalType,
-              goalValue,
-              updated.currentPage,
-              updated.unit,
-              updated.reviewPasses || [],
-              studyDays,
-              1.0,
-              updated.estimatedMinutesPerUnit,
-              parentSubject?.studyTime,
-              updated.category
-            );
-            updated.detailedPlans = plans;
-            updated.targetDate = calculatedTargetDate;
-          }
-          return updated;
-        });
+        student.books = (student.books || []).map(updateBook);
       } else if (materialType === 'lecture') {
-        const proposedSpeed = target.proposedGoal.speedMultiplier || 1.0;
-        
         if (student.subjects) {
-          student.subjects = student.subjects.map((sub: any) => {
-            if (sub.id !== parentSubject?.id) return sub;
-            return {
-              ...sub,
-              lectures: (sub.lectures || []).map((l: any) => {
-                if (l.id !== materialId) return l;
-                const updated = { ...l, speedMultiplier: proposedSpeed };
-                if (proposedWeekNumber && proposedRangeText) {
-                  updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
-                    if (p.weekNumber === proposedWeekNumber) {
-                      return { ...p, rangeText: proposedRangeText };
-                    }
-                    return p;
-                  });
-                }
-                if (goalValue > 0) {
-                  updated.goalType = goalType;
-                  updated.goalValue = goalValue;
-                  const { plans, calculatedTargetDate } = generateDetailedPlans(
-                    materialId,
-                    updated.totalLectures,
-                    'lecture',
-                    goalType,
-                    goalValue,
-                    updated.completedLectures,
-                    undefined,
-                    updated.reviewPasses || [],
-                    studyDays,
-                    proposedSpeed,
-                    updated.estimatedMinutesPerUnit,
-                    parentSubject?.studyTime,
-                    updated.category
-                  );
-                  updated.detailedPlans = plans;
-                  updated.targetDate = calculatedTargetDate;
-                }
-                return updated;
-              })
-            };
-          });
+          student.subjects = student.subjects.map((sub: any) => (
+            sub.id !== parentSubject?.id ? sub : { ...sub, lectures: (sub.lectures || []).map(updateLecture) }
+          ));
         }
-        student.lectures = (student.lectures || []).map((l: any) => {
-          if (l.id !== materialId) return l;
-          const updated = { ...l, speedMultiplier: proposedSpeed };
-          if (proposedWeekNumber && proposedRangeText) {
-            updated.detailedPlans = (updated.detailedPlans || []).map((p: any) => {
-              if (p.weekNumber === proposedWeekNumber) {
-                return { ...p, rangeText: proposedRangeText };
-              }
-              return p;
-            });
-          }
-          if (goalValue > 0) {
-            updated.goalType = goalType;
-            updated.goalValue = goalValue;
-            const { plans, calculatedTargetDate } = generateDetailedPlans(
-              materialId,
-              updated.totalLectures,
-              'lecture',
-              goalType,
-              goalValue,
-              updated.completedLectures,
-              undefined,
-              updated.reviewPasses || [],
-              studyDays,
-              proposedSpeed,
-              updated.estimatedMinutesPerUnit,
-              parentSubject?.studyTime,
-              updated.category
-            );
-            updated.detailedPlans = plans;
-            updated.targetDate = calculatedTargetDate;
-          }
-          return updated;
-        });
+        student.lectures = (student.lectures || []).map(updateLecture);
       }
     }
   }

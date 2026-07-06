@@ -1257,6 +1257,12 @@ export default function AdminInboxPage() {
                         </div>
                       )}
 
+                      {pg.currentProgress !== undefined && (
+                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-[#0071E3]">
+                          현재 진도 정정: {pg.currentProgress}{isBook ? 'p' : '강'}
+                        </span>
+                      )}
+
                       {pg.proposedWeekNumber && pg.proposedRangeText && (
                         <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                           {pg.proposedWeekNumber}주차: {pg.proposedRangeText}

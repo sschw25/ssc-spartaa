@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Tv, FileText, Pencil, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
+import { BookOpen, Tv, FileText, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
 import { Student, DetailedPlan, MakeupCarryover } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
@@ -59,7 +59,6 @@ function InputHeatmap({ inputLog, studyDays, leaveDates }: { inputLog?: string[]
 interface SubjectProgressTabProps {
   student: Student;
   isStudentReport: boolean;
-  updateProgress: (materialType: 'book' | 'lecture', materialId: string, value: number) => void;
   updateBookSolvedQuestions: (materialId: string, solvedQuestions: number) => void;
   incrementBookIncorrectTag: (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => void;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
@@ -72,7 +71,6 @@ interface SubjectProgressTabProps {
 export function SubjectProgressTab({
   student,
   isStudentReport,
-  updateProgress,
   updateBookSolvedQuestions,
   incrementBookIncorrectTag,
   updatePlanCompletion,
@@ -99,6 +97,10 @@ export function SubjectProgressTab({
   );
   const alreadyCarried = hasCarryoverInRealWeek(student.makeupCarryovers, thisWeek);
   const coupons = student.leaveCoupons ?? 0;
+  const goToChangeRequest = React.useCallback(() => {
+    setActiveTab('execution-plan');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setActiveTab]);
 
   const handleCarryover = async (subjectId: string, materialId: string, materialType: 'book' | 'lecture', amount: number, unit: string) => {
     if (!deferLeave || carrying) return;
@@ -434,10 +436,7 @@ export function SubjectProgressTab({
             </div>
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('execution-plan');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
+              onClick={goToChangeRequest}
               className="w-full rounded-2xl border border-amber-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-2.5 text-xs font-black text-amber-900 dark:text-amber-300 shadow-sm transition hover:bg-amber-50 dark:hover:bg-white/5 sm:w-auto"
             >
               변경 신청 바로가기
@@ -588,27 +587,20 @@ export function SubjectProgressTab({
                               )}
                               {isStudentReport ? (
                                 <div className="flex flex-col items-end gap-1.5">
-                                  <span className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 group relative">
-                                    <div className="relative flex items-center">
-                                      <input
-                                        key={b.currentPage}
-                                        type="number"
-                                        inputMode="numeric"
-                                        min={0}
-                                        max={b.totalPages || undefined}
-                                        defaultValue={b.currentPage}
-                                        onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                                        onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== b.currentPage) updateProgress('book', b.id, v); }}
-                                        className="w-14 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
-                                        aria-label="현재 페이지 입력"
-                                      />
-                                      <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
-                                    </div>
-                                    <span className="font-normal text-slate-300 dark:text-slate-600">/</span> {b.totalPages}p
-                                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                      숫자를 수정하여 직접 진도를 기록하세요
+                                  <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    <span className="rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-[#0071E3]">
+                                      {b.currentPage}
                                     </span>
-                                  </span>
+                                    <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
+                                    <span>{b.totalPages}p</span>
+                                    <button
+                                      type="button"
+                                      onClick={goToChangeRequest}
+                                      className="ml-1 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/5 px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-[0.98]"
+                                    >
+                                      변경 신청
+                                    </button>
+                                  </div>
                                   <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 group relative">
                                     <span>누적 해결:</span>
                                     <input
@@ -869,27 +861,20 @@ export function SubjectProgressTab({
                                 </span>
                               )}
                               {isStudentReport ? (
-                                <span className="flex items-center gap-1 text-xs font-bold text-slate-500 dark:text-slate-400 group relative">
-                                  <div className="relative flex items-center">
-                                    <input
-                                      key={l.completedLectures}
-                                      type="number"
-                                      inputMode="numeric"
-                                      min={0}
-                                      max={l.totalLectures || undefined}
-                                      defaultValue={l.completedLectures}
-                                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
-                                      onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== l.completedLectures) updateProgress('lecture', l.id, v); }}
-                                      className="w-14 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-1.5 pr-4.5 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
-                                      aria-label="수강 강수 입력"
-                                    />
-                                    <Pencil className="w-2.5 h-2.5 text-slate-400 absolute right-1.5 pointer-events-none" />
-                                  </div>
-                                  <span className="font-normal text-slate-300 dark:text-slate-600">/</span> {l.totalLectures}강
-                                  <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                    숫자를 수정하여 직접 진도를 기록하세요
+                                <div className="flex items-center justify-end gap-1.5 text-xs font-bold text-slate-500 dark:text-slate-400">
+                                  <span className="rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-[#0071E3]">
+                                    {l.completedLectures}
                                   </span>
-                                </span>
+                                  <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
+                                  <span>{l.totalLectures}강</span>
+                                  <button
+                                    type="button"
+                                    onClick={goToChangeRequest}
+                                    className="ml-1 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/5 px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-[0.98]"
+                                  >
+                                    변경 신청
+                                  </button>
+                                </div>
                               ) : (
                                 <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{l.completedLectures} / {l.totalLectures}강</span>
                               )}

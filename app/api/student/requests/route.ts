@@ -31,6 +31,10 @@ function normalizeProposedGoal(raw: unknown): ProposedGoal | undefined {
   if (typeof g.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.targetDate)) {
     normalized.targetDate = g.targetDate;
   }
+  const currentProgressNum = Number(g.currentProgress);
+  if (Number.isFinite(currentProgressNum) && currentProgressNum >= 0) {
+    normalized.currentProgress = Math.min(999999, Math.round(currentProgressNum));
+  }
   const weekNum = Number(g.proposedWeekNumber);
   if (Number.isFinite(weekNum) && weekNum >= 1) {
     normalized.proposedWeekNumber = Math.min(12, Math.round(weekNum));

@@ -107,6 +107,7 @@ export interface ProposedGoal {
   goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks';
   goalValue: number;
   targetDate?: string;
+  currentProgress?: number;
   proposedWeekNumber?: number;
   proposedRangeText?: string;
   speedMultiplier?: number;

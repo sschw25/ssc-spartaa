@@ -73,6 +73,7 @@ interface HomeOverviewTabProps {
     goalCount: number;
   } | null;
   deadlineGoals?: DeadlineGoal[];
+  openWeeklyPlan?: () => void;
 }
 
 export function HomeOverviewTab({
@@ -105,6 +106,7 @@ export function HomeOverviewTab({
   setCompletedQuests,
   deadlineSummary,
   deadlineGoals = [],
+  openWeeklyPlan,
 }: HomeOverviewTabProps) {
   const confirm = useConfirm();
   // D-Day FAB state
@@ -474,9 +476,21 @@ export function HomeOverviewTab({
                     </div>
                   );
                 })}
-                <p className="pt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                  진도 입력은 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 해요.
-                </p>
+                <div className="flex flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                    진도 입력은 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 해요.
+                  </p>
+                  {openWeeklyPlan && (
+                    <button
+                      type="button"
+                      onClick={openWeeklyPlan}
+                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-[0.98] sm:self-auto"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      진도 확인·수정
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 

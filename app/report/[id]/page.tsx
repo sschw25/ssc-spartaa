@@ -206,7 +206,6 @@ function StudentReportInner() {
     isEnrollmentExpiredLocked,
     handleSwipeStart,
     handleSwipeEnd,
-    updateProgress,
     updateBookSolvedQuestions,
     updatePlanCompletion,
     updateDeadlineProgress,
@@ -266,6 +265,11 @@ function StudentReportInner() {
     if (applyContainerTab(tabId)) return;
     setActiveTab(tabId);
   }, [setActiveTab, applyContainerTab]);
+
+  const openWeeklyPlanTab = useCallback(() => {
+    selectReportTab('execution-plan');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectReportTab]);
 
   const learningActiveTab = activeTab === 'learning' ? learningSubTab : activeTab;
   // 생활 컨테이너의 유효 탭. HomeOverviewTab(등하원·순공)·PenaltiesTab(벌점) 공용.
@@ -582,6 +586,7 @@ function StudentReportInner() {
           setCompletedQuests={setCompletedQuests}
           deadlineGoals={deadlineGoals}
           deadlineSummary={deadlineSummary}
+          openWeeklyPlan={openWeeklyPlanTab}
         />
 
         {/* 2. 오늘 계획 (시간표) 탭 */}
@@ -628,7 +633,6 @@ function StudentReportInner() {
         <SubjectProgressTab
           student={student}
           isStudentReport={isStudentReport}
-          updateProgress={updateProgress}
           updateBookSolvedQuestions={updateBookSolvedQuestions}
           incrementBookIncorrectTag={incrementBookIncorrectTag}
           updatePlanCompletion={updatePlanCompletion}
