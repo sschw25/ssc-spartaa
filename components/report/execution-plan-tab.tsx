@@ -324,6 +324,46 @@ export function ExecutionPlanTab({
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.weekNumber - b.weekNumber || a.subject.localeCompare(b.subject));
   }, [deadlineGoals, isStudentReport, student.subjects, todayKey]);
 
+  const deadlinePlanGroups = React.useMemo(() => {
+    const groups = new Map<string, {
+      key: string;
+      subject: string;
+      title: string;
+      materialType: 'book' | 'lecture';
+      entries: DeadlinePlanEntry[];
+    }>();
+
+    deadlinePlanEntries.forEach((entry) => {
+      const key = `${entry.materialType}:${entry.materialId}`;
+      const group = groups.get(key);
+      if (group) {
+        group.entries.push(entry);
+        return;
+      }
+      groups.set(key, {
+        key,
+        subject: entry.subject,
+        title: entry.title,
+        materialType: entry.materialType,
+        entries: [entry],
+      });
+    });
+
+    return Array.from(groups.values())
+      .map((group) => ({
+        ...group,
+        entries: [...group.entries].sort((a, b) => a.weekNumber - b.weekNumber || a.startDate.localeCompare(b.startDate)),
+      }))
+      .sort((a, b) => {
+        const aFirst = a.entries[0]?.startDate || '';
+        const bFirst = b.entries[0]?.startDate || '';
+        return aFirst.localeCompare(bFirst)
+          || a.subject.localeCompare(b.subject)
+          || a.title.localeCompare(b.title)
+          || (a.materialType === b.materialType ? 0 : a.materialType === 'book' ? -1 : 1);
+      });
+  }, [deadlinePlanEntries]);
+
   // 최근(14일) 외출 반영으로 조정된 과목명 — 계획 항목에 '외출 반영' 배지 표시용.
   const awayAdjustedSubjects = React.useMemo(() => {
     if (!isStudentReport) return new Set<string>();
@@ -785,12 +825,29 @@ export function ExecutionPlanTab({
               </p>
             </div>
             <span className="self-start rounded-full border border-[#0071E3]/15 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 px-3 py-1 text-[10px] font-black text-[#0071E3] sm:self-auto">
-              {deadlinePlanEntries.length}개 목표
+              {deadlinePlanGroups.length}개 자료 · {deadlinePlanEntries.length}개 목표
             </span>
           </div>
 
-          <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
-            {deadlinePlanEntries.map((entry) => {
+          <div className="space-y-4">
+            {deadlinePlanGroups.map((group) => (
+              <div key={group.key} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 p-3">
+                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]">
+                      {group.materialType === 'book' ? '교재' : '인강'}
+                    </p>
+                    <h5 className="mt-0.5 truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                      {group.subject} · {group.title}
+                    </h5>
+                  </div>
+                  <span className="self-start rounded-full bg-white dark:bg-[#1c1c1e] px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 sm:self-auto">
+                    {group.entries.length}개 주차
+                  </span>
+                </div>
+
+                <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
+            {group.entries.map((entry) => {
               const progressPercent = entry.targetAmount > 0
                 ? Math.min(100, Math.round((entry.actualAmount / entry.targetAmount) * 100))
                 : 0;
@@ -940,6 +997,9 @@ export function ExecutionPlanTab({
                 </article>
               );
             })}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       )}
