@@ -230,6 +230,7 @@ export interface LeaveRequest {
   reviewedAt?: string;    // 처리(승인/반려) 시각 (ISO)
   acknowledgedAt?: string;// 관리자가 확인했지만 아직 승인/반려하지 않은 시각 (ISO)
   adminReply?: string;    // 관리자 최신 코멘트 (학생에게 노출, 하위호환)
+  repliedAt?: string;     // 답변 시각 (ISO) — 승인/반려(reviewedAt)와 별개로 답변만 새로 달려도 갱신
   thread?: ThreadMessage[];// 양방향 재답변 대화 (head=reason 이후의 추가 메시지들)
   reappealedAt?: string;  // 반려 후 학생이 재승인 요청한 시각 (ISO) — 인박스에 '재요청'으로 표시
   reappealReason?: string;// 재승인 요청 시 학생이 추가한 메시지

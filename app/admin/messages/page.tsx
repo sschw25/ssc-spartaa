@@ -6,11 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   ChevronLeft, MessageSquare, Search, Loader2,
-  Send, CheckSquare, Square, AlertTriangle, CheckCircle2, Bookmark, BookmarkPlus, X, Users,
+  Send, CheckSquare, Square, AlertTriangle, CheckCircle2, Bookmark, BookmarkPlus, X, Users, History,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm, usePrompt } from '@/components/ui/confirm-dialog';
-import { Student } from '@/lib/types/student';
+import { Student, SmsLog } from '@/lib/types/student';
 import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { AdminNavActions } from '@/components/admin/admin-nav-actions';
@@ -73,8 +73,9 @@ export default function MessagesPage() {
     verifyAuth();
   }, [router]);
 
-  async function loadStudents() {
-    setLoading(true);
+  // silent=true 면 로딩 스피너 없이 백그라운드 재동기화 (발송 직후 이력 갱신용)
+  async function loadStudents(silent = false) {
+    if (!silent) setLoading(true);
     try {
       const res = await fetch('/api/admin/students', { cache: 'no-store', credentials: 'same-origin' });
       if (res.ok) {
@@ -128,6 +129,38 @@ export default function MessagesPage() {
       if (json.success) { setTemplates(json.templates || []); toast.success('삭제했습니다.'); }
       else toast.error(json.message || '삭제 실패');
     } catch { toast.error('네트워크 에러'); }
+  };
+
+  // 발송 이력 — 학생별 smsLogs 취합, 최근 발송순. 캠퍼스 필터·검색(학생명/본문/발송자)과 연동.
+  const [historyLimit, setHistoryLimit] = useState(30);
+  const smsHistory = React.useMemo(() => {
+    const rows: Array<{ key: string; studentId: string; studentName: string; campus: string; log: SmsLog }> = [];
+    for (const s of students) {
+      for (const log of (s.smsLogs || [])) {
+        rows.push({ key: `${s.id}_${log.id}`, studentId: s.id, studentName: s.name, campus: s.campus, log });
+      }
+    }
+    return rows.sort((a, b) => (b.log.sentAt || '').localeCompare(a.log.sentAt || ''));
+  }, [students]);
+  const filteredHistory = smsHistory.filter((row) => {
+    if (campusFilter !== 'all' && row.campus !== campusFilter) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      row.studentName.toLowerCase().includes(q) ||
+      row.log.message.toLowerCase().includes(q) ||
+      (row.log.sentBy || '').toLowerCase().includes(q)
+    );
+  });
+  const formatSentAt = (iso?: string) => {
+    if (!iso) return '';
+    try {
+      return new Intl.DateTimeFormat('ko-KR', {
+        timeZone: 'Asia/Seoul', year: '2-digit', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
+      }).format(new Date(iso));
+    } catch {
+      return iso.slice(0, 16).replace('T', ' ');
+    }
   };
 
   const filteredStudents = students
@@ -196,6 +229,7 @@ export default function MessagesPage() {
         toast.success(`${json.totalSent}건 발송 완료${json.failedCount > 0 ? ` (${json.failedCount}건 실패)` : ''}`);
         setSelectedIds(new Set());
         setMessage('');
+        loadStudents(true); // 발송 이력 즉시 갱신 (깜빡임 없음)
       } else {
         toast.error(json.message || '발송에 실패했습니다.');
       }
@@ -484,6 +518,62 @@ export default function MessagesPage() {
                   </Button>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* 발송 이력 — 개별/일괄 발송 로그(smsLogs) 취합. 캠퍼스 필터·검색 연동 */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <History className="w-4 h-4 text-slate-400" />
+              <p className="text-sm font-black text-slate-700 dark:text-slate-300">발송 이력</p>
+              <span className="rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-black text-slate-500 dark:text-slate-400">
+                {filteredHistory.length}건
+              </span>
+            </div>
+            {(campusFilter !== 'all' || searchQuery.trim()) && (
+              <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500">위 캠퍼스 필터·검색이 이력에도 적용됩니다.</p>
+            )}
+          </div>
+
+          {filteredHistory.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 px-5 py-8 text-center">
+              <History className="w-7 h-7 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+              <p className="text-xs font-bold text-slate-400">아직 발송된 메시지가 없습니다. 발송하면 이곳에 이력이 쌓입니다.</p>
+            </div>
+          ) : (
+            <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-sm overflow-hidden divide-y divide-slate-100/60 dark:divide-white/10">
+              {filteredHistory.slice(0, historyLimit).map((row) => (
+                <div key={row.key} className="px-4 py-3.5 space-y-1.5">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-black text-xs text-slate-800 dark:text-slate-200">{row.studentName}</span>
+                    <Badge className="bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 border-none font-bold rounded-lg px-2 py-0.5 text-[9px]">
+                      {getCampusLabel(row.campus)}
+                    </Badge>
+                    {(row.log.targets || []).map((t) => (
+                      <span key={t} className="rounded-md bg-blue-50 dark:bg-[#0071E3]/15 px-1.5 py-0.5 text-[9px] font-black text-blue-600 dark:text-blue-400">
+                        {t === 'parent' ? '학부모' : '학생'}
+                      </span>
+                    ))}
+                    <span className="ml-auto text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                      {formatSentAt(row.log.sentAt)} · {row.log.sentBy || '관리자'} · {row.log.sentCount}건
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-pre-wrap break-words leading-relaxed">
+                    {row.log.message}
+                  </p>
+                </div>
+              ))}
+              {filteredHistory.length > historyLimit && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryLimit((n) => n + 30)}
+                  className="w-full py-3 text-xs font-black text-[#0071E3] hover:bg-[#0071E3]/[0.04] dark:hover:bg-[#0071E3]/10 transition"
+                >
+                  이력 더 보기 ({filteredHistory.length - historyLimit}건 남음)
+                </button>
+              )}
             </div>
           )}
         </div>

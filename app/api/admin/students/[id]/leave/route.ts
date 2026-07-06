@@ -122,8 +122,10 @@ export async function PATCH(
     if (reply) {
       appendThreadMessage(target, { from: 'admin', text: reply, author: '코멘터' });
       target.adminReply = reply;
+      target.repliedAt = nowIso;
     } else if (reply !== null) {
       target.adminReply = undefined;
+      target.repliedAt = undefined;
     }
     if (status) {
       target.status = status;

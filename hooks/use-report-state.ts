@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Flame } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover } from '@/lib/types/student';
+import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover, ThreadMessage } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -83,6 +83,16 @@ function readDismissedNotificationIds(studentId: string): string[] {
   } catch {
     return [];
   }
+}
+
+// 스레드의 마지막 관리자 답변 시각. 답변 알림 id 에 포함해, 학생이 이전 답변을 확인(dismiss)한
+// 뒤에도 같은 신청에 새 답변이 달리면 별개 알림으로 다시 노출되게 한다(상담 시간변경 제안과 동일 패턴).
+function lastAdminReplyAt(thread: ThreadMessage[] | undefined, fallback?: string): string {
+  for (let i = (thread?.length ?? 0) - 1; i >= 0; i--) {
+    const msg = thread![i];
+    if (msg.from === 'admin') return msg.at || fallback || '';
+  }
+  return fallback || '';
 }
 
 function writeDismissedNotificationIds(studentId: string, ids: string[]) {
@@ -1668,7 +1678,7 @@ export function useReportState() {
 
     if (request.adminReply || (request.thread && request.thread.length > 0)) {
       return {
-        id: `request-reply-${request.id}`,
+        id: `request-reply-${request.id}-${lastAdminReplyAt(request.thread, request.repliedAt)}`,
         tone: 'blue' as const,
         label: '답변 도착',
         title: `${requestLabel}에 답변이 도착했어요`,
@@ -1723,7 +1733,7 @@ export function useReportState() {
 
     if (suggestion.adminReply || (suggestion.thread && suggestion.thread.length > 0)) {
       return {
-        id: `suggestion-reply-${suggestion.id}`,
+        id: `suggestion-reply-${suggestion.id}-${lastAdminReplyAt(suggestion.thread, suggestion.repliedAt)}`,
         tone: 'blue' as const,
         label: '건의 답변',
         title: '건의사항에 답변이 도착했어요',
@@ -1771,17 +1781,17 @@ export function useReportState() {
     .filter((leave) => leave.adminReply || (leave.thread && leave.thread.length > 0))
     .map((leave) => {
       const leaveLabel = formatLeaveLabel(leave.type, leave.slot);
-      const notificationDate = leave.reviewedAt || leave.createdAt || leave.date;
+      const notificationDate = leave.repliedAt || leave.reviewedAt || leave.createdAt || leave.date;
       const leaveConvo = buildDisplayThread({
         headText: leave.reason || leaveLabel,
         headAt: leave.createdAt,
         adminReply: leave.adminReply,
-        repliedAt: leave.reviewedAt,
+        repliedAt: leave.repliedAt || leave.reviewedAt,
         thread: leave.thread,
       }).slice(1);
 
       return {
-        id: `leave-reply-${leave.id}`,
+        id: `leave-reply-${leave.id}-${lastAdminReplyAt(leave.thread, leave.repliedAt || leave.reviewedAt)}`,
         tone: 'blue' as const,
         label: '휴가 답변',
         title: `${leaveLabel} 신청에 답변이 도착했어요`,
