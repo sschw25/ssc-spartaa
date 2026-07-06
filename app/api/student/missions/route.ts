@@ -150,13 +150,19 @@ export async function GET() {
       progress: progressOf(id),
     }));
 
-  // 최근 적립 — grantedAt(실제 지급 시각) 우선 표시, 레거시(없음)는 periodKey(date) 폴백.
+  // 최근 적립 — grantedAt(실제 지급 시각)이 있으면 시간순, 레거시는 기존 append 순서 유지.
   const recent = rewardsLog
     .filter((l) => (l.rewardGranted || 0) > 0)
-    .slice()
-    .sort((a, b) => String(b.grantedAt || b.date || '').localeCompare(String(a.grantedAt || a.date || '')))
+    .map((l, index) => ({ l, index, grantTime: typeof l.grantedAt === 'string' ? Date.parse(l.grantedAt) : NaN }))
+    .sort((a, b) => {
+      const aHasTime = Number.isFinite(a.grantTime);
+      const bHasTime = Number.isFinite(b.grantTime);
+      if (aHasTime && bHasTime && a.grantTime !== b.grantTime) return b.grantTime - a.grantTime;
+      if (aHasTime !== bHasTime) return aHasTime ? -1 : 1;
+      return b.index - a.index;
+    })
     .slice(0, 6)
-    .map((l) => ({
+    .map(({ l }) => ({
       missionName: l.missionName,
       rewardGranted: l.rewardGranted || 0,
       date: l.date,

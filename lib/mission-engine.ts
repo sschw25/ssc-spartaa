@@ -105,7 +105,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
   const monthOffset = opts.monthOffset ?? 0;
   const runWeekly = scope === 'all' || scope === 'weekly';
   const runMonthly = scope === 'all' || scope === 'monthly';
-  const requested = opts.missionIds?.length ? new Set(opts.missionIds) : null;
+  const requested = opts.missionIds ? new Set(opts.missionIds) : null;
 
   const config = await getActiveMissionConfig();
 

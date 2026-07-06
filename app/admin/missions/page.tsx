@@ -41,6 +41,7 @@ export default function MissionsPage() {
   // 항목별 정산 — 대상자 미리보기 + 체크 선택
   const [preview, setPreview] = useState<PreviewEntry[] | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [selectedMissions, setSelectedMissions] = useState<Set<MissionId>>(new Set());
   const [settlingKey, setSettlingKey] = useState<string | null>(null); // missionId | 'selected'
 
@@ -66,14 +67,23 @@ export default function MissionsPage() {
   // 항목별 지급 대상 미리보기 — 저장된 설정 기준 dryRun 평가(지급 없음).
   const loadPreview = useCallback(async () => {
     setPreviewLoading(true);
+    setPreviewError(null);
     try {
       const res = await fetch('/api/admin/missions/settle?dry=1', { method: 'POST' });
       const json = await res.json();
       if (res.ok && json.success) {
         setPreview(json.preview || []);
         setSelectedMissions(new Set());
+      } else {
+        setPreview(null);
+        setSelectedMissions(new Set());
+        setPreviewError(json.message || '지급 대상 미리보기를 불러오지 못했습니다.');
       }
-    } catch { /* 미리보기 실패는 치명적이지 않음 — 새로고침으로 재시도 */ } finally {
+    } catch {
+      setPreview(null);
+      setSelectedMissions(new Set());
+      setPreviewError('네트워크 오류로 지급 대상 미리보기를 불러오지 못했습니다.');
+    } finally {
       setPreviewLoading(false);
     }
   }, []);
@@ -303,6 +313,17 @@ export default function MissionsPage() {
           {previewLoading && !preview ? (
             <div className="space-y-2">
               {[0, 1, 2].map((i) => <div key={i} className="h-[52px] rounded-xl bg-black/[0.03] dark:bg-white/5 animate-pulse" />)}
+            </div>
+          ) : previewError ? (
+            <div className="rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50/60 dark:bg-amber-500/10 px-4 py-4 text-center">
+              <p className="text-[11px] font-bold text-amber-700 dark:text-amber-300">{previewError}</p>
+              <button
+                type="button"
+                onClick={loadPreview}
+                className="mt-2 rounded-lg bg-white dark:bg-white/10 px-3 py-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-500/20 hover:bg-amber-100 dark:hover:bg-amber-500/20 transition"
+              >
+                다시 시도
+              </button>
             </div>
           ) : !preview || preview.length === 0 ? (
             <p className="rounded-xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 px-4 py-5 text-center text-[11px] font-bold text-slate-400">

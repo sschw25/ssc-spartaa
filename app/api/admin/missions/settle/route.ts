@@ -3,6 +3,8 @@ import { isAdmin } from '@/lib/auth';
 import { settleMissions, type SettleOptions } from '@/lib/mission-engine';
 import { MISSION_ORDER, type MissionId } from '@/lib/missions';
 
+class BadRequestError extends Error {}
+
 // 쿠폰 미션 정산 — 활성 미션 조건을 평가하고 쿠폰을 지급(멱등).
 // 관리자 '지금 정산' 버튼(POST) 또는 Vercel/외부 크론(GET, Authorization: Bearer CRON_SECRET).
 // 쿼리: ?scope=all|weekly|monthly, ?prev=1 (월간 미션을 지난 달 기준으로 평가)
@@ -20,12 +22,18 @@ function parseOptions(request: Request): SettleOptions {
   const scopeRaw = sp.get('scope');
   const scope = scopeRaw === 'weekly' || scopeRaw === 'monthly' ? scopeRaw : 'all';
   const monthOffset = sp.get('prev') === '1' ? -1 : 0;
-  const missionIds = (sp.get('missions') || '')
-    .split(',')
-    .map((m) => m.trim())
-    .filter((m): m is MissionId => (MISSION_ORDER as string[]).includes(m));
+  let missionIds: MissionId[] | undefined;
+  const missionsParam = sp.get('missions');
+  if (missionsParam !== null) {
+    const requested = missionsParam.split(',').map((m) => m.trim()).filter(Boolean);
+    const validIds = new Set<string>(MISSION_ORDER);
+    const invalid = requested.filter((m) => !validIds.has(m));
+    if (requested.length === 0) throw new BadRequestError('정산할 미션을 선택해 주세요.');
+    if (invalid.length > 0) throw new BadRequestError(`지원하지 않는 미션 ID입니다: ${invalid.join(', ')}`);
+    missionIds = Array.from(new Set(requested)) as MissionId[];
+  }
   const dryRun = sp.get('dry') === '1';
-  return { scope, monthOffset, ...(missionIds.length ? { missionIds } : {}), dryRun };
+  return { scope, monthOffset, ...(missionIds ? { missionIds } : {}), dryRun };
 }
 
 async function handle(request: Request) {
@@ -33,9 +41,10 @@ async function handle(request: Request) {
     const result = await settleMissions(parseOptions(request));
     return NextResponse.json({ success: true, ...result });
   } catch (e) {
+    const status = e instanceof BadRequestError ? 400 : 500;
     return NextResponse.json(
       { success: false, message: e instanceof Error ? e.message : '정산 실패' },
-      { status: 500 },
+      { status },
     );
   }
 }
