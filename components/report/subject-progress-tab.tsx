@@ -9,7 +9,7 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
-import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMakeupAmount, toDateKey, isStudyDay } from '@/lib/progress-plan';
+import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMakeupAmount, getMaterialStudyDays, toDateKey, isStudyDay } from '@/lib/progress-plan';
 import { canCarryLeaveType, hasCarryoverInRealWeek, weekKeyOf, CARRYOVER_COUPON_COST, formatCarryoverMessage } from '@/lib/makeup-carryover';
 import { kstToday } from '@/lib/leave';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -56,10 +56,98 @@ function InputHeatmap({ inputLog, studyDays, leaveDates }: { inputLog?: string[]
   );
 }
 
+// 자율 입력(selfPaced) 자료 — 진행률/목표 없이 "누적 N{단위}"만 보여주고,
+// 학생은 "오늘 한 만큼"을 더해 누적에 반영한다(절대값 = 기존 + 입력분).
+function SelfPacedInput({
+  materialType,
+  materialId,
+  current,
+  unit,
+  canInput,
+  updateProgress,
+}: {
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  current: number;
+  unit: string;
+  canInput: boolean;
+  updateProgress: (materialType: 'book' | 'lecture', materialId: string, value: number) => Promise<boolean>;
+}) {
+  const [add, setAdd] = React.useState(1);
+  const [saving, setSaving] = React.useState(false);
+
+  const submit = async () => {
+    if (saving || add <= 0) return;
+    setSaving(true);
+    const ok = await updateProgress(materialType, materialId, current + add);
+    setSaving(false);
+    if (ok) setAdd(1);
+  };
+
+  return (
+    <div className="mt-3 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/10 p-3.5 space-y-2.5">
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">자율 입력 자료</span>
+        <span className="text-[13px] font-black text-[#0071E3]">누적 {current}{unit}</span>
+      </div>
+      {canInput ? (
+        <>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed break-keep">
+            오늘 한 만큼 더해서 기록해요. 목표·마감 없이 꾸준히 쌓는 자료예요.
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setAdd((v) => Math.max(1, v - 1))}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[13px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
+              aria-label="입력값 감소"
+            >
+              -
+            </button>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={add}
+              onChange={(e) => setAdd(Math.max(1, Math.round(Number(e.target.value) || 1)))}
+              onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
+              className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-[13px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
+              aria-label="오늘 한 만큼"
+            />
+            <span className="shrink-0 text-[10px] font-semibold text-slate-500 dark:text-slate-400">{unit}</span>
+            <button
+              type="button"
+              onClick={() => setAdd((v) => v + 1)}
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[13px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
+              aria-label="입력값 증가"
+            >
+              +
+            </button>
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => { void submit(); }}
+              className="shrink-0 rounded-full bg-[#0071E3] px-3.5 py-1.5 text-[11px] font-black text-white transition hover:bg-[#0060c0] active:scale-[0.97] disabled:opacity-60"
+            >
+              {saving ? '기록 중...' : '+ 기록'}
+            </button>
+          </div>
+        </>
+      ) : (
+        <p className="text-[10px] font-bold text-slate-400 leading-relaxed">
+          목표 없이 학생이 그날 한 만큼 누적으로 기록하는 자료입니다.
+        </p>
+      )}
+    </div>
+  );
+}
+
 interface SubjectProgressTabProps {
   student: Student;
   isStudentReport: boolean;
   updateBookSolvedQuestions: (materialId: string, solvedQuestions: number) => void;
+  // 자율 입력(selfPaced) 자료 누적 갱신 — value 는 절대값(기존 + 입력분)으로 보낸다.
+  updateProgress: (materialType: 'book' | 'lecture', materialId: string, value: number) => Promise<boolean>;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
   onCarryoverApplied?: (record: MakeupCarryover) => void;
   materialBenchmarks: MaterialBenchmarkMap;
@@ -71,6 +159,7 @@ export function SubjectProgressTab({
   student,
   isStudentReport,
   updateBookSolvedQuestions,
+  updateProgress,
   updatePlanCompletion,
   onCarryoverApplied,
   materialBenchmarks,
@@ -550,13 +639,16 @@ export function SubjectProgressTab({
 
                   <div className="space-y-5">
                     {sub.books.map(b => {
+                      // 자율 입력(selfPaced): 진행률·목표·뒤처짐 판정 없이 누적만. 계획이 없어 스케줄/보강도 자연 제외.
+                      const isSelfPaced = b.goalType === 'selfPaced';
+                      const bookUnit = b.unit || 'p';
                       const percent = b.totalPages > 0 ? Math.round((b.currentPage / b.totalPages) * 100) : 0;
                       const oneMonthPlans = getOneMonthPlans(b.detailedPlans);
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = getPlanStatus(b.currentPage, b.detailedPlans, sub.studyDays);
-                      const paceComparison = formatPaceComparison(
+                      const status = isSelfPaced ? null : getPlanStatus(b.currentPage, b.detailedPlans, getMaterialStudyDays(sub.studyDays, b.studyDays));
+                      const paceComparison = isSelfPaced ? null : formatPaceComparison(
                         getMaterialDailyPace(b.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'book', b.title)
                       );
@@ -589,8 +681,14 @@ export function SubjectProgressTab({
                                     <span className="rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-[#0071E3]">
                                       {b.currentPage}
                                     </span>
-                                    <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
-                                    <span>{b.totalPages}p</span>
+                                    {isSelfPaced ? (
+                                      <span className="text-slate-400">{bookUnit} 누적</span>
+                                    ) : (
+                                      <>
+                                        <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
+                                        <span>{b.totalPages}p</span>
+                                      </>
+                                    )}
                                     <button
                                       type="button"
                                       onClick={goToChangeRequest}
@@ -630,17 +728,34 @@ export function SubjectProgressTab({
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-end gap-0.5">
-                                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{b.currentPage} / {b.totalPages}p</span>
+                                  <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                    {isSelfPaced ? `누적 ${b.currentPage}${bookUnit}` : `${b.currentPage} / ${b.totalPages}p`}
+                                  </span>
                                   {(b.solvedQuestions || 0) > 0 && <span className="text-[9px] font-extrabold text-[#0071E3]">해결: {b.solvedQuestions}문항</span>}
                                 </div>
                               )}
-                              <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{percent}%</span>
+                              {!isSelfPaced && (
+                                <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{percent}%</span>
+                              )}
                             </div>
                           </div>
 
-                          <div className="bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-                            <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
-                          </div>
+                          {!isSelfPaced && (
+                            <div className="bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
+                              <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
+                            </div>
+                          )}
+
+                          {isSelfPaced && (
+                            <SelfPacedInput
+                              materialType="book"
+                              materialId={b.id}
+                              current={b.currentPage}
+                              unit={bookUnit}
+                              canInput={isStudentReport}
+                              updateProgress={updateProgress}
+                            />
+                          )}
 
                           {isStudentReport && oneMonthPlans.length > 0 && (
                             <div className="pt-4 border-t border-slate-100 dark:border-white/10 space-y-3">
@@ -769,7 +884,7 @@ export function SubjectProgressTab({
                           )}
 
                           {isStudentReport && (() => {
-                            const mk = getMakeupAmount(b, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
+                            const mk = getMakeupAmount(b, new Date(), getMaterialStudyDays(sub.studyDays, b.studyDays), leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
                             return (
                               <>
                                 {mk.makeupTotal > 0 && (
@@ -783,7 +898,7 @@ export function SubjectProgressTab({
                               </>
                             );
                           })()}
-                          {isStudentReport && <InputHeatmap inputLog={b.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />}
+                          {isStudentReport && <InputHeatmap inputLog={b.inputLog} studyDays={getMaterialStudyDays(sub.studyDays, b.studyDays)} leaveDates={leaveDates} />}
 
                           {isStudentReport && (
                             <BenchmarkSection type="book" subject={sub.name} name={b.title} studentId={student.id} audience="student" />
@@ -804,13 +919,14 @@ export function SubjectProgressTab({
 
                   <div className="space-y-5">
                     {sub.lectures.map(l => {
+                      const isSelfPaced = l.goalType === 'selfPaced';
                       const percent = l.totalLectures > 0 ? Math.round((l.completedLectures / l.totalLectures) * 100) : 0;
                       const oneMonthPlans = getOneMonthPlans(l.detailedPlans);
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = getPlanStatus(l.completedLectures, l.detailedPlans, sub.studyDays);
-                      const paceComparison = formatPaceComparison(
+                      const status = isSelfPaced ? null : getPlanStatus(l.completedLectures, l.detailedPlans, getMaterialStudyDays(sub.studyDays, l.studyDays));
+                      const paceComparison = isSelfPaced ? null : formatPaceComparison(
                         getMaterialDailyPace(l.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'lecture', l.name)
                       );
@@ -842,8 +958,14 @@ export function SubjectProgressTab({
                                   <span className="rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-[#0071E3]">
                                     {l.completedLectures}
                                   </span>
-                                  <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
-                                  <span>{l.totalLectures}강</span>
+                                  {isSelfPaced ? (
+                                    <span className="text-slate-400">강 누적</span>
+                                  ) : (
+                                    <>
+                                      <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
+                                      <span>{l.totalLectures}강</span>
+                                    </>
+                                  )}
                                   <button
                                     type="button"
                                     onClick={goToChangeRequest}
@@ -853,15 +975,32 @@ export function SubjectProgressTab({
                                   </button>
                                 </div>
                               ) : (
-                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{l.completedLectures} / {l.totalLectures}강</span>
+                                <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                                  {isSelfPaced ? `누적 ${l.completedLectures}강` : `${l.completedLectures} / ${l.totalLectures}강`}
+                                </span>
                               )}
-                              <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{percent}%</span>
+                              {!isSelfPaced && (
+                                <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[10px] font-black text-white shadow-sm">{percent}%</span>
+                              )}
                             </div>
                           </div>
 
-                          <div className="bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
-                            <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
-                          </div>
+                          {!isSelfPaced && (
+                            <div className="bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.03)]">
+                              <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
+                            </div>
+                          )}
+
+                          {isSelfPaced && (
+                            <SelfPacedInput
+                              materialType="lecture"
+                              materialId={l.id}
+                              current={l.completedLectures}
+                              unit="강"
+                              canInput={isStudentReport}
+                              updateProgress={updateProgress}
+                            />
+                          )}
 
                           {isStudentReport && oneMonthPlans.length > 0 && (
                             <div className="pt-4 border-t border-slate-100 dark:border-white/10 space-y-3">
@@ -990,7 +1129,7 @@ export function SubjectProgressTab({
                           )}
 
                           {isStudentReport && (() => {
-                            const mk = getMakeupAmount(l, new Date(), sub.studyDays, leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
+                            const mk = getMakeupAmount(l, new Date(), getMaterialStudyDays(sub.studyDays, l.studyDays), leaveDates, leaveExemptions, sub.studyTime, student.makeupCarryovers);
                             return (
                               <>
                                 {mk.makeupTotal > 0 && (
@@ -1004,7 +1143,7 @@ export function SubjectProgressTab({
                               </>
                             );
                           })()}
-                          {isStudentReport && <InputHeatmap inputLog={l.inputLog} studyDays={sub.studyDays} leaveDates={leaveDates} />}
+                          {isStudentReport && <InputHeatmap inputLog={l.inputLog} studyDays={getMaterialStudyDays(sub.studyDays, l.studyDays)} leaveDates={leaveDates} />}
 
                           {isStudentReport && (
                             <BenchmarkSection type="lecture" subject={sub.name} name={l.name} studentId={student.id} audience="student" />

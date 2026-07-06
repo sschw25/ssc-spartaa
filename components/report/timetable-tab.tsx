@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE } from '@/lib/academy-timetable';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
+import { getMaterialStudyDays } from '@/lib/progress-plan';
 
 type DayKey = NonNullable<SubjectProgress['studyDays']>[number];
 
@@ -233,7 +234,13 @@ export function TimetableTab({
 
       <div className="print-week-grid grid grid-cols-2 md:grid-cols-7 gap-3">
         {weekDaySlots.map(day => {
-          const subjectsInDay = (student.subjects || []).filter(subject => (subject.studyDays || []).includes(day.key));
+          // 과목 요일이 그날을 포함하거나, 그 과목의 어떤 자료라도 개별 요일이 그날을 포함하면 배치.
+          // (자료별 요일을 따로 지정한 자료가 시간표에서 사라지지 않도록 union 으로 판정)
+          const subjectsInDay = (student.subjects || []).filter(subject => {
+            const materials = [...(subject.books || []), ...(subject.lectures || [])];
+            return materials.some(m => (getMaterialStudyDays(subject.studyDays, m.studyDays) || []).includes(day.key))
+              || (materials.length === 0 && (subject.studyDays || []).includes(day.key));
+          });
           const isWeekend = day.key === 'sat' || day.key === 'sun';
           const isToday = day.key === todayDayKey;
 

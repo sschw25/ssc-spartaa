@@ -11,7 +11,7 @@ import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
 import { TabHero } from './tab-hero';
-import { getLeaveDates, getLeaveExemptions, getMakeupAmount } from '@/lib/progress-plan';
+import { getLeaveDates, getLeaveExemptions, getMakeupAmount, getMaterialStudyDays } from '@/lib/progress-plan';
 
 type DailyPlanEntry = {
   id: string;
@@ -279,7 +279,7 @@ export function HomeOverviewTab({
     let sum = 0;
     for (const s of subjects) {
       for (const m of [...(s.books || []), ...(s.lectures || [])]) {
-        sum += getMakeupAmount(m, now, s.studyDays, leaveDates, exemptions, (s as { studyTime?: string }).studyTime, student.makeupCarryovers).makeupTotal;
+        sum += getMakeupAmount(m, now, getMaterialStudyDays(s.studyDays, m.studyDays), leaveDates, exemptions, (s as { studyTime?: string }).studyTime, student.makeupCarryovers).makeupTotal;
       }
     }
     return sum;

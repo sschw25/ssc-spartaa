@@ -154,7 +154,9 @@ function applyProgressMutation(
 
     const baseBook = matchingBooks[0];
     const total = baseBook.totalPages || 0;
-    let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(baseBook.currentPage || 0, total);
+    // 자율 입력(selfPaced) 자료는 목표 총량 개념이 없다 — 총량 상한(clamp cap) 없이 누적을 허용한다.
+    const clampTotal = baseBook.goalType === 'selfPaced' ? 0 : total;
+    let nextValue = hasProgressValue ? clampProgressValue(rawValue, clampTotal) : clampProgressValue(baseBook.currentPage || 0, clampTotal);
 
     let planCompletedVal = false;
     let planActualAmount: number | undefined;
@@ -260,7 +262,9 @@ function applyProgressMutation(
 
     const baseLecture = matchingLectures[0];
     const total = baseLecture.totalLectures || 0;
-    let nextValue = hasProgressValue ? clampProgressValue(rawValue, total) : clampProgressValue(baseLecture.completedLectures || 0, total);
+    // 자율 입력(selfPaced) 자료는 목표 총량 개념이 없다 — 총량 상한(clamp cap) 없이 누적을 허용한다.
+    const clampTotal = baseLecture.goalType === 'selfPaced' ? 0 : total;
+    let nextValue = hasProgressValue ? clampProgressValue(rawValue, clampTotal) : clampProgressValue(baseLecture.completedLectures || 0, clampTotal);
 
     let planCompletedVal = false;
     let planActualAmount: number | undefined;

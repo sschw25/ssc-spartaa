@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Flame, Target } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover, ThreadMessage } from '@/lib/types/student';
+import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover, ThreadMessage } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -18,6 +18,7 @@ import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/aca
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { deriveDeadlineGoals } from '@/lib/deadline-goals';
+import { getMaterialStudyDays } from '@/lib/progress-plan';
 import { buildDisplayThread } from '@/lib/thread';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
@@ -1400,17 +1401,21 @@ export function useReportState() {
         const dateKey = formatDateKey(currentDate);
         const day = WEEK_DAY_SLOTS_BY_DATE[currentDate.getDay()];
 
+        // 요일 판정은 과목이 아니라 자료별로 한다 — 자료별 요일이 있으면 그걸, 없으면 과목 요일 폴백.
+        // (자료 요일 미설정 시 과목 요일과 동일해 기존 동작과 100% 일치)
+        const isMaterialOnDay = (materialStudyDays?: string[], subjectStudyDays?: string[]) => {
+          const ds = getMaterialStudyDays(subjectStudyDays, materialStudyDays) || [];
+          return ds.length === 0 || ds.includes(day.key);
+        };
         const entries = (student.subjects || [])
-          .filter((subject) => {
-            const ds = subject.studyDays || [];
-            return ds.length === 0 || ds.includes(day.key);
-          })
           .sort((a, b) => {
             const timeDiff = STUDY_TIME_ORDER[a.studyTime || ''] - STUDY_TIME_ORDER[b.studyTime || ''];
             return timeDiff || a.name.localeCompare(b.name);
           })
           .flatMap((subject) => {
-            const lectures = (subject.lectures || []).flatMap((lecture) =>
+            const lectures = (subject.lectures || [])
+              .filter((lecture) => isMaterialOnDay(lecture.studyDays, subject.studyDays))
+              .flatMap((lecture) =>
               (lecture.detailedPlans || [])
                 .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey))
                 .map((plan) => {
@@ -1433,7 +1438,9 @@ export function useReportState() {
                   };
                 })
             );
-            const books = (subject.books || []).flatMap((book) =>
+            const books = (subject.books || [])
+              .filter((book) => isMaterialOnDay(book.studyDays, subject.studyDays))
+              .flatMap((book) =>
               (book.detailedPlans || [])
                 .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey))
                 .map((plan) => {
@@ -1569,16 +1576,26 @@ export function useReportState() {
   const currentStudyTimeKey = currentPeriod?.studyTime || '';
   const todayDayKey = WEEKDAY_KEY_MAP[kstNow.weekday] || 'mon';
   
-  const todaySubjects = (student.subjects || []).filter((subject) => {
-    const subjectDays = subject.studyDays || [];
-    return subjectDays.length === 0 || subjectDays.includes(todayDayKey);
-  });
-  
-  const currentSubjects = (student.subjects || []).filter((subject) => {
-    const subjectDays = subject.studyDays || [];
-    const matchesDay = subjectDays.length === 0 || subjectDays.includes(todayDayKey);
-    return matchesDay && (subject.studyTime || '') === currentStudyTimeKey;
-  });
+  // 과목이 "오늘 학습 대상"인지 판정 — 자료별 요일을 union 으로 반영한다.
+  // 과목 요일 또는 그 과목의 어떤 자료 요일이라도 오늘을 포함하면 오늘 대상.
+  // (자료 요일 미설정 시 과목 요일 폴백이라 기존 동작과 동일)
+  const subjectMatchesToday = (subject: SubjectProgress) => {
+    const materials = [...(subject.books || []), ...(subject.lectures || [])];
+    if (materials.length === 0) {
+      const subjectDays = subject.studyDays || [];
+      return subjectDays.length === 0 || subjectDays.includes(todayDayKey);
+    }
+    return materials.some((m) => {
+      const ds = getMaterialStudyDays(subject.studyDays, m.studyDays) || [];
+      return ds.length === 0 || ds.includes(todayDayKey);
+    });
+  };
+
+  const todaySubjects = (student.subjects || []).filter(subjectMatchesToday);
+
+  const currentSubjects = (student.subjects || []).filter((subject) =>
+    subjectMatchesToday(subject) && (subject.studyTime || '') === currentStudyTimeKey,
+  );
 
   const nonStudyPeriodLabel = currentPeriod && !currentPeriod.studyTime ? currentPeriod.label : '';
   const timeGreeting = kstNow.hour < 6

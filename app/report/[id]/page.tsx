@@ -209,6 +209,7 @@ function StudentReportInner() {
     handleSwipeStart,
     handleSwipeEnd,
     updateBookSolvedQuestions,
+    updateProgress,
     updatePlanCompletion,
     updateDeadlineProgress,
     deadlineGoals,
@@ -656,6 +657,7 @@ function StudentReportInner() {
           student={student}
           isStudentReport={isStudentReport}
           updateBookSolvedQuestions={updateBookSolvedQuestions}
+          updateProgress={updateProgress}
           updatePlanCompletion={updatePlanCompletion}
           onCarryoverApplied={applyCarryover}
           materialBenchmarks={materialBenchmarks}
