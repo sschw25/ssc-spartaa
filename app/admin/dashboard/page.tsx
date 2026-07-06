@@ -710,7 +710,7 @@ export default function AdminDashboardPage() {
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => document.getElementById('work-queue')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-                title="아래 '오늘의 작업 큐'에서 유형별 대기 건을 확인하세요"
+                title="아래 '오늘의 브리핑'의 처리 대기에서 유형별 대기 건을 확인하세요"
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition-colors ${pendingRequestsTotal > 0 ? 'bg-amber-500/12 text-amber-700 hover:bg-amber-500/20' : 'bg-black/[0.04] dark:bg-white/5 text-slate-600 dark:text-slate-400 hover:bg-black/[0.07] dark:hover:bg-white/10'}`}
               >
                 <ClipboardList className="w-3.5 h-3.5" />
@@ -880,11 +880,9 @@ export default function AdminDashboardPage() {
 
           </motion.div>
 
-          {/* 오늘의 작업 큐 — 인박스 밖(자리이동/가입/도시락/상담예약)까지 포함한 유형별 대기 딥링크 */}
-          <WorkQueueWidget students={campusScopedStudents} campusFilter={effectiveFilter} studentsLoading={loading} />
         </div>{/* /섹션1 알림현황 */}
 
-        {/* ── 섹션 2: 오늘의 브리핑 (스마트화 Wave1 #2+#3: 연속결석·이탈급증·위험밴드) ── */}
+        {/* ── 섹션 2: 오늘의 브리핑 — 좌: 현황 브리핑(연속결석·이탈급증·위험밴드) / 우: 처리 대기 큐 (반반) ── */}
         <div className="space-y-3.5">
           <div className="flex items-end justify-between gap-3">
             <h2 className="text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">오늘의 브리핑</h2>
@@ -898,7 +896,11 @@ export default function AdminDashboardPage() {
               {showDailyDigestSchedule ? '예약 닫기' : '예약 확인'}
             </button>
           </div>
-          <DailyDigestWidget campusFilter={campusFilter} onSelectStudentId={handleOpenStudentById} />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
+            <DailyDigestWidget campusFilter={campusFilter} onSelectStudentId={handleOpenStudentById} />
+            {/* 처리 대기 — 인박스 밖(자리이동/가입/도시락/상담예약)까지 포함한 유형별 대기 딥링크 */}
+            <WorkQueueWidget students={campusScopedStudents} campusFilter={effectiveFilter} studentsLoading={loading} />
+          </div>
           {/* 일일 브리핑 생성(daily_digest) 예약 설정 — 전체 잡은 /admin/schedules 에서 관리 */}
           {showDailyDigestSchedule && <ScheduledJobsPanel jobIds={['daily_digest']} compact />}
         </div>{/* /섹션2 */}

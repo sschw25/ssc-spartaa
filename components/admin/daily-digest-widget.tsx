@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { AlertCircle, Loader2, RefreshCw, TrendingDown, UserX, ShieldAlert, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, RefreshCw, TrendingDown, UserX, ShieldAlert, Sparkles } from 'lucide-react';
 import { getCampusLabel } from '@/lib/meal';
 
 // 오늘의 브리핑 — /api/admin/daily-digest 를 그대로 반영(스마트화 Wave1 #2+#3).
@@ -99,7 +99,7 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
   const allRisk = campusDigests.flatMap((c) => c.riskBand);
 
   return (
-    <div className="rounded-3xl glass p-5">
+    <div className="rounded-3xl glass p-5 h-full flex flex-col">
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900 dark:text-slate-100">
           <Sparkles className="w-4 h-4 text-[#0071E3]" /> 오늘의 브리핑
@@ -113,9 +113,13 @@ export function DailyDigestWidget({ campusFilter, onSelectStudentId }: Props) {
       </div>
 
       {loading ? (
-        <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-[#0071E3]" /></div>
+        <div className="flex-1 py-8 flex items-center justify-center"><Loader2 className="w-5 h-5 animate-spin text-[#0071E3]" /></div>
       ) : isEmpty ? (
-        <p className="text-[12px] font-semibold text-slate-500 py-6 text-center">오늘 특이사항 없음</p>
+        // '오늘 처리할 일' 카드의 빈 상태와 동일한 형식(체크 아이콘 + 문구) — 반반 배치 시 톤 일치
+        <div className="flex-1 py-8 flex flex-col items-center justify-center gap-2">
+          <CheckCircle2 className="w-7 h-7 text-emerald-500" />
+          <p className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">오늘 특이사항 없음</p>
+        </div>
       ) : (
         <div className="mt-4 space-y-4">
           {/* 카운트 요약 칩 */}

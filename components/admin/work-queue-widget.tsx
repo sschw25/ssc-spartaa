@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import type { Student, SeatMoveRequest, ConsultationBooking } from '@/lib/types/student';
 
-// 오늘의 작업 큐 — 대시보드에서 놓치기 쉬운 "처리 대기" 항목을 유형별로 모아 딥링크한다.
+// 오늘 처리할 일 — '오늘의 브리핑' 우측 반. 놓치기 쉬운 "처리 대기" 항목을 유형별로 모아 딥링크한다.
 // 휴가/변경/건의/불참/리워드/도시락은 대시보드가 이미 들고 있는 students에서 파생(추가 fetch 없음),
 // 자리이동·가입신청·상담예약만 인박스/출결판이 쓰는 기존 API를 그대로 재호출한다. (새 라우트 없음)
 interface Props {
@@ -126,11 +126,11 @@ export function WorkQueueWidget({ students, campusFilter, studentsLoading }: Pro
   return (
     <div
       id="work-queue"
-      className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.025)]"
+      className="rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] h-full flex flex-col"
     >
       <div className="flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-[15px] font-semibold text-slate-900 dark:text-slate-100">
-          <ClipboardList className="w-4 h-4 text-[#0071E3]" /> 오늘의 작업 큐
+          <ClipboardList className="w-4 h-4 text-[#0071E3]" /> 오늘 처리할 일
           {!loading && pendingTotal > 0 && (
             <span className="rounded-full bg-amber-500/12 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
               대기 {pendingTotal}건
@@ -154,9 +154,9 @@ export function WorkQueueWidget({ students, campusFilter, studentsLoading }: Pro
           ))}
         </div>
       ) : allClear ? (
-        <div className="py-8 flex flex-col items-center gap-2">
+        <div className="flex-1 py-8 flex flex-col items-center justify-center gap-2">
           <CheckCircle2 className="w-7 h-7 text-emerald-500" />
-          <p className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">모두 처리했어요</p>
+          <p className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">모두 처리 완료</p>
         </div>
       ) : (
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
