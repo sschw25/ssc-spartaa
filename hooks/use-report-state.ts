@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover, ThreadMessage } from '@/lib/types/student';
+import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -2191,13 +2191,59 @@ export function useReportState() {
 
   const tabIds = reportNavItems.map((item) => item.href.slice(1));
 
-  // 보강 이월 성공 시 조용한 낙관적 갱신(쿠폰 차감 + 이월 내역 추가) — 하드 리로드 대체.
-  const applyCarryover = (record: MakeupCarryover) => {
-    setStudent((prev) => (prev ? {
-      ...prev,
-      leaveCoupons: Math.max(0, (prev.leaveCoupons ?? 0) - (record.couponCost || 0)),
-      makeupCarryovers: [...(prev.makeupCarryovers || []), record],
-    } : prev));
+  // 주말 보강 완료 입력 — /api/student/makeup 호출 후 조용한 낙관적 갱신(makeupDone 누적 + 진도 회복).
+  // 성공 시 자료의 makeupDone·currentPage/completedLectures 를 서버가 적용한 applied 만큼 반영한다.
+  const saveMakeupDone = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    amount: number,
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/student/makeup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ materialType, materialId, amount }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        const applied = Math.max(0, Math.round(Number(json.applied) || 0));
+        if (applied > 0) {
+          setStudent((prev) => {
+            if (!prev) return prev;
+            const patch = <T extends { id: string; makeupDone?: number; currentPage?: number; totalPages?: number; completedLectures?: number; totalLectures?: number }>(m: T): T => {
+              if (m.id !== materialId) return m;
+              const next: T = { ...m, makeupDone: (m.makeupDone || 0) + applied };
+              if (materialType === 'book') {
+                next.currentPage = Math.min(next.totalPages ?? Infinity, (m.currentPage || 0) + applied);
+              } else {
+                next.completedLectures = Math.min(next.totalLectures ?? Infinity, (m.completedLectures || 0) + applied);
+              }
+              return next;
+            };
+            return {
+              ...prev,
+              subjects: (prev.subjects || []).map((s) => ({
+                ...s,
+                ...(materialType === 'book' ? { books: (s.books || []).map(patch) } : { lectures: (s.lectures || []).map(patch) }),
+              })),
+              ...(materialType === 'book'
+                ? { books: (prev.books || []).map(patch) }
+                : { lectures: (prev.lectures || []).map(patch) }),
+            };
+          });
+          toast.success(`보강 ${applied}${materialType === 'lecture' ? '강' : ''} 완료로 기록했어요.`);
+        } else {
+          toast.success('남은 보강이 없어요.');
+        }
+        return true;
+      }
+      toast.error(json?.message || '보강 저장에 실패했어요. 다시 시도해 주세요.');
+      return false;
+    } catch {
+      toast.error('네트워크 오류로 저장하지 못했어요. 다시 시도해 주세요.');
+      return false;
+    }
   };
 
   return {
@@ -2325,7 +2371,7 @@ export function useReportState() {
     deadlineGoals: deadlineDerivation.deadlineGoals,
     deadlineSummary: deadlineDerivation.deadlineSummary,
     incrementBookIncorrectTag,
-    applyCarryover,
+    saveMakeupDone,
     submitChecklist,
     studyTimeLabels: STUDY_TIME_LABELS,
     weekDaySlots: WEEK_DAY_SLOTS,

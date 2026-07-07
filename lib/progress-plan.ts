@@ -318,39 +318,8 @@ export function getManagedProgressItems(students: Student[], today = new Date())
   });
 }
 
-// 이번 주(현재 활성 일일 plan 창) 안에서 오늘 이전 휴가 학습일 × 일일량을 남은 학습일(오늘~창끝)에 분배.
-// 기간 목표(periodType) plan 은 제외. 남은 학습일 0 이면 makeupTotal 을 perDay 로 반환.
-export interface WeekendMakeupItem {
-  id: string;
-  subject: string;
-  title: string;
-  materialType: 'book' | 'lecture';
-  amount: number;
-  unit: string;
-}
-
-// 일회성 휴가로 발생한 자료별 보강량 → '주말 보강 스케줄' 목록.
-// getMakeupAmount(단일 소스, carryover 반영)를 자료별로 집계한다. amount>0 인 자료만.
-export function getWeekendMakeupItems(student: Student, today: Date): WeekendMakeupItem[] {
-  const leaveDates = getLeaveDates(student);
-  if (leaveDates.size === 0) return [];
-  const exemptions = getLeaveExemptions(student);
-  const carryovers = student.makeupCarryovers;
-  const out: WeekendMakeupItem[] = [];
-  for (const s of student.subjects || []) {
-    const studyTime = (s as { studyTime?: string }).studyTime;
-    for (const b of s.books || []) {
-      const { makeupTotal } = getMakeupAmount(b, today, getMaterialStudyDays(s.studyDays, b.studyDays), leaveDates, exemptions, studyTime, carryovers);
-      if (makeupTotal > 0) out.push({ id: `makeup_${s.id}_${b.id}`, subject: s.name, title: b.title, materialType: 'book', amount: makeupTotal, unit: b.unit || 'p' });
-    }
-    for (const l of s.lectures || []) {
-      const { makeupTotal } = getMakeupAmount(l, today, getMaterialStudyDays(s.studyDays, l.studyDays), leaveDates, exemptions, studyTime, carryovers);
-      if (makeupTotal > 0) out.push({ id: `makeup_${s.id}_${l.id}`, subject: s.name, title: l.name, materialType: 'lecture', amount: makeupTotal, unit: '강' });
-    }
-  }
-  return out;
-}
-
+// getMakeupAmount — 파생 보강량(창 스코프 + 쿠폰 이월 net). 주말 보강 원장(lib/makeup-ledger.ts)으로
+// 표시는 이관됐으나, pace 회귀 검증 하네스(scripts/verify-leave-plan-scenarios.mts)가 이 함수를 참조하므로 유지한다.
 export function getMakeupAmount(
   material: BookProgress | LectureProgress,
   today: Date,

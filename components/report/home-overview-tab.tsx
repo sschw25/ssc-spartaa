@@ -12,7 +12,7 @@ import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
 import { TabHero } from './tab-hero';
 import { StreakCard } from './streak-card';
-import { getWeekendMakeupItems } from '@/lib/progress-plan';
+import { getMakeupLedger, getMakeupObligations } from '@/lib/makeup-ledger';
 import { STUDY_SLOT_OPTIONS, formatSlotLabel } from '@/lib/academy-timetable';
 
 type DailyPlanEntry = {
@@ -59,6 +59,7 @@ interface HomeOverviewTabProps {
   todaySelfPacedItems?: SelfPacedItem[];
   saveSelfPacedToday?: (materialType: 'book' | 'lecture', materialId: string, addAmount: number, reviewMinutes?: number) => Promise<boolean>;
   saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
+  saveMakeupDone?: (materialType: 'book' | 'lecture', materialId: string, amount: number) => Promise<boolean>;
   pendingPlanId: string | null;
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
@@ -103,6 +104,7 @@ export function HomeOverviewTab({
   todaySelfPacedItems = [],
   saveSelfPacedToday,
   saveStudySlot,
+  saveMakeupDone,
   pendingPlanId,
   setPendingPlanId,
   pendingAmount,
@@ -147,6 +149,11 @@ export function HomeOverviewTab({
   const [selfPacedSaving, setSelfPacedSaving] = useState(false);
   // 자율 학습 시간표 배치(studySlot) 저장 중인 항목 id.
   const [slotSavingId, setSlotSavingId] = useState<string | null>(null);
+
+  // 주말 보강 입력(원장) — 홈 토/일 박스.
+  const [makeupOpenId, setMakeupOpenId] = useState<string | null>(null);
+  const [makeupAmount, setMakeupAmount] = useState(1);
+  const [makeupSaving, setMakeupSaving] = useState(false);
 
   const ddays: DDayEvent[] = student.ddays || [];
 
@@ -301,24 +308,38 @@ export function HomeOverviewTab({
   // 기간목표도 '오늘 할 일'에 포함 — 오늘까지 기대치(예상목표치)를 채웠으면 완료로 집계(요약 배지와 동일 기준).
   // (전엔 일일계획+점검표만 세어 "기간목표 다 했는데 진행률이 안 오른다" 혼동이 있었음)
   const deadlineDoneToday = activeDeadlineGoals.filter((g) => g.expectedAmount <= 0 || g.actualAmount >= g.expectedAmount * 0.9).length;
-  const todayMissionTotal = todayPlanEntries.length + 1 + activeDeadlineGoals.length;
-  const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0) + deadlineDoneToday;
+
+  // 주말 보강 원장 — 남은 보강(remaining>0) 목록 + 발생분 전체(카운트 판정용).
+  const makeupLedger = React.useMemo(
+    () => (isStudentReport ? getMakeupLedger(student) : []),
+    [isStudentReport, student],
+  );
+  const makeupObligations = React.useMemo(
+    () => (isStudentReport ? getMakeupObligations(student) : []),
+    [isStudentReport, student],
+  );
+  // 오늘이 토/일이면 보강을 '오늘 할 일'에 포함(평일엔 별도 알림/탭에서만).
+  const isWeekendToday = React.useMemo(() => {
+    // Asia/Seoul 요일 기준 — 파일 내 다른 날짜 로직(getSeoulDateKey)과 일관, 자정 경계 안전.
+    const wk = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short' }).format(new Date());
+    return wk === 'Sat' || wk === 'Sun';
+  }, []);
+  // 토/일엔 보강 발생 자료를 '오늘 할 일'에 포함(remaining==0이면 완료). 평일엔 카운트 미포함.
+  const makeupCountTotal = isWeekendToday ? makeupObligations.length : 0;
+  const makeupCountDone = isWeekendToday ? makeupObligations.filter((it) => it.remaining <= 0).length : 0;
+  const todayMissionTotal = todayPlanEntries.length + 1 + activeDeadlineGoals.length + makeupCountTotal;
+  const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0) + deadlineDoneToday + makeupCountDone;
   const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
 
-  // 일회성 휴가로 발생한 자료별 보강 — 이번 주 주말(토) 보강 스케줄로 노출.
-  const weekendMakeupItems = React.useMemo(() => {
+  // 최근(14일) 주말 보강 발생 알림 — 홈 알림 카드.
+  const recentMakeupNotices = React.useMemo(() => {
     if (!isStudentReport) return [];
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-    return getWeekendMakeupItems(student, now);
+    const cutoff = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    return (student.makeupNotices || [])
+      .filter((n) => (n.createdAt || '') >= cutoff)
+      .slice(-5)
+      .reverse();
   }, [isStudentReport, student]);
-  // 이번 주 토요일(보강일) 날짜 라벨 — 오늘이 속한 주의 토요일.
-  const makeupSaturdayLabel = React.useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7)); // 이번 주 토요일(오늘이 토면 오늘)
-    return `${d.getMonth() + 1}월 ${d.getDate()}일(토)`;
-  }, []);
 
   // 최근(14일) 외출 반영 계획조정 — 홈에서 서브탭 없이 바로 확인.
   const recentAwayReplans = React.useMemo(() => {
@@ -384,18 +405,20 @@ export function HomeOverviewTab({
             description="오늘 할 일과 연속출석을 한곳에서 확인해요."
           />
           <StreakCard />
-          {weekendMakeupItems.length > 0 && (
+          {recentMakeupNotices.length > 0 && (
             <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/25 px-3.5 py-2.5 space-y-1.5">
               <p className="flex items-center gap-2 text-[12px] font-bold text-amber-800 dark:text-amber-300">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                휴가로 빠진 만큼 {makeupSaturdayLabel} 보강이 잡혔어요
+                주말 보강 계획이 생겼어요
               </p>
-              {weekendMakeupItems.map((it) => (
-                <p key={it.id} className="pl-6 text-[11px] font-semibold leading-4 text-amber-800/90 dark:text-amber-300/90">
-                  {it.subject} · {it.title} <span className="font-black">{it.amount}{it.unit}</span>
-                </p>
-              ))}
-              <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">주말에 못 하면 학습계획 탭에서 다음 주로 이월할 수 있어요.</p>
+              {recentMakeupNotices.flatMap((n) =>
+                n.items.map((it, i) => (
+                  <p key={`${n.id}_${i}`} className="pl-6 text-[11px] font-semibold leading-4 text-amber-800/90 dark:text-amber-300/90">
+                    {it.subjectName} · {it.materialTitle} <span className="font-black">{it.amount}{it.unit}</span>
+                  </p>
+                )),
+              )}
+              <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">주말에 보강하고 학습 · 보강 탭에서 얼마나 했는지 입력해요.</p>
             </div>
           )}
           {recentAwayReplans.length > 0 && (
@@ -854,6 +877,114 @@ export function HomeOverviewTab({
                                 type="button"
                                 disabled={selfPacedSaving}
                                 onClick={() => setSelfPacedOpenId(null)}
+                                className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] disabled:opacity-60"
+                              >
+                                취소
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* 주말 보강 박스 — 오늘이 토/일이고 남은 보강이 있으면 '오늘 할 일'에 노출(입력 가능). */}
+              {isWeekendToday && makeupLedger.length > 0 && (
+                <div className="mt-1 space-y-2.5 rounded-2xl border border-amber-200 dark:border-amber-500/25 bg-amber-50/70 dark:bg-amber-500/10 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      이번 주말 보강
+                    </p>
+                    <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+                      오늘 할 일에 포함
+                    </span>
+                  </div>
+                  <p className="text-[11px] font-medium text-amber-800/80 dark:text-amber-300/80">
+                    휴가로 빠진 만큼 보강할 분량이에요. 보강한 만큼 입력하면 진도도 함께 채워져요.
+                  </p>
+
+                  {makeupLedger.map((it) => {
+                    const isOpen = makeupOpenId === it.id;
+                    return (
+                      <div key={it.id} className={`rounded-xl border p-3 transition ${
+                        isOpen ? 'border-amber-300 bg-white dark:border-amber-500/30 dark:bg-[#1c1c1e]' : 'border-amber-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                      }`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                              {it.subjectName} · {it.materialTitle}
+                            </p>
+                            <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                              {it.materialType === 'book' ? '교재' : '인강'} · 완료 {it.done}{it.unit} / 발생 {it.owed}{it.unit}
+                            </p>
+                          </div>
+                          {saveMakeupDone ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isOpen) { setMakeupOpenId(null); return; }
+                                setMakeupOpenId(it.id);
+                                setMakeupAmount(Math.min(it.remaining, 1) || 1);
+                              }}
+                              className="shrink-0 rounded-full border border-amber-300/60 bg-white dark:bg-[#1c1c1e] px-3 py-1.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300 transition hover:bg-amber-50 dark:hover:bg-amber-500/10 active:scale-95"
+                            >
+                              남음 {it.remaining}{it.unit} · 입력
+                            </button>
+                          ) : (
+                            <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                              남음 {it.remaining}{it.unit}
+                            </span>
+                          )}
+                        </div>
+
+                        {isOpen && saveMakeupDone && (
+                          <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">이번에 얼마나 보강했나요?</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setMakeupAmount((v) => Math.max(1, v - 1))}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                              >
+                                -
+                              </button>
+                              <span className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {makeupAmount}{it.unit}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setMakeupAmount((v) => Math.min(it.remaining, v + 1))}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                              >
+                                +
+                              </button>
+                              <span className="text-[11px] font-medium text-slate-400 dark:text-slate-500">최대 {it.remaining}{it.unit}</span>
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                disabled={makeupSaving || makeupAmount <= 0}
+                                onClick={async () => {
+                                  if (makeupSaving || makeupAmount <= 0) return;
+                                  setMakeupSaving(true);
+                                  try {
+                                    const ok = await saveMakeupDone(it.materialType, it.materialId, makeupAmount);
+                                    if (ok) setMakeupOpenId(null);
+                                  } finally {
+                                    setMakeupSaving(false);
+                                  }
+                                }}
+                                className="flex-1 rounded-full bg-amber-500 py-2 text-[11px] font-semibold text-white hover:bg-amber-600 active:scale-[0.97] disabled:opacity-60"
+                              >
+                                {makeupSaving ? '저장 중...' : '보강 완료 기록'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={makeupSaving}
+                                onClick={() => setMakeupOpenId(null)}
                                 className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] disabled:opacity-60"
                               >
                                 취소

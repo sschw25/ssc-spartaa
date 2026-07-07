@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, patchStudentProgress } from '@/lib/store';
 import type { LeaveRequest } from '@/lib/types/student';
+import { accrueMakeupAndNotify } from '@/lib/makeup-ledger';
 import {
   LEAVE_TYPES,
   getLeaveTypeLabel,
@@ -137,6 +138,9 @@ export async function POST(req: NextRequest) {
       ...(autoApprove ? { reviewedAt: nowIso, adminReply: usedCredit ? '교환한 반차권으로 자동 승인되었습니다.' : '이번 달 잔여 반차 한도가 있어 자동 승인되었습니다.' } : {}),
     };
     student.leaveRequests = [...existing, request];
+
+    // 자동 승인(반차)된 신청은 그 즉시 주말 보강 원장에 발생량을 스냅샷 가산(멱등).
+    if (autoApprove) accrueMakeupAndNotify(student, request);
 
     const saved = await patchStudentProgress(student, originalUpdatedAt);
     if (saved === 'conflict') continue;

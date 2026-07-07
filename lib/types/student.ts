@@ -87,6 +87,10 @@ export interface BookProgress {
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
+  // ── 주말 보강 원장(makeup ledger) ── 마이그레이션 불필요(subjects jsonb에 통째 저장).
+  makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
+  makeupDone?: number;     // 누적 보강 완료량(학생 입력).
+  makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용).
 }
 
 export interface LectureProgress {
@@ -114,6 +118,10 @@ export interface LectureProgress {
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
+  // ── 주말 보강 원장(makeup ledger) ── 마이그레이션 불필요(subjects jsonb에 통째 저장).
+  makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
+  makeupDone?: number;     // 누적 보강 완료량(학생 입력).
+  makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용).
 }
 
 export interface ProposedGoal {
@@ -250,6 +258,15 @@ export interface LeaveRequest {
   thread?: ThreadMessage[];// 양방향 재답변 대화 (head=reason 이후의 추가 메시지들)
   reappealedAt?: string;  // 반려 후 학생이 재승인 요청한 시각 (ISO) — 인박스에 '재요청'으로 표시
   reappealReason?: string;// 재승인 요청 시 학생이 추가한 메시지
+  makeupAccruedAt?: string;// 이 휴가로 주말 보강 원장에 가산 완료한 시각 (ISO) — 멱등 플래그(재가산 금지)
+}
+
+// 주말 보강 발생 알림 1건 — 휴가 승인 시 발생한 자료별 보강량을 묶어 학생 홈 알림으로 노출.
+// 별도 컬럼 없이 student_state(jsonb)에 makeupNotices 로 보관(makeupCarryovers 패턴과 동일) — 마이그레이션 불필요.
+export interface MakeupNotice {
+  id: string;
+  createdAt: string;      // ISO
+  items: Array<{ subjectName: string; materialTitle: string; amount: number; unit: string }>;
 }
 
 // 쿠폰 리워드 교환 내역 — 쿠폰을 반차권/휴식권/상품권/플래너로 교환
@@ -537,6 +554,8 @@ export interface Student {
   makeupCarryovers?: MakeupCarryover[];
   // 정기외출 반영 계획조정 통지 (관리자 적용 시 append → 학생 홈 알림)
   awayReplanNotices?: AwayReplanNotice[];
+  // 주말 보강 발생 알림 (휴가 승인 시 append → 학생 홈 알림). student_state(jsonb)에 보관.
+  makeupNotices?: MakeupNotice[];
   // 쿠폰 리워드 교환/지급 내역
   rewardRedemptions?: RewardRedemption[];
   // 토요 지각 증빙 내역

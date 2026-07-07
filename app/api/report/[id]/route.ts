@@ -63,9 +63,10 @@ function buildMaskedStudent(
           penalties: student.penalties || [],
           mockExams: student.mockExams || [],
           seatAlerts: student.seatAlerts || [],
-          // 보강 이월(오버레이·내역 표시)·외출 계획조정 통지 — 학생 홈 전용.
+          // 보강 이월(오버레이·내역 표시)·외출 계획조정 통지·주말 보강 발생 알림 — 학생 홈 전용.
           makeupCarryovers: student.makeupCarryovers || [],
           awayReplanNotices: student.awayReplanNotices || [],
+          makeupNotices: student.makeupNotices || [],
           consultationBookings,
           consultationHistory,
           consultationCancellations,

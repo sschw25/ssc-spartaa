@@ -8,6 +8,7 @@ import { HomeOverviewTab } from '@/components/report/home-overview-tab';
 import { TimetableTab } from '@/components/report/timetable-tab';
 import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
+import { MakeupTab } from '@/components/report/makeup-tab';
 import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
@@ -24,13 +25,14 @@ import { Loader2, AlertCircle, BookOpen, Shield } from 'lucide-react';
 import { TabHero } from '@/components/report/tab-hero';
 import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
-type LearningSubTab = 'timetable' | 'execution-plan' | 'subject-progress' | 'grade-analysis';
+type LearningSubTab = 'timetable' | 'execution-plan' | 'subject-progress' | 'makeup' | 'grade-analysis';
 type LifeSubTab = 'attendance-status' | 'study-stats' | 'student-penalties' | 'student-coupons';
 
 const LEARNING_SUB_TABS: Array<{ id: LearningSubTab; label: string; meta: string }> = [
   { id: 'timetable', label: '오늘 계획', meta: '시간표 기준' },
   { id: 'execution-plan', label: '학습계획', meta: '주간 계획' },
   { id: 'subject-progress', label: '과목별 진도', meta: '교재/인강' },
+  { id: 'makeup', label: '보강', meta: '휴가 보강' },
   { id: 'grade-analysis', label: '성적분석', meta: '시험 기록' },
 ];
 
@@ -216,7 +218,7 @@ function StudentReportInner() {
     deadlineGoals,
     deadlineSummary,
     incrementBookIncorrectTag,
-    applyCarryover,
+    saveMakeupDone,
     submitChecklist,
     studyTimeLabels,
     weekDaySlots,
@@ -285,7 +287,7 @@ function StudentReportInner() {
     ariaLabel: string,
   ) => (
     <div className="no-print rounded-3xl border border-slate-100 bg-white p-2 shadow-sm">
-      <div className="grid gap-1.5 sm:grid-cols-4" role="tablist" aria-label={ariaLabel}>
+      <div className={`grid gap-1.5 grid-cols-2 ${tabs.length >= 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`} role="tablist" aria-label={ariaLabel}>
         {tabs.map((tab) => {
           const selected = current === tab.id;
           return (
@@ -576,6 +578,7 @@ function StudentReportInner() {
           todaySelfPacedItems={todaySelfPacedItems}
           saveSelfPacedToday={saveSelfPacedToday}
           saveStudySlot={saveStudySlot}
+          saveMakeupDone={saveMakeupDone}
           pendingPlanId={pendingPlanId}
           setPendingPlanId={setPendingPlanId}
           pendingAmount={pendingAmount}
@@ -634,7 +637,6 @@ function StudentReportInner() {
           updateBookSolvedQuestions={updateBookSolvedQuestions}
           updateProgress={updateProgress}
           updatePlanCompletion={updatePlanCompletion}
-          onCarryoverApplied={applyCarryover}
           materialBenchmarks={materialBenchmarks}
           activeTab={learningActiveTab}
           requestForm={requestForm}
@@ -649,6 +651,14 @@ function StudentReportInner() {
           requestError={requestError}
           realignStudentPlans={realignStudentPlans}
           realigningPlans={realigningPlans}
+        />
+
+        {/* 4-1. 보강 탭 — 휴가로 발생한 자료별 보강 원장(누적/완료 입력) */}
+        <MakeupTab
+          student={student}
+          isStudentReport={isStudentReport}
+          activeTab={learningActiveTab}
+          saveMakeupDone={saveMakeupDone}
         />
 
         {/* 오답 노트 (독립 탭) — 과목별 진도에서 분리한 교재별 오답 사유 태깅 */}
