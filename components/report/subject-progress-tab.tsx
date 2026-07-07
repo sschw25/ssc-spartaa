@@ -383,13 +383,15 @@ export function SubjectProgressTab({
   //  - expectedByEnd:   오늘 종료 시점까지(오늘치 포함) 끝냈어야 할 누적량
   // 오늘 할당량 범위 안에서 학습 중이면 '계획대로 진행중', 그보다 많으면 '빠름',
   // 전날까지 목표(expectedByStart)에도 못 미치면 진짜 뒤처진 것 → '느림'.
-  const getPlanStatus = (current: number, plans?: DetailedPlan[], studyDays?: string[]) => {
+  const getPlanStatus = (current: number, plans?: DetailedPlan[], studyDays?: string[], subjectStudyTime?: string) => {
     // 계획이 아예 없는 자료 = 목표 미설정. 판정(빠름/느림) 대신 중립 뱃지로 안내한다.
     if (!plans || plans.length === 0) return '목표 미설정';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const expectedByStart = getExpectedFromPlans(plans, today, studyDays, student.createdAt);
-    const expectedByEnd = getExpectedFromPlans(plans, today, studyDays, student.createdAt, true);
+    // 승인된 휴가(반차/휴식 등)는 그날 기대치에서 면제 — 순수 휴가로는 '느림'이 뜨지 않게 오버레이를 넘긴다.
+    // 반차는 slot-특정 부분면제라 과목 studyTime 을 함께 전달(없으면 비율 폴백).
+    const expectedByStart = getExpectedFromPlans(plans, today, studyDays, student.createdAt, false, leaveDates, leaveExemptions, subjectStudyTime);
+    const expectedByEnd = getExpectedFromPlans(plans, today, studyDays, student.createdAt, true, leaveDates, leaveExemptions, subjectStudyTime);
     if (expectedByStart === null || expectedByEnd === null) return null;
     if (current > expectedByEnd) return '계획보다 빠름';
     if (current >= expectedByStart) return '계획대로 진행중';
@@ -707,7 +709,7 @@ export function SubjectProgressTab({
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = isSelfPaced ? null : getPlanStatus(b.currentPage, b.detailedPlans, getMaterialStudyDays(sub.studyDays, b.studyDays));
+                      const status = isSelfPaced ? null : getPlanStatus(b.currentPage, b.detailedPlans, getMaterialStudyDays(sub.studyDays, b.studyDays), sub.studyTime);
                       const paceComparison = isSelfPaced ? null : formatPaceComparison(
                         getMaterialDailyPace(b.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'book', b.title)
@@ -985,7 +987,7 @@ export function SubjectProgressTab({
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = isSelfPaced ? null : getPlanStatus(l.completedLectures, l.detailedPlans, getMaterialStudyDays(sub.studyDays, l.studyDays));
+                      const status = isSelfPaced ? null : getPlanStatus(l.completedLectures, l.detailedPlans, getMaterialStudyDays(sub.studyDays, l.studyDays), sub.studyTime);
                       const paceComparison = isSelfPaced ? null : formatPaceComparison(
                         getMaterialDailyPace(l.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'lecture', l.name)
