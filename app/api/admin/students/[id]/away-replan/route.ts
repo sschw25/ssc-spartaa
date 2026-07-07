@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
-import type { AwayReplanNotice } from '@/lib/types/student';
-import { buildAwayReplan } from '@/lib/away-impact';
+import { applyAwayReplan } from '@/lib/away-impact';
 import { kstToday } from '@/lib/leave';
 
 // 관리자가 외출로 인한 계획 재조정을 적용(과목 단위). 적용 시 subject.studyDays 를 잃은 요일만큼
@@ -28,47 +27,8 @@ export async function POST(
   let appliedCount = 0;
 
   const result = await updateStudentById(id, (student) => {
-    const items = buildAwayReplan(student, todayKey).filter((it) => !it.blocked);
-    if (items.length === 0) return false;
-
-    // 과목별 그룹
-    const bySubject = new Map<string, typeof items>();
-    for (const it of items) {
-      const arr = bySubject.get(it.subjectId) || [];
-      arr.push(it);
-      bySubject.set(it.subjectId, arr);
-    }
-    const targets = subjectIds && subjectIds.length > 0 ? subjectIds : [...bySubject.keys()];
-
-    const nowIso = new Date().toISOString();
-    const notices: AwayReplanNotice[] = [...(student.awayReplanNotices || [])];
-
-    for (const sid of targets) {
-      const subjItems = bySubject.get(sid);
-      if (!subjItems || subjItems.length === 0) continue;
-      const subject = (student.subjects || []).find((s) => s.id === sid);
-      if (!subject) continue;
-      // 잃은 요일을 반영해 학습 요일 축소(모든 자료 공통 afterStudyDays)
-      subject.studyDays = subjItems[0].afterStudyDays;
-      for (const it of subjItems) {
-        const list = it.materialType === 'book' ? subject.books : subject.lectures;
-        const mat = (list || []).find((m) => m.id === it.materialId);
-        if (!mat) continue;
-        mat.detailedPlans = it.newPlans;
-        mat.targetDate = it.afterTargetDate;
-        notices.push({
-          id: `awr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${appliedCount}`,
-          appliedAt: nowIso,
-          subjectName: it.subjectName,
-          materialTitle: it.title,
-          summary: it.diff,
-        });
-        appliedCount++;
-      }
-    }
+    appliedCount = applyAwayReplan(student, todayKey, { subjectIds: subjectIds ?? undefined });
     if (appliedCount === 0) return false;
-    // append-only 무한증가 방지 — 최근 60개만 유지(UI는 최근 14일만 노출).
-    student.awayReplanNotices = notices.slice(-60);
     return true;
   });
 

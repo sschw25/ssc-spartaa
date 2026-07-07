@@ -3,6 +3,8 @@ import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfil
 import { BookProgress, LectureProgress, Student, SubjectProgress } from '@/lib/types/student';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
+import { applyAwayReplan } from '@/lib/away-impact';
+import { kstToday } from '@/lib/leave';
 
 // 학생 소유 진도 필드 보존 병합 — detail-sheet 전체 저장은 시트 로드 시점의 subjects 스냅샷을
 // 통째로 보내므로, 시트가 열려 있는 사이 학생이 직접 쓴 필드(자율학습 studySlot·입력/복습 로그·
@@ -132,6 +134,8 @@ export async function PUT(
     const result = await updateStudentById(id, (student) => {
       // subjects 병합용 fresh 스냅샷 — assignArr('subjects')가 교체하기 전에 잡아둔다.
       const freshSubjects = student.subjects;
+      // 외출 자동 재조정 트리거 판정용 — 저장 전 정기외출 스냅샷.
+      const prevAwayJson = JSON.stringify(student.awaySchedules || []);
       const assign = <K extends keyof Student>(key: K) => {
         if (key in studentData) student[key] = studentData[key];
       };
@@ -164,6 +168,11 @@ export async function PUT(
       assignArr('grades', 500);
       assignArr('consultationLogs', 500);
       assignArr('awaySchedules', 500);
+      // 정기 외출이 실제로 바뀐 저장에서만 외출로 막힌 슬롯을 반영해 계획 자동 재조정.
+      // 변경분에 한정해 반복 저장 churn·중복 알림을 막는다. (일반 진도 저장은 트리거 안 함)
+      if (('awaySchedules' in studentData) && JSON.stringify(student.awaySchedules || []) !== prevAwayJson) {
+        applyAwayReplan(student, kstToday());
+      }
     });
     if (result === 'not_found') {
       return NextResponse.json({ success: false, message: '원생을 찾을 수 없습니다.' }, { status: 404 });

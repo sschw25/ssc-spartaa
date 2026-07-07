@@ -1,6 +1,6 @@
 // 정기 외출(AwaySchedule) → 상시 손실 슬롯 감지. 계획 재조정(C)의 단일 소스.
 // 외출 시간대를 학원 시간표(교시)와 겹쳐, 어떤 요일·슬롯이 상시로 막히는지 판정한다.
-import type { AwaySchedule, Student, SubjectProgress, BookProgress, LectureProgress, DetailedPlan } from '@/lib/types/student';
+import type { AwaySchedule, Student, SubjectProgress, BookProgress, LectureProgress, DetailedPlan, AwayReplanNotice } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE, type StudyTimeKey } from '@/lib/academy-timetable';
 import { generateDetailedPlans } from '@/lib/progress-plan';
 
@@ -191,4 +191,54 @@ export function buildAwayReplan(student: Student, todayKey: string): AwayReplanI
     }
   }
   return out;
+}
+
+// 외출 재조정 결과를 student 에 직접 적용(파괴적) — 수동 라우트와 자동 저장 훅의 공용 단일 소스.
+// 잃은 요일만큼 subject.studyDays 를 줄이고 자료 계획을 재생성 결과로 교체 + 홈 알림 append.
+// 적용 후엔 studyDays 에서 손실 요일이 빠져 재실행해도 영향이 0 → 멱등(반복 저장 안전).
+export function applyAwayReplan(
+  student: Student,
+  todayKey: string,
+  opts?: { subjectIds?: string[]; nowIso?: string },
+): number {
+  const items = buildAwayReplan(student, todayKey).filter((it) => !it.blocked);
+  if (items.length === 0) return 0;
+
+  const bySubject = new Map<string, AwayReplanItem[]>();
+  for (const it of items) {
+    const arr = bySubject.get(it.subjectId) || [];
+    arr.push(it);
+    bySubject.set(it.subjectId, arr);
+  }
+  const targets = opts?.subjectIds && opts.subjectIds.length > 0 ? opts.subjectIds : [...bySubject.keys()];
+
+  const nowIso = opts?.nowIso || new Date().toISOString();
+  const notices: AwayReplanNotice[] = [...(student.awayReplanNotices || [])];
+  let appliedCount = 0;
+
+  for (const sid of targets) {
+    const subjItems = bySubject.get(sid);
+    if (!subjItems || subjItems.length === 0) continue;
+    const subject = (student.subjects || []).find((s) => s.id === sid);
+    if (!subject) continue;
+    subject.studyDays = subjItems[0].afterStudyDays; // 모든 자료 공통 축소 요일
+    for (const it of subjItems) {
+      const list = it.materialType === 'book' ? subject.books : subject.lectures;
+      const mat = (list || []).find((m) => m.id === it.materialId);
+      if (!mat) continue;
+      mat.detailedPlans = it.newPlans;
+      mat.targetDate = it.afterTargetDate;
+      notices.push({
+        id: `awr_${Date.now()}_${Math.random().toString(36).slice(2, 6)}_${appliedCount}`,
+        appliedAt: nowIso,
+        subjectName: it.subjectName,
+        materialTitle: it.title,
+        summary: it.diff,
+      });
+      appliedCount++;
+    }
+  }
+  if (appliedCount === 0) return 0;
+  student.awayReplanNotices = notices.slice(-60); // append-only 무한증가 방지
+  return appliedCount;
 }
