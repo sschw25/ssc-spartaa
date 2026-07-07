@@ -396,12 +396,6 @@ export default function ChuncheonInterviewPage() {
                   <td className="py-4 px-6">-</td>
                   <td className="py-4 px-6 text-[#007AFF] font-semibold">필기 합격 확인 즉시 면접반 신청 및 센터 상담</td>
                 </tr>
-                <tr>
-                  <td className="py-4 px-6 font-semibold">7/10(금)</td>
-                  <td className="py-4 px-6">면접 전용 플랫폼 가입</td>
-                  <td className="py-4 px-6">-</td>
-                  <td className="py-4 px-6">자체 면접 플랫폼 가입 및 자기소개서 사전과제 작성 시작</td>
-                </tr>
                 <tr className="bg-blue-50/20">
                   <td className="py-4 px-6 font-semibold text-[#007AFF]">7/14(화)</td>
                   <td className="py-4 px-6 font-semibold">춘천 공채 1차시 본수업</td>
@@ -415,22 +409,25 @@ export default function ChuncheonInterviewPage() {
                   <td className="py-4 px-6 font-medium text-[#FF9500]">★ 교육행정 합격생 춘천 수업 희망여부 파악 및 사전등록</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/17(금)</td>
-                  <td className="py-4 px-6">공채 자율스터디 / 교행 1차시</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/16(목)</td>
+                  <td className="py-4 px-6">원주·춘천 자율스터디</td>
+                  <td className="py-4 px-6">오전 09:30~12:30</td>
                   <td className="py-4 px-6">
-                    오전 09:30~12:30 (스터디)<br />
-                    오후 14:00~17:00 (교행 1차시)
+                    <span className="block text-xs font-semibold text-[#FF9500]">★ 첫 주 금요스터디 대체 운영</span>
+                    7/17(금) 제헌절 공휴일(휴원)로 인한 목요일 오전 스터디 진행
                   </td>
-                  <td className="py-4 px-6">
-                    공채 수강생은 오전 자율스터디 참여.<br />
-                    <span className="text-[#FF9500] font-semibold">교육행정 1차시는 기본 원주 진행이나, 발표 전 사전등록자 대상으로는 춘천에서 수강 가능</span>
-                  </td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 font-semibold">7/17(금)</td>
+                  <td className="py-4 px-6 text-[#FF3B30] font-semibold">제헌절 공휴일 (휴원)</td>
+                  <td className="py-4 px-6">-</td>
+                  <td className="py-4 px-6">수업 및 자율스터디 없음 (공휴일)</td>
                 </tr>
                 <tr className="bg-blue-50/20">
                   <td className="py-4 px-6 font-semibold text-[#007AFF]">7/21(화)</td>
                   <td className="py-4 px-6 font-semibold">춘천 통합반 2차시 본수업</td>
                   <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
-                  <td className="py-4 px-6">공채 및 교육행정 통합 수업 (2차시부터는 전체 춘천캠퍼스 진행)</td>
+                  <td className="py-4 px-6">공채 및 교육행정 통합 수업 (춘천 교행 합류 가능)</td>
                 </tr>
                 <tr className="bg-blue-50/20">
                   <td className="py-4 px-6 font-semibold text-[#007AFF]">7/23(목)</td>
@@ -440,27 +437,15 @@ export default function ChuncheonInterviewPage() {
                 </tr>
                 <tr>
                   <td className="py-4 px-6 font-semibold">7/24(금)</td>
-                  <td className="py-4 px-6">춘천 2차 자율스터디</td>
+                  <td className="py-4 px-6">원주·춘천 최종 자율스터디</td>
                   <td className="py-4 px-6">오전 09:30~12:30</td>
                   <td className="py-4 px-6">스터디원 교대 모의면접 피드백 훈련</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/28(화)</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/24(금)</td>
                   <td className="py-4 px-6 font-semibold">춘천 통합반 4차시 본수업</td>
-                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:30~17:30</td>
-                  <td className="py-4 px-6">실전 대면 모의면접 피드백 및 답변 최종 정교화</td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-semibold">7/29(수)</td>
-                  <td className="py-4 px-6 font-semibold text-emerald-600">춘천 1:1 개인 코멘팅 진행</td>
-                  <td className="py-4 px-6 text-emerald-600">개별 예약 타임</td>
-                  <td className="py-4 px-6">1:1 추가반 신청자 개별 밀착 대면 코멘팅 (원장단 직접 첨삭)</td>
-                </tr>
-                <tr>
-                  <td className="py-4 px-6 font-semibold">7/31(금)</td>
-                  <td className="py-4 px-6">춘천 최종 자율스터디</td>
-                  <td className="py-4 px-6">오전 09:30~12:30</td>
-                  <td className="py-4 px-6">실전 최종 점검 및 모의 면접 교대 진행</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
+                  <td className="py-4 px-6">실전 대면 모의면접 피드백 및 답변 최종 정교화 (춘천 본수업 종료)</td>
                 </tr>
               </tbody>
             </table>
@@ -471,7 +456,10 @@ export default function ChuncheonInterviewPage() {
             <AlertTriangle size={18} className="text-[#FF9500] shrink-0 mt-0.5" />
             <div className="text-xs md:text-sm text-[#FF9500] leading-relaxed">
               <span className="font-semibold">강원 교육행정직 수강생 필수 안내:</span><br />
-              교육행정 1차시 수업(7/17 금 오후)은 원주캠퍼스 통합 진행이 기본입니다. 단, <b>교육행정 필기 발표(7/15) 전에 미리 사전등록을 완료하신 춘천 수강생에 한하여</b> 1차시 수업을 원주 이동 없이 춘천에서 수강하실 수 있도록 지원합니다. 발표(7/15) 이후 신청할 경우 1차시는 원주캠퍼스에 오셔서 통합 수강하셔야 하므로, 춘천에서 1차시부터 편하게 듣기를 원하시는 분들은 반드시 발표 전 사전등록을 완료해 주시기 바랍니다.
+              강원 교육행정직의 첫 수업인 <b>교육행정 기본정리 보강(1차시)은 7월 20일(월) 14:00~17:00 원주센터</b>에서 통합 진행됩니다.
+              이후 <b>원주 교육행정 수강생</b>은 7/22(수) 3차시, 7/23(목) 4차시 원주 본수업에 합류하며(원주 교행은 7/20 오전에 2차시 본수업을 먼저 수강한 후, 오후에 기본정리 보강을 듣는 구조입니다), 
+              <b>춘천 교육행정 수강생</b>은 7/21(화) 2차시, 7/23(목) 3차시, 7/24(금) 4차시 춘천 본수업에 합류하게 됩니다. 
+              상세한 일정 조율과 사전과제 안내를 위해 필기합격 발표 즉시 센터로 문의해 주시기 바랍니다.
             </div>
           </div>
         </div>

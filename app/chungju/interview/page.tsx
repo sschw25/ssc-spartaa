@@ -403,46 +403,58 @@ export default function ChungjuInterviewPage() {
                   <td className="py-4 px-6 text-[#FF9500] font-semibold">★ 발표 즉시 면접반 등록 확인 및 안내</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/22(수)</td>
-                  <td className="py-4 px-6 font-semibold">충주 통합반 1차시 본수업</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/27(월)</td>
+                  <td className="py-4 px-6 font-semibold">충주 공채 1차시 본수업</td>
                   <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
                   <td className="py-4 px-6">
-                    <span className="block text-xs font-semibold text-[#FF9500]">★ 교행 발표 다음날 바로 개강! 사전등록 필수</span>
+                    <span className="block text-xs font-semibold text-[#007AFF]">★ 충주 면접반 개강! (충북반 시작)</span>
                     자기소개서 작성 및 1분 스피치 뼈대 빌드업 (실강)
                   </td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/24(금)</td>
-                  <td className="py-4 px-6">충주 자율스터디 / 2차시 본수업</td>
-                  <td className="py-4 px-6">
-                    오전 09:30~12:30 (스터디)<br />
-                    오후 14:00~17:00 (2차시 수업)
-                  </td>
-                  <td className="py-4 px-6">오전에는 수강생 자율스터디, 오후에는 공직가치/상황질문 본수업 진행</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/30(목)</td>
+                  <td className="py-4 px-6 font-semibold">충주 공채 2차시 본수업</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
+                  <td className="py-4 px-6">공직가치/상황질문 본수업 진행</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 font-semibold">7/31(금)</td>
+                  <td className="py-4 px-6">충주 자율스터디</td>
+                  <td className="py-4 px-6">오전 09:30~12:30</td>
+                  <td className="py-4 px-6">1차시 복습 및 수강생 자율스터디 진행</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/27(월)</td>
-                  <td className="py-4 px-6 font-semibold">충주 통합반 3차시 본수업</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">8/3(월)</td>
+                  <td className="py-4 px-6 font-semibold">충주 공채 3차시 본수업</td>
                   <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
                   <td className="py-4 px-6">충북도정 및 각 지자체 현안 분석, 직렬 전문 예상질문 학습</td>
                 </tr>
                 <tr className="bg-blue-50/20">
-                  <td className="py-4 px-6 font-semibold text-[#007AFF]">7/30(목)</td>
-                  <td className="py-4 px-6 font-semibold">충주 통합반 4차시 본수업</td>
-                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:30~17:30</td>
-                  <td className="py-4 px-6">실전 대면 모의면접 피드백 및 답변 최종 정교화</td>
+                  <td className="py-4 px-6 font-semibold text-[#007AFF]">8/6(목)</td>
+                  <td className="py-4 px-6 font-semibold">충주 공채 4차시 본수업</td>
+                  <td className="py-4 px-6 text-[#007AFF] font-semibold">오후 14:00~17:00</td>
+                  <td className="py-4 px-6">실전 대면 모의면접 피드백 및 답변 최종 정교화 (충주 본수업 종료)</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-6 font-semibold">7/31(금)</td>
-                  <td className="py-4 px-6 font-semibold text-emerald-600">충주 1:1 개인 코멘팅 진행</td>
-                  <td className="py-4 px-6 text-emerald-600">개별 예약 타임</td>
-                  <td className="py-4 px-6">1:1 추가반 신청자 개별 밀착 대면 코멘팅 (원장단 직접 첨삭)</td>
+                  <td className="py-4 px-6 font-semibold">8/7(금)</td>
+                  <td className="py-4 px-6 font-semibold text-emerald-600">충주 최종 자율스터디 / 1:1 코칭</td>
+                  <td className="py-4 px-6 text-emerald-600">
+                    오전 09:30~12:30 (스터디)<br />
+                    오후 개별 예약 (1:1 코칭)
+                  </td>
+                  <td className="py-4 px-6">실전 최종 점검 및 모의 면접 교대 진행 / 1:1 코칭 희망자 개별 진행</td>
                 </tr>
                 <tr>
-                  <td className="py-4 px-6 font-semibold">7/31(금)</td>
-                  <td className="py-4 px-6">충주 최종 자율스터디</td>
-                  <td className="py-4 px-6">오전 09:30~12:30</td>
-                  <td className="py-4 px-6">실전 최종 점검 및 모의 면접 교대 진행</td>
+                  <td className="py-4 px-6 font-semibold">8/10(월)</td>
+                  <td className="py-4 px-6 font-semibold text-emerald-600">최종 1:1 코칭 가능</td>
+                  <td className="py-4 px-6 text-emerald-600">오전/오후 개별 예약</td>
+                  <td className="py-4 px-6">충북 면접 전 최종 점검 및 최종 코칭 (원장단 대면 피드백)</td>
+                </tr>
+                <tr>
+                  <td className="py-4 px-6 font-semibold">8/11(화)</td>
+                  <td className="py-4 px-6 text-[#FF3B30] font-semibold">충북 면접 시작</td>
+                  <td className="py-4 px-6">-</td>
+                  <td className="py-4 px-6">충청북도 지방직 공무원 면접시험 시작일</td>
                 </tr>
               </tbody>
             </table>
@@ -453,7 +465,7 @@ export default function ChungjuInterviewPage() {
             <AlertTriangle size={18} className="text-[#FF9500] shrink-0 mt-0.5" />
             <div className="text-xs md:text-sm text-[#FF9500] leading-relaxed">
               <span className="font-semibold">충북 교육행정직 수강생 필수 안내사항:</span><br />
-              충북 교육행정직의 합격 발표일은 7월 21일(화)이며, 첫 수업(1차시)은 발표 바로 다음 날인 7월 22일(수) 오후 2시에 진행됩니다. 발표 직후 당일에 등록하여 사전과제(자소서 초안 등)를 준비하려면 물리적인 시간이 크게 부족합니다. 따라서 합격 가능성이 조금이라도 있으신 분들은 **발표 전에 미리 사전등록 신청서**를 제출하시어 사전 안내와 과제를 수령하시는 것을 강력히 권장해 드립니다.
+              충북 교육행정직의 합격 발표일은 7월 21일(화)이며, 충주 면접반 첫 수업(1차시)은 7월 27일(월) 14:00에 시작합니다. 필기 발표 이후 등록 시 사전과제(자소서 초안 등)를 준비할 시간이 부족할 수 있으므로, 합격 가능성이 있으신 분들은 **발표 전에 미리 사전등록 신청서**를 제출하시어 사전 안내와 과제를 수령하시는 것을 강력히 권장해 드립니다.
             </div>
           </div>
         </div>
