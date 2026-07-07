@@ -74,4 +74,46 @@ const shortAmount = generateDetailedPlans('book_short', 3, 'book', 'deadlineWeek
 assert.equal(shortAmount.plans.length, 3);
 assert.deepEqual(shortAmount.plans.map((p) => p.targetAmount), [1, 1, 1]);
 
+// ── 계획 시작일(startDateStr) ─────────────────────────────────────────────
+const ALL_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+// A) weekly, 주중 시작(2026-07-08 수요일). 첫 주 startDate 는 월요일 스냅 대신 고른 날짜.
+const startMidweek = generateDetailedPlans(
+  'book_start', 20, 'book', 'weeks', 2, 0, 'p', [], ALL_DAYS,
+  1.0, undefined, undefined, undefined, '2026-07-08',
+);
+assert.equal(startMidweek.plans.length, 2);
+assert.equal(startMidweek.plans[0].startDate, '2026-07-08'); // 월요일(07-06)로 스냅하지 않음
+assert.equal(startMidweek.plans[0].endDate, '2026-07-12');   // 그 주 일요일
+assert.equal(startMidweek.plans[1].startDate, '2026-07-13'); // 다음 주 월요일
+// 시작 전 날짜에 계획이 없어야 한다(유령 뒤처짐 방지).
+assert.ok(startMidweek.plans.every((p) => p.startDate >= '2026-07-08'));
+assert.ok(startMidweek.plans.every((p) => p.startDate <= p.endDate));
+
+// B) weekly, 다음 주 월요일 시작(2026-07-13). 첫 주 startDate === 고른 날짜.
+const startNextWeek = generateDetailedPlans(
+  'book_nextweek', 10, 'book', 'weeks', 1, 0, 'p', [], undefined,
+  1.0, undefined, undefined, undefined, '2026-07-13',
+);
+assert.equal(startNextWeek.plans[0].startDate, '2026-07-13');
+assert.equal(startNextWeek.plans[0].endDate, '2026-07-19');
+
+// C) deadlineWeeks, 주중 시작(2026-07-08). 첫 창이 고른 날짜부터, 이후 창이 이어붙음.
+const deadlineStart = generateDetailedPlans(
+  'lec_start', 30, 'lecture', 'deadlineWeeks', 3, 0, undefined, [], ALL_DAYS,
+  1.0, undefined, undefined, undefined, '2026-07-08',
+);
+assert.equal(deadlineStart.plans.length, 3);
+assert.equal(deadlineStart.plans[0].startDate, '2026-07-08');
+assert.equal(deadlineStart.plans[1].startDate, '2026-07-15');
+assert.ok(deadlineStart.plans.every((p) => p.startDate >= '2026-07-08'));
+assert.ok(deadlineStart.plans.every((p) => p.startDate <= p.endDate));
+
+// D) 잘못된/빈 시작일은 무시(오늘 기준). 빈 문자열은 레거시 경로와 동일하게 계획을 만든다.
+const badStart = generateDetailedPlans(
+  'book_bad', 10, 'book', 'weeks', 1, 0, 'p', [], ALL_DAYS,
+  1.0, undefined, undefined, undefined, 'not-a-date',
+);
+assert.ok(badStart.plans.length >= 1);
+
 console.log('progress-plan checks passed');

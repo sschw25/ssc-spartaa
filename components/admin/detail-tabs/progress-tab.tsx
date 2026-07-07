@@ -171,6 +171,8 @@ export function ProgressTab() {
     sortOrder,
     studentId,
     subjectsState,
+    planStartOf,
+    updateMaterialPlanStart,
     updateBookGoalField,
     updateLectureGoalField,
     updateProgress,
@@ -1233,6 +1235,19 @@ export function ProgressTab() {
                                           )}
                                         </div>
 
+                                        {book.goalType !== 'selfPaced' && (
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <Label className="text-[9px] text-slate-500 dark:text-slate-400 shrink-0">시작일</Label>
+                                            <Input
+                                              type="date"
+                                              value={planStartOf(book.id)}
+                                              onChange={(e) => e.target.value && updateMaterialPlanStart(sub.id, book.id, 'book', e.target.value)}
+                                              className="h-8 w-[140px] text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10"
+                                            />
+                                            <span className="text-[9px] text-slate-400 dark:text-slate-500">기본 내일 · 계획 첫 주가 이 날부터</span>
+                                          </div>
+                                        )}
+
                                         {book.goalType === 'selfPaced' && (
                                           <div className="rounded-lg bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 border border-[#0071E3]/15 px-2.5 py-2 text-[10px] font-semibold text-[#0071E3] leading-relaxed">
                                             자율 입력 자료예요. 목표·계획 없이 학생이 그날 한 만큼 누적으로 입력합니다. 현재 누적 <b>{book.currentPage}{book.unit || 'p'}</b>.
@@ -1688,6 +1703,19 @@ export function ProgressTab() {
                                           </div>
                                           )}
                                         </div>
+
+                                        {lec.goalType !== 'selfPaced' && (
+                                          <div className="flex items-center gap-2 flex-wrap">
+                                            <Label className="text-[9px] text-slate-500 dark:text-slate-400 shrink-0">시작일</Label>
+                                            <Input
+                                              type="date"
+                                              value={planStartOf(lec.id)}
+                                              onChange={(e) => e.target.value && updateMaterialPlanStart(sub.id, lec.id, 'lecture', e.target.value)}
+                                              className="h-8 w-[140px] text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10"
+                                            />
+                                            <span className="text-[9px] text-slate-400 dark:text-slate-500">기본 내일 · 계획 첫 주가 이 날부터</span>
+                                          </div>
+                                        )}
 
                                         {lec.goalType === 'selfPaced' && (
                                           <div className="rounded-lg bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 border border-[#0071E3]/15 px-2.5 py-2 text-[10px] font-semibold text-[#0071E3] leading-relaxed">

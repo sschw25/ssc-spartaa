@@ -52,6 +52,17 @@ function normalizeSmsTargetsForState(value: Student['smsTargets']): Array<'paren
   return Array.isArray(value) ? value : ['parent'];
 }
 
+// KST 기준 "내일" 날짜(YYYY-MM-DD). 계획 시작일 기본값 — 대개 오늘 세운 계획은 다음날부터 시작한다.
+// tz 무관하도록 Seoul 캘린더 날짜를 뽑아 UTC 로 하루 더한다.
+function seoulTomorrow(): string {
+  const s = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+  const [y, m, d] = s.split('-').map(Number);
+  const next = new Date(Date.UTC(y, m - 1, d) + 24 * 60 * 60 * 1000);
+  const mm = String(next.getUTCMonth() + 1).padStart(2, '0');
+  const dd = String(next.getUTCDate()).padStart(2, '0');
+  return `${next.getUTCFullYear()}-${mm}-${dd}`;
+}
+
 type TodayAttendanceStatus = {
   configured: boolean;
   today?: string;
@@ -540,6 +551,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [editingMaterialEstimatedMinutes, setEditingMaterialEstimatedMinutes] = useState<number | ''>('');
   const [newMaterialSpeedMultiplier, setNewMaterialSpeedMultiplier] = useState<number>(1.0);
   const [editingMaterialSpeedMultiplier, setEditingMaterialSpeedMultiplier] = useState<number>(1.0);
+  // 계획 시작일 — 영구 저장하지 않는 세션 초안(자료별). 기본값=내일(KST). 계획은 인라인 목표 설정에서만 생성된다.
+  const [planStartDrafts, setPlanStartDrafts] = useState<Record<string, string>>({});
+  const planStartOf = (materialId: string) => planStartDrafts[materialId] || seoulTomorrow();
   // 통합 폼 전용 자동완성 검색 상태
   const [integratedSearchResults, setIntegratedSearchResults] = useState<SharedMaterial[]>([]);
   const [isSearchingIntegrated, setIsSearchingIntegrated] = useState(false);
@@ -1548,7 +1562,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     overrideCategory?: string,
     // 새로 만드는 교재/강의는 아직 subjectsState에 없어 부모 과목 조회가 실패한다.
     // 이때 호출부가 부모 과목을 직접 넘겨 studyDays/studyTime이 누락되지 않게 한다.
-    parentSubjectHint?: SubjectProgress | null
+    parentSubjectHint?: SubjectProgress | null,
+    // 계획 시작일(YYYY-MM-DD). 미지정=오늘. 지정 시 그 날짜부터 시작하는 계획을 만든다.
+    startDateStr?: string
   ): { plans: DetailedPlan[], calculatedTargetDate: string } => {
     const parentSubject = subjectsState.find((s) => {
       const hasBook = s.books?.some((b) => b.id === materialId);
@@ -1599,7 +1615,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       speedMultiplier,
       estimatedMinutes,
       parentSubject?.studyTime,
-      category
+      category,
+      startDateStr
     );
   };
 
@@ -1629,7 +1646,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               1.0,
               updatedBook.estimatedMinutesPerUnit,
               sub.studyTime,
-              updatedBook.category
+              updatedBook.category,
+              planStartOf(bookId)
             );
             updatedBook.detailedPlans = plans;
             updatedBook.targetDate = calculatedTargetDate;
@@ -1671,7 +1689,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               Number(updatedLec.speedMultiplier || 1.0),
               updatedLec.estimatedMinutesPerUnit,
               sub.studyTime,
-              updatedLec.category
+              updatedLec.category,
+              planStartOf(lectureId)
             );
             updatedLec.detailedPlans = plans;
             updatedLec.targetDate = calculatedTargetDate;
@@ -1683,6 +1702,49 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           return updatedLec;
         })
       };
+    }));
+    setIsAutoSaving(true);
+  };
+
+  // 계획 시작일 변경 핸들러 — 초안(planStartDrafts) 갱신 + 목표가 설정돼 있으면 그 날짜로 계획 재생성.
+  // date 를 명시 인자로 넘겨 setState 클로저의 stale planStartDrafts 참조를 피한다.
+  const updateMaterialPlanStart = (
+    subId: string,
+    materialId: string,
+    type: 'book' | 'lecture',
+    date: string,
+  ) => {
+    setPlanStartDrafts(prev => ({ ...prev, [materialId]: date }));
+    setSubjectsState(prev => prev.map(sub => {
+      if (sub.id !== subId) return sub;
+      const regen = <T extends BookProgress | LectureProgress>(mat: T): T => {
+        const goalType = mat.goalType;
+        const goalValue = mat.goalValue || 0;
+        // 목표 미설정/자율입력이면 계획이 없으니 시작일만 기억하고 재생성하지 않는다.
+        if (!goalType || goalType === 'selfPaced' || goalValue <= 0) return mat;
+        const isBook = type === 'book';
+        const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+          materialId,
+          isBook ? (mat as BookProgress).totalPages : (mat as LectureProgress).totalLectures,
+          type,
+          goalType,
+          goalValue,
+          isBook ? (mat as BookProgress).currentPage : (mat as LectureProgress).completedLectures,
+          isBook ? (mat as BookProgress).unit : undefined,
+          mat.reviewPasses || [],
+          getMaterialStudyDays(sub.studyDays, mat.studyDays),
+          isBook ? 1.0 : Number((mat as LectureProgress).speedMultiplier || 1.0),
+          mat.estimatedMinutesPerUnit,
+          sub.studyTime,
+          mat.category,
+          date,
+        );
+        return { ...mat, detailedPlans: plans, targetDate: calculatedTargetDate };
+      };
+      if (type === 'book') {
+        return { ...sub, books: sub.books.map(b => (b.id === materialId ? regen(b) : b)) };
+      }
+      return { ...sub, lectures: sub.lectures.map(l => (l.id === materialId ? regen(l) : l)) };
     }));
     setIsAutoSaving(true);
   };
@@ -1865,7 +1927,12 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       goalValue,
       currentAmount,
       customUnit,
-      reviewPasses
+      reviewPasses,
+      undefined, // overrideSpeedMultiplier — 래퍼가 부모 과목에서 조회
+      undefined, // overrideEstimatedMinutes
+      undefined, // overrideCategory
+      undefined, // parentSubjectHint
+      planStartOf(materialId), // 계획 시작일(기본 내일)
     );
 
     // subjectsState 업데이트
@@ -4502,6 +4569,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 showIntegratedSuggestions,
                 sortOrder,
                 subjectsState,
+                planStartOf,
+                updateMaterialPlanStart,
                 updateBookGoalField,
                 updateLectureGoalField,
                 updateProgress,

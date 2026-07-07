@@ -633,10 +633,15 @@ export function generateDetailedPlans(
   lectureSpeedMultiplier = 1.0,
   estimatedMinutesPerUnit?: number,
   studyTime?: 'morning' | 'afternoon' | 'night' | '',
-  category?: string
+  category?: string,
+  // 계획 시작일(YYYY-MM-DD). 미지정=오늘(레거시). 지정 시 이 날짜를 계획 기준점(anchor)으로 잡아
+  // "내일부터"/"다음 주부터" 시작을 만든다. 아래 today 변수를 anchor 로 재사용한다.
+  startDateStr?: string
 ): { plans: DetailedPlan[], calculatedTargetDate: string } {
   const plans: DetailedPlan[] = [];
-  const today = new Date();
+  // 명시 시작일이 유효하면 그 날짜를, 아니면 오늘을 기준점으로 쓴다(변수명은 today 유지 — 내부 전 참조 재사용).
+  const explicitStart = Boolean(startDateStr && /^\d{4}-\d{2}-\d{2}$/.test(startDateStr));
+  const today = (explicitStart ? parseDate(startDateStr) : null) ?? new Date();
   today.setHours(0, 0, 0, 0);
 
   // 자율 입력(selfPaced): 목표 분량·마감·계획이 없다. 계획을 만들지 않고 빈 목록을 돌려준다
@@ -822,14 +827,17 @@ export function generateDetailedPlans(
     amountPerWeek: number,
     totalWeeks: number,
     phaseStartWeek: Date,
-    firstWeekFromDate?: Date
+    firstWeekFromDate?: Date,
+    // 첫 주(i===0) plan.startDate 를 이 문자열로 강제(명시 시작일 기능). 미지정 시 그 주 월요일.
+    firstWeekStartOverride?: string
   ) => {
     let remainingAmount = phaseAmount;
     let currentStart = new Date(phaseStartWeek);
 
     for (let i = 0; i < totalWeeks; i++) {
       // KST 직렬화 — toISOString()은 KST 브라우저에서 하루 밀려 일요일 시작 plan 을 만들던 버그.
-      const startStr = seoulDateStr(currentStart);
+      // 명시 시작일이 있으면 첫 주 시작을 그 날짜로(월요일 스냅 대신) — 시작 전 유령 뒤처짐 방지.
+      const startStr = i === 0 && firstWeekStartOverride ? firstWeekStartOverride : seoulDateStr(currentStart);
       const currentEnd = new Date(currentStart);
       currentEnd.setDate(currentStart.getDate() + 6);
       const endStr = seoulDateStr(currentEnd);
@@ -912,8 +920,16 @@ export function generateDetailedPlans(
     }
   }
 
+  // 명시 시작일이 이번(첫) 주 창[월~일] 안에 있으면 첫 주 plan.startDate 를 그 날짜로 강제.
+  // 범위를 벗어나는 경계 케이스(예: 일요일 시작)는 오버라이드하지 않아 startDate<=endDate 불변식을 지킨다.
+  const firstWeekEnd = new Date(startOfWeek);
+  firstWeekEnd.setDate(startOfWeek.getDate() + 6);
+  const firstWeekStartOverride = explicitStart && today >= startOfWeek && today <= firstWeekEnd
+    ? seoulDateStr(today)
+    : undefined;
+
   if (planAmount > 0) {
-    appendPlansByWeeklyAmount(1, planAmount, safeCurrentAmount, firstWeekAmount, amountPerWeek, totalWeeks, startOfWeek, today);
+    appendPlansByWeeklyAmount(1, planAmount, safeCurrentAmount, firstWeekAmount, amountPerWeek, totalWeeks, startOfWeek, today, firstWeekStartOverride);
   }
 
   const enabledReviewPasses = reviewPasses
