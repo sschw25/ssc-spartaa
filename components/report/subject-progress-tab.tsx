@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Tv, FileText, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
+import { BookOpen, Tv, FileText, CheckCircle2, Clock } from 'lucide-react';
 import { Student, DetailedPlan, MakeupCarryover, ProposedGoal } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
@@ -553,29 +553,6 @@ export function SubjectProgressTab({
           </div>
         );
       })()}
-
-      {isStudentReport && (
-        <div className="no-print rounded-3xl border border-amber-500/15 bg-amber-500/[0.04] p-4 shadow-sm md:p-5">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h4 className="flex items-center gap-2 text-sm font-black text-amber-900">
-                <MessageSquare className="h-4 w-4 text-amber-700" />
-                진도나 계획이 맞지 않나요?
-              </h4>
-              <p className="mt-1 text-[10px] font-semibold leading-5 text-amber-700/90">
-                숫자 정정, 속도 조절, 상담 요청은 담당 코멘터에게 바로 신청할 수 있습니다.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={goToChangeRequest}
-              className="w-full rounded-2xl border border-amber-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-4 py-2.5 text-xs font-black text-amber-900 dark:text-amber-300 shadow-sm transition hover:bg-amber-50 dark:hover:bg-white/5 sm:w-auto"
-            >
-              변경 신청 바로가기
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* 학습 관련 요청 + 진도 재조정 (execution-plan 탭에서 이동) — 학생 본인만 노출 */}
       <LearningRequestPanel
