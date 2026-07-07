@@ -37,17 +37,31 @@ type DailyPlanDay = {
   entries: DailyPlanEntry[];
 };
 
+type SelfPacedItem = {
+  id: string;
+  subject: string;
+  title: string;
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  unit: string;
+  current: number;
+  studyTime: string;
+  loggedToday: boolean;
+};
+
 interface HomeOverviewTabProps {
   student: Student;
   setStudent: React.Dispatch<React.SetStateAction<Student | null>>;
   isStudentReport: boolean;
   todayDailyPlan: DailyPlanDay | undefined;
   todayPlanEntries: DailyPlanEntry[];
+  todaySelfPacedItems?: SelfPacedItem[];
+  saveSelfPacedToday?: (materialType: 'book' | 'lecture', materialId: string, addAmount: number, reviewMinutes?: number) => Promise<boolean>;
   pendingPlanId: string | null;
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
-  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
+  updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string, reviewMinutes?: number) => Promise<boolean>;
   homeAttend: { loading: boolean; checkedIn: boolean; todayMinutes: number; since: string | null; sinceToday: boolean };
   homeTotalMin: number;
   currentSubjectText: string;
@@ -84,6 +98,8 @@ export function HomeOverviewTab({
   isStudentReport,
   todayDailyPlan,
   todayPlanEntries,
+  todaySelfPacedItems = [],
+  saveSelfPacedToday,
   pendingPlanId,
   setPendingPlanId,
   pendingAmount,
@@ -119,6 +135,13 @@ export function HomeOverviewTab({
   const [ddayDeleting, setDdayDeleting] = useState<string | null>(null);
   // '완료 확인' 저장 중 표시 — 저장 성공 전에는 패널을 닫지 않는다(입력값 보존).
   const [completionSaving, setCompletionSaving] = useState(false);
+  // 계획 완료 패널의 복습 시간(분) 입력 — 선택 입력(0이면 미복습). 패널 열릴 때 초기화.
+  const [reviewMinutesInput, setReviewMinutesInput] = useState(0);
+  // 자율 학습 '오늘 입력' 패널 상태 — 열린 항목 id·오늘 한 양·복습 분·저장중.
+  const [selfPacedOpenId, setSelfPacedOpenId] = useState<string | null>(null);
+  const [selfPacedAmount, setSelfPacedAmount] = useState(1);
+  const [selfPacedReview, setSelfPacedReview] = useState(0);
+  const [selfPacedSaving, setSelfPacedSaving] = useState(false);
 
   const ddays: DDayEvent[] = student.ddays || [];
 
@@ -204,6 +227,16 @@ export function HomeOverviewTab({
     const month = parts.find(part => part.type === 'month')?.value;
     const day = parts.find(part => part.type === 'day')?.value;
     return `${year}-${month}-${day}`;
+  };
+
+  // 자료의 오늘 복습 분 — reviewLog[오늘] 조회(계획/자율 공통 배지용). subjects 단일소스에서 찾는다.
+  const reviewMinFor = (materialType: 'book' | 'lecture', materialId: string): number => {
+    const todayKey = getSeoulDateKey();
+    const list: Array<{ id: string; reviewLog?: Record<string, number> }> = (student.subjects || [])
+      .flatMap((s): Array<{ id: string; reviewLog?: Record<string, number> }> =>
+        materialType === 'book' ? (s.books || []) : (s.lectures || []));
+    const found = list.find((m) => m.id === materialId);
+    return found?.reviewLog?.[todayKey] || 0;
   };
 
   // specialNote 파싱 헬퍼
@@ -558,6 +591,7 @@ export function HomeOverviewTab({
                             } else {
                               setPendingPlanId(entry.id);
                               setPendingAmount(entry.dailyAmount ?? 1);
+                              setReviewMinutesInput(reviewMinFor(entry.materialType, entry.materialId));
                             }
                           }}
                           aria-pressed={entry.isCompleted}
@@ -580,6 +614,11 @@ export function HomeOverviewTab({
                               <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
                                 {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
                               </p>
+                              {reviewMinFor(entry.materialType, entry.materialId) > 0 && (
+                                <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                  복습 {reviewMinFor(entry.materialType, entry.materialId)}분 ✅
+                                </span>
+                              )}
                             </div>
                             <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
                               entry.isCompleted ? 'bg-white text-emerald-700 dark:bg-white/10 dark:text-emerald-300' : isPending ? 'bg-white text-amber-700 dark:bg-white/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
@@ -610,6 +649,18 @@ export function HomeOverviewTab({
                                   +
                                 </button>
                               </div>
+                              <div className="mt-3 flex items-center justify-between gap-2">
+                                <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">복습 시간(분) <span className="font-medium text-slate-400 dark:text-slate-500">선택</span></label>
+                                <input
+                                  type="number"
+                                  min={0}
+                                  max={1440}
+                                  value={reviewMinutesInput || ''}
+                                  onChange={(e) => setReviewMinutesInput(Math.max(0, Math.min(1440, Math.round(Number(e.target.value) || 0))))}
+                                  placeholder="0"
+                                  className="h-9 w-20 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-right text-[13px] font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                                />
+                              </div>
                               <div className="mt-3 flex gap-2">
                                 <button
                                   type="button"
@@ -618,7 +669,7 @@ export function HomeOverviewTab({
                                     if (completionSaving) return;
                                     setCompletionSaving(true);
                                     try {
-                                      const ok = await updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey);
+                                      const ok = await updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey, reviewMinutesInput);
                                       // 성공 시에만 패널 닫기 — 실패하면 입력값 그대로 유지(실패 토스트는 저장 훅에서).
                                       if (ok) setPendingPlanId(null);
                                     } finally {
@@ -645,10 +696,136 @@ export function HomeOverviewTab({
                     </div>
                   );
                 })
-              ) : (
+              ) : todaySelfPacedItems.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 px-4 py-5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
                   오늘 배정된 항목이 없어요. 자율 학습 계획을 확인해 보세요.
                 </p>
+              ) : null}
+
+              {/* 자율 학습 그룹 — selfPaced 자료(목표 없이 누적 입력). 오늘 할 일 완료 카운트에 포함하지 않는다. */}
+              {todaySelfPacedItems.length > 0 && (
+                <div className="mt-1 space-y-2.5 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      <Target className="h-3.5 w-3.5 text-[#0071E3]" />
+                      자율 학습
+                    </p>
+                    <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
+                      오늘 할 일 완료와 별도
+                    </span>
+                  </div>
+
+                  {todaySelfPacedItems.map((item) => {
+                    const isOpen = selfPacedOpenId === item.id;
+                    const reviewMin = reviewMinFor(item.materialType, item.materialId);
+                    return (
+                      <div key={item.id} className={`rounded-xl border p-3 transition ${
+                        item.loggedToday ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isOpen ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                      }`}>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                              {item.subject} · {item.title}
+                            </p>
+                            <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                              {studyTimeLabels[item.studyTime] || '미지정'} · {item.materialType === 'book' ? '교재' : '인강'} · 누적 {item.current}{item.unit}
+                            </p>
+                            {reviewMin > 0 && (
+                              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                                복습 {reviewMin}분 ✅
+                              </span>
+                            )}
+                          </div>
+                          {item.loggedToday ? (
+                            <span className="shrink-0 rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-white/10 dark:text-emerald-300">
+                              오늘 입력 완료 ✅
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isOpen) { setSelfPacedOpenId(null); return; }
+                                setSelfPacedOpenId(item.id);
+                                setSelfPacedAmount(1);
+                                setSelfPacedReview(reviewMin);
+                              }}
+                              className="shrink-0 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-1.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-95"
+                            >
+                              오늘 입력
+                            </button>
+                          )}
+                        </div>
+
+                        {isOpen && !item.loggedToday && (
+                          <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
+                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">오늘 얼마나 했나요?</p>
+                            <div className="mt-2 flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setSelfPacedAmount((v) => Math.max(0, v - 1))}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                              >
+                                -
+                              </button>
+                              <span className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                {selfPacedAmount}{item.unit}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelfPacedAmount((v) => v + 1)}
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                              >
+                                +
+                              </button>
+                            </div>
+                            <div className="mt-3 flex items-center justify-between gap-2">
+                              <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">복습 시간(분) <span className="font-medium text-slate-400 dark:text-slate-500">선택</span></label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={1440}
+                                value={selfPacedReview || ''}
+                                onChange={(e) => setSelfPacedReview(Math.max(0, Math.min(1440, Math.round(Number(e.target.value) || 0))))}
+                                placeholder="0"
+                                className="h-9 w-20 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-right text-[13px] font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                              />
+                            </div>
+                            <div className="mt-3 flex gap-2">
+                              <button
+                                type="button"
+                                disabled={selfPacedSaving || !saveSelfPacedToday}
+                                onClick={async () => {
+                                  if (selfPacedSaving || !saveSelfPacedToday) return;
+                                  setSelfPacedSaving(true);
+                                  try {
+                                    const ok = await saveSelfPacedToday(item.materialType, item.materialId, selfPacedAmount, selfPacedReview);
+                                    if (ok) {
+                                      setSelfPacedOpenId(null);
+                                      toast.success('오늘 학습을 기록했어요.');
+                                    }
+                                  } finally {
+                                    setSelfPacedSaving(false);
+                                  }
+                                }}
+                                className="flex-1 rounded-full bg-emerald-500 py-2 text-[11px] font-semibold text-white hover:bg-emerald-600 active:scale-[0.97] disabled:opacity-60"
+                              >
+                                {selfPacedSaving ? '저장 중...' : '저장'}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={selfPacedSaving}
+                                onClick={() => setSelfPacedOpenId(null)}
+                                className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] disabled:opacity-60"
+                              >
+                                취소
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
 

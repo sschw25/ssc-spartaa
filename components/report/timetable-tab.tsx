@@ -10,10 +10,23 @@ import { getMaterialStudyDays } from '@/lib/progress-plan';
 
 type DayKey = NonNullable<SubjectProgress['studyDays']>[number];
 
+type SelfPacedItem = {
+  id: string;
+  subject: string;
+  title: string;
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  unit: string;
+  current: number;
+  studyTime: string;
+  loggedToday: boolean;
+};
+
 interface TimetableTabProps {
   student: Student;
   isStudentReport: boolean;
   todaySubjects: SubjectProgress[];
+  todaySelfPacedItems?: SelfPacedItem[];
   currentMinutes: number;
   todayDayKey: DayKey;
   activeTab: string;
@@ -25,6 +38,7 @@ export function TimetableTab({
   student,
   isStudentReport,
   todaySubjects,
+  todaySelfPacedItems = [],
   currentMinutes,
   todayDayKey,
   activeTab,
@@ -92,6 +106,8 @@ export function TimetableTab({
                 isCompleted?: boolean;
                 actualAmount?: number;
                 unit?: string;
+                selfPaced?: boolean;
+                current?: number;
               }> = [];
 
               if (isStudyPeriod && period.studyTime) {
@@ -136,6 +152,22 @@ export function TimetableTab({
                     });
                   }
                 });
+
+                // 자율 입력(selfPaced) 자료 — 목표 수치 없이 "자율 학습"으로 표시(부모 과목 studyTime 기준).
+                todaySelfPacedItems
+                  .filter((item) => item.studyTime === period.studyTime)
+                  .forEach((item) => {
+                    matchedPlans.push({
+                      subjectName: item.subject,
+                      title: item.title,
+                      type: item.materialType,
+                      range: '',
+                      amount: 0,
+                      unit: item.unit,
+                      selfPaced: true,
+                      current: item.current,
+                    });
+                  });
               }
 
               // 0교시부터 8교시 매칭 헬퍼 라벨
@@ -193,14 +225,25 @@ export function TimetableTab({
                             <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
                               {pl.title}
                             </span>
-                            <span className="font-bold text-slate-500 dark:text-slate-400">
-                              오늘 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
-                              {pl.isCompleted && (
-                                <span className="ml-1.5 text-emerald-600 font-extrabold text-[9px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-white/10 rounded px-1.5 py-0.5">
-                                  (실제: {pl.actualAmount !== undefined ? `${pl.actualAmount}${pl.unit}` : '완료'} 완료 ✅)
+                            {pl.selfPaced ? (
+                              <>
+                                <span className="font-bold text-slate-500 dark:text-slate-400">
+                                  자율 학습 (누적 {pl.current ?? 0}{pl.unit})
                                 </span>
-                              )}
-                            </span>
+                                <Badge className="bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/[0.06] text-[#0071E3] text-[9px] border-[#0071E3]/15 dark:border-white/10 font-bold px-1.5 py-0 rounded border">
+                                  자율
+                                </Badge>
+                              </>
+                            ) : (
+                              <span className="font-bold text-slate-500 dark:text-slate-400">
+                                오늘 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
+                                {pl.isCompleted && (
+                                  <span className="ml-1.5 text-emerald-600 font-extrabold text-[9px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-white/10 rounded px-1.5 py-0.5">
+                                    (실제: {pl.actualAmount !== undefined ? `${pl.actualAmount}${pl.unit}` : '완료'} 완료 ✅)
+                                  </span>
+                                )}
+                              </span>
+                            )}
                             {pl.speed && pl.speed !== 1.0 && (
                               <Badge className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 font-bold px-1 py-0 rounded border-0">
                                 {pl.speed}배속 적용됨

@@ -190,6 +190,8 @@ function StudentReportInner() {
     weeklyDailyPlans,
     todayDailyPlan,
     todayPlanEntries,
+    todaySelfPacedItems,
+    saveSelfPacedToday,
     formatNotificationDate,
     notificationCount,
     notificationPreview,
@@ -570,6 +572,8 @@ function StudentReportInner() {
           isStudentReport={isStudentReport}
           todayDailyPlan={todayDailyPlan}
           todayPlanEntries={todayPlanEntries}
+          todaySelfPacedItems={todaySelfPacedItems}
+          saveSelfPacedToday={saveSelfPacedToday}
           pendingPlanId={pendingPlanId}
           setPendingPlanId={setPendingPlanId}
           pendingAmount={pendingAmount}
@@ -603,6 +607,7 @@ function StudentReportInner() {
           student={student}
           isStudentReport={isStudentReport}
           todaySubjects={todaySubjects}
+          todaySelfPacedItems={todaySelfPacedItems}
           currentMinutes={currentMinutes}
           todayDayKey={todayDayKey}
           activeTab={learningActiveTab}

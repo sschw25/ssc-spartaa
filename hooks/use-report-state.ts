@@ -808,9 +808,16 @@ export function useReportState() {
     incorrectTags?: Record<string, number>,
     actualAmount?: number,
     dateKey?: string,
+    reviewLog?: Record<string, number>,
+    addInputToday?: boolean,
   ) => {
     setStudent((prev) => {
       if (!prev) return prev;
+
+      // 자율 입력 저장 성공 시 inputLog 에 오늘을 낙관적으로 추가 → todaySelfPacedItems.loggedToday 즉시 반영.
+      const seoulToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+      const nextInputLog = (log?: string[]) =>
+        addInputToday && !(log || []).includes(seoulToday) ? [...(log || []), seoulToday].slice(-120) : log;
 
       // 1. 최상위 books 패치
       const updatedBooks = (prev.books || []).map((b) => {
@@ -818,6 +825,8 @@ export function useReportState() {
         return {
           ...b,
           currentPage: value,
+          ...(reviewLog !== undefined ? { reviewLog } : {}),
+          ...(addInputToday ? { inputLog: nextInputLog(b.inputLog) } : {}),
           ...(solvedQuestions !== undefined ? { solvedQuestions } : {}),
           ...(incorrectTags !== undefined ? { incorrectTags } : {}),
           ...(planId
@@ -854,6 +863,8 @@ export function useReportState() {
         return {
           ...l,
           completedLectures: value,
+          ...(reviewLog !== undefined ? { reviewLog } : {}),
+          ...(addInputToday ? { inputLog: nextInputLog(l.inputLog) } : {}),
           ...(planId
             ? {
                 detailedPlans: (l.detailedPlans || []).map((p) =>
@@ -890,6 +901,8 @@ export function useReportState() {
           return {
             ...b,
             currentPage: value,
+            ...(reviewLog !== undefined ? { reviewLog } : {}),
+            ...(addInputToday ? { inputLog: nextInputLog(b.inputLog) } : {}),
             ...(solvedQuestions !== undefined ? { solvedQuestions } : {}),
             ...(incorrectTags !== undefined ? { incorrectTags } : {}),
             ...(planId
@@ -924,6 +937,8 @@ export function useReportState() {
           return {
             ...l,
             completedLectures: value,
+            ...(reviewLog !== undefined ? { reviewLog } : {}),
+            ...(addInputToday ? { inputLog: nextInputLog(l.inputLog) } : {}),
             ...(planId
               ? {
                   detailedPlans: (l.detailedPlans || []).map((p) =>
@@ -1007,7 +1022,9 @@ export function useReportState() {
   const saveProgressPatch = async (
     materialType: ProgressMaterialType,
     materialId: string,
-    payload: { value?: number; planId?: string; isCompleted?: boolean; dateKey?: string; actualAmount?: number; solvedQuestions?: number; incorrectTags?: Record<string, number> },
+    payload: { value?: number; planId?: string; isCompleted?: boolean; dateKey?: string; actualAmount?: number; solvedQuestions?: number; incorrectTags?: Record<string, number>; reviewMinutes?: number },
+    // 자율 입력(selfPaced) 저장 — 성공 시 inputLog 에 오늘을 낙관적으로 추가(loggedToday 즉시 반영).
+    addInputToday?: boolean,
   ): Promise<boolean> => {
     try {
       const res = await fetch('/api/student/progress', {
@@ -1028,6 +1045,8 @@ export function useReportState() {
           json.incorrectTags,
           json.actualAmount ?? payload.actualAmount,
           json.dateKey ?? payload.dateKey,
+          json.reviewLog,
+          addInputToday,
         );
         return true;
       }
@@ -1055,7 +1074,37 @@ export function useReportState() {
     isCompleted: boolean,
     actualAmount?: number,
     dateKey?: string,
-  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted, ...(actualAmount !== undefined ? { actualAmount } : {}), ...(dateKey ? { dateKey } : {}) });
+    reviewMinutes?: number,
+  ) => saveProgressPatch(materialType, materialId, { planId, isCompleted, ...(actualAmount !== undefined ? { actualAmount } : {}), ...(dateKey ? { dateKey } : {}), ...(reviewMinutes !== undefined ? { reviewMinutes } : {}) });
+
+  // 자율 입력(selfPaced) 자료 — 오늘 한 양(addAmount)을 현재 누적에 더한 절대값으로 저장 + 복습 분(옵션).
+  // 계획/완료 카운트와 무관한 순수 누적 기록. 저장 성공 시 inputLog 에 오늘 추가(loggedToday 반영).
+  const saveSelfPacedToday = (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    addAmount: number,
+    reviewMinutes?: number,
+  ): Promise<boolean> => {
+    const seoulToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+    // 현재 누적값 조회(루트/subjects 어디든 최초 매칭). selfPaced 는 subjects 에만 있으나 폴백 포함.
+    let current = 0;
+    if (materialType === 'book') {
+      const b = (student?.books || []).find((it) => it.id === materialId)
+        || (student?.subjects || []).flatMap((s) => s.books || []).find((it) => it.id === materialId);
+      current = b?.currentPage || 0;
+    } else {
+      const l = (student?.lectures || []).find((it) => it.id === materialId)
+        || (student?.subjects || []).flatMap((s) => s.lectures || []).find((it) => it.id === materialId);
+      current = l?.completedLectures || 0;
+    }
+    const value = Math.max(0, current + Math.round(Number(addAmount) || 0));
+    return saveProgressPatch(
+      materialType,
+      materialId,
+      { value, dateKey: seoulToday, ...(reviewMinutes !== undefined ? { reviewMinutes } : {}) },
+      true,
+    );
+  };
 
   // 기간 목표(모드 B) 누적 진행량 입력 — deadline plan 의 actualAmount 를 갱신하고
   // 자료 current(currentPage/completedLectures)를 parsePlanBounds 기준으로 best-effort 동기화.
@@ -1485,6 +1534,56 @@ export function useReportState() {
     const now = new Date();
     now.setHours(0, 0, 0, 0);
     return deriveDeadlineGoals(student, now, formatDateKey(now));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.subjects]);
+
+  // 자율 입력(selfPaced) 자료 — detailedPlans 가 없어 오늘 할 일/시간표에 안 뜬다.
+  // 오늘이 그 자료의 학습요일이면 홈·시간표에 "자율 학습"으로 노출한다(완료 카운트 무영향).
+  const todaySelfPacedItems = useMemo(() => {
+    if (!student) return [] as Array<{
+      id: string; subject: string; title: string; materialType: 'book' | 'lecture';
+      materialId: string; unit: string; current: number; studyTime: string; loggedToday: boolean;
+    }>;
+    const todayKey = getSeoulDateKey();
+    // getSeoulDateKey 는 'ko-KR' → 요일 판정용 요일키가 필요하므로 별도 산출(en-US short → sun/mon...)
+    const wk = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Seoul', weekday: 'short' }).format(new Date());
+    const dayKey = WEEKDAY_KEY_MAP[wk] || 'mon';
+    // 학습요일: 자료/과목 요일 union. 지정 없으면 월~토(일 제외) 기본.
+    const isOnToday = (subjectDays?: string[], materialDays?: string[]) => {
+      const ds = getMaterialStudyDays(subjectDays, materialDays) || [];
+      if (ds.length === 0) return dayKey !== 'sun';
+      return ds.includes(dayKey);
+    };
+    return (student.subjects || []).flatMap((subject) => {
+      const studyTime = subject.studyTime || '';
+      const books = (subject.books || [])
+        .filter((b) => b.goalType === 'selfPaced' && isOnToday(subject.studyDays, b.studyDays))
+        .map((b) => ({
+          id: `selfpaced_${subject.id}_${b.id}`,
+          subject: subject.name,
+          title: b.title,
+          materialType: 'book' as const,
+          materialId: b.id,
+          unit: b.unit || 'p',
+          current: b.currentPage || 0,
+          studyTime,
+          loggedToday: !!b.inputLog?.includes(todayKey),
+        }));
+      const lectures = (subject.lectures || [])
+        .filter((l) => l.goalType === 'selfPaced' && isOnToday(subject.studyDays, l.studyDays))
+        .map((l) => ({
+          id: `selfpaced_${subject.id}_${l.id}`,
+          subject: subject.name,
+          title: l.name,
+          materialType: 'lecture' as const,
+          materialId: l.id,
+          unit: '강',
+          current: l.completedLectures || 0,
+          studyTime,
+          loggedToday: !!l.inputLog?.includes(todayKey),
+        }));
+      return [...books, ...lectures];
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.subjects]);
 
@@ -2142,6 +2241,8 @@ export function useReportState() {
     weeklyDailyPlans,
     todayDailyPlan,
     todayPlanEntries,
+    todaySelfPacedItems,
+    saveSelfPacedToday,
     formatNotificationDate,
     notificationCount,
     notificationPreview,

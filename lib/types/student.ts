@@ -83,6 +83,7 @@ export interface BookProgress {
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
+  reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
 }
 
 export interface LectureProgress {
@@ -106,6 +107,7 @@ export interface LectureProgress {
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
+  reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
 }
 
 export interface ProposedGoal {

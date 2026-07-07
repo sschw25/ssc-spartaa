@@ -12,6 +12,7 @@ type UpdatedInfo = {
   actualAmount?: number;
   solvedQuestions?: number;
   incorrectTags?: Record<string, number>;
+  reviewLog?: Record<string, number>;
 };
 
 type MutationResult =
@@ -134,6 +135,8 @@ function applyProgressMutation(
     hasPlanCompletion: boolean;
     hasSolvedQuestions: boolean;
     hasIncorrectTags: boolean;
+    hasReviewMinutes: boolean;
+    reviewMinutes: number;
     dateKey: string;
     body: Record<string, unknown>;
   },
@@ -141,8 +144,18 @@ function applyProgressMutation(
   const nowIso = new Date().toISOString();
   const {
     materialType, materialId, hasProgressValue, rawValue,
-    planId, hasPlanCompletion, hasSolvedQuestions, hasIncorrectTags, dateKey, body,
+    planId, hasPlanCompletion, hasSolvedQuestions, hasIncorrectTags,
+    hasReviewMinutes, reviewMinutes, dateKey, body,
   } = opts;
+
+  // 자료 reviewLog[dateKey] 갱신 헬퍼 — dateKey 없으면 무시(기록 위치 불명). 0이면 그날 기록 제거.
+  const applyReviewLog = (material: { reviewLog?: Record<string, number> }) => {
+    if (!hasReviewMinutes || !dateKey) return;
+    const next = { ...(material.reviewLog || {}) };
+    if (reviewMinutes > 0) next[dateKey] = reviewMinutes;
+    else delete next[dateKey];
+    material.reviewLog = Object.keys(next).length > 0 ? next : undefined;
+  };
 
   if (materialType === 'book') {
     const matchingBooks: BookProgress[] = [
@@ -239,6 +252,7 @@ function applyProgressMutation(
       book.currentPage = nextValue;
       book.updatedAt = nowIso;
       appendInputLog(book);
+      applyReviewLog(book);
     });
 
     return {
@@ -250,6 +264,7 @@ function applyProgressMutation(
         ...(hasPlanCompletion && dateKey ? { dateKey, actualAmount: planActualAmount } : {}),
         solvedQuestions: baseBook.solvedQuestions,
         incorrectTags: baseBook.incorrectTags,
+        ...(hasReviewMinutes && dateKey ? { dateKey, reviewLog: baseBook.reviewLog } : {}),
       },
     };
   } else {
@@ -329,6 +344,7 @@ function applyProgressMutation(
       lecture.completedLectures = nextValue;
       lecture.updatedAt = nowIso;
       appendInputLog(lecture);
+      applyReviewLog(lecture);
     });
 
     return {
@@ -338,6 +354,7 @@ function applyProgressMutation(
         total,
         ...(hasPlanCompletion ? { planId, isCompleted: planCompletedVal } : {}),
         ...(hasPlanCompletion && dateKey ? { dateKey, actualAmount: planActualAmount } : {}),
+        ...(hasReviewMinutes && dateKey ? { dateKey, reviewLog: baseLecture.reviewLog } : {}),
       },
     };
   }
@@ -360,6 +377,7 @@ export async function PATCH(req: NextRequest) {
     actualAmount?: unknown;
     solvedQuestions?: unknown;
     incorrectTags?: unknown;
+    reviewMinutes?: unknown;
     deadlineAmount?: unknown;
   };
   try {
@@ -377,6 +395,9 @@ export async function PATCH(req: NextRequest) {
   const hasPlanCompletion = planId.length > 0 && typeof body?.isCompleted === 'boolean';
   const hasSolvedQuestions = body?.solvedQuestions !== undefined;
   const hasIncorrectTags = body?.incorrectTags !== undefined;
+  // 복습 시간(분) — 계획 완료/자율 입력 어느 경로든 함께 올 수 있다. 0~1440 정규화, 0이면 그날 기록 제거.
+  const hasReviewMinutes = body?.reviewMinutes !== undefined;
+  const reviewMinutes = hasReviewMinutes ? Math.min(1440, Math.max(0, Math.round(Number(body.reviewMinutes) || 0))) : 0;
   // 기간 목표(deadline) 누적 진행량 입력 — planId + deadlineAmount(숫자). isCompleted 미동반.
   const hasDeadlineAmount = planId.length > 0 && body?.deadlineAmount !== undefined;
   const deadlineAmount = hasDeadlineAmount ? Number(body.deadlineAmount) : 0;
@@ -416,7 +437,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, message: '진도 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
   }
 
-  if (!hasProgressValue && !hasPlanCompletion && !hasSolvedQuestions && !hasIncorrectTags) {
+  if (!hasProgressValue && !hasPlanCompletion && !hasSolvedQuestions && !hasIncorrectTags && !hasReviewMinutes) {
     return NextResponse.json({ success: false, message: '진도 값 또는 완료 계획 정보, 혹은 해결 문항수 등이 필요합니다.' }, { status: 400 });
   }
   if (hasProgressValue && (!Number.isFinite(rawValue) || rawValue < 0)) {
@@ -435,6 +456,8 @@ export async function PATCH(req: NextRequest) {
     hasPlanCompletion,
     hasSolvedQuestions,
     hasIncorrectTags,
+    hasReviewMinutes,
+    reviewMinutes,
     dateKey,
     body: body as Record<string, unknown>,
   };
@@ -470,6 +493,7 @@ export async function PATCH(req: NextRequest) {
       actualAmount: updated.actualAmount,
       solvedQuestions: updated.solvedQuestions,
       incorrectTags: updated.incorrectTags,
+      reviewLog: updated.reviewLog,
     });
   }
 
