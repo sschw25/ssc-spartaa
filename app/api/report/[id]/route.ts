@@ -42,6 +42,8 @@ function buildMaskedStudent(
     enrollmentEndDate: student.enrollmentEndDate,
     weeklyGradeCheck: Boolean(student.weeklyGradeCheck),
     speedMultiplier: 1.0,
+    // 등록 시각 — subject-progress 탭이 진도 기대치의 'enrolledStart'(등록 전 학습일 제외) 보정에 쓴다. 누락 시 보정이 통째로 빠져 '느림/정체' 오판.
+    createdAt: student.createdAt,
     updatedAt: student.updatedAt,
     books: student.books,
     lectures: student.lectures,
@@ -55,6 +57,8 @@ function buildMaskedStudent(
     leaveRequests: (student.leaveRequests || [])
       .slice()
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
+    // 정기 외출(AwaySchedule) — 시간표 탭의 '외출' 배지가 이 소스로 판정된다. 누락 시 배지 안 뜸.
+    awaySchedules: student.awaySchedules || [],
     leaveCoupons: student.leaveCoupons ?? 0,
     grades: student.grades,
     subjects: student.subjects || [],
