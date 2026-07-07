@@ -321,12 +321,12 @@ export function GradeAnalysisTab({
         const dropInfo = detectScoreDrop();
         if (!dropInfo) return null;
         return (
-          <div className="no-print mt-4 p-5 rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
+          <div className="no-print mt-4 p-5 rounded-2xl border border-amber-200 dark:border-amber-500/25 bg-amber-50/60 dark:bg-amber-500/10 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-fade-in-up">
             <div className="space-y-1">
-              <h4 className="text-xs font-black text-amber-800 flex items-center gap-1.5">
+              <h4 className="text-xs font-black text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
                 <span>🧡</span> 이번 {dropInfo.subject} 시험은 조금 아쉬웠지만 괜찮아요!
               </h4>
-              <p className="text-[10px] text-amber-700 font-bold leading-relaxed">
+              <p className="text-[10px] text-amber-700 dark:text-amber-400 font-bold leading-relaxed">
                 이전 시험({dropInfo.prevScore}점) 대비 점수가 약 <span className="text-[#F56300] font-black">{dropInfo.dropPercent}%</span> 하락({dropInfo.currentScore}점)한 것으로 분석되었습니다.
                 공부법이나 취약 유형을 분석하고 보완하면 다음 시험에서는 충분히 극복할 수 있습니다.
               </p>

@@ -301,7 +301,7 @@ function StudentReportInner() {
     onSelect: (id: string) => void,
     ariaLabel: string,
   ) => (
-    <div className="no-print rounded-3xl border border-slate-100 bg-white p-2 shadow-sm">
+    <div className="no-print rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2 shadow-sm">
       <div className={`grid gap-1.5 grid-cols-2 ${tabs.length >= 5 ? 'sm:grid-cols-5' : 'sm:grid-cols-4'}`} role="tablist" aria-label={ariaLabel}>
         {tabs.map((tab) => {
           const selected = current === tab.id;

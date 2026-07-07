@@ -174,9 +174,9 @@ function PlanCard({ plan, onSaved }: { plan: MealPlanWithOrder; onSaved: (planId
           </div>
 
           {pendingAdds.length > 0 && (
-            <div className="rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 space-y-1">
+            <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/25 px-3 py-2 space-y-1">
               {pendingAdds.map((r) => (
-                <p key={r.id} className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
+                <p key={r.id} className="flex items-center gap-1.5 text-[11px] font-bold text-amber-700 dark:text-amber-300">
                   <Clock className="w-3 h-3" /> {MEAL_DAY_LABELS[r.day]} {MEAL_KIND_LABELS[r.meal]} 추가 — 승인 대기
                 </p>
               ))}

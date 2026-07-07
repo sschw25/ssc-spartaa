@@ -645,7 +645,7 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
           )}
         </div>
       ) : (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-3.5 py-4 text-[11px] font-semibold text-amber-800">
+        <div className="rounded-2xl border border-amber-200 dark:border-amber-500/25 bg-amber-50/70 dark:bg-amber-500/10 px-3.5 py-4 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
           이번 주와 다음 주 상담이 모두 마감됐어요. 아래 추가·긴급 상담 신청을 이용해 주세요.
         </div>
       )}
