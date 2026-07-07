@@ -758,7 +758,7 @@ export function SubjectProgressTab({
                                     </button>
                                   </div>
                                   <span className="flex items-center gap-1 text-[10px] font-bold text-slate-400 group relative">
-                                    <span>누적 해결:</span>
+                                    <span>풀이</span>
                                     <input
                                       key={b.solvedQuestions || 0}
                                       type="number"
@@ -768,11 +768,11 @@ export function SubjectProgressTab({
                                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
                                       onBlur={(e) => { const v = Number(e.target.value); if (Number.isFinite(v) && v !== (b.solvedQuestions || 0)) updateBookSolvedQuestions(b.id, v); }}
                                       className="w-12 rounded-lg border border-dashed border-slate-300 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1 py-0.5 text-center font-extrabold text-[#0071E3] hover:border-[#0071E3]/50 focus:border-[#0071E3] focus:border-solid focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0 transition-all"
-                                      aria-label="푼 문항 수 입력"
+                                      aria-label="몇 번 문제까지 풀었는지 입력"
                                     />
-                                    <span>문항</span>
+                                    <span>번까지</span>
                                     <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-slate-900/95 text-[9px] text-white font-black rounded-lg whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-md z-10">
-                                      해결한 누적 문항 수를 기록하세요
+                                      지금까지 푼 마지막 문제 번호를 적어요 (페이지 진도와 별개)
                                     </span>
                                   </span>
 
@@ -791,7 +791,7 @@ export function SubjectProgressTab({
                                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
                                     {isSelfPaced ? `누적 ${b.currentPage}${bookUnit}` : `${b.currentPage} / ${b.totalPages}p`}
                                   </span>
-                                  {(b.solvedQuestions || 0) > 0 && <span className="text-[9px] font-extrabold text-[#0071E3]">해결: {b.solvedQuestions}문항</span>}
+                                  {(b.solvedQuestions || 0) > 0 && <span className="text-[9px] font-extrabold text-[#0071E3]">~{b.solvedQuestions}번까지 풀이</span>}
                                 </div>
                               )}
                               {!isSelfPaced && (
