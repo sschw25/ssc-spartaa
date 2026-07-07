@@ -12,7 +12,7 @@ import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
 import { TabHero } from './tab-hero';
 import { StreakCard } from './streak-card';
-import { getLeaveDates, getLeaveExemptions, getMakeupAmount, getMaterialStudyDays } from '@/lib/progress-plan';
+import { getWeekendMakeupItems } from '@/lib/progress-plan';
 import { STUDY_SLOT_OPTIONS, formatSlotLabel } from '@/lib/academy-timetable';
 
 type DailyPlanEntry = {
@@ -305,24 +305,20 @@ export function HomeOverviewTab({
   const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0) + deadlineDoneToday;
   const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
 
-  // 휴가 보강 총합 — 이번 주 승인 휴가로 이월된 자료별 보강량의 합.
-  const totalMakeup = React.useMemo(() => {
-    if (!isStudentReport) return 0;
-    const leaveDates = getLeaveDates(student);
-    const exemptions = getLeaveExemptions(student);
-    if (leaveDates.size === 0) return 0;
+  // 일회성 휴가로 발생한 자료별 보강 — 이번 주 주말(토) 보강 스케줄로 노출.
+  const weekendMakeupItems = React.useMemo(() => {
+    if (!isStudentReport) return [];
     const now = new Date();
-    // subjects 단일소스와 정렬 — 과목별 진도 탭도 subjects 만 렌더하므로 홈 요약도 subjects 만 집계
-    // (레거시 최상위 books/lectures 폴백 제거: 홈엔 "보강 있음"인데 탭엔 배지가 없던 불일치 해소).
-    const subjects = student.subjects || [];
-    let sum = 0;
-    for (const s of subjects) {
-      for (const m of [...(s.books || []), ...(s.lectures || [])]) {
-        sum += getMakeupAmount(m, now, getMaterialStudyDays(s.studyDays, m.studyDays), leaveDates, exemptions, (s as { studyTime?: string }).studyTime, student.makeupCarryovers).makeupTotal;
-      }
-    }
-    return sum;
+    now.setHours(0, 0, 0, 0);
+    return getWeekendMakeupItems(student, now);
   }, [isStudentReport, student]);
+  // 이번 주 토요일(보강일) 날짜 라벨 — 오늘이 속한 주의 토요일.
+  const makeupSaturdayLabel = React.useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + ((6 - d.getDay() + 7) % 7)); // 이번 주 토요일(오늘이 토면 오늘)
+    return `${d.getMonth() + 1}월 ${d.getDate()}일(토)`;
+  }, []);
 
   // 최근(14일) 외출 반영 계획조정 — 홈에서 서브탭 없이 바로 확인.
   const recentAwayReplans = React.useMemo(() => {
@@ -388,11 +384,19 @@ export function HomeOverviewTab({
             description="오늘 할 일과 연속출석을 한곳에서 확인해요."
           />
           <StreakCard />
-          {totalMakeup > 0 && (
-            <p className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/25 px-3.5 py-2.5 text-[12px] font-bold text-amber-800 dark:text-amber-300">
-              <AlertTriangle className="h-4 w-4 shrink-0" />
-              최근 휴가로 이번 주 보강이 있어요 — 과목별 진도 탭에서 보강량을 확인하세요.
-            </p>
+          {weekendMakeupItems.length > 0 && (
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/25 px-3.5 py-2.5 space-y-1.5">
+              <p className="flex items-center gap-2 text-[12px] font-bold text-amber-800 dark:text-amber-300">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                휴가로 빠진 만큼 {makeupSaturdayLabel} 보강이 잡혔어요
+              </p>
+              {weekendMakeupItems.map((it) => (
+                <p key={it.id} className="pl-6 text-[11px] font-semibold leading-4 text-amber-800/90 dark:text-amber-300/90">
+                  {it.subject} · {it.title} <span className="font-black">{it.amount}{it.unit}</span>
+                </p>
+              ))}
+              <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">주말에 못 하면 학습계획 탭에서 다음 주로 이월할 수 있어요.</p>
+            </div>
           )}
           {recentAwayReplans.length > 0 && (
             <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/12 dark:border-[#0071E3]/30 px-3.5 py-2.5 space-y-1.5">

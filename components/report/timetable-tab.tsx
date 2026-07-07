@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE, slotMatchesPeriod } from '@/lib/academy-timetable';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
-import { getMaterialStudyDays } from '@/lib/progress-plan';
+import { getMaterialStudyDays, getWeekendMakeupItems } from '@/lib/progress-plan';
 import { getAwayRangesForDay, type WeekdayKey } from '@/lib/away-impact';
 import { getLeaveTypeLabel } from '@/lib/leave';
 import type { LeaveRequest } from '@/lib/types/student';
@@ -92,6 +92,11 @@ export function TimetableTab({
   };
   const awayRanges = getAwayRangesForDay(student.awaySchedules, absenceTodayStr, todayDayKey as WeekdayKey);
 
+  // 일회성 휴가 보강 → 이번 주 주말 보강 스케줄(홈과 동일 소스).
+  const makeupToday = new Date();
+  makeupToday.setHours(0, 0, 0, 0);
+  const weekendMakeupItems = getWeekendMakeupItems(student, makeupToday);
+
   // study 교시 하나가 휴가/외출로 비는지 — 비면 배지 라벨과 종류 반환.
   const getPeriodAbsence = (period: (typeof ACADEMY_TIMETABLE)[number]): { label: string; kind: 'leave' | 'away' } | null => {
     const isStudy = period.type === 'study' || period.type === 'late-study' || period.type === 'supplement';
@@ -112,6 +117,30 @@ export function TimetableTab({
 
   return (
     <div id="timetable" className={`scroll-mt-24 space-y-5 print-card ${!isStudentReport || activeTab === 'timetable' ? '' : 'hidden print:block'}`}>
+      {/* 주말 보강 스케줄 — 일회성 휴가로 빠진 만큼 이번 주 토요일 보강 */}
+      {isStudentReport && weekendMakeupItems.length > 0 && (
+        <div className="rounded-3xl border border-amber-200 dark:border-amber-500/25 bg-amber-50 dark:bg-amber-500/10 p-4 md:p-5 shadow-sm space-y-2">
+          <h3 className="flex items-center gap-2 text-sm font-black text-amber-800 dark:text-amber-300">
+            <Calendar className="w-4 h-4" /> 이번 주 주말 보강
+          </h3>
+          <p className="text-[11px] font-semibold text-amber-800/80 dark:text-amber-300/80">
+            휴가로 빠진 학습만큼 이번 주 토요일에 보강이 잡혔어요.
+          </p>
+          <div className="space-y-1.5 border-t border-dashed border-amber-200/70 dark:border-amber-500/20 pt-2">
+            {weekendMakeupItems.map((it) => (
+              <div key={it.id} className="flex flex-wrap items-center gap-2 text-[11px]">
+                <span className="font-black text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-500/20 border border-amber-200 dark:border-amber-500/20 px-1.5 py-0.5 rounded">
+                  {it.subject}
+                </span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[200px]">{it.title}</span>
+                <span className="font-black text-amber-700 dark:text-amber-300">{it.amount}{it.unit}</span>
+                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500">{it.materialType === 'book' ? '교재' : '인강'}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* 오늘의 실시간 타임라인 계획표 (시간표 연동) */}
       {isStudentReport && (
         <div className="rounded-3xl border border-[#0071E3]/15 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 md:p-6 shadow-sm space-y-4 print-card">
