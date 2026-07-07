@@ -71,6 +71,9 @@ export interface BookProgress {
   // 자료별 학습 요일 — 요일 단일 소스. 미설정(undefined)이면 기본 월~토.
   // getMaterialStudyDays(_, material) 가 단일 진입점.
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+  // 자율학습(selfPaced) 자료의 학생 지정 시간대 — 시간표 노출 결정용. 미설정('')이면 시간표 제외(홈 그룹만).
+  // 'morning'|'afternoon'|'night'=블록, 'p0'~'p8'=특정 교시(p8=심야). selfPaced 자료에만 의미. 마이그레이션 불필요(JSON).
+  studySlot?: string;
 
   // 개편 추가: 교재별 학습 목표 및 세부 계획
   // selfPaced = 자율 입력(목표 분량·계획 없음). 학생이 그날 한 만큼 누적 입력만 한다(뒤처짐/마감 판정 제외).
@@ -96,6 +99,9 @@ export interface LectureProgress {
   category?: '기본' | '문제풀이' | '요약강의' | string; // 학습 자료 유형 분류
   // 자료별 학습 요일 — 요일 단일 소스. 미설정(undefined)이면 기본 월~토.
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+  // 자율학습(selfPaced) 자료의 학생 지정 시간대 — 시간표 노출 결정용. 미설정('')이면 시간표 제외(홈 그룹만).
+  // 'morning'|'afternoon'|'night'=블록, 'p0'~'p8'=특정 교시(p8=심야). selfPaced 자료에만 의미. 마이그레이션 불필요(JSON).
+  studySlot?: string;
 
   // 개편 추가: 인강별 학습 목표 및 세부 계획
   // selfPaced = 자율 입력(목표 분량·계획 없음).

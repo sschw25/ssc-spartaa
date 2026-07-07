@@ -4,7 +4,7 @@ import React from 'react';
 import { Clock, Calendar, Coffee } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
-import { ACADEMY_TIMETABLE } from '@/lib/academy-timetable';
+import { ACADEMY_TIMETABLE, slotMatchesPeriod } from '@/lib/academy-timetable';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { getMaterialStudyDays } from '@/lib/progress-plan';
 
@@ -153,9 +153,10 @@ export function TimetableTab({
                   }
                 });
 
-                // 자율 입력(selfPaced) 자료 — 목표 수치 없이 "자율 학습"으로 표시(부모 과목 studyTime 기준).
+                // 자율 입력(selfPaced) 자료 — 목표 수치 없이 "자율 학습"으로 표시.
+                // 자료별 학생 지정 슬롯(item.studyTime=studySlot) 기준: 블록→그 블록 교시 전부, 특정 교시→그 칸만, 미지정→제외.
                 todaySelfPacedItems
-                  .filter((item) => item.studyTime === period.studyTime)
+                  .filter((item) => slotMatchesPeriod(item.studyTime, period))
                   .forEach((item) => {
                     matchedPlans.push({
                       subjectName: item.subject,

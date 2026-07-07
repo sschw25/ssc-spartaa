@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, patchStudentProgress } from '@/lib/store';
 import type { BookProgress, DetailedPlan, LectureProgress, Student } from '@/lib/types/student';
+import { isValidStudySlot } from '@/lib/academy-timetable';
 
 type UpdatedInfo = {
   value: number;
@@ -122,6 +123,34 @@ function applyDeadlineMutation(
     matchingLectures.forEach((lecture) => { lecture.completedLectures = nextCurrent; lecture.updatedAt = nowIso; appendInputLog(lecture); });
     return { ok: true, updated: { value: nextCurrent, total, planId, isCompleted: completed, actualAmount: actual } };
   }
+}
+
+// 자율학습 자료의 학생 지정 시간대(studySlot) 설정 — 시간표 노출 결정. 대상 자료(최상위+subjects)에 반영.
+function applyStudySlotMutation(
+  student: Student,
+  materialType: 'book' | 'lecture',
+  materialId: string,
+  slot: string,
+): MutationResult {
+  const nowIso = new Date().toISOString();
+  const materials: Array<BookProgress | LectureProgress> = materialType === 'book'
+    ? [
+        ...((student.books || []).filter((b) => b.id === materialId)),
+        ...((student.subjects || []).flatMap((s) => (s.books || []).filter((b) => b.id === materialId))),
+      ]
+    : [
+        ...((student.lectures || []).filter((l) => l.id === materialId)),
+        ...((student.subjects || []).flatMap((s) => (s.lectures || []).filter((l) => l.id === materialId))),
+      ];
+  if (materials.length === 0) return { ok: false, reason: 'material-not-found' };
+  materials.forEach((m) => { m.studySlot = slot; m.updatedAt = nowIso; });
+  const total = materialType === 'book'
+    ? (materials[0] as BookProgress).totalPages || 0
+    : (materials[0] as LectureProgress).totalLectures || 0;
+  const value = materialType === 'book'
+    ? (materials[0] as BookProgress).currentPage || 0
+    : (materials[0] as LectureProgress).completedLectures || 0;
+  return { ok: true, updated: { value, total } };
 }
 
 function applyProgressMutation(
@@ -379,6 +408,7 @@ export async function PATCH(req: NextRequest) {
     incorrectTags?: unknown;
     reviewMinutes?: unknown;
     deadlineAmount?: unknown;
+    studySlot?: unknown;
   };
   try {
     body = await req.json();
@@ -401,6 +431,8 @@ export async function PATCH(req: NextRequest) {
   // 기간 목표(deadline) 누적 진행량 입력 — planId + deadlineAmount(숫자). isCompleted 미동반.
   const hasDeadlineAmount = planId.length > 0 && body?.deadlineAmount !== undefined;
   const deadlineAmount = hasDeadlineAmount ? Number(body.deadlineAmount) : 0;
+  // 자율학습 슬롯(studySlot) 설정 — 진도/완료와 독립. 허용 값만.
+  const hasStudySlot = body?.studySlot !== undefined;
 
   if (!materialType || !materialId) {
     return NextResponse.json({ success: false, message: '대상 자료 정보가 올바르지 않습니다.' }, { status: 400 });
@@ -435,6 +467,29 @@ export async function PATCH(req: NextRequest) {
       });
     }
     return NextResponse.json({ success: false, message: '진도 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
+  }
+
+  // 자율학습 슬롯 설정 — 전용 경로(진도/완료 검증과 분리).
+  if (hasStudySlot) {
+    if (!isValidStudySlot(body.studySlot)) {
+      return NextResponse.json({ success: false, message: '시간대 값이 올바르지 않습니다.' }, { status: 400 });
+    }
+    const slot = body.studySlot as string;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const student = await getStudentById(studentId);
+      if (!student) {
+        return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const originalUpdatedAt = student.updatedAt ?? '';
+      const result = applyStudySlotMutation(student, materialType as 'book' | 'lecture', materialId, slot);
+      if (!result.ok) {
+        return NextResponse.json({ success: false, message: '해당 학습 자료를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const saved = await patchStudentProgress(student, originalUpdatedAt);
+      if (saved === 'conflict') continue;
+      return NextResponse.json({ success: true, studySlot: slot });
+    }
+    return NextResponse.json({ success: false, message: '설정 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
   }
 
   if (!hasProgressValue && !hasPlanCompletion && !hasSolvedQuestions && !hasIncorrectTags && !hasReviewMinutes) {

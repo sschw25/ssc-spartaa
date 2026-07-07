@@ -1106,6 +1106,45 @@ export function useReportState() {
     );
   };
 
+  // 자율 입력(selfPaced) 자료의 학생 지정 시간대(studySlot) 저장 — 시간표 노출 결정. 즉시 반영(승인 불필요).
+  // 성공 시 subjects 내 해당 자료의 studySlot 낙관적 갱신.
+  const saveStudySlot = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    slot: string,
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, studySlot: slot }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        mutationSeqRef.current += 1;
+        setStudent((prev) => {
+          if (!prev) return prev;
+          const patchList = <T extends { id: string; studySlot?: string }>(list?: T[]) =>
+            (list || []).map((m) => (m.id === materialId ? { ...m, studySlot: slot } : m));
+          return {
+            ...prev,
+            subjects: (prev.subjects || []).map((s) => ({
+              ...s,
+              ...(materialType === 'book' ? { books: patchList(s.books) } : { lectures: patchList(s.lectures) }),
+            })),
+            ...(materialType === 'book'
+              ? { books: patchList(prev.books) }
+              : { lectures: patchList(prev.lectures) }),
+          };
+        });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   // 기간 목표(모드 B) 누적 진행량 입력 — deadline plan 의 actualAmount 를 갱신하고
   // 자료 current(currentPage/completedLectures)를 parsePlanBounds 기준으로 best-effort 동기화.
   // 저장은 전용 progress API(deadlineAmount)를 재사용. 낙관적 갱신은 서버 응답값으로 확정.
@@ -1555,7 +1594,7 @@ export function useReportState() {
       return ds.includes(dayKey);
     };
     return (student.subjects || []).flatMap((subject) => {
-      const studyTime = subject.studyTime || '';
+      // 시간표 노출은 자료별 학생 지정 슬롯(studySlot)이 단독 결정. 과목 studyTime 상속 제거.
       const books = (subject.books || [])
         .filter((b) => b.goalType === 'selfPaced' && isOnToday(subject.studyDays, b.studyDays))
         .map((b) => ({
@@ -1566,7 +1605,7 @@ export function useReportState() {
           materialId: b.id,
           unit: b.unit || 'p',
           current: b.currentPage || 0,
-          studyTime,
+          studyTime: b.studySlot || '',
           loggedToday: !!b.inputLog?.includes(todayKey),
         }));
       const lectures = (subject.lectures || [])
@@ -1579,7 +1618,7 @@ export function useReportState() {
           materialId: l.id,
           unit: '강',
           current: l.completedLectures || 0,
-          studyTime,
+          studyTime: l.studySlot || '',
           loggedToday: !!l.inputLog?.includes(todayKey),
         }));
       return [...books, ...lectures];
@@ -2243,6 +2282,7 @@ export function useReportState() {
     todayPlanEntries,
     todaySelfPacedItems,
     saveSelfPacedToday,
+    saveStudySlot,
     formatNotificationDate,
     notificationCount,
     notificationPreview,

@@ -13,6 +13,7 @@ import { PomodoroTimer } from './pomodoro-timer-modal';
 import { TabHero } from './tab-hero';
 import { StreakCard } from './streak-card';
 import { getLeaveDates, getLeaveExemptions, getMakeupAmount, getMaterialStudyDays } from '@/lib/progress-plan';
+import { STUDY_SLOT_OPTIONS, formatSlotLabel } from '@/lib/academy-timetable';
 
 type DailyPlanEntry = {
   id: string;
@@ -57,6 +58,7 @@ interface HomeOverviewTabProps {
   todayPlanEntries: DailyPlanEntry[];
   todaySelfPacedItems?: SelfPacedItem[];
   saveSelfPacedToday?: (materialType: 'book' | 'lecture', materialId: string, addAmount: number, reviewMinutes?: number) => Promise<boolean>;
+  saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
   pendingPlanId: string | null;
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
@@ -100,6 +102,7 @@ export function HomeOverviewTab({
   todayPlanEntries,
   todaySelfPacedItems = [],
   saveSelfPacedToday,
+  saveStudySlot,
   pendingPlanId,
   setPendingPlanId,
   pendingAmount,
@@ -142,6 +145,8 @@ export function HomeOverviewTab({
   const [selfPacedAmount, setSelfPacedAmount] = useState(1);
   const [selfPacedReview, setSelfPacedReview] = useState(0);
   const [selfPacedSaving, setSelfPacedSaving] = useState(false);
+  // 자율 학습 시간표 배치(studySlot) 저장 중인 항목 id.
+  const [slotSavingId, setSlotSavingId] = useState<string | null>(null);
 
   const ddays: DDayEvent[] = student.ddays || [];
 
@@ -728,7 +733,7 @@ export function HomeOverviewTab({
                               {item.subject} · {item.title}
                             </p>
                             <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                              {studyTimeLabels[item.studyTime] || '미지정'} · {item.materialType === 'book' ? '교재' : '인강'} · 누적 {item.current}{item.unit}
+                              {formatSlotLabel(item.studyTime)} · {item.materialType === 'book' ? '교재' : '인강'} · 누적 {item.current}{item.unit}
                             </p>
                             {reviewMin > 0 && (
                               <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -755,6 +760,36 @@ export function HomeOverviewTab({
                             </button>
                           )}
                         </div>
+
+                        {/* 시간표 배치 — 자료별 학생 지정 슬롯. 미지정이면 시간표에 안 뜨고 여기(그날 할일)에만 노출. */}
+                        {saveStudySlot && (
+                          <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
+                              시간표 배치
+                            </label>
+                            <select
+                              value={item.studyTime || ''}
+                              disabled={slotSavingId === item.id}
+                              onChange={async (e) => {
+                                const next = e.target.value;
+                                setSlotSavingId(item.id);
+                                try {
+                                  const ok = await saveStudySlot(item.materialType, item.materialId, next);
+                                  if (ok) toast.success(next ? `시간표 ${formatSlotLabel(next)}에 배치했어요.` : '시간표에서 내렸어요.');
+                                  else toast.error('시간대 설정에 실패했어요. 다시 시도해 주세요.');
+                                } finally {
+                                  setSlotSavingId(null);
+                                }
+                              }}
+                              className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                            >
+                              {STUDY_SLOT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
 
                         {isOpen && !item.loggedToday && (
                           <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">

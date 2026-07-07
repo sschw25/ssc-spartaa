@@ -192,6 +192,7 @@ function StudentReportInner() {
     todayPlanEntries,
     todaySelfPacedItems,
     saveSelfPacedToday,
+    saveStudySlot,
     formatNotificationDate,
     notificationCount,
     notificationPreview,
@@ -574,6 +575,7 @@ function StudentReportInner() {
           todayPlanEntries={todayPlanEntries}
           todaySelfPacedItems={todaySelfPacedItems}
           saveSelfPacedToday={saveSelfPacedToday}
+          saveStudySlot={saveStudySlot}
           pendingPlanId={pendingPlanId}
           setPendingPlanId={setPendingPlanId}
           pendingAmount={pendingAmount}
