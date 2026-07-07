@@ -703,17 +703,17 @@ export function HomeOverviewTab({
                 })
               ) : todaySelfPacedItems.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 px-4 py-5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
-                  오늘 배정된 항목이 없어요. 자율 학습 계획을 확인해 보세요.
+                  오늘 배정된 항목이 없어요. 학습 계획을 확인해 보세요.
                 </p>
               ) : null}
 
-              {/* 자율 학습 그룹 — selfPaced 자료(목표 없이 누적 입력). 오늘 할 일 완료 카운트에 포함하지 않는다. */}
+              {/* 자율 목표 그룹 — selfPaced 자료(분량 자유·누적 입력). 오늘 할 일 완료 카운트에 포함하지 않는다. */}
               {todaySelfPacedItems.length > 0 && (
                 <div className="mt-1 space-y-2.5 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                       <Target className="h-3.5 w-3.5 text-[#0071E3]" />
-                      자율 학습
+                      자율 목표
                     </p>
                     <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
                       오늘 할 일 완료와 별도

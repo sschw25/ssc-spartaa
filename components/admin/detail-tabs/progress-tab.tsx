@@ -1164,7 +1164,7 @@ export function ProgressTab() {
                                               <SelectContent>
                                                 <SelectItem value="deadlineWeeks">기간 목표 (N주 안에 완주)</SelectItem>
                                                 <SelectItem value="dailyAmount">일일 목표 (하루 Np, 공부 요일만)</SelectItem>
-                                                <SelectItem value="selfPaced">자율 입력 (목표 없음 · 누적 로그)</SelectItem>
+                                                <SelectItem value="selfPaced">자율 목표 (분량 자유 · 누적 입력)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -1224,7 +1224,7 @@ export function ProgressTab() {
 
                                         {book.goalType === 'selfPaced' && (
                                           <div className="rounded-lg bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 border border-[#0071E3]/15 px-2.5 py-2 text-[10px] font-semibold text-[#0071E3] leading-relaxed">
-                                            자율 입력 자료예요. 목표·계획 없이 학생이 그날 한 만큼 누적으로 입력합니다. 현재 누적 <b>{book.currentPage}{book.unit || 'p'}</b>.
+                                            자율 목표 자료예요. 정해진 분량 없이 학생이 그날 한 만큼 누적으로 입력합니다. 현재 누적 <b>{book.currentPage}{book.unit || 'p'}</b>.
                                           </div>
                                         )}
 
@@ -1601,7 +1601,7 @@ export function ProgressTab() {
                                               <SelectContent>
                                                 <SelectItem value="deadlineWeeks">기간 목표 (N주 안에 완주)</SelectItem>
                                                 <SelectItem value="dailyAmount">일일 목표 (하루 N강, 공부 요일만)</SelectItem>
-                                                <SelectItem value="selfPaced">자율 입력 (목표 없음 · 누적 로그)</SelectItem>
+                                                <SelectItem value="selfPaced">자율 목표 (분량 자유 · 누적 입력)</SelectItem>
                                               </SelectContent>
                                             </Select>
                                           </div>
@@ -1693,7 +1693,7 @@ export function ProgressTab() {
 
                                         {lec.goalType === 'selfPaced' && (
                                           <div className="rounded-lg bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 border border-[#0071E3]/15 px-2.5 py-2 text-[10px] font-semibold text-[#0071E3] leading-relaxed">
-                                            자율 입력 자료예요. 목표·계획 없이 학생이 그날 들은 만큼 누적으로 입력합니다. 현재 누적 <b>{lec.completedLectures}강</b>.
+                                            자율 목표 자료예요. 정해진 분량 없이 학생이 그날 들은 만큼 누적으로 입력합니다. 현재 누적 <b>{lec.completedLectures}강</b>.
                                           </div>
                                         )}
 

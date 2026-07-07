@@ -229,10 +229,10 @@ export function TimetableTab({
                             {pl.selfPaced ? (
                               <>
                                 <span className="font-bold text-slate-500 dark:text-slate-400">
-                                  자율 학습 (누적 {pl.current ?? 0}{pl.unit})
+                                  자율 목표 (누적 {pl.current ?? 0}{pl.unit})
                                 </span>
                                 <Badge className="bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/[0.06] text-[#0071E3] text-[9px] border-[#0071E3]/15 dark:border-white/10 font-bold px-1.5 py-0 rounded border">
-                                  자율
+                                  자율 목표
                                 </Badge>
                               </>
                             ) : (

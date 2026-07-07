@@ -104,13 +104,13 @@ function SelfPacedInput({
   return (
     <div className="mt-3 rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/10 p-3.5 space-y-2.5">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">자율 입력 자료</span>
+        <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">자율 목표 자료</span>
         <span className="text-[13px] font-black text-[#0071E3]">누적 {current}{unit}</span>
       </div>
       {canInput ? (
         <>
           <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed break-keep">
-            오늘 한 만큼 더해서 기록해요. 목표·마감 없이 꾸준히 쌓는 자료예요.
+            오늘 한 만큼 더해서 기록해요. 학습 요일마다 꼭 채워야 하는 자율 목표예요.
           </p>
           <div className="flex items-center gap-1.5">
             <button
@@ -152,7 +152,7 @@ function SelfPacedInput({
         </>
       ) : (
         <p className="text-[10px] font-bold text-slate-400 leading-relaxed">
-          목표 없이 학생이 그날 한 만큼 누적으로 기록하는 자료입니다.
+          학생이 그날 한 만큼 누적으로 기록하는 자율 목표 자료입니다.
         </p>
       )}
     </div>
