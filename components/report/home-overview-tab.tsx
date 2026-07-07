@@ -2,9 +2,9 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, Home, type LucideIcon } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, Home, ChevronRight, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
-import type { ConsultationBooking } from '@/lib/types/student';
+import type { BookProgress, ConsultationBooking, LectureProgress } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { HomeHighlightsPanel } from './home-highlights-panel';
@@ -16,6 +16,7 @@ import { TabHero } from './tab-hero';
 import { StreakCard } from './streak-card';
 import { getMakeupLedger, getMakeupObligations } from '@/lib/makeup-ledger';
 import { STUDY_SLOT_OPTIONS, formatSlotLabel } from '@/lib/academy-timetable';
+import { StartPointAdjustPanel, type StartPointAdjustResult } from './start-point-adjust-panel';
 
 type DailyPlanEntry = {
   id: string;
@@ -61,6 +62,7 @@ interface HomeOverviewTabProps {
   todaySelfPacedItems?: SelfPacedItem[];
   saveSelfPacedToday?: (materialType: 'book' | 'lecture', materialId: string, addAmount: number, reviewMinutes?: number) => Promise<boolean>;
   saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
+  adjustStartPoint?: (materialType: 'book' | 'lecture', materialId: string, newValue: number, reason?: string) => Promise<StartPointAdjustResult>;
   saveMakeupDone?: (materialType: 'book' | 'lecture', materialId: string, amount: number) => Promise<boolean>;
   pendingPlanId: string | null;
   setPendingPlanId: (id: string | null) => void;
@@ -105,6 +107,8 @@ interface HomeOverviewTabProps {
   openConsultation?: () => void;
   openNotifications?: () => void;
   openLeaveRequests?: () => void;
+  // 자료 상세 시트 열기 — 오늘 계획·자율 목표·주말 보강·기간목표 항목 탭 시(학생 뷰 전용, 미전달 시 비활성).
+  openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
 }
 
 export function HomeOverviewTab({
@@ -116,6 +120,7 @@ export function HomeOverviewTab({
   todaySelfPacedItems = [],
   saveSelfPacedToday,
   saveStudySlot,
+  adjustStartPoint,
   saveMakeupDone,
   pendingPlanId,
   setPendingPlanId,
@@ -151,6 +156,7 @@ export function HomeOverviewTab({
   openConsultation,
   openNotifications,
   openLeaveRequests,
+  openMaterialDetail,
 }: HomeOverviewTabProps) {
   const confirm = useConfirm();
   // D-Day FAB state
@@ -170,6 +176,8 @@ export function HomeOverviewTab({
   const [selfPacedSaving, setSelfPacedSaving] = useState(false);
   // 자율 학습 시간표 배치(studySlot) 저장 중인 항목 id.
   const [slotSavingId, setSlotSavingId] = useState<string | null>(null);
+  // 시작점 조정 패널 — 열린 항목 id 만 여기서 관리(입력 상태는 공용 StartPointAdjustPanel 내부).
+  const [adjustOpenId, setAdjustOpenId] = useState<string | null>(null);
 
   // 주말 보강 입력(원장) — 홈 토/일 박스.
   const [makeupOpenId, setMakeupOpenId] = useState<string | null>(null);
@@ -270,6 +278,29 @@ export function HomeOverviewTab({
         materialType === 'book' ? (s.books || []) : (s.lectures || []));
     const found = list.find((m) => m.id === materialId);
     return found?.reviewLog?.[todayKey] || 0;
+  };
+
+  // 시작점 조정용 자료 현황 — current/total/오늘 자동조정 사용량(adjustLog 의 auto 항목 |delta| 합).
+  // 임계치는 전체 분량의 1/10(최소 1) — 서버(progress/adjust)와 동일 규칙(안내 표시용).
+  const adjustInfoFor = (materialType: 'book' | 'lecture', materialId: string) => {
+    const todayKey = getSeoulDateKey();
+    const list: Array<BookProgress | LectureProgress> = materialType === 'book'
+      ? [...(student.subjects || []).flatMap((s) => s.books || []), ...(student.books || [])]
+      : [...(student.subjects || []).flatMap((s) => s.lectures || []), ...(student.lectures || [])];
+    const found = list.find((m) => m.id === materialId);
+    if (!found || found.goalType === 'selfPaced') return null;
+    const total = materialType === 'book'
+      ? (found as BookProgress).totalPages || 0
+      : (found as LectureProgress).totalLectures || 0;
+    if (total <= 0) return null;
+    const current = materialType === 'book'
+      ? (found as BookProgress).currentPage || 0
+      : (found as LectureProgress).completedLectures || 0;
+    const usedToday = (found.adjustLog || [])
+      .filter((entry) => entry.date === todayKey && entry.auto)
+      .reduce((sum, entry) => sum + Math.abs((Number(entry.to) || 0) - (Number(entry.from) || 0)), 0);
+    const threshold = Math.max(1, Math.ceil(total / 10));
+    return { current, total, usedToday, threshold };
   };
 
   // specialNote 파싱 헬퍼
@@ -521,6 +552,12 @@ export function HomeOverviewTab({
                   const isPending = pendingPlanId === entry.id;
                   const _r = entry.rangeText || '';
                   const unit = _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
+                  // 시작점 조정 — 완료 항목·selfPaced·분량 미상 자료는 대상 아님(adjustInfoFor 가 null).
+                  const adjustInfo = adjustStartPoint && !entry.isCompleted
+                    ? adjustInfoFor(entry.materialType, entry.materialId)
+                    : null;
+                  const adjustUnit = unit || (entry.materialType === 'lecture' ? '강' : 'p');
+                  const isAdjustOpen = adjustInfo !== null && adjustOpenId === entry.id;
                   return (
                     <div key={entry.id} className={`rounded-2xl border p-3 transition ${
                       entry.isCompleted ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isPending ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
@@ -551,16 +588,45 @@ export function HomeOverviewTab({
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
-                              <p className={`truncate text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 dark:text-emerald-300 line-through decoration-emerald-500/40' : 'text-slate-900 dark:text-slate-100'}`}>
-                                {entry.subject} · {entry.title}
-                              </p>
-                              <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                                {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
-                              </p>
+                              {/* 제목/본문 탭 → 자료 상세 시트 (완료 체크·시작점 조정 버튼과 충돌 없게 별도 버튼) */}
+                              <button
+                                type="button"
+                                disabled={!openMaterialDetail}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openMaterialDetail?.(entry.materialType, entry.materialId);
+                                }}
+                                aria-label={`${entry.subject} ${entry.title} 상세 보기`}
+                                className="block w-full min-w-0 text-left disabled:cursor-default"
+                              >
+                                <p className={`flex items-center gap-1 text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 dark:text-emerald-300 line-through decoration-emerald-500/40' : 'text-slate-900 dark:text-slate-100'}`}>
+                                  <span className="truncate">{entry.subject} · {entry.title}</span>
+                                  {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
+                                </p>
+                                <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                                  {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
+                                </p>
+                              </button>
                               {reviewMinFor(entry.materialType, entry.materialId) > 0 && (
                                 <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                                   복습 {reviewMinFor(entry.materialType, entry.materialId)}분 ✅
                                 </span>
+                              )}
+                              {adjustInfo && (
+                                <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                                  <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                    오늘은 <span className="font-semibold text-[#0071E3]">{Math.min(adjustInfo.total, adjustInfo.current + 1)}{adjustUnit}</span>부터 시작해요
+                                  </span>
+                                  {!isAdjustOpen && (
+                                    <button
+                                      type="button"
+                                      onClick={() => setAdjustOpenId(entry.id)}
+                                      className="rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.05] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-95 dark:bg-[#0071E3]/15"
+                                    >
+                                      시작점 조정
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </div>
                             <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
@@ -634,6 +700,17 @@ export function HomeOverviewTab({
                               </div>
                             </div>
                           )}
+
+                          {isAdjustOpen && adjustInfo && adjustStartPoint && (
+                            <StartPointAdjustPanel
+                              materialType={entry.materialType}
+                              materialId={entry.materialId}
+                              unit={adjustUnit}
+                              info={adjustInfo}
+                              adjustStartPoint={adjustStartPoint}
+                              onClose={() => setAdjustOpenId(null)}
+                            />
+                          )}
                         </div>
                       </div>
                     </div>
@@ -667,12 +744,25 @@ export function HomeOverviewTab({
                       }`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
-                              {item.subject} · {item.title}
-                            </p>
-                            <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                              {formatSlotLabel(item.studyTime)} · {item.materialType === 'book' ? '교재' : '인강'} · 누적 {item.current}{item.unit}
-                            </p>
+                            {/* 제목 탭 → 자료 상세 시트 ('오늘 입력' 버튼과 충돌 없게 별도 버튼) */}
+                            <button
+                              type="button"
+                              disabled={!openMaterialDetail}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openMaterialDetail?.(item.materialType, item.materialId);
+                              }}
+                              aria-label={`${item.subject} ${item.title} 상세 보기`}
+                              className="block w-full min-w-0 text-left disabled:cursor-default"
+                            >
+                              <p className="flex items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                <span className="truncate">{item.subject} · {item.title}</span>
+                                {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
+                              </p>
+                              <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                                {formatSlotLabel(item.studyTime)} · {item.materialType === 'book' ? '교재' : '인강'} · 누적 {item.current}{item.unit}
+                              </p>
+                            </button>
                             {reviewMin > 0 && (
                               <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
                                 복습 {reviewMin}분 ✅
@@ -825,12 +915,25 @@ export function HomeOverviewTab({
                       }`}>
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
-                              {it.subjectName} · {it.materialTitle}
-                            </p>
-                            <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                              {it.materialType === 'book' ? '교재' : '인강'} · 완료 {it.done}{it.unit} / 발생 {it.owed}{it.unit}
-                            </p>
+                            {/* 제목 탭 → 자료 상세 시트 (보강 입력 버튼과 충돌 없게 별도 버튼) */}
+                            <button
+                              type="button"
+                              disabled={!openMaterialDetail}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openMaterialDetail?.(it.materialType, it.materialId);
+                              }}
+                              aria-label={`${it.subjectName} ${it.materialTitle} 상세 보기`}
+                              className="block w-full min-w-0 text-left disabled:cursor-default"
+                            >
+                              <p className="flex items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                <span className="truncate">{it.subjectName} · {it.materialTitle}</span>
+                                {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
+                              </p>
+                              <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                                {it.materialType === 'book' ? '교재' : '인강'} · 완료 {it.done}{it.unit} / 발생 {it.owed}{it.unit}
+                              </p>
+                            </button>
                           </div>
                           {saveMakeupDone ? (
                             <button
@@ -963,12 +1066,25 @@ export function HomeOverviewTab({
                     <div key={goal.id} className="rounded-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
-                            {goal.subject} · {goal.title}
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                            이번 주 목표: {goal.rangeText}
-                          </p>
+                          {/* 제목 탭 → 해당 자료 상세 시트 */}
+                          <button
+                            type="button"
+                            disabled={!openMaterialDetail}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openMaterialDetail?.(goal.materialType, goal.materialId);
+                            }}
+                            aria-label={`${goal.subject} ${goal.title} 상세 보기`}
+                            className="block w-full min-w-0 text-left disabled:cursor-default"
+                          >
+                            <p className="flex items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                              <span className="truncate">{goal.subject} · {goal.title}</span>
+                              {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
+                            </p>
+                            <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                              이번 주 목표: {goal.rangeText}
+                            </p>
+                          </button>
                         </div>
                         <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
                           done ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : goal.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'

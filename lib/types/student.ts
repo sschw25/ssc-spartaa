@@ -91,6 +91,9 @@ export interface BookProgress {
   makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
   makeupDone?: number;     // 누적 보강 완료량(학생 입력).
   makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용).
+  // 시작점 조정 감사 로그 — 학생이 오늘 시작점(current)을 옮긴 기록. 최근 30개 캡.
+  // auto=true(자동 승인 즉시 반영)만 하루 누적 자동승인 한도 계산에 쓴다. 마이그레이션 불필요(JSON).
+  adjustLog?: Array<{ date: string; from: number; to: number; auto: boolean; reason?: string }>;
 }
 
 export interface LectureProgress {
@@ -122,6 +125,9 @@ export interface LectureProgress {
   makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
   makeupDone?: number;     // 누적 보강 완료량(학생 입력).
   makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용).
+  // 시작점 조정 감사 로그 — 학생이 오늘 시작점(current)을 옮긴 기록. 최근 30개 캡.
+  // auto=true(자동 승인 즉시 반영)만 하루 누적 자동승인 한도 계산에 쓴다. 마이그레이션 불필요(JSON).
+  adjustLog?: Array<{ date: string; from: number; to: number; auto: boolean; reason?: string }>;
 }
 
 export interface ProposedGoal {

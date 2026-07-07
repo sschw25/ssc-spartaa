@@ -11,7 +11,7 @@ import { kstToday } from '@/lib/leave';
 // 오늘 할 일 완료·문풀 기록)가 stale 값으로 되돌아간다. 관리자 UI는 이 필드들을 편집하지 않으므로
 // 자료/계획 id 매칭으로 fresh(DB 최신) 값을 무조건 우선한다. (plan.isCompleted 는 관리자도
 // 토글하는 계약 필드라 병합 대상에서 제외 — 클라이언트 값 유지.)
-const STUDENT_OWNED_MATERIAL_FIELDS = ['studySlot', 'inputLog', 'reviewLog', 'solvedQuestions', 'incorrectTags'] as const;
+const STUDENT_OWNED_MATERIAL_FIELDS = ['studySlot', 'inputLog', 'reviewLog', 'solvedQuestions', 'incorrectTags', 'adjustLog'] as const;
 const STUDENT_OWNED_PLAN_FIELDS = ['dailyCompletions', 'actualAmount'] as const;
 
 function preserveStudentOwnedProgress(

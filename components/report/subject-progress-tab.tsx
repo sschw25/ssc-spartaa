@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { BookOpen, Tv, FileText, CheckCircle2, Clock } from 'lucide-react';
+import { BookOpen, Tv, FileText, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
 import { Student, DetailedPlan, ProposedGoal } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
@@ -9,10 +9,11 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
-import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMaterialStudyDays, toDateKey, isStudyDay } from '@/lib/progress-plan';
+import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMaterialStudyDays } from '@/lib/progress-plan';
 import { getMakeupLedger } from '@/lib/makeup-ledger';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
 import { LearningRequestPanel } from '@/components/report/learning-request-panel';
+import { InputHeatmap } from '@/components/report/input-heatmap';
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
@@ -30,45 +31,7 @@ type RequestForm = {
   currentGoalSnapshot: { goalType?: GoalType; goalValue?: number; speedMultiplier?: number } | null;
 };
 
-// 과목별 진도 입력 히트맵 — 최근 35일. 파랑=입력한 날 / 옅은칸=학습일·미입력 / 점=비학습일·휴가일.
-function InputHeatmap({ inputLog, studyDays, leaveDates }: { inputLog?: string[]; studyDays?: string[]; leaveDates: Set<string> }) {
-  const done = new Set(inputLog || []);
-  const cells: { key: string; state: 'done' | 'miss' | 'off' }[] = [];
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  for (let i = 34; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    const key = toDateKey(d);
-    const off = !isStudyDay(d, studyDays) || leaveDates.has(key);
-    const state = done.has(key) ? 'done' : off ? 'off' : 'miss';
-    cells.push({ key, state });
-  }
-  return (
-    <div className="mt-3">
-      <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-400">
-        진도 입력 최근 5주
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-[#0071E3]" /> 입력</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-slate-100 dark:bg-white/10" /> 미입력</span>
-      </p>
-      <div className="flex flex-wrap gap-[3px]" aria-label="진도 입력 히트맵">
-        {cells.map((c) => (
-          <span
-            key={c.key}
-            title={`${c.key} · ${c.state === 'done' ? '입력함' : c.state === 'miss' ? '미입력' : '비학습/휴가'}`}
-            className={
-              c.state === 'done'
-                ? 'h-3 w-3 rounded-[3px] bg-[#0071E3]'
-                : c.state === 'miss'
-                ? 'h-3 w-3 rounded-[3px] bg-slate-100 dark:bg-white/10'
-                : 'h-3 w-3 rounded-[3px] bg-transparent ring-1 ring-inset ring-slate-100 dark:ring-white/10'
-            }
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
+// 진도 입력 히트맵은 자료 상세 시트와 공유하는 공용 컴포넌트로 추출됨 — components/report/input-heatmap.tsx
 
 // 자율 입력(selfPaced) 자료 — 진행률/목표 없이 "누적 N{단위}"만 보여주고,
 // 학생은 "오늘 한 만큼"을 더해 누적에 반영한다(절대값 = 기존 + 입력분).
@@ -178,6 +141,8 @@ interface SubjectProgressTabProps {
   requestError: string;
   realignStudentPlans?: (mode: 'keepTargetDate' | 'keepPace') => Promise<void>;
   realigningPlans?: boolean;
+  // 자료 카드 '자세히 보기' → 자료 상세 시트(학생 뷰 전용, 미전달 시 비활성).
+  openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
 }
 
 export function SubjectProgressTab({
@@ -200,6 +165,7 @@ export function SubjectProgressTab({
   requestError,
   realignStudentPlans,
   realigningPlans,
+  openMaterialDetail,
 }: SubjectProgressTabProps) {
   const [pendingPlanKey, setPendingPlanKey] = React.useState<string | null>(null);
   const [pendingAmount, setPendingAmount] = React.useState(0);
@@ -641,10 +607,20 @@ export function SubjectProgressTab({
                       );
 
                       return (
-                        <div key={b.id} className="p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
+                        <div key={b.id} id={`material-card-${b.id}`} className="scroll-mt-24 p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
                           <div className="flex justify-between items-start flex-wrap gap-2">
                             <div>
                               <h5 className="text-xs font-black text-slate-700 dark:text-slate-300">{b.title}</h5>
+                              {openMaterialDetail && (
+                                <button
+                                  type="button"
+                                  onClick={() => openMaterialDetail('book', b.id)}
+                                  className="mt-1.5 inline-flex items-center gap-0.5 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/5 px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-[0.98]"
+                                >
+                                  자세히 보기
+                                  <ChevronRight className="h-3 w-3" />
+                                </button>
+                              )}
                               {b.goalDescription && (
                                 <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
                                   완독 목표: {b.goalDescription}
@@ -905,10 +881,20 @@ export function SubjectProgressTab({
                       );
 
                       return (
-                        <div key={l.id} className="p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
+                        <div key={l.id} id={`material-card-${l.id}`} className="scroll-mt-24 p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
                           <div className="flex justify-between items-start flex-wrap gap-2">
                             <div>
                               <h5 className="text-xs font-black text-slate-700 dark:text-slate-300">{l.name}</h5>
+                              {openMaterialDetail && (
+                                <button
+                                  type="button"
+                                  onClick={() => openMaterialDetail('lecture', l.id)}
+                                  className="mt-1.5 inline-flex items-center gap-0.5 rounded-full border border-[#0071E3]/20 bg-[#0071E3]/5 px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-[0.98]"
+                                >
+                                  자세히 보기
+                                  <ChevronRight className="h-3 w-3" />
+                                </button>
+                              )}
                               {l.goalDescription && (
                                 <p className="text-[10px] text-[#0071E3] font-bold mt-1.5 flex items-center gap-1">
                                   수강 목표: {l.goalDescription}

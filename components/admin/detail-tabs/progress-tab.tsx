@@ -73,6 +73,41 @@ function MaterialStudyDayPicker({
   );
 }
 
+// 시작점 조정 이력 — 학생이 시작점(current)을 옮긴 감사 로그(adjustLog) 읽기 전용 노출.
+// 최근 5개(최신 먼저). (자동)=하루 한도 내 즉시 반영 / (승인)=신청 후 관리자 승인 반영.
+// 표시는 학생 화면과 동일하게 "시작점"(=current+1) 기준. 사유는 괄호+툴팁.
+function MaterialAdjustLogList({
+  adjustLog,
+  unit,
+}: {
+  adjustLog?: BookProgress['adjustLog'];
+  unit: string;
+}) {
+  const entries = (adjustLog || []).slice(-5).reverse();
+  if (entries.length === 0) return null;
+  const fmtDate = (key: string) => {
+    const [, m, d] = key.split('-');
+    return `${Number(m)}/${Number(d)}`;
+  };
+  return (
+    <div className="pt-2 border-t border-black/[0.03] dark:border-white/10 space-y-1">
+      <Label className="text-[9px] text-slate-500 dark:text-slate-400 font-semibold">시작점 조정 이력 (학생)</Label>
+      <div className="space-y-0.5">
+        {entries.map((entry, idx) => (
+          <p
+            key={`${entry.date}_${idx}`}
+            title={entry.reason || undefined}
+            className="text-[10px] text-slate-600 dark:text-slate-300 tabular-nums truncate"
+          >
+            {fmtDate(entry.date)} 시작점 {(Number(entry.from) || 0) + 1}{unit}→{(Number(entry.to) || 0) + 1}{unit} ({entry.auto ? '자동' : '승인'})
+            {entry.reason ? <span className="text-slate-400 dark:text-slate-500"> — {entry.reason}</span> : null}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function ProgressTab() {
   const {
     categoryFilter,
@@ -1313,6 +1348,8 @@ export function ProgressTab() {
                                       </div>
                                     )}
 
+                                    <MaterialAdjustLogList adjustLog={book.adjustLog} unit={book.unit || 'p'} />
+
                                     <BenchmarkSection
                                       type="book"
                                       subject={sub.name}
@@ -1789,6 +1826,8 @@ export function ProgressTab() {
                                         )}
                                       </div>
                                     )}
+
+                                    <MaterialAdjustLogList adjustLog={lec.adjustLog} unit="강" />
 
                                     <BenchmarkSection
                                       type="lecture"

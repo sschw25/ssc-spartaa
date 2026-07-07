@@ -1,68 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
-import type { ConsultationLog, ProposedGoal } from '@/lib/types/student';
+// normalizeProposedGoal — lib/student-requests 로 이동(시작점 조정 신청 경로와 공유). 동작 동일.
+import { normalizeProposedGoal } from '@/lib/student-requests';
+import type { ConsultationLog } from '@/lib/types/student';
 
 const REQUEST_TYPES = ['progress', 'subject', 'plan', 'halfDay', 'restPass', 'etc'] as const;
-const GOAL_TYPES = ['weeks', 'weeklyAmount', 'dailyAmount', 'deadlineWeeks'] as const;
-
-// 학생 body의 proposedGoal은 관리자 승인 시 generateDetailedPlans에 그대로 투입되므로
-// (admin/students/[id]/requests) 저장 시점에 필드 단위로 정규화한다. 검증 실패 필드는 버린다.
-// - materialId/materialType 없으면 제안 자체를 폐기(undefined) — 소비처가 자료를 못 찾음
-// - goalType은 union allowlist, goalValue는 유한수 0~9999 클램프
-// - proposedWeekNumber 정수 1~12, proposedRangeText/goalDescription류 trim+길이상한
-function normalizeProposedGoal(raw: unknown): ProposedGoal | undefined {
-  if (!raw || typeof raw !== 'object') return undefined;
-  const g = raw as Record<string, unknown>;
-
-  const materialId = typeof g.materialId === 'string' ? g.materialId.trim().slice(0, 100) : '';
-  const materialType = g.materialType === 'book' || g.materialType === 'lecture' ? g.materialType : null;
-  if (!materialId || !materialType) return undefined; // 자료 식별 불가한 제안은 폐기
-
-  const goalType = (GOAL_TYPES as readonly string[]).includes(String(g.goalType))
-    ? (g.goalType as ProposedGoal['goalType'])
-    : 'weeks';
-
-  const goalValueNum = Number(g.goalValue);
-  const goalValue = Number.isFinite(goalValueNum) ? Math.max(0, Math.min(9999, goalValueNum)) : 0;
-
-  const normalized: ProposedGoal = { materialId, materialType, goalType, goalValue };
-
-  if (typeof g.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.targetDate)) {
-    normalized.targetDate = g.targetDate;
-  }
-  const currentProgressNum = Number(g.currentProgress);
-  if (Number.isFinite(currentProgressNum) && currentProgressNum >= 0) {
-    normalized.currentProgress = Math.min(999999, Math.round(currentProgressNum));
-  }
-  const weekNum = Number(g.proposedWeekNumber);
-  if (Number.isFinite(weekNum) && weekNum >= 1) {
-    normalized.proposedWeekNumber = Math.min(12, Math.round(weekNum));
-  }
-  if (typeof g.proposedRangeText === 'string') {
-    const rangeText = g.proposedRangeText.trim().slice(0, 200);
-    if (rangeText) normalized.proposedRangeText = rangeText;
-  }
-  const speedNum = Number(g.speedMultiplier);
-  if (Number.isFinite(speedNum) && speedNum > 0) {
-    normalized.speedMultiplier = Math.min(4, speedNum);
-  }
-  // currentGoal은 관리자 before/after 표시용(계획 계산에 미투입)이지만 동일 규격으로 방어
-  if (g.currentGoal && typeof g.currentGoal === 'object') {
-    const c = g.currentGoal as Record<string, unknown>;
-    const cur: ProposedGoal['currentGoal'] = {};
-    if ((GOAL_TYPES as readonly string[]).includes(String(c.goalType))) {
-      cur.goalType = c.goalType as ProposedGoal['goalType'];
-    }
-    const cv = Number(c.goalValue);
-    if (Number.isFinite(cv)) cur.goalValue = Math.max(0, Math.min(9999, cv));
-    const cs = Number(c.speedMultiplier);
-    if (Number.isFinite(cs) && cs > 0) cur.speedMultiplier = Math.min(4, cs);
-    if (Object.keys(cur).length > 0) normalized.currentGoal = cur;
-  }
-
-  return normalized;
-}
 
 // 학생이 관리자에게 진도/과목/학습계획 변경 등을 신청 (consultation_logs 재사용, type==='request')
 export async function POST(req: NextRequest) {

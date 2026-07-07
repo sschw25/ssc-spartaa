@@ -1,6 +1,7 @@
 'use client';
 
-import React, { Suspense, useState, useEffect, useCallback } from 'react';
+import React, { Suspense, useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useReportState } from '@/hooks/use-report-state';
 import { StudentLayout } from '@/components/report/student-layout';
 import { NotificationsSection } from '@/components/report/notifications-section';
@@ -20,10 +21,11 @@ import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
+import { MaterialDetailSheet } from '@/components/report/material-detail-sheet';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, BookOpen, Shield } from 'lucide-react';
 import { TabHero } from '@/components/report/tab-hero';
-import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student } from '@/lib/types/student';
+import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student, SubjectProgress, BookProgress, LectureProgress } from '@/lib/types/student';
 
 type LearningSubTab = 'timetable' | 'execution-plan' | 'subject-progress' | 'makeup' | 'grade-analysis';
 type LifeSubTab = 'attendance-status' | 'study-stats' | 'student-penalties' | 'student-coupons';
@@ -219,6 +221,7 @@ function StudentReportInner() {
     deadlineSummary,
     incrementBookIncorrectTag,
     saveMakeupDone,
+    adjustStartPoint,
     submitChecklist,
     studyTimeLabels,
     weekDaySlots,
@@ -290,6 +293,99 @@ function StudentReportInner() {
     setActiveTab('student-requests');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [setActiveTab, setRequestSubTab]);
+
+  // ── 자료(교재/인강) 상세 시트 — 학생 뷰 전용. 딥링크: ?material=<materialId>&mtype=book|lecture ──
+  const searchParams = useSearchParams();
+  const [materialSheet, setMaterialSheet] = useState<{ materialType: 'book' | 'lecture'; materialId: string } | null>(null);
+  // 최초 진입 URL 의 ?material= 파라미터 — 학생 로드 후 1회 소비(replaceState 는 useSearchParams 를 안 갱신하므로 초깃값 캡처).
+  const [pendingMaterialParam] = useState<{ id: string; mtype: string | null } | null>(() => {
+    const id = searchParams.get('material');
+    return id ? { id, mtype: searchParams.get('mtype') } : null;
+  });
+  // 딥링크 소비 완료 여부 — 소비 전에는 URL 정리(파라미터 삭제)를 하지 않는다.
+  const materialConsumedRef = useRef(pendingMaterialParam === null);
+
+  // 자료 존재 확인 — 없는 id 는 조용히 무시. mtype 미지정이면 교재 → 인강 순으로 탐색.
+  const findMaterial = useCallback(
+    (materialId: string, mtype?: string): { materialType: 'book' | 'lecture'; materialId: string } | null => {
+      if (!student) return null;
+      const subjects: SubjectProgress[] = student.subjects || [];
+      const hasBook =
+        subjects.some((s) => (s.books || []).some((b) => b.id === materialId)) ||
+        ((student.books || []) as BookProgress[]).some((b) => b.id === materialId);
+      const hasLecture =
+        subjects.some((s) => (s.lectures || []).some((l) => l.id === materialId)) ||
+        ((student.lectures || []) as LectureProgress[]).some((l) => l.id === materialId);
+      if (mtype === 'book') return hasBook ? { materialType: 'book', materialId } : null;
+      if (mtype === 'lecture') return hasLecture ? { materialType: 'lecture', materialId } : null;
+      if (hasBook) return { materialType: 'book', materialId };
+      if (hasLecture) return { materialType: 'lecture', materialId };
+      return null;
+    },
+    [student],
+  );
+
+  const openMaterialDetail = useCallback((materialType: 'book' | 'lecture', materialId: string) => {
+    materialConsumedRef.current = true;
+    setMaterialSheet({ materialType, materialId });
+  }, []);
+  const closeMaterialDetail = useCallback(() => setMaterialSheet(null), []);
+
+  // 딥링크 소비 — 학생 데이터 로드 후 1회. 존재하지 않는 자료면 시트를 열지 않고 파라미터만 정리.
+  useEffect(() => {
+    if (!isStudentReport || !student || !pendingMaterialParam || materialConsumedRef.current) return;
+    materialConsumedRef.current = true;
+    const found = findMaterial(pendingMaterialParam.id, pendingMaterialParam.mtype || undefined);
+    if (found) {
+      setMaterialSheet(found);
+    } else if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('material');
+      url.searchParams.delete('mtype');
+      window.history.replaceState(window.history.state, '', url.toString());
+    }
+  }, [isStudentReport, student, pendingMaterialParam, findMaterial]);
+
+  // 시트 상태 ↔ URL 동기화 — ?tab= 동기화(use-report-state)와 같은 replaceState 패턴(히스토리 오염 없음).
+  useEffect(() => {
+    if (!isStudentReport || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const currentId = url.searchParams.get('material');
+    const currentType = url.searchParams.get('mtype');
+    if (materialSheet) {
+      if (currentId === materialSheet.materialId && currentType === materialSheet.materialType) return;
+      url.searchParams.set('material', materialSheet.materialId);
+      url.searchParams.set('mtype', materialSheet.materialType);
+    } else {
+      if (currentId === null && currentType === null) return;
+      if (!materialConsumedRef.current) return; // 딥링크 소비 전(로딩 중)에는 파라미터를 지우지 않음
+      url.searchParams.delete('material');
+      url.searchParams.delete('mtype');
+    }
+    window.history.replaceState(window.history.state, '', url.toString());
+  }, [materialSheet, isStudentReport]);
+
+  // 시트 하단 연결 링크 — 기존 탭 전환 콜백(selectReportTab) 재사용.
+  const openSubjectProgressFromSheet = useCallback(() => {
+    const id = materialSheet?.materialId;
+    setMaterialSheet(null);
+    selectReportTab('subject-progress');
+    setTimeout(() => {
+      if (id) document.getElementById(`material-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+  }, [materialSheet, selectReportTab]);
+  const openTimetableFromSheet = useCallback(() => {
+    setMaterialSheet(null);
+    selectReportTab('timetable');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectReportTab]);
+  const openChangeRequestFromSheet = useCallback(() => {
+    setMaterialSheet(null);
+    selectReportTab('subject-progress');
+    setTimeout(() => {
+      document.getElementById('student-request-panel')?.scrollIntoView({ behavior: 'smooth' });
+    }, 80);
+  }, [selectReportTab]);
 
   const learningActiveTab = activeTab === 'learning' ? learningSubTab : activeTab;
   // 생활 컨테이너의 유효 탭. HomeOverviewTab(등하원·순공)·PenaltiesTab(벌점) 공용.
@@ -593,6 +689,7 @@ function StudentReportInner() {
           todaySelfPacedItems={todaySelfPacedItems}
           saveSelfPacedToday={saveSelfPacedToday}
           saveStudySlot={saveStudySlot}
+          adjustStartPoint={adjustStartPoint}
           saveMakeupDone={saveMakeupDone}
           pendingPlanId={pendingPlanId}
           setPendingPlanId={setPendingPlanId}
@@ -629,6 +726,7 @@ function StudentReportInner() {
           openConsultation={openConsultationTab}
           openNotifications={openNotificationsTab}
           openLeaveRequests={openLeaveRequestsTab}
+          openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
         />
 
         {/* 2. 오늘 계획 (시간표) 탭 */}
@@ -642,6 +740,7 @@ function StudentReportInner() {
           activeTab={learningActiveTab}
           weekDaySlots={weekDaySlots}
           studyTimeSlots={studyTimeSlots}
+          openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
         />
 
         {/* 3. 실행 계획표 탭 */}
@@ -675,6 +774,7 @@ function StudentReportInner() {
           requestError={requestError}
           realignStudentPlans={realignStudentPlans}
           realigningPlans={realigningPlans}
+          openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
         />
 
         {/* 4-1. 보강 탭 — 휴가로 발생한 자료별 보강 원장(누적/완료 입력) */}
@@ -776,6 +876,21 @@ function StudentReportInner() {
           }}
         />
       </div>
+
+      {/* 자료(교재/인강) 상세 시트 — 학생 뷰 전용 오버레이. 홈/시간표/과목별 진도 어디서든 열린다. */}
+      {isStudentReport && materialSheet && (
+        <MaterialDetailSheet
+          student={student}
+          materialType={materialSheet.materialType}
+          materialId={materialSheet.materialId}
+          studyTimeLabels={studyTimeLabels}
+          adjustStartPoint={adjustStartPoint}
+          onClose={closeMaterialDetail}
+          onOpenSubjectProgress={openSubjectProgressFromSheet}
+          onOpenTimetable={openTimetableFromSheet}
+          onOpenChangeRequest={openChangeRequestFromSheet}
+        />
+      )}
 
       {/* 사용법 다시보기 (학생 전용) */}
       {isStudentReport && (

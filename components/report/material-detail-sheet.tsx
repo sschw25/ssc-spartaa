@@ -1,0 +1,464 @@
+'use client';
+
+import React, { useEffect, useMemo, useState } from 'react';
+import { X, BookOpen, Tv, ChevronRight, CalendarDays, Clock, Target, History, FileText } from 'lucide-react';
+import type { Student, BookProgress, LectureProgress, SubjectProgress, DetailedPlan } from '@/lib/types/student';
+import { getMaterialStudyDays, getLeaveDates, toDateKey } from '@/lib/progress-plan';
+import { getPlanDailyCompletion } from '@/lib/student-activity';
+import { formatSlotLabel } from '@/lib/academy-timetable';
+import { InputHeatmap } from './input-heatmap';
+import { StartPointAdjustPanel, type StartPointAdjustInfo, type StartPointAdjustResult } from './start-point-adjust-panel';
+
+// 자료(교재/인강) 상세 시트 — 학생 뷰 전용 풀스크린 오버레이.
+// 홈/시간표/과목별 진도의 어떤 항목을 눌러도 그 자료의 진도·계획·기록을 한곳에서 보여준다.
+// 데이터는 이미 로드된 student(subjects 단일소스)에서만 파생 — 새 fetch 없음.
+// 딥링크: ?material=<materialId>&mtype=book|lecture (URL 동기화는 page 쪽에서).
+
+const DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+const DAY_LABELS: Record<string, string> = {
+  mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일',
+};
+
+type FoundMaterial = {
+  subject: SubjectProgress | null;
+  material: BookProgress | LectureProgress;
+};
+
+interface MaterialDetailSheetProps {
+  student: Student;
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  studyTimeLabels: Record<string, string>;
+  adjustStartPoint?: (
+    materialType: 'book' | 'lecture',
+    materialId: string,
+    newValue: number,
+    reason?: string,
+  ) => Promise<StartPointAdjustResult>;
+  onClose: () => void;
+  // 연결 링크 — 탭 전환은 페이지의 기존 콜백 패턴(selectReportTab)을 그대로 탄다.
+  onOpenSubjectProgress: () => void;
+  onOpenTimetable: () => void;
+  onOpenChangeRequest: () => void;
+}
+
+const getSeoulDateKey = () =>
+  new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+
+// "2026-07-07" → "7.7" (기록 리스트용 짧은 날짜)
+const fmtShortDate = (key: string) => {
+  const [, m, d] = key.split('-');
+  return `${Number(m)}.${Number(d)}`;
+};
+
+export function MaterialDetailSheet({
+  student,
+  materialType,
+  materialId,
+  studyTimeLabels,
+  adjustStartPoint,
+  onClose,
+  onOpenSubjectProgress,
+  onOpenTimetable,
+  onOpenChangeRequest,
+}: MaterialDetailSheetProps) {
+  const [adjustOpen, setAdjustOpen] = useState(false);
+
+  // ESC 로 닫기 + 열려 있는 동안 배경 스크롤 잠금.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      // 입력 중(사유 textarea·숫자 입력 등) ESC 는 시트를 닫지 않는다 — 입력 취소 용도로 남겨둔다.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return;
+      onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  const leaveDates = useMemo(() => getLeaveDates(student), [student]);
+
+  // subjects 단일소스에서 자료 찾기(+레거시 최상위 books/lectures 폴백 — 과목 미지정).
+  // 선형 탐색이라 가벼워서 memo 없이 렌더마다 계산(React Compiler 가 알아서 최적화).
+  const findInStudent = (): FoundMaterial | null => {
+    for (const sub of student.subjects || []) {
+      const list: Array<BookProgress | LectureProgress> =
+        materialType === 'book' ? (sub.books || []) : (sub.lectures || []);
+      const m = list.find((item) => item.id === materialId);
+      if (m) return { subject: sub, material: m };
+    }
+    const legacy: Array<BookProgress | LectureProgress> =
+      materialType === 'book' ? (student.books || []) : (student.lectures || []);
+    const m = legacy.find((item) => item.id === materialId);
+    return m ? { subject: null, material: m } : null;
+  };
+  const found = findInStudent();
+
+  // 존재하지 않는 자료면 조용히 무시(렌더 안 함) — 딥링크 오타 방어.
+  if (!found) return null;
+
+  const { subject, material } = found;
+  const isBook = materialType === 'book';
+  const title = isBook ? (material as BookProgress).title : (material as LectureProgress).name;
+  const unit = isBook ? ((material as BookProgress).unit || 'p') : '강';
+  const total = isBook ? ((material as BookProgress).totalPages || 0) : ((material as LectureProgress).totalLectures || 0);
+  const current = isBook ? ((material as BookProgress).currentPage || 0) : ((material as LectureProgress).completedLectures || 0);
+  const isSelfPaced = material.goalType === 'selfPaced';
+  const subjectName = subject?.name || '학습 자료';
+  const typeLabel = isBook ? '교재' : '인강';
+  const TypeIcon = isBook ? BookOpen : Tv;
+
+  const todayKey = getSeoulDateKey();
+  const percent = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : 0;
+  const nextStart = Math.min(total, current + 1);
+
+  // 학습 요일 — 자료 단위 단일소스(getMaterialStudyDays). 미지정이면 계획자료=매일 / 자율=일요일 제외.
+  const studyDays = getMaterialStudyDays(subject?.studyDays, material.studyDays);
+  const isDayActive = (key: string) =>
+    studyDays && studyDays.length > 0 ? studyDays.includes(key as (typeof DAY_ORDER)[number]) : (isSelfPaced ? key !== 'sun' : true);
+
+  // 시간대 — 자율은 자료별 학생 지정 슬롯(studySlot), 계획자료는 과목 studyTime.
+  const slotLabel = isSelfPaced
+    ? formatSlotLabel(material.studySlot)
+    : (studyTimeLabels[subject?.studyTime || ''] || '미지정');
+
+  // 현재 활성 계획 — 매일 시간표 plan 우선, 없으면 기간 목표(deadline) plan 표시.
+  const plans: DetailedPlan[] = material.detailedPlans || [];
+  const activeDailyPlan = plans.find((p) => !p.periodType && p.startDate <= todayKey && todayKey <= p.endDate);
+  const activeDeadlinePlan = plans.find((p) => p.periodType === 'deadline' && p.startDate <= todayKey && todayKey <= p.endDate);
+  const activePlan = activeDailyPlan || activeDeadlinePlan;
+  const todayCompletion = activeDailyPlan ? getPlanDailyCompletion(activeDailyPlan, todayKey) : undefined;
+
+  const isFinished = total > 0 && current >= total;
+
+  // 시작점 조정 — 홈(adjustInfoFor)과 동일 규칙: 자율/분량미상 제외, 임계치 = 전체의 1/10(최소 1).
+  // 추가 조건: 세부 계획 없는 자료(서버 400 dead-end)·완주·오늘치 이미 완료(홈과 동일)면 숨긴다.
+  const adjustInfo: StartPointAdjustInfo | null = (() => {
+    if (!adjustStartPoint || isSelfPaced || total <= 0) return null;
+    if (plans.length === 0) return null;
+    if (isFinished) return null;
+    if (todayCompletion?.isCompleted) return null;
+    const usedToday = (material.adjustLog || [])
+      .filter((entry) => entry.date === todayKey && entry.auto)
+      .reduce((sum, entry) => sum + Math.abs((Number(entry.to) || 0) - (Number(entry.from) || 0)), 0);
+    return { current, total, usedToday, threshold: Math.max(1, Math.ceil(total / 10)) };
+  })();
+
+  // 최근 7일 완료 이력 — 모든 plan 의 dailyCompletions 를 날짜 내림차순으로.
+  const cutoffDate = new Date();
+  cutoffDate.setHours(0, 0, 0, 0);
+  cutoffDate.setDate(cutoffDate.getDate() - 6);
+  const cutoffKey = toDateKey(cutoffDate);
+  const recentCompletions = plans
+    .flatMap((plan) =>
+      Object.entries(plan.dailyCompletions || {})
+        .filter(([date, val]) => val?.isCompleted && date >= cutoffKey)
+        .map(([date, val]) => ({ date, amount: typeof val.actualAmount === 'number' ? val.actualAmount : undefined })),
+    )
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 7);
+
+  // 복습 기록 — reviewLog(날짜별 분) 최근 5개.
+  const recentReviews = Object.entries(material.reviewLog || {})
+    .filter(([, min]) => Number(min) > 0)
+    .sort(([a], [b]) => b.localeCompare(a))
+    .slice(0, 5);
+
+  // 시작점 조정 이력 — adjustLog 최근 5개(최신 먼저). auto 여부 배지 표시.
+  const recentAdjusts = (material.adjustLog || []).slice(-5).reverse();
+
+  const hasRecords = recentCompletions.length > 0 || recentReviews.length > 0 || recentAdjusts.length > 0;
+
+  const sectionTitleCls = 'flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400';
+  const cardCls = 'rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4';
+
+  return (
+    <div
+      className="no-print fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${subjectName} ${title} 상세`}
+    >
+      <div
+        className="glass-strong flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/50 dark:border-white/10 sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px]"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* 1. 헤더 — 과목·자료명·종류·단위 + 닫기 */}
+        <div className="flex items-start justify-between gap-3 border-b border-black/[0.06] dark:border-white/10 px-5 py-4">
+          <div className="min-w-0">
+            <p className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold text-[#0071E3]">
+              <TypeIcon className="h-3.5 w-3.5" />
+              {subjectName}
+              <span className="rounded-full bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/20 px-2 py-0.5 text-[10px] font-semibold">
+                {typeLabel}
+              </span>
+              <span className="rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                단위 {unit}
+              </span>
+            </p>
+            <h2 className="mt-1 break-keep text-[16px] font-semibold leading-snug text-slate-900 dark:text-slate-100">
+              {title}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="닫기"
+            className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100/80 dark:bg-white/10 text-slate-500 dark:text-slate-300 transition hover:bg-slate-200/80 dark:hover:bg-white/15 active:scale-95"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="flex-1 space-y-3.5 overflow-y-auto px-5 py-4">
+          {/* 2. 진도 현황 */}
+          <div className={cardCls}>
+            <p className={sectionTitleCls}>
+              <Target className="h-3.5 w-3.5 text-[#0071E3]" />
+              진도 현황
+            </p>
+            {isSelfPaced ? (
+              <div className="mt-2.5 flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[17px] font-semibold text-[#0071E3] tabular-nums">누적 {current}{unit}</p>
+                  <p className="mt-0.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                    자율 학습 자료예요. 한 만큼 기록하면 누적돼요.
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[10px] font-semibold text-[#0071E3]">
+                  자율 목표
+                </span>
+              </div>
+            ) : total > 0 ? (
+              <>
+                <div className="mt-2.5 flex items-end justify-between gap-3">
+                  <p className="text-[15px] font-semibold text-slate-900 dark:text-slate-100 tabular-nums">
+                    {current} <span className="text-[12px] font-medium text-slate-400">/ {total}{unit}</span>
+                  </p>
+                  <span className="rounded-lg bg-[#0071E3] px-2 py-0.5 text-[11px] font-semibold text-white tabular-nums">{percent}%</span>
+                </div>
+                <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                  <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
+                </div>
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {isFinished ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                      완주했어요 🎉
+                    </span>
+                  ) : (
+                    <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                      오늘은 <span className="font-semibold text-[#0071E3]">{nextStart}{unit}</span>부터 시작해요
+                    </span>
+                  )}
+                  {adjustInfo && !adjustOpen && (
+                    <button
+                      type="button"
+                      onClick={() => setAdjustOpen(true)}
+                      className="rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.05] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-95 dark:bg-[#0071E3]/15"
+                    >
+                      시작점 조정
+                    </button>
+                  )}
+                </div>
+                {adjustInfo && adjustOpen && adjustStartPoint && (
+                  <StartPointAdjustPanel
+                    materialType={materialType}
+                    materialId={materialId}
+                    unit={unit}
+                    info={adjustInfo}
+                    adjustStartPoint={adjustStartPoint}
+                    onClose={() => setAdjustOpen(false)}
+                  />
+                )}
+              </>
+            ) : (
+              <p className="mt-2.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                아직 전체 분량이 등록되지 않은 자료예요. 분량이 등록되면 진행률이 보여요.
+              </p>
+            )}
+          </div>
+
+          {/* 3. 이번 주 계획 */}
+          <div className={cardCls}>
+            <p className={sectionTitleCls}>
+              <CalendarDays className="h-3.5 w-3.5 text-[#0071E3]" />
+              이번 주 계획
+            </p>
+            {isSelfPaced ? (
+              <p className="mt-2.5 break-keep text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                자율 학습이라 정해진 주간 계획은 없어요. 학습 요일에 한 만큼 기록해요.
+              </p>
+            ) : activePlan ? (
+              <div className="mt-2.5 space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[11px] font-semibold text-[#0071E3]">
+                    {activePlan.rangeText}
+                  </span>
+                  {!activePlan.periodType && (
+                    <span className="rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 tabular-nums">
+                      하루 {activePlan.dailyAmount ?? Math.ceil((activePlan.targetAmount || 1) / 6)}{unit}
+                    </span>
+                  )}
+                  {activePlan.periodType === 'deadline' && (
+                    <span className="rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                      기간 목표
+                    </span>
+                  )}
+                  <span className="text-[10px] font-medium text-slate-400 dark:text-slate-400 tabular-nums">
+                    {activePlan.startDate.substring(5)} ~ {activePlan.endDate.substring(5)}
+                  </span>
+                </div>
+                {todayCompletion?.isCompleted && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">
+                    오늘치 완료{typeof todayCompletion.actualAmount === 'number' ? ` · ${todayCompletion.actualAmount}${unit}` : ''} ✅
+                  </span>
+                )}
+              </div>
+            ) : (
+              <p className="mt-2.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                지금 진행 중인 주간 계획이 없어요.
+              </p>
+            )}
+
+            {/* 학습 요일 + 시간대 — 뱃지 시각화 */}
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-3">
+              <div className="flex items-center gap-1" aria-label="학습 요일">
+                {DAY_ORDER.map((key) => (
+                  <span
+                    key={key}
+                    className={`grid h-6 w-6 place-items-center rounded-full text-[10px] font-semibold ${
+                      isDayActive(key)
+                        ? 'bg-[#0071E3] text-white'
+                        : 'bg-slate-100 dark:bg-white/10 text-slate-300 dark:text-slate-600'
+                    }`}
+                  >
+                    {DAY_LABELS[key]}
+                  </span>
+                ))}
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                <Clock className="h-3 w-3" />
+                {slotLabel}
+              </span>
+            </div>
+          </div>
+
+          {/* 4. 공부한 날 — 진도 입력 히트맵 재사용 */}
+          <div className={cardCls}>
+            <p className={sectionTitleCls}>
+              <FileText className="h-3.5 w-3.5 text-[#0071E3]" />
+              공부한 날
+            </p>
+            <InputHeatmap inputLog={material.inputLog} studyDays={studyDays} leaveDates={leaveDates} />
+          </div>
+
+          {/* 5. 기록 — 최근 완료·복습·시작점 조정 이력 */}
+          <div className={cardCls}>
+            <p className={sectionTitleCls}>
+              <History className="h-3.5 w-3.5 text-[#0071E3]" />
+              기록
+            </p>
+            {!hasRecords ? (
+              <p className="mt-2.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                아직 기록이 없어요. 오늘 한 만큼 입력하면 여기에 쌓여요.
+              </p>
+            ) : (
+              <div className="mt-2.5 space-y-3">
+                {recentCompletions.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-400">최근 7일 완료</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {recentCompletions.map((item) => (
+                        <span
+                          key={item.date}
+                          className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300 tabular-nums"
+                        >
+                          {fmtShortDate(item.date)}{typeof item.amount === 'number' ? ` · ${item.amount}${unit}` : ''} ✅
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {recentReviews.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-400">복습 기록</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {recentReviews.map(([date, min]) => (
+                        <span
+                          key={date}
+                          className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums"
+                        >
+                          {fmtShortDate(date)} · 복습 {min}분
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {recentAdjusts.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-semibold text-slate-400 dark:text-slate-400">시작점 조정</p>
+                    <div className="mt-1.5 space-y-1.5">
+                      {recentAdjusts.map((entry, idx) => (
+                        <div
+                          key={`${entry.date}_${idx}`}
+                          className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl bg-slate-50 dark:bg-white/5 px-2.5 py-1.5 text-[10px] font-semibold text-slate-600 dark:text-slate-300"
+                        >
+                          <span className="tabular-nums">{fmtShortDate(entry.date)}</span>
+                          <span className="tabular-nums">{(Number(entry.from) || 0) + 1}{unit} → {(Number(entry.to) || 0) + 1}{unit}</span>
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+                              entry.auto
+                                ? 'bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/20 text-[#0071E3]'
+                                : 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                            }`}
+                          >
+                            {entry.auto ? '바로 반영' : '신청'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 6. 빠른 액션 + 연결 링크 */}
+          <div className="grid grid-cols-1 gap-2 pb-1 sm:grid-cols-3">
+            <button
+              type="button"
+              onClick={onOpenSubjectProgress}
+              className="flex min-h-11 items-center justify-between gap-1 rounded-2xl border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3.5 py-2.5 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/[0.04] dark:hover:bg-[#0071E3]/15 active:scale-[0.98]"
+            >
+              과목별 진도에서 보기
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            </button>
+            <button
+              type="button"
+              onClick={onOpenTimetable}
+              className="flex min-h-11 items-center justify-between gap-1 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3.5 py-2.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.98]"
+            >
+              오늘 계획(시간표) 보기
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            </button>
+            <button
+              type="button"
+              onClick={onOpenChangeRequest}
+              className="flex min-h-11 items-center justify-between gap-1 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3.5 py-2.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.98]"
+            >
+              변경 신청하기
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

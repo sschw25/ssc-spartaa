@@ -114,7 +114,12 @@ export async function PATCH(
         const updated = { ...book };
         const clampedProgress = hasCurrentProgress ? clampProgress(currentProgress, updated.totalPages) : null;
         if (clampedProgress !== null) {
+          const prevCurrent = Number(updated.currentPage || 0);
           updated.currentPage = clampedProgress;
+          if (clampedProgress !== prevCurrent) {
+            // 승인으로 진도 위치가 바뀐 것도 시작점 조정 이력에 남긴다(auto:false = 승인 배지).
+            updated.adjustLog = [...(updated.adjustLog || []), { date: inputDate, from: prevCurrent, to: clampedProgress, auto: false }].slice(-30);
+          }
           updated.inputLog = appendInputLog(updated.inputLog, inputDate);
           updated.updatedAt = nowIso;
         }
@@ -160,7 +165,12 @@ export async function PATCH(
         const updated = { ...lecture };
         const clampedProgress = hasCurrentProgress ? clampProgress(currentProgress, updated.totalLectures) : null;
         if (clampedProgress !== null) {
+          const prevCurrent = Number(updated.completedLectures || 0);
           updated.completedLectures = clampedProgress;
+          if (clampedProgress !== prevCurrent) {
+            // 승인으로 진도 위치가 바뀐 것도 시작점 조정 이력에 남긴다(auto:false = 승인 배지).
+            updated.adjustLog = [...(updated.adjustLog || []), { date: inputDate, from: prevCurrent, to: clampedProgress, auto: false }].slice(-30);
+          }
           updated.inputLog = appendInputLog(updated.inputLog, inputDate);
           updated.updatedAt = nowIso;
         }

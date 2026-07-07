@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Clock, Calendar, Coffee } from 'lucide-react';
+import { Clock, Calendar, Coffee, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE, slotMatchesPeriod } from '@/lib/academy-timetable';
@@ -35,6 +35,8 @@ interface TimetableTabProps {
   activeTab: string;
   weekDaySlots: Array<{ key: DayKey; label: string }>;
   studyTimeSlots: Array<{ key: string; label: string; timeRange: string; periodLabel: string }>;
+  // 교시 항목 탭 → 자료 상세 시트(학생 뷰 전용, 미전달 시 비활성).
+  openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
 }
 
 export function TimetableTab({
@@ -47,6 +49,7 @@ export function TimetableTab({
   activeTab,
   weekDaySlots,
   studyTimeSlots,
+  openMaterialDetail,
 }: TimetableTabProps) {
 
   // 서울 기준 YYYY-MM-DD 날짜 키 구하기
@@ -140,6 +143,7 @@ export function TimetableTab({
                 subjectName: string;
                 title: string;
                 type: 'book' | 'lecture';
+                materialId: string;
                 range: string;
                 amount: number;
                 speed?: number;
@@ -163,6 +167,7 @@ export function TimetableTab({
                           subjectName: subject.name,
                           title: book.title,
                           type: 'book',
+                          materialId: book.id,
                           range: activePlan.rangeText,
                           amount: dailyVal,
                           isCompleted: dailyCompletion.isCompleted,
@@ -181,6 +186,7 @@ export function TimetableTab({
                           subjectName: subject.name,
                           title: lecture.name,
                           type: 'lecture',
+                          materialId: lecture.id,
                           range: activePlan.rangeText,
                           amount: dailyVal,
                           speed: lecture.speedMultiplier,
@@ -202,6 +208,7 @@ export function TimetableTab({
                       subjectName: item.subject,
                       title: item.title,
                       type: item.materialType,
+                      materialId: item.materialId,
                       range: '',
                       amount: 0,
                       unit: item.unit,
@@ -278,40 +285,59 @@ export function TimetableTab({
 
                     {isStudyPeriod && !absence && matchedPlans.length > 0 && (
                       <div className="mt-2 space-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2">
-                        {matchedPlans.map((pl, idx) => (
-                          <div key={idx} className="flex flex-wrap items-center gap-2 text-[10px]">
-                            <span className="font-black text-[#0071E3] bg-[#0071E3]/5 dark:bg-[#0071E3]/15 border border-[#0071E3]/10 dark:border-white/10 px-1.5 py-0.5 rounded">
-                              {pl.subjectName}
-                            </span>
-                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
-                              {pl.title}
-                            </span>
-                            {pl.selfPaced ? (
-                              <>
-                                <span className="font-bold text-slate-500 dark:text-slate-400">
-                                  자율 목표 (누적 {pl.current ?? 0}{pl.unit})
-                                </span>
-                                <Badge className="bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/[0.06] text-[#0071E3] text-[9px] border-[#0071E3]/15 dark:border-white/10 font-bold px-1.5 py-0 rounded border">
-                                  자율 목표
-                                </Badge>
-                              </>
-                            ) : (
-                              <span className="font-bold text-slate-500 dark:text-slate-400">
-                                오늘 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
-                                {pl.isCompleted && (
-                                  <span className="ml-1.5 text-emerald-600 font-extrabold text-[9px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-white/10 rounded px-1.5 py-0.5">
-                                    (실제: {pl.actualAmount !== undefined ? `${pl.actualAmount}${pl.unit}` : '완료'} 완료 ✅)
-                                  </span>
-                                )}
+                        {matchedPlans.map((pl, idx) => {
+                          const rowContent = (
+                            <>
+                              <span className="font-black text-[#0071E3] bg-[#0071E3]/5 dark:bg-[#0071E3]/15 border border-[#0071E3]/10 dark:border-white/10 px-1.5 py-0.5 rounded">
+                                {pl.subjectName}
                               </span>
-                            )}
-                            {pl.speed && pl.speed !== 1.0 && (
-                              <Badge className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 font-bold px-1 py-0 rounded border-0">
-                                {pl.speed}배속 적용됨
-                              </Badge>
-                            )}
-                          </div>
-                        ))}
+                              <span className="font-semibold text-slate-700 dark:text-slate-300 truncate max-w-[200px]">
+                                {pl.title}
+                              </span>
+                              {pl.selfPaced ? (
+                                <>
+                                  <span className="font-bold text-slate-500 dark:text-slate-400">
+                                    자율 목표 (누적 {pl.current ?? 0}{pl.unit})
+                                  </span>
+                                  <Badge className="bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/[0.06] text-[#0071E3] text-[9px] border-[#0071E3]/15 dark:border-white/10 font-bold px-1.5 py-0 rounded border">
+                                    자율 목표
+                                  </Badge>
+                                </>
+                              ) : (
+                                <span className="font-bold text-slate-500 dark:text-slate-400">
+                                  오늘 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
+                                  {pl.isCompleted && (
+                                    <span className="ml-1.5 text-emerald-600 font-extrabold text-[9px] bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-white/10 rounded px-1.5 py-0.5">
+                                      (실제: {pl.actualAmount !== undefined ? `${pl.actualAmount}${pl.unit}` : '완료'} 완료 ✅)
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                              {pl.speed && pl.speed !== 1.0 && (
+                                <Badge className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 font-bold px-1 py-0 rounded border-0">
+                                  {pl.speed}배속 적용됨
+                                </Badge>
+                              )}
+                            </>
+                          );
+                          // 항목 탭 → 자료 상세 시트(핸들러 있을 때만 버튼화 — 학부모 뷰는 기존 그대로).
+                          return openMaterialDetail ? (
+                            <button
+                              key={idx}
+                              type="button"
+                              onClick={() => openMaterialDetail(pl.type, pl.materialId)}
+                              aria-label={`${pl.subjectName} ${pl.title} 상세 보기`}
+                              className="flex w-full flex-wrap items-center gap-2 rounded-lg text-left text-[10px] transition hover:bg-[#0071E3]/[0.04] dark:hover:bg-[#0071E3]/10 active:scale-[0.99]"
+                            >
+                              {rowContent}
+                              <ChevronRight className="h-3 w-3 shrink-0 text-slate-300 dark:text-slate-600" />
+                            </button>
+                          ) : (
+                            <div key={idx} className="flex flex-wrap items-center gap-2 text-[10px]">
+                              {rowContent}
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 

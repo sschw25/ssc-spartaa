@@ -1146,6 +1146,57 @@ export function useReportState() {
     }
   };
 
+  // 오늘 시작점 조정 — /api/student/progress/adjust 호출.
+  // 자동 승인(auto=true): 서버가 current+계획을 오늘 anchor 로 재생성 → 최소 데이터(subjects 등)만 병합(조용한 갱신).
+  //   (리포트 student 는 마스킹 투영이라 전체 교체 대신 진도 관련 필드만 덮는다 — changeRequests 등 파생 필드 보존)
+  // 범위 초과(auto=false): pending 신청 생성 → changeRequests 에 낙관적 추가(sendRequest 패턴).
+  // 한도 소진(needsReason): 토스트 없이 그대로 반환 — 패널이 사유 입력 모드로 전환해 안내한다.
+  const adjustStartPoint = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    newValue: number,
+    reason?: string,
+  ): Promise<{ ok: boolean; auto?: boolean; needsReason?: boolean; threshold?: number }> => {
+    try {
+      const res = await fetch('/api/student/progress/adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, newValue, ...(reason ? { reason } : {}) }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        mutationSeqRef.current += 1;
+        if (json.auto && json.data) {
+          setStudent((prev) => (prev
+            ? {
+                ...prev,
+                subjects: json.data.subjects ?? prev.subjects,
+                books: json.data.books ?? prev.books,
+                lectures: json.data.lectures ?? prev.lectures,
+                updatedAt: json.data.updatedAt ?? prev.updatedAt,
+              }
+            : prev));
+          toast.success('시작점을 옮겼어요. 오늘 계획도 다시 맞춰뒀어요.');
+          return { ok: true, auto: true };
+        }
+        if (json.request) {
+          setStudent((prev) => (prev ? { ...prev, changeRequests: [json.request, ...(prev.changeRequests || [])] } : prev));
+        }
+        toast.success('신청을 보냈어요! 관리자 확인 후 반영돼요.');
+        return { ok: true, auto: false };
+      }
+      if (json?.needsReason) {
+        // 에러 토스트 대신 패널 내 안내 — 사유 입력 모드 전환은 StartPointAdjustPanel 몫.
+        return { ok: false, needsReason: true, threshold: typeof json.threshold === 'number' ? json.threshold : undefined };
+      }
+      toast.error(json?.message || '시작점 조정에 실패했어요. 다시 시도해 주세요.');
+      return { ok: false };
+    } catch {
+      toast.error('네트워크 오류로 조정하지 못했어요. 다시 시도해 주세요.');
+      return { ok: false };
+    }
+  };
+
   // 기간 목표(모드 B) 누적 진행량 입력 — deadline plan 의 actualAmount 를 갱신하고
   // 자료 current(currentPage/completedLectures)를 parsePlanBounds 기준으로 best-effort 동기화.
   // 저장은 전용 progress API(deadlineAmount)를 재사용. 낙관적 갱신은 서버 응답값으로 확정.
@@ -2345,6 +2396,7 @@ export function useReportState() {
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,
+    adjustStartPoint,
     formatNotificationDate,
     notificationCount,
     notificationPreview,
