@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
-import { generateDetailedPlans } from '@/lib/progress-plan';
+import { generateDetailedPlans, getMaterialStudyDays } from '@/lib/progress-plan';
 import { appendThreadMessage } from '@/lib/thread';
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
@@ -12,7 +12,9 @@ const clampProgress = (value: unknown, total: unknown) => {
   const progress = Number(value);
   const max = Math.max(0, Number(total) || 0);
   if (!Number.isFinite(progress)) return null;
-  return Math.max(0, Math.min(max, Math.round(progress)));
+  const rounded = Math.max(0, Math.round(progress));
+  // selfPaced 자료는 총량(max)이 0 → 상한을 걸지 않고 누적값 보존 (학생 진도 경로와 동일)
+  return max > 0 ? Math.min(rounded, max) : rounded;
 };
 
 const appendInputLog = (inputLog: unknown, dateKey: string) => {
@@ -107,8 +109,6 @@ export async function PATCH(
         const hasLecture = s.lectures?.some((l: any) => l.id === materialId);
         return hasBook || hasLecture;
       });
-      const studyDays = parentSubject?.studyDays;
-
       const updateBook = (book: any) => {
         if (book.id !== materialId) return book;
         const updated = { ...book };
@@ -137,7 +137,7 @@ export async function PATCH(
             updated.currentPage,
             updated.unit,
             updated.reviewPasses || [],
-            studyDays,
+            getMaterialStudyDays(parentSubject?.studyDays, updated.studyDays),
             1.0,
             updated.estimatedMinutesPerUnit,
             parentSubject?.studyTime,
@@ -188,7 +188,7 @@ export async function PATCH(
             updated.completedLectures,
             undefined,
             updated.reviewPasses || [],
-            studyDays,
+            getMaterialStudyDays(parentSubject?.studyDays, updated.studyDays),
             nextSpeed,
             updated.estimatedMinutesPerUnit,
             parentSubject?.studyTime,
