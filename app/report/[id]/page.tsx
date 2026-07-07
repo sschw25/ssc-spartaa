@@ -19,9 +19,8 @@ import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
-import { MissionsHub } from '@/components/student/missions-hub';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
-import { Loader2, AlertCircle, BookOpen, Shield, Flame } from 'lucide-react';
+import { Loader2, AlertCircle, BookOpen, Shield } from 'lucide-react';
 import { TabHero } from '@/components/report/tab-hero';
 import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student } from '@/lib/types/student';
 
@@ -51,7 +50,6 @@ function StudentReportInner() {
   const [pendingCampusEvents, setPendingCampusEvents] = useState<CampusEvent[]>([]);
   const [mealPlans, setMealPlans] = useState<MealPlanWithOrder[]>([]);
   // 미션 탭은 첫 활성화 때 마운트(그때 API 호출) — 초기 로딩을 가볍게 유지한다.
-  const [missionsTabActivated, setMissionsTabActivated] = useState(false);
   const [requestSubTab, setRequestSubTab] = useState<ApplicationSubTab>('leave');
   const [learningSubTab, setLearningSubTab] = useState<LearningSubTab>('timetable');
   const [lifeSubTab, setLifeSubTab] = useState<LifeSubTab>('attendance-status');
@@ -252,7 +250,6 @@ function StudentReportInner() {
   }, [setActiveTab]);
 
   useEffect(() => {
-    if (activeTab === 'student-missions') setMissionsTabActivated(true);
     if (applyContainerTab(activeTab)) return;
     if (activeTab === 'coupon-exchange') {
       setRequestSubTab('coupon');
@@ -515,33 +512,7 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 미션 탭 (학생 전용, 독립 탭) — 오늘 할 일 허브 + 쿠폰 미션 통합 */}
-        {isStudentReport && missionsTabActivated && (
-          <div
-            id="student-missions"
-            className={`no-print scroll-mt-24 mx-auto w-full max-w-[680px] px-4 sm:px-5 ${activeTab === 'student-missions' ? 'block' : 'hidden'}`}
-          >
-            <div className="mb-4">
-              <TabHero
-                eyebrow="Missions"
-                icon={Flame}
-                title="미션"
-                description="오늘 할 일을 해내고 미션을 달성하면 쿠폰이 쌓여요."
-              />
-            </div>
-            <MissionsHub
-              studentId={student.id}
-              studentName={student.name}
-              embedded
-              onGoToExchange={() => {
-                slideDirRef.current = 1;
-                setRequestSubTab('coupon');
-                setActiveTab('student-requests');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }}
-            />
-          </div>
-        )}
+        {/* 미션 탭은 해체됨 — 연속출석은 홈, 쿠폰 미션은 생활·쿠폰 탭으로 이동 */}
 
         {isStudentReport && activeTab === 'learning' && (
           <section id="learning" className="scroll-mt-24 space-y-4">
@@ -551,6 +522,21 @@ function StudentReportInner() {
               title="학습"
               description="오늘 계획·주간 계획·과목별 진도·성적을 한곳에서 확인해요."
             />
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setLearningSubTab('subject-progress');
+                  // 서브탭 전환 후 요청 폼(과목별 진도 탭 내)으로 스크롤.
+                  setTimeout(() => {
+                    document.getElementById('student-request-panel')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 50);
+                }}
+                className="rounded-2xl border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-4 py-2 text-xs font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/[0.04] dark:hover:bg-[#0071E3]/15 active:scale-[0.98]"
+              >
+                학습 관련 요청
+              </button>
+            </div>
             {renderSubTabs(
               LEARNING_SUB_TABS,
               learningSubTab,
@@ -629,27 +615,9 @@ function StudentReportInner() {
           student={student}
           isStudentReport={isStudentReport}
           weeklyDailyPlans={weeklyDailyPlans}
-          pendingPlanId={pendingPlanId}
-          setPendingPlanId={setPendingPlanId}
-          pendingAmount={pendingAmount}
-          setPendingAmount={setPendingAmount}
-          updatePlanCompletion={updatePlanCompletion}
           updateDeadlineProgress={updateDeadlineProgress}
           deadlineGoals={deadlineGoals}
-          requestForm={requestForm}
-          setRequestForm={setRequestForm}
-          requestSubmitting={requestSubmitting}
-          requestCustomOpen={requestCustomOpen}
-          setRequestCustomOpen={setRequestCustomOpen}
-          sendRequest={sendRequest}
-          cancelRequest={cancelRequest}
-          showRequestHistory={showRequestHistory}
-          setShowRequestHistory={setShowRequestHistory}
-          requestError={requestError}
           activeTab={learningActiveTab}
-          studyTimeLabels={studyTimeLabels}
-          realignStudentPlans={realignStudentPlans}
-          realigningPlans={realigningPlans}
         />
 
         {/* 4. 과목별 진도 탭 */}
@@ -662,7 +630,18 @@ function StudentReportInner() {
           onCarryoverApplied={applyCarryover}
           materialBenchmarks={materialBenchmarks}
           activeTab={learningActiveTab}
-          setActiveTab={selectReportTab}
+          requestForm={requestForm}
+          setRequestForm={setRequestForm}
+          requestSubmitting={requestSubmitting}
+          requestCustomOpen={requestCustomOpen}
+          setRequestCustomOpen={setRequestCustomOpen}
+          sendRequest={sendRequest}
+          cancelRequest={cancelRequest}
+          showRequestHistory={showRequestHistory}
+          setShowRequestHistory={setShowRequestHistory}
+          requestError={requestError}
+          realignStudentPlans={realignStudentPlans}
+          realigningPlans={realigningPlans}
         />
 
         {/* 오답 노트 (독립 탭) — 과목별 진도에서 분리한 교재별 오답 사유 태깅 */}

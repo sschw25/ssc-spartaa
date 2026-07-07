@@ -224,6 +224,9 @@ export function TimetableTab({
         </div>
       )}
 
+      {/* 요일별 그리드·시간대 배정 뷰는 학부모 리포트 전용 — 학생 페이지 '오늘 계획'은 실시간 하루 계획표만 노출 */}
+      {!isStudentReport && (
+      <>
       <div className="flex justify-between items-center">
         <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 tracking-wider uppercase flex items-center gap-2">
           <Calendar className="w-4 h-4 text-[#0071E3]" />
@@ -333,6 +336,8 @@ export function TimetableTab({
           );
         })}
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -4,6 +4,7 @@ import React from 'react';
 import { ArrowRight, CheckCircle2, Clock, Gift, Sparkles, Ticket, XCircle } from 'lucide-react';
 import type { Student, RewardRedemption } from '@/lib/types/student';
 import { getRewardLabel } from '@/lib/leave';
+import { MissionsCard } from '@/components/report/missions-card';
 
 interface CouponTabProps {
   student: Student;
@@ -141,6 +142,9 @@ export function CouponTab({ student, activeTab, onGoToExchange }: CouponTabProps
           </div>
         )}
       </section>
+
+      {/* 쿠폰 미션 — 미션 탭 해체로 여기(생활·쿠폰) 하단으로 이동. 획득 기회+최근 적립. */}
+      <MissionsCard onGoToExchange={onGoToExchange} />
     </div>
   );
 }

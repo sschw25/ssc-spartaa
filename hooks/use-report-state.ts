@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Flame, Target } from 'lucide-react';
+import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
 import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, MakeupCarryover, ThreadMessage } from '@/lib/types/student';
 import {
@@ -289,7 +289,6 @@ const STUDENT_TAB_IDS = [
   'student-requests',
   'student-suggestions',
   'clinic-booking',
-  'student-missions',
   'coupon-exchange',
   'student-coupons',
   'subject-progress',
@@ -2000,7 +1999,6 @@ export function useReportState() {
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
         { href: '#learning', label: '학습', meta: `오늘 ${todaySubjects.length}개 · 진도·성적`, icon: BookOpen },
         { href: '#wrong-note', label: '오답 노트', meta: '교재별 오답 사유', icon: Target },
-        { href: '#student-missions', label: '미션', meta: `보상 · 쿠폰 ${student.leaveCoupons ?? 0}장`, icon: Flame },
         { href: '#student-requests', label: '신청', meta: `상담 · 반차 ${homeHalfLeft}회`, icon: ClipboardList },
         { href: '#life', label: '생활', meta: `등하원 · 벌점 ${totalPenaltyPoints}점`, icon: Shield },
         { href: '#student-notifications', label: '알림', meta: `${notificationCount}개`, icon: Bell },

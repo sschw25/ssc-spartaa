@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BookOpen, Tv, FileText, MessageSquare, CheckCircle2, Clock } from 'lucide-react';
-import { Student, DetailedPlan, MakeupCarryover } from '@/lib/types/student';
+import { Student, DetailedPlan, MakeupCarryover, ProposedGoal } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
   formatPaceComparison,
@@ -15,6 +15,23 @@ import { kstToday } from '@/lib/leave';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { toast } from 'sonner';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
+import { LearningRequestPanel } from '@/components/report/learning-request-panel';
+
+type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
+
+type RequestForm = {
+  requestType: string;
+  message: string;
+  materialId: string;
+  materialType: 'book' | 'lecture';
+  goalType: GoalType;
+  goalValue: string;
+  currentProgress: string;
+  proposedWeekNumber: string;
+  proposedRangeText: string;
+  speedMultiplier: string;
+  currentGoalSnapshot: { goalType?: GoalType; goalValue?: number; speedMultiplier?: number } | null;
+};
 
 // 과목별 진도 입력 히트맵 — 최근 35일. 파랑=입력한 날 / 옅은칸=학습일·미입력 / 점=비학습일·휴가일.
 function InputHeatmap({ inputLog, studyDays, leaveDates }: { inputLog?: string[]; studyDays?: string[]; leaveDates: Set<string> }) {
@@ -152,7 +169,19 @@ interface SubjectProgressTabProps {
   onCarryoverApplied?: (record: MakeupCarryover) => void;
   materialBenchmarks: MaterialBenchmarkMap;
   activeTab: string;
-  setActiveTab: (tab: string) => void;
+  // 학습 관련 요청/진도 재조정 패널(execution-plan 탭에서 이동) 관련 props.
+  requestForm: RequestForm;
+  setRequestForm: React.Dispatch<React.SetStateAction<RequestForm>>;
+  requestSubmitting: boolean;
+  requestCustomOpen: boolean;
+  setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal) => Promise<void>;
+  cancelRequest: (id: string) => Promise<void>;
+  showRequestHistory: boolean;
+  setShowRequestHistory: (show: boolean) => void;
+  requestError: string;
+  realignStudentPlans?: (mode: 'keepTargetDate' | 'keepPace') => Promise<void>;
+  realigningPlans?: boolean;
 }
 
 export function SubjectProgressTab({
@@ -164,7 +193,18 @@ export function SubjectProgressTab({
   onCarryoverApplied,
   materialBenchmarks,
   activeTab,
-  setActiveTab,
+  requestForm,
+  setRequestForm,
+  requestSubmitting,
+  requestCustomOpen,
+  setRequestCustomOpen,
+  sendRequest,
+  cancelRequest,
+  showRequestHistory,
+  setShowRequestHistory,
+  requestError,
+  realignStudentPlans,
+  realigningPlans,
 }: SubjectProgressTabProps) {
   const [pendingPlanKey, setPendingPlanKey] = React.useState<string | null>(null);
   const [pendingAmount, setPendingAmount] = React.useState(0);
@@ -184,10 +224,12 @@ export function SubjectProgressTab({
   );
   const alreadyCarried = hasCarryoverInRealWeek(student.makeupCarryovers, thisWeek);
   const coupons = student.leaveCoupons ?? 0;
+  // 요청 폼은 이제 이 탭 안(LearningRequestPanel)에 있으므로, 탭 이동 대신 같은 탭 내 폼으로 스크롤한다.
   const goToChangeRequest = React.useCallback(() => {
-    setActiveTab('execution-plan');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [setActiveTab]);
+    const el = document.getElementById('student-request-panel');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   const handleCarryover = async (subjectId: string, materialId: string, materialType: 'book' | 'lecture', amount: number, unit: string) => {
     if (!deferLeave || carrying) return;
@@ -531,6 +573,24 @@ export function SubjectProgressTab({
           </div>
         </div>
       )}
+
+      {/* 학습 관련 요청 + 진도 재조정 (execution-plan 탭에서 이동) — 학생 본인만 노출 */}
+      <LearningRequestPanel
+        student={student}
+        isStudentReport={isStudentReport}
+        requestForm={requestForm}
+        setRequestForm={setRequestForm}
+        requestSubmitting={requestSubmitting}
+        requestCustomOpen={requestCustomOpen}
+        setRequestCustomOpen={setRequestCustomOpen}
+        sendRequest={sendRequest}
+        cancelRequest={cancelRequest}
+        showRequestHistory={showRequestHistory}
+        setShowRequestHistory={setShowRequestHistory}
+        requestError={requestError}
+        realignStudentPlans={realignStudentPlans}
+        realigningPlans={realigningPlans}
+      />
 
       {!student.subjects || student.subjects.length === 0 ? (
         (student.books.length === 0 && student.lectures.length === 0 ? (

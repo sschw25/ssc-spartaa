@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, type LucideIcon } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, Home, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -11,6 +11,7 @@ import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { PomodoroTimer } from './pomodoro-timer-modal';
 import { TabHero } from './tab-hero';
+import { StreakCard } from './streak-card';
 import { getLeaveDates, getLeaveExemptions, getMakeupAmount, getMaterialStudyDays } from '@/lib/progress-plan';
 
 type DailyPlanEntry = {
@@ -341,6 +342,14 @@ export function HomeOverviewTab({
     <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 dark:border-white/10 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
       {isStudentReport ? (
         <div className="stagger-children w-full space-y-5">
+          {/* 홈 대표카드 + 연속출석(미션 탭 해체로 홈으로 이동) */}
+          <TabHero
+            eyebrow="Home"
+            icon={Home}
+            title="홈"
+            description="오늘 할 일과 연속출석을 한곳에서 확인해요."
+          />
+          <StreakCard />
           {totalMakeup > 0 && (
             <p className="flex items-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/25 px-3.5 py-2.5 text-[12px] font-bold text-amber-800 dark:text-amber-300">
               <AlertTriangle className="h-4 w-4 shrink-0" />
