@@ -7,6 +7,9 @@ import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE, slotMatchesPeriod } from '@/lib/academy-timetable';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { getMaterialStudyDays } from '@/lib/progress-plan';
+import { getAwayRangesForDay, type WeekdayKey } from '@/lib/away-impact';
+import { getLeaveTypeLabel } from '@/lib/leave';
+import type { LeaveRequest } from '@/lib/types/student';
 
 type DayKey = NonNullable<SubjectProgress['studyDays']>[number];
 
@@ -70,6 +73,41 @@ export function TimetableTab({
   const getSubjectColorClass = (subjectName?: string) => {
     void subjectName;
     return 'bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-white/10';
+  };
+
+  // ── 오늘 빠지는 시간(휴가·정기외출) → 교시별 표시 ─────────────────────────────
+  // 일회성 승인 휴가는 슬롯/전일로, 정기 외출은 시간 겹침으로 판정한다.
+  const absenceTodayStr = getSeoulDateKey();
+  const todayLeaves = (student.leaveRequests || []).filter(
+    (req) => req.status === 'approved' && req.date === absenceTodayStr,
+  );
+  // 휴가 종류 → 면제 슬롯. getLeaveExemptions(진도 소스)와 동일 규칙으로 맞춘다.
+  const resolveLeaveSlot = (req: LeaveRequest): 'morning' | 'afternoon' | 'night' | 'fullday' => {
+    const t = req.type;
+    if (t === 'morning' || t === 'afternoon' || t === 'night') return t;
+    if (t === 'fullday' || t === 'personal_fullday') return 'fullday';
+    const s = req.slot;
+    if (s === 'morning' || s === 'afternoon' || s === 'night' || s === 'fullday') return s;
+    return 'fullday'; // 병가·개인반차(슬롯 미지정) → 하루 종일
+  };
+  const awayRanges = getAwayRangesForDay(student.awaySchedules, absenceTodayStr, todayDayKey as WeekdayKey);
+
+  // study 교시 하나가 휴가/외출로 비는지 — 비면 배지 라벨과 종류 반환.
+  const getPeriodAbsence = (period: (typeof ACADEMY_TIMETABLE)[number]): { label: string; kind: 'leave' | 'away' } | null => {
+    const isStudy = period.type === 'study' || period.type === 'late-study' || period.type === 'supplement';
+    if (!isStudy) return null;
+    for (const req of todayLeaves) {
+      const slot = resolveLeaveSlot(req);
+      if (slot === 'fullday' || (period.studyTime && period.studyTime === slot)) {
+        return { label: getLeaveTypeLabel(req.type), kind: 'leave' };
+      }
+    }
+    const pStart = toMinutes(period.start);
+    const pEnd = toMinutes(period.end);
+    for (const r of awayRanges) {
+      if (pStart < r.end && r.start < pEnd) return { label: r.label, kind: 'away' };
+    }
+    return null;
   };
 
   return (
@@ -183,24 +221,30 @@ export function TimetableTab({
               else if (period.label.includes('7교시')) periodNumLabel = '7교시';
               else if (period.label.includes('심야 자율')) periodNumLabel = '8교시';
 
+              const absence = getPeriodAbsence(period);
+
               return (
                 <div key={pIdx} className="relative group">
                   <span className={`absolute -left-[27.5px] top-1.5 w-3.5 h-3.5 rounded-full border-2 bg-white dark:bg-[#1c1c1e] flex items-center justify-center transition-all ${
-                    isCurrent
-                      ? 'border-[#0071E3] ring-4 ring-[#0071E3]/20 scale-110 z-10'
-                      : isPast
-                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
-                        : 'border-slate-200 dark:border-white/10'
+                    absence
+                      ? 'border-amber-400 bg-amber-50 dark:bg-amber-500/10'
+                      : isCurrent
+                        ? 'border-[#0071E3] ring-4 ring-[#0071E3]/20 scale-110 z-10'
+                        : isPast
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10'
+                          : 'border-slate-200 dark:border-white/10'
                   }`}>
-                    {isCurrent && <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-ping" />}
+                    {isCurrent && !absence && <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-ping" />}
                   </span>
 
                   <div className={`p-3 rounded-2xl border transition-all text-left ${
-                    isCurrent
-                      ? 'bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 border-[#0071E3]/25 shadow-sm'
-                      : isPast
-                        ? 'bg-slate-50/50 dark:bg-white/5 border-slate-100 dark:border-white/10 opacity-70'
-                        : 'bg-white dark:bg-[#1c1c1e] border-slate-100 dark:border-white/10'
+                    absence
+                      ? 'bg-amber-50/60 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+                      : isCurrent
+                        ? 'bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 border-[#0071E3]/25 shadow-sm'
+                        : isPast
+                          ? 'bg-slate-50/50 dark:bg-white/5 border-slate-100 dark:border-white/10 opacity-70'
+                          : 'bg-white dark:bg-[#1c1c1e] border-slate-100 dark:border-white/10'
                   }`}>
                     <div className="flex flex-wrap items-center justify-between gap-1.5">
                       <div className="flex items-center gap-1.5">
@@ -216,7 +260,21 @@ export function TimetableTab({
                       <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">{period.start} ~ {period.end}</span>
                     </div>
 
-                    {isStudyPeriod && matchedPlans.length > 0 && (
+                    {isStudyPeriod && absence && (
+                      <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-dashed border-amber-200/70 dark:border-amber-500/20 pt-2">
+                        <Badge className="bg-amber-100 dark:bg-amber-500/20 hover:bg-amber-100 text-amber-700 dark:text-amber-300 text-[10px] font-black border-amber-200 dark:border-amber-500/20 px-2 py-0.5 rounded-lg border">
+                          {absence.kind === 'away' ? '외출' : '휴가'}
+                        </Badge>
+                        <span className="text-[10px] font-bold text-amber-700/90 dark:text-amber-300/90">
+                          {absence.label}
+                        </span>
+                        <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">
+                          이 시간은 학습 계획에서 제외돼요
+                        </span>
+                      </div>
+                    )}
+
+                    {isStudyPeriod && !absence && matchedPlans.length > 0 && (
                       <div className="mt-2 space-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2">
                         {matchedPlans.map((pl, idx) => (
                           <div key={idx} className="flex flex-wrap items-center gap-2 text-[10px]">
@@ -255,7 +313,7 @@ export function TimetableTab({
                       </div>
                     )}
 
-                    {isStudyPeriod && matchedPlans.length === 0 && (
+                    {isStudyPeriod && !absence && matchedPlans.length === 0 && (
                       <p className="mt-1 text-[9px] font-bold text-slate-400 dark:text-slate-400">
                         개별 자습 및 취약 영역 보완 학습 시간
                       </p>

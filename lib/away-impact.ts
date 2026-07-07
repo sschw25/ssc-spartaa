@@ -70,6 +70,27 @@ export function getAwayImpactSlots(awaySchedules: AwaySchedule[] | undefined, to
   return map;
 }
 
+// 특정 요일의 정기 외출 시간대(분 범위) 목록 — 시간표(교시)별 겹침 표시용.
+// getAwayImpactSlots 는 '과반 겹침=슬롯 상실'(계획 재조정용)이라 교시 단위 표시엔 부적합해,
+// 여기선 외출 시간 원본 범위를 그대로 돌려주고 교시 겹침 판정은 호출부에서 한다.
+export function getAwayRangesForDay(
+  awaySchedules: AwaySchedule[] | undefined,
+  todayKey: string,     // YYYY-MM-DD (until 활성 판정)
+  dayKey: WeekdayKey,   // 요일 키
+): Array<{ start: number; end: number; label: string }> {
+  const out: Array<{ start: number; end: number; label: string }> = [];
+  for (const sch of awaySchedules || []) {
+    if (!isActiveAway(sch, todayKey)) continue;
+    if (!scheduleWeekdays(sch).has(dayKey)) continue;
+    const start = timeToMin(sch.awayTime);
+    if (Number.isNaN(start)) continue;
+    const end = sch.returnTime && !Number.isNaN(timeToMin(sch.returnTime)) ? timeToMin(sch.returnTime) : 24 * 60;
+    const label = sch.returnTime ? `외출 ${sch.awayTime}~${sch.returnTime}` : `외출 ${sch.awayTime}~`;
+    out.push({ start, end, label });
+  }
+  return out;
+}
+
 export interface AffectedSubject {
   subject: SubjectProgress;
   lostStudyDays: WeekdayKey[]; // 외출로 잃은(그 과목 슬롯이 막힌) 학습 요일

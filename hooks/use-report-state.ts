@@ -18,7 +18,8 @@ import { ACADEMY_TIMETABLE, STUDY_TIME_SLOTS, getStudyTimeSlot } from '@/lib/aca
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { deriveDeadlineGoals } from '@/lib/deadline-goals';
-import { getMaterialStudyDays } from '@/lib/progress-plan';
+import { getMaterialStudyDays, getLeaveExemptions } from '@/lib/progress-plan';
+import { getAwayImpactSlots } from '@/lib/away-impact';
 import { buildDisplayThread } from '@/lib/thread';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
@@ -1476,6 +1477,11 @@ export function useReportState() {
     const _weekStart = new Date(_today);
     _weekStart.setDate(_today.getDate() - _today.getDay());
 
+    // 오늘 계획 슬롯 제외용 — 일회성 휴가(날짜별 면제)·정기 외출(요일별 상실 슬롯).
+    // 슬롯(오전/오후/야간)이 지정된 계획만 제외한다. studyTime 미지정 계획은 제외하지 않음(사용자 규칙).
+    const _leaveExemptions = getLeaveExemptions(student);
+    const _awayImpact = getAwayImpactSlots(student.awaySchedules, formatDateKey(_today));
+
     return Array.from({ length: visiblePlanWeeks }, (_, weekOffset) => {
       const start = new Date(_weekStart);
       start.setDate(_weekStart.getDate() + weekOffset * 7);
@@ -1553,7 +1559,17 @@ export function useReportState() {
             return [...lectures, ...books];
           });
 
-        return { key: day.key, label: day.label, dateKey, dateLabel: formatShortDate(currentDate), entries };
+        // 이 날 휴가/외출로 비는 슬롯 — 슬롯 지정 계획만 제외(미지정은 유지).
+        const coveredSlots = new Set<string>();
+        const lx = _leaveExemptions.get(dateKey);
+        if (lx) {
+          if (lx.full) { coveredSlots.add('morning'); coveredSlots.add('afternoon'); coveredSlots.add('night'); }
+          else lx.slots.forEach((s) => coveredSlots.add(s));
+        }
+        _awayImpact.get(day.key as 'sun' | 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat')?.forEach((s) => coveredSlots.add(s));
+        const visibleEntries = entries.filter((entry) => !(entry.studyTime && coveredSlots.has(entry.studyTime)));
+
+        return { key: day.key, label: day.label, dateKey, dateLabel: formatShortDate(currentDate), entries: visibleEntries };
       });
 
       return {
@@ -1565,7 +1581,7 @@ export function useReportState() {
       };
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.subjects, visiblePlanWeeks]);
+  }, [student?.subjects, student?.leaveRequests, student?.awaySchedules, visiblePlanWeeks]);
 
   // 기간 목표(모드 B) — deadline plan 을 서버(missions-hub)와 동일 소스로 파생.
   const deadlineDerivation = useMemo(() => {
