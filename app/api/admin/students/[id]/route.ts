@@ -1,8 +1,49 @@
 import { NextResponse } from 'next/server';
 import { getStudentById, deleteStudent, patchStudentSubjects, patchStudentProfile, updateStudentById, removeConsultationBookingsForStudent, getStudentAuthRecords } from '@/lib/store';
-import { Student } from '@/lib/types/student';
+import { BookProgress, LectureProgress, Student, SubjectProgress } from '@/lib/types/student';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
+
+// 학생 소유 진도 필드 보존 병합 — detail-sheet 전체 저장은 시트 로드 시점의 subjects 스냅샷을
+// 통째로 보내므로, 시트가 열려 있는 사이 학생이 직접 쓴 필드(자율학습 studySlot·입력/복습 로그·
+// 오늘 할 일 완료·문풀 기록)가 stale 값으로 되돌아간다. 관리자 UI는 이 필드들을 편집하지 않으므로
+// 자료/계획 id 매칭으로 fresh(DB 최신) 값을 무조건 우선한다. (plan.isCompleted 는 관리자도
+// 토글하는 계약 필드라 병합 대상에서 제외 — 클라이언트 값 유지.)
+const STUDENT_OWNED_MATERIAL_FIELDS = ['studySlot', 'inputLog', 'reviewLog', 'solvedQuestions', 'incorrectTags'] as const;
+const STUDENT_OWNED_PLAN_FIELDS = ['dailyCompletions', 'actualAmount'] as const;
+
+function preserveStudentOwnedProgress(
+  freshSubjects: SubjectProgress[] | undefined,
+  nextSubjects: SubjectProgress[] | undefined,
+) {
+  if (!Array.isArray(freshSubjects) || !Array.isArray(nextSubjects)) return;
+  const freshMaterials = new Map<string, BookProgress | LectureProgress>();
+  freshSubjects.forEach((subject) => {
+    (subject.books || []).forEach((m) => freshMaterials.set(`book:${m.id}`, m));
+    (subject.lectures || []).forEach((m) => freshMaterials.set(`lecture:${m.id}`, m));
+  });
+  const mergeMaterial = (kind: 'book' | 'lecture', next: BookProgress | LectureProgress) => {
+    const fresh = freshMaterials.get(`${kind}:${next.id}`);
+    if (!fresh) return;
+    for (const field of STUDENT_OWNED_MATERIAL_FIELDS) {
+      (next as unknown as Record<string, unknown>)[field] = (fresh as unknown as Record<string, unknown>)[field];
+    }
+    if (Array.isArray(next.detailedPlans) && Array.isArray(fresh.detailedPlans)) {
+      const freshPlans = new Map(fresh.detailedPlans.map((p) => [p.id, p]));
+      next.detailedPlans.forEach((plan) => {
+        const freshPlan = freshPlans.get(plan.id);
+        if (!freshPlan) return;
+        for (const field of STUDENT_OWNED_PLAN_FIELDS) {
+          (plan as unknown as Record<string, unknown>)[field] = (freshPlan as unknown as Record<string, unknown>)[field];
+        }
+      });
+    }
+  };
+  nextSubjects.forEach((subject) => {
+    (subject.books || []).forEach((m) => mergeMaterial('book', m));
+    (subject.lectures || []).forEach((m) => mergeMaterial('lecture', m));
+  });
+}
 
 // 0. 특정 원생 단건 조회
 export async function GET(
@@ -89,6 +130,8 @@ export async function PUT(
       Array.isArray(v) ? (v.length > max ? v.slice(0, max) : v) : v;
 
     const result = await updateStudentById(id, (student) => {
+      // subjects 병합용 fresh 스냅샷 — assignArr('subjects')가 교체하기 전에 잡아둔다.
+      const freshSubjects = student.subjects;
       const assign = <K extends keyof Student>(key: K) => {
         if (key in studentData) student[key] = studentData[key];
       };
@@ -117,6 +160,7 @@ export async function PUT(
       assign('weeklyGradeCheck');
       // 진도·성적·면담 로그·외출 일정 (detail-sheet 편집 대상)
       assignArr('subjects', 500);
+      if ('subjects' in studentData) preserveStudentOwnedProgress(freshSubjects, student.subjects);
       assignArr('grades', 500);
       assignArr('consultationLogs', 500);
       assignArr('awaySchedules', 500);

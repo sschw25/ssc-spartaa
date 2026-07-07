@@ -3387,10 +3387,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           }
         }
 
-        // 현재 위치가 총량보다 크면 오타(순서 뒤집힘) 가능성이 높으므로 조용히 캡하지 않고 오류로 표시
+        // 현재 위치가 총량보다 크면 오타(순서 뒤집힘) 가능성이 높으므로 조용히 캡하지 않고 오류로 표시.
+        // 숫자가 있는데 형식을 인식하지 못한 줄은 이름만 등록으로 조용히 흡수하지 않고 오류로 표시
+        // (단위 누락·단위가 줄 끝이 아닌 오타를 총량 0 자료로 만들지 않기 위함).
         const invalidReason = currentAmount > totalAmount
           ? `현재 위치(${currentAmount})가 총량(${totalAmount})보다 큽니다 — [현재/총량] 순서를 확인해 주세요`
-          : '';
+          : nameOnly && /\d/.test(line)
+            ? '숫자가 있지만 형식을 인식하지 못했습니다 — "4강/64강"처럼 [현재/총량][단위]가 줄 끝에 오도록 입력해 주세요'
+            : '';
         currentAmount = Math.max(0, currentAmount);
 
         const lowerUnitText = unitText.toLowerCase();
@@ -3624,6 +3628,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             name: plan.title,
             totalLectures: plan.totalAmount,
             completedLectures: Math.min(plan.currentAmount, plan.totalAmount),
+            // 요일은 자료 단위 단일 소스 — 파싱된 요일 접두어를 자료에 기록해야 판정/오늘 계획에 반영된다.
+            ...(plan.studyDays && plan.studyDays.length > 0 ? { studyDays: plan.studyDays } : {}),
             updatedAt: now,
           });
           appliedPlanCount += 1;
@@ -3641,6 +3647,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             totalPages: plan.totalAmount,
             currentPage: Math.min(plan.currentAmount, plan.totalAmount),
             unit: plan.unit,
+            // 요일은 자료 단위 단일 소스 — 파싱된 요일 접두어를 자료에 기록해야 판정/오늘 계획에 반영된다.
+            ...(plan.studyDays && plan.studyDays.length > 0 ? { studyDays: plan.studyDays } : {}),
             updatedAt: now,
           });
           appliedPlanCount += 1;
@@ -3668,7 +3676,9 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     try {
       const success = await saveStudentData(updatedStudent);
       if (success) {
-        await Promise.all(uniquePlans.map(plan => fetch('/api/admin/shared-materials', {
+        // 이름만 등록(총량 0)은 shared-materials API가 총량 필수 검증으로 400을 반환하므로 제외
+        // (총량 0 자료로 자동완성 카탈로그를 오염시키지 않는 효과도 겸함).
+        await Promise.all(uniquePlans.filter(plan => plan.totalAmount > 0).map(plan => fetch('/api/admin/shared-materials', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

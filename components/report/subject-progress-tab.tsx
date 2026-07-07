@@ -426,9 +426,10 @@ export function SubjectProgressTab({
       {isStudentReport && (() => {
         const allBooks = (student.subjects || []).flatMap((s) => s.books || []);
         const allLectures = (student.subjects || []).flatMap((s) => s.lectures || []);
+        // 총량 미정(이름만 등록) 자료는 진도율 계산이 불가능하므로 전체 평균에서 제외 — 0%로 평균을 끌어내리지 않게.
         const pcts = [
-          ...allBooks.map((b) => (b.totalPages > 0 ? Math.min(1, (b.currentPage || 0) / b.totalPages) : 0)),
-          ...allLectures.map((l) => (l.totalLectures > 0 ? Math.min(1, (l.completedLectures || 0) / l.totalLectures) : 0)),
+          ...allBooks.filter((b) => (b.totalPages || 0) > 0).map((b) => Math.min(1, (b.currentPage || 0) / b.totalPages)),
+          ...allLectures.filter((l) => (l.totalLectures || 0) > 0).map((l) => Math.min(1, (l.completedLectures || 0) / l.totalLectures)),
         ];
         const total = pcts.length;
         if (total === 0) return null;
