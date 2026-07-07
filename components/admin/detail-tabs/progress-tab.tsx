@@ -279,7 +279,7 @@ export function ProgressTab() {
                 </div>
 
                 <textarea
-                  placeholder={'예: 행정법 기본강의 4강/64강 (64강 중 4강까지 들음)\n예: 영어 단어장 30p/200p (200p 중 30p까지 풂)\n예: 수학I 기출문제집 150p (새 교재 = 0/150p)\n예: 월수금 오전 국어 봉투모의고사 2회/10회 (요일·시간대는 선택)'}
+                  placeholder={'예: 행정법 기본강의 4강/64강 (64강 중 4강까지 들음)\n예: 영어 단어장 30p/200p (200p 중 30p까지 풂)\n예: 수학I 기출문제집 150p (새 교재 = 0/150p)\n예: 행정법 행정법오엑스 (이름만 = 총량·요일은 나중에 설정)\n예: 월수금 오전 국어 봉투모의고사 2회/10회 (요일·시간대는 선택)'}
                   value={quickPlanText}
                   onChange={(e) => setQuickPlanText(e.target.value)}
                   className="flex w-full rounded-lg border border-black/[0.08] dark:border-white/10 px-3 py-2 text-xs bg-white dark:bg-white/5 dark:text-slate-100 min-h-[78px] resize-y outline-none focus-visible:ring-2 focus-visible:ring-[#0071E3]/20"
@@ -311,7 +311,7 @@ export function ProgressTab() {
                         • 입력 형식: <strong>[요일(선택)] [시간대(선택)] [과목명] [자료명] [현재 위치/총분량(필수)]</strong>
                       </p>
                       <p>
-                        • <strong>현재 위치/총분량</strong>: <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">4강/64강</code>은 <strong>총 64강 중 4강까지 수강함</strong>, <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">30p/200p</code>는 <strong>총 200p 중 30p까지 풂</strong>을 뜻합니다. 슬래시 없이 <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">150p</code>처럼 총량만 쓰면 아직 시작 전(0/150p)으로 등록됩니다. 페이지(p), 강의(강), 회차(회) 외에 <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">장</code>, <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">문제</code>, <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">세트</code> 등 커스텀 단위도 감지합니다.
+                        • <strong>현재 위치/총분량</strong>: <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">4강/64강</code>은 <strong>총 64강 중 4강까지 수강함</strong>, <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">30p/200p</code>는 <strong>총 200p 중 30p까지 풂</strong>을 뜻합니다. 슬래시 없이 <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">150p</code>처럼 총량만 쓰면 아직 시작 전(0/150p)으로 등록됩니다. 페이지(p), 강의(강), 회차(회) 외에 <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">장</code>, <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">문제</code>, <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">세트</code> 등 커스텀 단위도 감지합니다. <strong>자료명만</strong> 써도(예: <code className="bg-black/[0.05] dark:bg-white/10 px-1 rounded text-slate-900 dark:text-slate-100">행정법 행정법오엑스</code>) 일단 등록되고, 총량·요일·목표는 나중에 자료별 설정에서 지정할 수 있어요.
                       </p>
                       <p>
                         • <strong>과목 및 자료명</strong>: 요일/시간대 키워드 뒤에 오는 <strong>첫 단어</strong>가 과목명으로 감지되며, 그 뒤 단어들이 교재/강좌명이 됩니다.
@@ -329,7 +329,8 @@ export function ProgressTab() {
                           영어 단어장 30p/200p <span className="text-slate-500 dark:text-slate-400 text-[10px]">(총 200p 중 30p까지 풂)</span> <br/>
                           수학I 기출문제집 150p <span className="text-slate-500 dark:text-slate-400 text-[10px]">(새 교재, 0/150p로 등록)</span> <br/>
                           월수금 오전 국어 봉투모의고사 2회/10회 <span className="text-slate-500 dark:text-slate-400 text-[10px]">(요일·시간대는 선택 입력)</span> <br/>
-                          영어 어휘 10문제/100문제 <span className="text-slate-500 dark:text-slate-400 text-[10px]">(커스텀 단위 '문제')</span>
+                          영어 어휘 10문제/100문제 <span className="text-slate-500 dark:text-slate-400 text-[10px]">(커스텀 단위 '문제')</span> <br/>
+                          행정법 행정법오엑스 <span className="text-slate-500 dark:text-slate-400 text-[10px]">(이름만 등록 = 총량·목표는 나중에 설정)</span>
                         </p>
                       </div>
                     </>
@@ -356,7 +357,7 @@ export function ProgressTab() {
                               </span>
                             ) : (
                               <span className="shrink-0 text-[#0071E3] font-bold">
-                                {[plan.cadence, plan.timeLabel].filter(Boolean).join(' ')}{plan.cadence || plan.timeLabel ? ' · ' : ''}현재 {plan.currentAmount}/{plan.totalAmount}{plan.unit}
+                                {[plan.cadence, plan.timeLabel].filter(Boolean).join(' ')}{plan.cadence || plan.timeLabel ? ' · ' : ''}{plan.totalAmount > 0 ? `현재 ${plan.currentAmount}/${plan.totalAmount}${plan.unit}` : `${plan.type === 'lecture' ? '인강' : '교재'} · 총량 미정(나중에 설정)`}
                               </span>
                             )}
                           </div>

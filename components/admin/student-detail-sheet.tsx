@@ -3362,6 +3362,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         let matchedIndex = -1;
 
         const slashMatch = line.match(/(\d+)\s*(?:강의|강|페이지|쪽|p|P|회|장|문제|세트|과|단원|ch|Ch|chapter|Chapter|일차)?\s*[\/\uFF0F]\s*(\d+)\s*(강의|강|페이지|쪽|p|P|회|장|문제|세트|과|단원|ch|Ch|chapter|Chapter|일차)$/i);
+        let nameOnly = false;
         if (slashMatch && slashMatch.index !== undefined) {
           currentAmount = Number(slashMatch[1]);
           totalAmount = Number(slashMatch[2]);
@@ -3370,11 +3371,20 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         } else {
           // 2. 단일 [총분량][단위] 패턴 — 슬래시가 없으면 "현재 0, 총량 그 숫자"로 해석 (예: 64강 = 0/64강)
           const amountMatch = line.match(/(\d+)\s*(강의|강|페이지|쪽|p|P|회|장|문제|세트|과|단원|ch|Ch|chapter|Chapter|일차)$/i);
-          if (!amountMatch || amountMatch.index === undefined) return null;
-          totalAmount = Number(amountMatch[1]);
-          currentAmount = 0;
-          unitText = amountMatch[2];
-          matchedIndex = amountMatch.index;
+          if (amountMatch && amountMatch.index !== undefined) {
+            totalAmount = Number(amountMatch[1]);
+            currentAmount = 0;
+            unitText = amountMatch[2];
+            matchedIndex = amountMatch.index;
+          } else {
+            // 3. 숫자/단위가 전혀 없으면 "이름만" 등록 — 총량·목표 미정으로 일단 생성하고
+            //    요일·분량·목표는 나중에 자료별 설정에서 지정한다. 예: "행정법 행정법오엑스".
+            nameOnly = true;
+            totalAmount = 0;
+            currentAmount = 0;
+            unitText = '';
+            matchedIndex = line.length; // beforeAmount = 줄 전체 → 요일/시간대 앞부분 파싱 후 나머지가 자료명
+          }
         }
 
         // 현재 위치가 총량보다 크면 오타(순서 뒤집힘) 가능성이 높으므로 조용히 캡하지 않고 오류로 표시
@@ -3384,7 +3394,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         currentAmount = Math.max(0, currentAmount);
 
         const lowerUnitText = unitText.toLowerCase();
-        const type: 'book' | 'lecture' = lowerUnitText.includes('강') ? 'lecture' : 'book';
+        // 이름만 등록은 단위가 없어 교재/인강 구분 불가 → 기본 교재, 이름에 강의/인강/강좌가 있으면 인강.
+        const type: 'book' | 'lecture' = (lowerUnitText.includes('강') || (nameOnly && /강의|인강|강좌/.test(line))) ? 'lecture' : 'book';
 
         // 단위 정규화 헬퍼
         const getCleanUnit = (rawUnit: string, materialType: 'book' | 'lecture'): string => {
@@ -3393,7 +3404,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           if (lower.includes('페이지') || lower === '쪽' || lower === 'p') return 'p';
           return rawUnit; // '회', '장', '문제', '세트', '과', '단원', '일차' 등은 그대로 반환
         };
-        const unit = getCleanUnit(unitText, type);
+        // 단위 미표기(숫자만) 시 기본값 — 교재 'p', 인강 '강'.
+        const unit = getCleanUnit(unitText, type) || (type === 'lecture' ? '강' : 'p');
 
         const beforeAmount = line.slice(0, matchedIndex).trim();
         const tokens = beforeAmount.split(' ').filter(Boolean);
@@ -3440,7 +3452,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         }
 
         const materialTokens = tokens.slice(cursor);
-        if (materialTokens.length === 0 || totalAmount <= 0) return null;
+        // 자료명이 없으면 제외. 총량 0(이름만 등록)은 허용 — 총량·목표는 나중에 설정.
+        if (materialTokens.length === 0) return null;
 
         const subjectName = materialTokens[0];
         const title = materialTokens.join(' ');
