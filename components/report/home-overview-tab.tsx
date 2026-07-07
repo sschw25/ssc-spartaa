@@ -4,8 +4,10 @@ import React, { useState } from 'react';
 import { toast } from 'sonner';
 import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, Home, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
+import type { ConsultationBooking } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { HomeHighlightsPanel } from './home-highlights-panel';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
@@ -93,6 +95,16 @@ interface HomeOverviewTabProps {
   } | null;
   deadlineGoals?: DeadlineGoal[];
   openWeeklyPlan?: () => void;
+  // 홈 최상단 '확인할 특이사항' 패널 데이터·내비게이션 (학생 리포트 전용, 옵셔널 — 학부모 호출부 미전달).
+  consultationBookings?: ConsultationBooking[];
+  pendingMealCount?: number;
+  pendingMockCount?: number;
+  pendingOtCount?: number;
+  pendingCampusCount?: number;
+  pendingSaturdayCount?: number;
+  openConsultation?: () => void;
+  openNotifications?: () => void;
+  openLeaveRequests?: () => void;
 }
 
 export function HomeOverviewTab({
@@ -130,6 +142,15 @@ export function HomeOverviewTab({
   deadlineSummary,
   deadlineGoals = [],
   openWeeklyPlan,
+  consultationBookings = [],
+  pendingMealCount = 0,
+  pendingMockCount = 0,
+  pendingOtCount = 0,
+  pendingCampusCount = 0,
+  pendingSaturdayCount = 0,
+  openConsultation,
+  openNotifications,
+  openLeaveRequests,
 }: HomeOverviewTabProps) {
   const confirm = useConfirm();
   // D-Day FAB state
@@ -405,36 +426,6 @@ export function HomeOverviewTab({
             description="오늘 할 일과 연속출석을 한곳에서 확인해요."
           />
           <StreakCard />
-          {recentMakeupNotices.length > 0 && (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 dark:bg-amber-500/10 dark:border-amber-500/25 px-3.5 py-2.5 space-y-1.5">
-              <p className="flex items-center gap-2 text-[12px] font-bold text-amber-800 dark:text-amber-300">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                주말 보강 계획이 생겼어요
-              </p>
-              {recentMakeupNotices.flatMap((n) =>
-                n.items.map((it, i) => (
-                  <p key={`${n.id}_${i}`} className="pl-6 text-[11px] font-semibold leading-4 text-amber-800/90 dark:text-amber-300/90">
-                    {it.subjectName} · {it.materialTitle} <span className="font-black">{it.amount}{it.unit}</span>
-                  </p>
-                )),
-              )}
-              <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">주말에 보강하고 학습 · 보강 탭에서 얼마나 했는지 입력해요.</p>
-            </div>
-          )}
-          {recentAwayReplans.length > 0 && (
-            <div className="rounded-2xl border border-[#0071E3]/20 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/12 dark:border-[#0071E3]/30 px-3.5 py-2.5 space-y-1.5">
-              <p className="flex items-center gap-2 text-[12px] font-bold text-[#0071E3]">
-                <CalendarDays className="h-4 w-4 shrink-0" />
-                외출 반영으로 학습 계획이 조정됐어요
-              </p>
-              {recentAwayReplans.map((n) => (
-                <p key={n.id} className="pl-6 text-[11px] font-semibold leading-4 text-slate-600 dark:text-slate-400">
-                  {n.subjectName} {n.materialTitle} · {n.summary}
-                </p>
-              ))}
-              <p className="pl-6 text-[10px] font-medium text-slate-400 dark:text-slate-500">학습계획 · 주간 계획 탭에서 조정된 일정을 확인하세요.</p>
-            </div>
-          )}
           {/* 압축 히어로 — 1줄 인사 + 날짜. 390px 첫 화면에서 '오늘 할 일 요약'이 바로 보이게 낮췄다. */}
           <div className="space-y-1">
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
@@ -447,6 +438,23 @@ export function HomeOverviewTab({
             </div>
             <p className="text-[12px] font-medium text-[#0071E3]">{currentBriefingPhrase}</p>
           </div>
+
+          {/* 확인할 특이사항 — 홈 최상단 통합 패널(휴가·도시락·상담·미응답요청·주말보강·외출반영). 특이사항 없으면 렌더 안 함. */}
+          <HomeHighlightsPanel
+            leaveRequests={student.leaveRequests || []}
+            makeupNotices={recentMakeupNotices}
+            awayReplans={recentAwayReplans}
+            consultationBookings={consultationBookings}
+            pendingMealCount={pendingMealCount}
+            pendingMockCount={pendingMockCount}
+            pendingOtCount={pendingOtCount}
+            pendingCampusCount={pendingCampusCount}
+            pendingSaturdayCount={pendingSaturdayCount}
+            openConsultation={openConsultation}
+            openNotifications={openNotifications}
+            openLeaveRequests={openLeaveRequests}
+            openWeeklyPlan={openWeeklyPlan}
+          />
 
           <div id="today-mission-card" className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm md:p-5">
             <div className="flex items-start justify-between gap-4">
@@ -471,103 +479,6 @@ export function HomeOverviewTab({
                 style={{ transform: `scaleX(${Math.max(0, Math.min(100, todayMissionPercent)) / 100})` }}
               />
             </div>
-
-            {/* 기간 목표 요약 한 줄 — 자세한 진행/입력은 미션 탭에서 */}
-            {deadlineSummary && deadlineSummary.goalCount > 0 && (
-              <div
-                className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-3.5 py-2.5 text-[11px] font-semibold break-keep ${
-                  deadlineSummary.metToday
-                    ? 'border-emerald-100 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10'
-                    : 'border-amber-200/60 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10'
-                }`}
-              >
-                <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                  <Target className="h-3.5 w-3.5 text-[#0071E3]" />
-                  기간 목표 {deadlineSummary.goalCount}개
-                </span>
-                {deadlineSummary.metToday ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    오늘치 완료{deadlineSummary.aheadDays > 0 ? ` · 약 ${deadlineSummary.aheadDays}일치 앞섬` : ''}
-                  </span>
-                ) : (
-                  <span className="text-amber-600 dark:text-amber-400 tabular-nums">
-                    진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
-                  </span>
-                )}
-                {deadlineSummary.riskCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    뒤처진 자료 {deadlineSummary.riskCount}개
-                  </span>
-                )}
-              </div>
-            )}
-
-            {activeDeadlineGoals.length > 0 && (
-              <div className="mt-3 space-y-2 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                    <Target className="h-3.5 w-3.5 text-[#0071E3]" />
-                    주간 목표 페이스
-                  </p>
-                  <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
-                    오늘 계획과 별도
-                  </span>
-                </div>
-
-                {activeDeadlineGoals.map((goal) => {
-                  const done = goal.actualAmount >= goal.targetAmount;
-                  const recommend = Math.min(Math.max(0, goal.targetAmount - goal.actualAmount), Math.max(0, goal.todayRecommend));
-                  // 예상목표치(오늘까지 누적 기대) 90% 이상이면 오늘 완료 표시. 홈은 요약만 — 입력은 실행계획 탭.
-                  const metToday = goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount * 0.9;
-
-                  return (
-                    <div key={goal.id} className="rounded-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
-                            {goal.subject} · {goal.title}
-                          </p>
-                          <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                            이번 주 목표: {goal.rangeText}
-                          </p>
-                        </div>
-                        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
-                          done ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : goal.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
-                        }`}>
-                          {done ? '주간 완료' : `${goal.actualAmount}/${goal.targetAmount}${goal.unit}`}
-                        </span>
-                      </div>
-
-                      <div className="mt-2 grid gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 sm:grid-cols-2">
-                        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
-                          오늘 권장: <span className={metToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
-                        </p>
-                        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
-                          예상목표치: <span className="text-slate-800 dark:text-slate-200">{goal.expectedAmount}{goal.unit}</span>
-                        </p>
-                      </div>
-
-                    </div>
-                  );
-                })}
-                <div className="flex flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                    진도 입력은 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 해요.
-                  </p>
-                  {openWeeklyPlan && (
-                    <button
-                      type="button"
-                      onClick={openWeeklyPlan}
-                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-[0.98] sm:self-auto"
-                    >
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      진도 확인·수정
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
 
             <div className="mt-4 space-y-2.5">
               <button
@@ -999,6 +910,102 @@ export function HomeOverviewTab({
               )}
             </div>
 
+            {/* 기간 목표 요약 한 줄 — 자세한 진행/입력은 미션 탭에서 (오늘 계획과 별도 → 카드 하단) */}
+            {deadlineSummary && deadlineSummary.goalCount > 0 && (
+              <div
+                className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-3.5 py-2.5 text-[11px] font-semibold break-keep ${
+                  deadlineSummary.metToday
+                    ? 'border-emerald-100 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10'
+                    : 'border-amber-200/60 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10'
+                }`}
+              >
+                <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
+                  <Target className="h-3.5 w-3.5 text-[#0071E3]" />
+                  기간 목표 {deadlineSummary.goalCount}개
+                </span>
+                {deadlineSummary.metToday ? (
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    오늘치 완료{deadlineSummary.aheadDays > 0 ? ` · 약 ${deadlineSummary.aheadDays}일치 앞섬` : ''}
+                  </span>
+                ) : (
+                  <span className="text-amber-600 dark:text-amber-400 tabular-nums">
+                    진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
+                  </span>
+                )}
+                {deadlineSummary.riskCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    뒤처진 자료 {deadlineSummary.riskCount}개
+                  </span>
+                )}
+              </div>
+            )}
+
+            {activeDeadlineGoals.length > 0 && (
+              <div className="mt-3 space-y-2 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    <Target className="h-3.5 w-3.5 text-[#0071E3]" />
+                    주간 목표 페이스
+                  </p>
+                  <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
+                    오늘 계획과 별도
+                  </span>
+                </div>
+
+                {activeDeadlineGoals.map((goal) => {
+                  const done = goal.actualAmount >= goal.targetAmount;
+                  const recommend = Math.min(Math.max(0, goal.targetAmount - goal.actualAmount), Math.max(0, goal.todayRecommend));
+                  // 예상목표치(오늘까지 누적 기대) 90% 이상이면 오늘 완료 표시. 홈은 요약만 — 입력은 실행계획 탭.
+                  const metToday = goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount * 0.9;
+
+                  return (
+                    <div key={goal.id} className="rounded-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                            {goal.subject} · {goal.title}
+                          </p>
+                          <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                            이번 주 목표: {goal.rangeText}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                          done ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : goal.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+                        }`}>
+                          {done ? '주간 완료' : `${goal.actualAmount}/${goal.targetAmount}${goal.unit}`}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 grid gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 sm:grid-cols-2">
+                        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
+                          오늘 권장: <span className={metToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
+                        </p>
+                        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
+                          예상목표치: <span className="text-slate-800 dark:text-slate-200">{goal.expectedAmount}{goal.unit}</span>
+                        </p>
+                      </div>
+
+                    </div>
+                  );
+                })}
+                <div className="flex flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
+                    진도 입력은 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 해요.
+                  </p>
+                  {openWeeklyPlan && (
+                    <button
+                      type="button"
+                      onClick={openWeeklyPlan}
+                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-[0.98] sm:self-auto"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      진도 확인·수정
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 🔵 리워드 달성 배너 알림 */}

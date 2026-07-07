@@ -276,6 +276,21 @@ function StudentReportInner() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selectReportTab]);
 
+  // 홈 '확인할 특이사항' 패널 딥링크 — 알림/상담/휴가 신청 탭으로 이동.
+  const openNotificationsTab = useCallback(() => {
+    setActiveTab('student-notifications');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setActiveTab]);
+  const openConsultationTab = useCallback(() => {
+    selectReportTab('clinic-booking');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectReportTab]);
+  const openLeaveRequestsTab = useCallback(() => {
+    setRequestSubTab('leave');
+    setActiveTab('student-requests');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setActiveTab, setRequestSubTab]);
+
   const learningActiveTab = activeTab === 'learning' ? learningSubTab : activeTab;
   // 생활 컨테이너의 유효 탭. HomeOverviewTab(등하원·순공)·PenaltiesTab(벌점) 공용.
   const lifeActiveTab = activeTab === 'life' ? lifeSubTab : activeTab;
@@ -605,6 +620,15 @@ function StudentReportInner() {
           deadlineGoals={deadlineGoals}
           deadlineSummary={deadlineSummary}
           openWeeklyPlan={openWeeklyPlanTab}
+          consultationBookings={consultationBookings}
+          pendingMealCount={pendingMealCount}
+          pendingMockCount={pendingMockExams.length}
+          pendingOtCount={pendingOtEvents.length}
+          pendingCampusCount={pendingCampusEvents.length}
+          pendingSaturdayCount={pendingSaturdayLateExcuses.length}
+          openConsultation={openConsultationTab}
+          openNotifications={openNotificationsTab}
+          openLeaveRequests={openLeaveRequestsTab}
         />
 
         {/* 2. 오늘 계획 (시간표) 탭 */}
