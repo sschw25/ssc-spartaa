@@ -620,7 +620,7 @@ export function SubjectProgressTab({
                             </span>
                           )}
                         </span>
-                        <span className="text-[#0071E3] font-extrabold">{b.currentPage} / {b.totalPages}p</span>
+                        <span className="text-[#0071E3] font-extrabold">{b.currentPage} / {b.totalPages}{b.unit || 'p'}</span>
                       </div>
                       <div className="flex items-center gap-3">
                         <div className="flex-1 bg-slate-100 dark:bg-white/10 rounded-full h-2.5 overflow-hidden shadow-[inset_0_1px_2px_rgba(0,0,0,0.02)]">
@@ -746,7 +746,7 @@ export function SubjectProgressTab({
                                     ) : (
                                       <>
                                         <span className="font-normal text-slate-300 dark:text-slate-600">/</span>
-                                        <span>{b.totalPages}p</span>
+                                        <span>{b.totalPages}{bookUnit}</span>
                                       </>
                                     )}
                                     <button
@@ -789,7 +789,7 @@ export function SubjectProgressTab({
                               ) : (
                                 <div className="flex flex-col items-end gap-0.5">
                                   <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                    {isSelfPaced ? `누적 ${b.currentPage}${bookUnit}` : `${b.currentPage} / ${b.totalPages}p`}
+                                    {isSelfPaced ? `누적 ${b.currentPage}${bookUnit}` : `${b.currentPage} / ${b.totalPages}${bookUnit}`}
                                   </span>
                                   {(b.solvedQuestions || 0) > 0 && <span className="text-[9px] font-extrabold text-[#0071E3]">~{b.solvedQuestions}번까지 풀이</span>}
                                 </div>
