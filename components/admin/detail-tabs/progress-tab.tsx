@@ -51,7 +51,7 @@ function MaterialStudyDayPicker({
   return (
     <div className="space-y-1">
       <Label className="text-[9px] text-slate-500 dark:text-slate-400">
-        이 자료 학습 요일 <span className="font-semibold text-[#0071E3]">{hasOwn ? '개별 지정' : '과목 기본'}</span>
+        이 자료 학습 요일 <span className="font-semibold text-[#0071E3]">{hasOwn ? '개별 지정' : '기본(월~토)'}</span>
       </Label>
       <div className="grid grid-cols-7 gap-1">
         {WEEKDAY_OPTIONS.map(([day, label]) => {
@@ -99,7 +99,6 @@ export function ProgressTab() {
     handleCreateCustomCategory,
     handleDeleteSubject,
     handleSaveMaterial,
-    handleToggleSubjectStudyDay,
     handleToggleMaterialStudyDay,
     handleUpdateSubjectStudyTime,
     hasSearchedIntegrated,
@@ -887,33 +886,7 @@ export function ProgressTab() {
                               {STUDY_TIME_SLOTS.find((slot) => slot.key === sub.studyTime)?.periodLabel}
                             </p>
                           )}
-                          <div className="pt-1.5 space-y-1">
-                            <Label className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">요일별 계획</Label>
-                            <div className="grid grid-cols-7 gap-1">
-                              {[
-                                ['mon', '월'],
-                                ['tue', '화'],
-                                ['wed', '수'],
-                                ['thu', '목'],
-                                ['fri', '금'],
-                                ['sat', '토'],
-                                ['sun', '일'],
-                              ].map(([day, label]) => {
-                                const isActive = (sub.studyDays || []).includes(day as NonNullable<SubjectProgress['studyDays']>[number]);
-                                return (
-                                  <Button
-                                    key={day}
-                                    type="button"
-                                    variant={isActive ? 'default' : 'outline'}
-                                    onClick={() => handleToggleSubjectStudyDay(sub.id, day as NonNullable<SubjectProgress['studyDays']>[number])}
-                                    className={`h-7 rounded-md text-[10px] px-0 ${isActive ? 'bg-[#0071E3] text-white' : 'bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400'}`}
-                                  >
-                                    {label}
-                                  </Button>
-                                );
-                              })}
-                            </div>
-                          </div>
+                          {/* 학습 요일은 과목이 아니라 각 교재/강의(자료) 단위에서 설정한다. */}
                         </div>
 
                         {/* 학습 목표 설정 */}

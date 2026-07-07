@@ -68,8 +68,8 @@ export interface BookProgress {
   updatedAt: string;
   category?: '기본' | '문제풀이' | '요약강의' | string; // 학습 자료 유형 분류
   unit?: string;           // 개편 추가: 학습 단위 (예: '페이지', '회')
-  // 자료별 학습 요일 — 미설정(undefined)이면 과목(SubjectProgress.studyDays)으로 폴백(레거시 호환).
-  // getMaterialStudyDays(subject, material) 가 단일 진입점.
+  // 자료별 학습 요일 — 요일 단일 소스. 미설정(undefined)이면 기본 월~토.
+  // getMaterialStudyDays(_, material) 가 단일 진입점.
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
 
   // 개편 추가: 교재별 학습 목표 및 세부 계획
@@ -94,7 +94,7 @@ export interface LectureProgress {
   targetDate?: string;     // 완강 목표일 (YYYY-MM-DD)
   updatedAt: string;
   category?: '기본' | '문제풀이' | '요약강의' | string; // 학습 자료 유형 분류
-  // 자료별 학습 요일 — 미설정(undefined)이면 과목(SubjectProgress.studyDays)으로 폴백(레거시 호환).
+  // 자료별 학습 요일 — 요일 단일 소스. 미설정(undefined)이면 기본 월~토.
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
 
   // 개편 추가: 인강별 학습 목표 및 세부 계획
@@ -452,7 +452,9 @@ export interface SubjectProgress {
   name: string;            // 과목명 (국어, 수학, 영어, 탐구 등)
   learningGoal?: string;   // 학습 목표 (과목 대주제 - 옵션)
   studyTime?: 'morning' | 'afternoon' | 'night' | ''; // 주 학습 시간대
-  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; // 학생용 요일별 시간표
+  /** @deprecated 요일은 자료(Book/LectureProgress.studyDays) 단위 단일 소스로 이관됨.
+   *  계획/시간표 계산에서 미사용. 상담 텍스트 파서·하위호환 위해 필드만 유지. */
+  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; // (deprecated)
   books: BookProgress[];   // 이 과목 하위의 교재 진도
   lectures: LectureProgress[]; // 이 과목 하위의 강의 진도
   updatedAt: string;

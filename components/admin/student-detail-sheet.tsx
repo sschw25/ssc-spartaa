@@ -1402,23 +1402,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     toast.success('과목별 학습 시간이 설정되었습니다. (자동 저장됨)');
   };
 
-  const handleToggleSubjectStudyDay = (subId: string, day: NonNullable<SubjectProgress['studyDays']>[number]) => {
-    const updatedSubjects = subjectsState.map(s => {
-      if (s.id !== subId) return s;
-      const currentDays = s.studyDays || [];
-      const studyDays = currentDays.includes(day)
-        ? currentDays.filter(item => item !== day)
-        : [...currentDays, day];
-      return { ...s, studyDays, updatedAt: new Date().toISOString() };
-    });
-
-    setSubjectsState(updatedSubjects);
-    setIsAutoSaving(true);
-    toast.success('요일별 학습 시간표가 변경되었습니다. (자동 저장됨)');
-  };
-
-  // 자료별 학습 요일 토글 — 과목 요일과 별개로 이 교재/강의만의 요일을 지정한다.
-  // 최초 토글 시 현재 유효요일(자료 미설정이면 과목/기본 폴백)을 실체화한 뒤 편집하며,
+  // 자료별 학습 요일 토글 — 요일은 자료(교재/강의) 단위 단일 소스다.
+  // 최초 토글 시 현재 유효요일(자료 미설정이면 기본 월~토)을 실체화한 뒤 편집하며,
   // 목표가 있는 자료(selfPaced 제외)는 새 요일로 주간 계획을 즉시 재생성한다.
   const handleToggleMaterialStudyDay = (
     subId: string,
@@ -2790,9 +2775,14 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         }).join('\n')
       : '- 등록된 과목이 없습니다.';
 
+    const dayOrder = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
     const scheduleLines = subjectsState.length > 0
       ? subjectsState.map((subject) => {
-          const days = (subject.studyDays || []).map((day) => dayLabels[day] || day).join(', ') || '요일 미지정';
+          // 요일은 자료(교재/강의) 단위 단일 소스 — 과목의 모든 자료 요일 합집합으로 요약.
+          const matDays = new Set<string>();
+          [...(subject.books || []), ...(subject.lectures || [])].forEach((m) =>
+            (m.studyDays || []).forEach((d) => matDays.add(d)));
+          const days = dayOrder.filter((d) => matDays.has(d)).map((d) => dayLabels[d]).join(', ') || '요일 미지정';
           const slot = getStudyTimeSlot(subject.studyTime || '');
           const timeText = slot
             ? `${slot.displayLabel} ${slot.timeRange} (${slot.periodLabel})`
@@ -4477,7 +4467,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 handleCreateCustomCategory,
                 handleDeleteSubject,
                 handleSaveMaterial,
-                handleToggleSubjectStudyDay,
                 handleToggleMaterialStudyDay,
                 handleUpdateSubjectStudyTime,
                 hasSearchedIntegrated,

@@ -590,14 +590,14 @@ export function getActiveStudyDays(studyDays?: string[]) {
   return studyDays && studyDays.length > 0 ? studyDays : ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 }
 
-// 자료(교재/강의)의 유효 학습 요일 — 자료별 요일이 있으면 그걸, 없으면 과목 요일로 폴백(레거시 호환).
-// 요일 계획이 과목 단위에서 자료 단위로 내려온 뒤의 단일 진입점. 둘 다 없으면 undefined(→ getActiveStudyDays 기본 월~토).
+// 자료(교재/강의)의 유효 학습 요일 — 요일은 자료 단위 단일 소스다.
+// 첫 인자(subjectStudyDays)는 하위호환을 위해 시그니처만 유지하며 무시한다(과목→자료 폴백 제거).
+// 자료 요일이 없으면 undefined 를 반환해 getActiveStudyDays 기본값(월~토)으로 처리된다.
 export function getMaterialStudyDays<T extends string>(
-  subjectStudyDays?: T[],
+  _subjectStudyDays: T[] | undefined,
   materialStudyDays?: T[],
 ): T[] | undefined {
-  if (materialStudyDays && materialStudyDays.length > 0) return materialStudyDays;
-  return subjectStudyDays;
+  return materialStudyDays && materialStudyDays.length > 0 ? materialStudyDays : undefined;
 }
 
 export function isStudyDay(date: Date, studyDays?: string[]) {
