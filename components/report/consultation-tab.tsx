@@ -5,8 +5,9 @@ import { toast } from 'sonner';
 import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
-import { Armchair, Calendar, CalendarClock, ClipboardList, MessageSquare, Thermometer, Ticket, Trash2, Zap } from 'lucide-react';
-import { LeaveType, Student } from '@/lib/types/student';
+import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
+import { Armchair, Calendar, CalendarClock, ClipboardList, MessageSquare, Thermometer, Ticket, Trash2, Utensils, Zap } from 'lucide-react';
+import { LeaveType, MealOrder, Student } from '@/lib/types/student';
 import { LEAVE_TYPE_ICON } from '@/components/leave-type-icon';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
@@ -27,7 +28,7 @@ import {
 } from '@/lib/leave';
 
 type LeaveSlotValue = 'morning' | 'afternoon' | 'night' | 'fullday';
-export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion' | 'consultation';
+export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion' | 'consultation' | 'meal';
 
 interface ConsultationTabProps {
   student: Student;
@@ -62,6 +63,10 @@ interface ConsultationTabProps {
   homeFullLeft: number;
   homeLeaveCoupons: number;
   onCouponsChange?: (coupons: number) => void;
+  // 도시락 신청 — 홈/알림에 이어 '신청' 탭에서도 신청할 수 있게 서브탭으로 노출.
+  mealPlans?: MealPlanWithOrder[];
+  onMealSaved?: (planId: string, order: MealOrder) => void;
+  pendingMealCount?: number;
 }
 
 export function ConsultationTab({
@@ -92,6 +97,9 @@ export function ConsultationTab({
   homeFullLeft,
   homeLeaveCoupons,
   onCouponsChange,
+  mealPlans = [],
+  onMealSaved,
+  pendingMealCount = 0,
 }: ConsultationTabProps) {
   const prompt = usePrompt();
   if (!isStudentReport) return null;
@@ -159,6 +167,7 @@ export function ConsultationTab({
   }> = [
     { id: 'leave', label: '휴식/반차', meta: `반차 ${homeHalfLeft}회`, icon: Calendar, badge: pendingLeaveCount, badgeLabel: '대기' },
     { id: 'consultation', label: '상담신청', meta: consultationAvailable ? '상담 예약' : '상담 요청', icon: CalendarClock, badge: pendingConsultationCount, badgeLabel: '예정' },
+    { id: 'meal', label: '도시락', meta: '주간 신청', icon: Utensils, badge: pendingMealCount, badgeLabel: '미신청' },
     { id: 'seat', label: '자리이동', meta: '좌석 변경', icon: Armchair },
     { id: 'coupon', label: '쿠폰교환', meta: `쿠폰 ${homeLeaveCoupons}장`, icon: Ticket },
     { id: 'suggestion', label: '건의사항', meta: '의견 남기기', icon: MessageSquare, badge: pendingSuggestionCount, badgeLabel: '대기' },
@@ -177,11 +186,11 @@ export function ConsultationTab({
               신청
             </h3>
             <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500 dark:text-slate-400">
-              휴식/반차, 자리이동, 쿠폰교환, 건의사항을 한곳에서 처리해요.
+              휴식/반차, 상담, 도시락, 자리이동, 쿠폰교환, 건의사항을 한곳에서 처리해요.
             </p>
           </div>
         </div>
-        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5" role="tablist" aria-label="신청 종류">
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3" role="tablist" aria-label="신청 종류">
           {applicationTabs.map((tab) => {
             const Icon = tab.icon;
             const selected = requestSubTab === tab.id;
@@ -494,6 +503,21 @@ export function ConsultationTab({
       {requestSubTab === 'coupon' && (
         <div id="coupon-exchange" className="no-print scroll-mt-24">
           <CouponExchangeCard onCouponsChange={onCouponsChange} />
+        </div>
+      )}
+
+      {/* 도시락 신청 — 주차/센터별 라운드. 홈·알림 카드와 동일 컴포넌트(MealPlanNotice) 재사용. */}
+      {requestSubTab === 'meal' && (
+        <div id="meal-order" className="no-print scroll-mt-24 space-y-3">
+          {mealPlans.length > 0 && onMealSaved ? (
+            <MealPlanNotice plans={mealPlans} onSaved={onMealSaved} />
+          ) : (
+            <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 text-center shadow-sm">
+              <Utensils className="mx-auto h-7 w-7 text-slate-300 dark:text-slate-600" />
+              <p className="mt-2 text-sm font-semibold text-slate-900 dark:text-slate-100">지금 신청할 수 있는 도시락이 없어요</p>
+              <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">새로운 주간 도시락 신청이 열리면 여기에서 바로 신청할 수 있어요.</p>
+            </div>
+          )}
         </div>
       )}
 
