@@ -27,6 +27,7 @@ import {
   PinOff,
   Pin,
   HeartPulse,
+  Stethoscope,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -92,6 +93,7 @@ export function AdminMenuList({
         { key: 'inbox', icon: Inbox, label: '통합 인박스', href: '/admin/inbox' },
         { key: 'calendar', icon: CalendarDays, label: '캘린더', href: '/admin/calendar' },
         { key: 'schedules', icon: AlarmClock, label: '예약 스케줄', href: '/admin/schedules' },
+        { key: 'diagnostics', icon: Stethoscope, label: '계획 정합성 점검', href: '/admin/diagnostics' },
       ],
     },
     {
