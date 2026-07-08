@@ -34,6 +34,7 @@ interface HomeHighlightsPanelProps {
   openNotifications?: () => void;
   openLeaveRequests?: () => void;
   openWeeklyPlan?: () => void;
+  openMakeup?: () => void;
 }
 
 // Asia/Seoul 기준 YYYY-MM-DD 날짜 키 (파일 내 다른 날짜 로직과 일관, 자정 경계 안전).
@@ -69,6 +70,7 @@ export function HomeHighlightsPanel({
   openNotifications,
   openLeaveRequests,
   openWeeklyPlan,
+  openMakeup,
 }: HomeHighlightsPanelProps) {
   const todayKey = getSeoulDateKey();
 
@@ -173,7 +175,7 @@ export function HomeHighlightsPanel({
     amberRows.push({
       key: 'makeup', tone: 'amber', icon: AlertTriangle,
       label: '주말 보강 계획이 생겼어요', summary: `보강할 자료 ${itemCount}건`,
-      actionLabel: '보기', onClick: openWeeklyPlan,
+      actionLabel: '보기', onClick: openMakeup || openWeeklyPlan,
     });
   }
 

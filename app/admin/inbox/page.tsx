@@ -1159,6 +1159,7 @@ export default function AdminInboxPage() {
                   원생 상세 시트 열기
                 </button>
 
+                {canSendReply(selectedItem) && (
                 <div className="space-y-2">
                   <label className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block">코멘터 답변 / 재답변 작성</label>
                   <div className="flex items-end gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 focus-within:border-[#0071E3] focus-within:ring-2 focus-within:ring-[#0071E3]/20">
@@ -1188,6 +1189,7 @@ export default function AdminInboxPage() {
                   </div>
                   <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500">Enter 전송 · Shift+Enter 줄바꿈. 처리완료와 확인 처리는 아래 버튼으로 따로 기록합니다.</p>
                 </div>
+                )}
                 </>
                 )}
 

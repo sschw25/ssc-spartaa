@@ -102,10 +102,12 @@ export default function WeeklyLeaderboardPage() {
   const allRows = data?.rows || [];
   const scopedRows = allRows.filter((r) => campusFilter === 'all' || r.campus === campusFilter);
 
-  // 검색어 필터링
-  const filteredRows = scopedRows.filter((r) =>
-    r.name.toLowerCase().includes(searchQuery.toLowerCase())
-  ).map((r, index) => ({ ...r, rank: index + 1 }));
+  // 순위(rank)는 캠퍼스 스코프 기준으로 먼저 부여한다. 검색은 그 뒤에 '필터'만 하므로
+  // 검색으로 한 명만 남아도 그 학생의 실제 순위·메달이 유지된다(검색이 재랭킹이 되지 않게).
+  const rankedRows = scopedRows.map((r, index) => ({ ...r, rank: index + 1 }));
+  const filteredRows = searchQuery
+    ? rankedRows.filter((r) => r.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    : rankedRows;
 
   const studiedCount = scopedRows.filter((r) => r.weekMinutes > 0).length;
   const notStudiedCount = scopedRows.filter((r) => r.weekMinutes === 0).length;

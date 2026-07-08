@@ -101,6 +101,7 @@ interface HomeOverviewTabProps {
   } | null;
   deadlineGoals?: DeadlineGoal[];
   openWeeklyPlan?: () => void;
+  openMakeup?: () => void;
   openTimetable?: () => void;
   // 홈 최상단 '확인할 특이사항' 패널 데이터·내비게이션 (학생 리포트 전용, 옵셔널 — 학부모 호출부 미전달).
   consultationBookings?: ConsultationBooking[];
@@ -154,6 +155,7 @@ export function HomeOverviewTab({
   deadlineSummary,
   deadlineGoals = [],
   openWeeklyPlan,
+  openMakeup,
   openTimetable,
   consultationBookings = [],
   pendingMealCount = 0,
@@ -1279,6 +1281,7 @@ export function HomeOverviewTab({
             openNotifications={openNotifications}
             openLeaveRequests={openLeaveRequests}
             openWeeklyPlan={openWeeklyPlan}
+            openMakeup={openMakeup}
           />
 
           {/* 🔵 리워드 달성 배너 알림 */}

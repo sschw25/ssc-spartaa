@@ -34,7 +34,7 @@ export default function PenaltiesPage() {
   const [selected, setSelected] = useState<Student | null>(null);
 
   const handleLogout = async () => {
-    await fetch('/api/admin/auth/logout', { method: 'POST' });
+    try { await fetch('/api/admin/auth/logout', { method: 'POST' }); } catch {}
     router.replace('/admin');
   };
 

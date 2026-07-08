@@ -421,7 +421,7 @@ export default function AdminConsultationBookingsPage() {
   const campusOptions = allowedCampuses.map((c) => ({ value: c, label: campusLabel(c) }));
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
       <AdminTopNav
         title="상담 예약"
         titleIcon={<CalendarClock className="w-4 h-4 text-[#0071E3]" />}

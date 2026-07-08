@@ -281,6 +281,12 @@ function StudentReportInner() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [selectReportTab]);
 
+  // 주말 보강 특이사항 딥링크 — 보강 원장/입력이 있는 '보강' 서브탭으로(실행계획 아님).
+  const openMakeupTab = useCallback(() => {
+    selectReportTab('makeup');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [selectReportTab]);
+
   // 홈 '확인할 특이사항' 패널 딥링크 — 알림/상담/휴가 신청 탭으로 이동.
   const openNotificationsTab = useCallback(() => {
     setActiveTab('student-notifications');
@@ -729,6 +735,7 @@ function StudentReportInner() {
           deadlineGoals={deadlineGoals}
           deadlineSummary={deadlineSummary}
           openWeeklyPlan={openWeeklyPlanTab}
+          openMakeup={openMakeupTab}
           openTimetable={openTimetableFromSheet}
           consultationBookings={consultationBookings}
           pendingMealCount={pendingMealCount}

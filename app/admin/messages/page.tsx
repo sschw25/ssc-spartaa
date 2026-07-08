@@ -250,7 +250,7 @@ export default function MessagesPage() {
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
-      <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} actions={<AdminNavActions onRefresh={loadStudents} loading={loading} onLogout={handleLogout} />} />
+      <AdminTopNav title="학생 메시지 발송" onLogout={handleLogout} actions={<AdminNavActions onRefresh={() => loadStudents()} loading={loading} onLogout={handleLogout} />} />
 
       <main className="stagger-children mx-auto max-w-4xl px-4 pt-6 pb-40 sm:px-6 space-y-6">
         {/* 헤더 */}

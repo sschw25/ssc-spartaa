@@ -487,16 +487,16 @@ export default function HealthScorePage() {
               <h2 className="text-[15px] font-semibold text-slate-900 dark:text-slate-100">밴드 기준</h2>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-red-500/10 p-3">
-                  <p className="text-[13px] font-semibold text-red-700">위험 · 60점 이상</p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-red-700/80">결석, 이탈, 상담 공백이 겹친 학생을 우선 확인합니다.</p>
+                  <p className="text-[13px] font-semibold text-red-700 dark:text-red-300">위험 · 60점 이상</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-red-700/80 dark:text-red-300/80">결석, 이탈, 상담 공백이 겹친 학생을 우선 확인합니다.</p>
                 </div>
                 <div className="rounded-2xl bg-amber-500/10 p-3">
-                  <p className="text-[13px] font-semibold text-amber-800">주의 · 30점 이상</p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-amber-800/80">최근 신호가 올라온 학생입니다. 다음 상담에서 확인하면 좋습니다.</p>
+                  <p className="text-[13px] font-semibold text-amber-800 dark:text-amber-300">주의 · 30점 이상</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-amber-800/80 dark:text-amber-300/80">최근 신호가 올라온 학생입니다. 다음 상담에서 확인하면 좋습니다.</p>
                 </div>
                 <div className="rounded-2xl bg-emerald-500/10 p-3">
-                  <p className="text-[13px] font-semibold text-emerald-800">정상 · 30점 미만</p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-emerald-800/80">현재 데이터 기준으로 큰 위험 신호가 낮습니다.</p>
+                  <p className="text-[13px] font-semibold text-emerald-800 dark:text-emerald-300">정상 · 30점 미만</p>
+                  <p className="mt-1 text-[12px] leading-relaxed text-emerald-800/80 dark:text-emerald-300/80">현재 데이터 기준으로 큰 위험 신호가 낮습니다.</p>
                 </div>
               </div>
             </section>
