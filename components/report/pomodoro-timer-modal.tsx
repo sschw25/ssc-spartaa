@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Maximize2, Minimize2, Edit2, Target, Coffee, Check, X, Pause, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
@@ -16,6 +17,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
   const [pomodoroActive, setPomodoroActive] = useState(false);
   const [pomodoroMode, setPomodoroMode] = useState<'focus' | 'rest'>('focus');
   const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
   const [isEditingPomoTime, setIsEditingPomoTime] = useState(false);
   const [pomoEditValue, setPomoEditValue] = useState('');
   const pomodoroSecondsKey = `ssc-pomodoro-seconds:${student.id}`;
@@ -470,7 +473,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
         </div>
       </div>
 
-      {/* 🔴 뽀모도로 타이머 전체화면 (Zen 모드) 오버레이 */}
+      {/* 🔴 뽀모도로 전체화면(Zen) — portal 로 body 직속에 붙여 .stagger-children 잔여 transform 이
+          position:fixed 를 grid 셀에 가두는 함정(아이패드 등에서 전체화면 실패)을 회피한다. */}
+      {mounted && createPortal(
       <div
         id="pomodoro-fullscreen-container"
         className={`fixed inset-0 z-50 flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white transition-all duration-300 ${
@@ -656,7 +661,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
             </p>
           </div>
         </div>
-      </div>
+      </div>,
+      document.body,
+      )}
     </>
   );
 }

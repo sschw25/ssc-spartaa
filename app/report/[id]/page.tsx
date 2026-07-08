@@ -367,6 +367,14 @@ function StudentReportInner() {
     window.history.replaceState(window.history.state, '', url.toString());
   }, [materialSheet, isStudentReport]);
 
+  // 탭을 바꾸면 자료 상세 시트(전체 오버레이)를 닫는다 — 새 탭 위에 계속 떠 있는 버그 방지.
+  // 최초 렌더는 건너뛴다(딥링크로 시트를 연 채 진입하는 경우 보존).
+  const materialSheetTabRef = useRef(false);
+  useEffect(() => {
+    if (!materialSheetTabRef.current) { materialSheetTabRef.current = true; return; }
+    setMaterialSheet(null);
+  }, [activeTab]);
+
   // 시트 하단 연결 링크 — 기존 탭 전환 콜백(selectReportTab) 재사용.
   const openSubjectProgressFromSheet = useCallback(() => {
     const id = materialSheet?.materialId;

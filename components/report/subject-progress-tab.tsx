@@ -818,6 +818,7 @@ export function SubjectProgressTab({
                                      ) : (
                                        <button
                                          type="button"
+                                         disabled={plan.startDate > todayKey && !displayCompleted}
                                          onClick={() => {
                                            if (todayCompleted) {
                                              updatePlanCompletion('book', b.id, plan.id, false, undefined, todayKey);
@@ -828,13 +829,15 @@ export function SubjectProgressTab({
                                            }
                                          }}
                                          aria-pressed={displayCompleted}
-                                         className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] ${
+                                         className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 ${
                                            displayCompleted
                                              ? 'border-emerald-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-emerald-700 dark:text-emerald-300'
                                              : 'border-[#0071E3]/20 dark:border-white/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/10'
                                          }`}
                                        >
-                                         {todayCompleted
+                                         {plan.startDate > todayKey && !displayCompleted
+                                           ? '아직 예정'
+                                           : todayCompleted
                                            ? `오늘 완료 (${todayCompletion?.actualAmount ?? getPlanDailyAmount(plan)}${unit})`
                                            : planCompleted
                                            ? (planActualAmount !== undefined ? `주차 완료 (${planActualAmount}${unit})` : '주차 완료')
@@ -1059,6 +1062,7 @@ export function SubjectProgressTab({
                                      ) : (
                                        <button
                                          type="button"
+                                         disabled={plan.startDate > todayKey && !displayCompleted}
                                          onClick={() => {
                                            if (todayCompleted) {
                                              updatePlanCompletion('lecture', l.id, plan.id, false, undefined, todayKey);
@@ -1069,13 +1073,15 @@ export function SubjectProgressTab({
                                            }
                                          }}
                                          aria-pressed={displayCompleted}
-                                         className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] ${
+                                         className={`mt-1 inline-flex h-6 items-center justify-center rounded-lg border text-[8px] font-semibold transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-45 ${
                                            displayCompleted
                                              ? 'border-emerald-200 dark:border-white/10 bg-white/70 dark:bg-white/5 text-emerald-700 dark:text-emerald-300'
                                              : 'border-[#0071E3]/20 dark:border-white/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 text-[#0071E3] hover:bg-[#0071E3]/10'
                                          }`}
                                        >
-                                         {todayCompleted
+                                         {plan.startDate > todayKey && !displayCompleted
+                                           ? '아직 예정'
+                                           : todayCompleted
                                            ? `오늘 완료 (${todayCompletion?.actualAmount ?? getPlanDailyAmount(plan)}${unit})`
                                            : planCompleted
                                            ? (planActualAmount !== undefined ? `주차 완료 (${planActualAmount}${unit})` : '주차 완료')
