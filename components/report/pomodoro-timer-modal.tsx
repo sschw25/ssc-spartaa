@@ -2,20 +2,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2, Edit2, Target, Coffee, Check, X, Pause, Play } from 'lucide-react';
+import { Maximize2, Minimize2, Edit2, Target, Check, X, Pause, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
+
+const FOCUS_SECONDS = 3000; // 50분 집중
 
 interface PomodoroTimerProps {
   student: Student;
   setStudent: React.Dispatch<React.SetStateAction<Student | null>>;
   setRewardBanner: React.Dispatch<React.SetStateAction<{ show: boolean; reasons: string[] }>>;
+  // 지금 교시에 인강이 배정돼 있으면 true — 강의 시청 중이 아닐 때만 탭 진입과 동시에 전체화면(몰입) 진입을 시도한다.
+  isLectureTime?: boolean;
 }
 
-export function PomodoroTimer({ student, setStudent, setRewardBanner }: PomodoroTimerProps) {
-  const [pomodoroSeconds, setPomodoroSeconds] = useState(3000); // 50분 집중 = 3000초
+export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureTime = false }: PomodoroTimerProps) {
+  const [pomodoroSeconds, setPomodoroSeconds] = useState(FOCUS_SECONDS);
   const [pomodoroActive, setPomodoroActive] = useState(false);
-  const [pomodoroMode, setPomodoroMode] = useState<'focus' | 'rest'>('focus');
   const [isPomodoroFullscreen, setIsPomodoroFullscreen] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
@@ -26,7 +29,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
 
   // 집중 세션의 계획 시간(초). 타이머를 끝까지 완주해 완료될 때 실제 기록할 분수 계산에 쓴다.
   // (편집/조절/리셋으로 계획 시간이 바뀔 때만 갱신 — 카운트다운 틱은 건드리지 않는다.)
-  const focusTotalRef = useRef(3000);
+  const focusTotalRef = useRef(FOCUS_SECONDS);
 
   const clearStoredPomodoro = () => {
     window.localStorage.removeItem(pomodoroSecondsKey);
@@ -112,7 +115,6 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
         setIsPomodoroFullscreen(true);
       } catch (err) {
         console.error('Failed to enter fullscreen:', err);
-        setIsPomodoroFullscreen(true);
       }
     } else {
       try {
@@ -132,6 +134,14 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       }
     }
   };
+
+  // 집중 탭 진입 시(강의 시간이 아니면) 전체화면 자동 진입 — 탭 클릭 자체가 사용자 제스처라 대부분 브라우저에서 허용된다.
+  // 실패해도(브라우저 정책 등) 헤더의 수동 전체화면 버튼으로 대체 가능.
+  useEffect(() => {
+    if (!mounted || isLectureTime || isPomodoroFullscreen) return;
+    toggleFullscreen('pomodoro-fullscreen-container');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, isLectureTime]);
 
   // 젠모드 내 스페이스바 단축키 핸들러
   useEffect(() => {
@@ -156,7 +166,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
     if (!isNaN(mins) && mins > 0 && mins <= 180) {
       const secs = mins * 60;
       setPomodoroSeconds(secs);
-      if (pomodoroMode === 'focus') focusTotalRef.current = secs; // 집중 계획 시간 갱신
+      focusTotalRef.current = secs; // 집중 계획 시간 갱신
       window.localStorage.setItem(pomodoroSecondsKey, String(secs));
       setIsEditingPomoTime(false);
       toast.success(`타이머를 ${mins}분으로 바꿨어요.`);
@@ -171,7 +181,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       let next = prev + diffMinutes * 60;
       if (next < 0) next = 0;
       if (next > 180 * 60) next = 180 * 60;
-      if (pomodoroMode === 'focus') focusTotalRef.current = next; // 집중 계획 시간 갱신
+      focusTotalRef.current = next; // 집중 계획 시간 갱신
       window.localStorage.setItem(pomodoroSecondsKey, String(next));
       return next;
     });
@@ -179,7 +189,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
   };
 
   // 뽀모도로 세션 완료 시 백엔드 API 호출 — 타이머를 끝까지 완주(0초 도달)했을 때만 호출된다.
-  const handlePomodoroComplete = async (elapsedSeconds = 3000) => {
+  // 완료 후엔 곧바로 다음 집중 세션을 위해 리셋(대기 상태)한다 — 별도 휴식 모드는 없음.
+  const handlePomodoroComplete = async (elapsedSeconds = FOCUS_SECONDS) => {
     const minutes = Math.max(1, Math.round(elapsedSeconds / 60));
     try {
       const res = await fetch('/api/student/pomodoro', {
@@ -190,9 +201,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       const json = await res.json();
       if (res.ok && json.success) {
         setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote, leaveCoupons: json.leaveCoupons } : prev));
-        toast.success(`🎉 ${minutes}분 집중 완료! 10분 휴식 모드로 전환됩니다.`, { duration: 4000 });
-        setPomodoroMode('rest');
-        setPomodoroSeconds(600); // 10분 휴식 = 600초
+        toast.success(`🎉 ${minutes}분 집중 완료! 다음 세션도 이어가 볼까요?`, { duration: 4000 });
 
         if (json.rewardGranted) {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
@@ -201,6 +210,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       }
     } catch {
       toast.error('완료 기록을 저장하지 못했어요. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setPomodoroSeconds(FOCUS_SECONDS);
+      focusTotalRef.current = FOCUS_SECONDS;
     }
   };
 
@@ -217,23 +229,18 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
           return next;
         });
       }, 1000);
-    } else if (pomodoroSeconds === 0) {
-      if (pomodoroMode === 'focus') {
-        // 끝까지 완주했을 때만 1회 완료로 기록 — 계획 시간 기준으로 분수 반영.
-        handlePomodoroComplete(focusTotalRef.current);
-      } else {
-        toast('휴식 완료! 다시 집중할 시간입니다 🔵', { duration: 4000 });
-        setPomodoroMode('focus');
-        setPomodoroSeconds(3000);
-        focusTotalRef.current = 3000;
-      }
+    } else if (pomodoroActive && pomodoroSeconds === 0) {
+      // 끝까지 완주했을 때만 1회 완료로 기록 — 계획 시간 기준으로 분수 반영.
+      // (pomodoroActive 가드: 0초 도달 렌더 + active=false 재렌더에서 이중 발화 방지)
+      handlePomodoroComplete(focusTotalRef.current);
       setPomodoroActive(false);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [pomodoroActive, pomodoroSeconds, pomodoroMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pomodoroActive, pomodoroSeconds]);
 
   useEffect(() => {
     const savedState = window.localStorage.getItem(pomodoroStateKey);
@@ -241,21 +248,28 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       try {
         const parsed = JSON.parse(savedState) as {
           seconds?: number;
-          mode?: 'focus' | 'rest';
           active?: boolean;
           updatedAt?: number;
         };
-        if (parsed.mode === 'focus' || parsed.mode === 'rest') {
-          const savedSeconds = Number(parsed.seconds);
-          const elapsedSeconds = parsed.active && parsed.updatedAt
-            ? Math.max(0, Math.floor((Date.now() - parsed.updatedAt) / 1000))
-            : 0;
-          const nextSeconds = Number.isFinite(savedSeconds) ? Math.max(0, savedSeconds - elapsedSeconds) : 3000;
-          setPomodoroMode(parsed.mode);
-          setPomodoroSeconds(nextSeconds || (parsed.mode === 'rest' ? 600 : 3000));
-          setPomodoroActive(Boolean(parsed.active && nextSeconds > 0));
+        const savedSeconds = Number(parsed.seconds);
+        const elapsedSeconds = parsed.active && parsed.updatedAt
+          ? Math.max(0, Math.floor((Date.now() - parsed.updatedAt) / 1000))
+          : 0;
+        const remainingSeconds = Number.isFinite(savedSeconds) ? savedSeconds - elapsedSeconds : FOCUS_SECONDS;
+        // 다른 탭에 있는 동안(집중 탭 언마운트) 완주 시각을 지나쳤으면 세션을 기록한다 — 크레딧 유실 방지.
+        // 재마운트 시 중복 크레딧이 없도록 저장 상태를 먼저 비활성으로 정리(서버 minGap 가드도 이중 방지).
+        if (parsed.active && Number.isFinite(savedSeconds) && savedSeconds > 0 && remainingSeconds <= 0) {
+          window.localStorage.setItem(
+            pomodoroStateKey,
+            JSON.stringify({ seconds: FOCUS_SECONDS, active: false, updatedAt: Date.now() }),
+          );
+          handlePomodoroComplete(FOCUS_SECONDS);
           return;
         }
+        const nextSeconds = Number.isFinite(savedSeconds) ? Math.max(0, remainingSeconds) : FOCUS_SECONDS;
+        setPomodoroSeconds(nextSeconds || FOCUS_SECONDS);
+        setPomodoroActive(Boolean(parsed.active && nextSeconds > 0));
+        return;
       } catch {
         // legacy seconds fallback below
       }
@@ -274,25 +288,22 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
       pomodoroStateKey,
       JSON.stringify({
         seconds: pomodoroSeconds,
-        mode: pomodoroMode,
         active: pomodoroActive,
         updatedAt: Date.now(),
       }),
     );
-  }, [pomodoroActive, pomodoroMode, pomodoroSeconds, pomodoroSecondsKey, pomodoroStateKey]);
+  }, [pomodoroActive, pomodoroSeconds, pomodoroSecondsKey, pomodoroStateKey]);
 
-  const totalSecs = pomodoroMode === 'focus' ? 3000 : 600;
   const remaining = pomodoroSeconds;
-  const pct = Math.min(remaining / totalSecs, 1);
+  const pct = Math.min(remaining / FOCUS_SECONDS, 1);
   const R = 58;
   const CIRC = 2 * Math.PI * R;
   const dash = pct * CIRC;
   const note = getSpecialNoteObj();
   const todayKey = getSeoulDateKey();
   const sessionCount = note.pomodoro_sessions?.[todayKey] || 0;
-  const isFocus = pomodoroMode === 'focus';
-  const ringColor = isFocus ? '#0071E3' : '#10B981';
-  const glowId = `pomo-glow-${isFocus ? 'blue' : 'green'}`;
+  const ringColor = '#0071E3';
+  const glowId = 'pomo-glow-blue';
   const tipAngle = pct * 2 * Math.PI;
   const tipCx = 70 + R * Math.cos(tipAngle);
   const tipCy = 70 + R * Math.sin(tipAngle);
@@ -301,7 +312,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
   const fsR = 135;
   const fsCIRC = 2 * Math.PI * fsR;
   const fsDash = pct * fsCIRC;
-  const fsGlowId = `pomo-fs-glow-${isFocus ? 'blue' : 'green'}`;
+  const fsGlowId = 'pomo-fs-glow-blue';
   const fsTipAngle = pct * 2 * Math.PI;
   const fsTipCx = 160 + fsR * Math.cos(fsTipAngle);
   const fsTipCy = 160 + fsR * Math.sin(fsTipAngle);
@@ -310,9 +321,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
     <>
       <div className={`rounded-3xl border p-5 flex flex-col justify-between gap-4 transition-all duration-500 ${
         pomodoroActive
-          ? isFocus
-            ? 'bg-gradient-to-br from-white to-blue-50/60 dark:from-[#1c1c1e] dark:to-[#0071E3]/15 border-[#0071E3]/20 shadow-[0_8px_32px_rgba(0,113,227,0.12)]'
-            : 'bg-gradient-to-br from-white to-emerald-50/60 dark:from-[#1c1c1e] dark:to-emerald-500/10 border-emerald-300/30 shadow-[0_8px_32px_rgba(16,185,129,0.12)]'
+          ? 'bg-gradient-to-br from-white to-blue-50/60 dark:from-[#1c1c1e] dark:to-[#0071E3]/15 border-[#0071E3]/20 shadow-[0_8px_32px_rgba(0,113,227,0.12)]'
           : 'bg-white dark:bg-[#1c1c1e] border-slate-100 dark:border-white/10 shadow-sm'
       }`}>
         {/* 헤더 */}
@@ -329,18 +338,20 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
             </button>
             <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black border transition-all ${
               pomodoroActive
-                ? isFocus
-                  ? 'bg-[#0071E3] text-white border-[#0071E3] shadow-[0_2px_8px_rgba(0,113,227,0.35)]'
-                  : 'bg-emerald-500 text-white border-emerald-500 shadow-[0_2px_8px_rgba(16,185,129,0.35)]'
-                : isFocus
-                  ? 'bg-[#0071E3]/8 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/15'
-                  : 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-200'
+                ? 'bg-[#0071E3] text-white border-[#0071E3] shadow-[0_2px_8px_rgba(0,113,227,0.35)]'
+                : 'bg-[#0071E3]/8 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/15'
             }`}>
-              {isFocus ? <Target className="w-2.5 h-2.5" /> : <Coffee className="w-2.5 h-2.5" />}
-              {isFocus ? '집중 50분' : '휴식 10분'}
+              <Target className="w-2.5 h-2.5" />
+              집중 50분
             </span>
           </div>
         </div>
+
+        {!isLectureTime && !isPomodoroFullscreen && (
+          <p className="-mt-2 text-[10px] font-bold text-[#0071E3]">
+            지금은 강의 시간이 아니에요. 전체화면으로 몰입해 볼까요?
+          </p>
+        )}
 
         {/* SVG 링 + 타이머 — flex-1 로 헤더 아래 남는 세로공간을 채우고 가운데 정렬(옆 카드가 더 커도 안 밀림) */}
         <div className="flex flex-1 items-center gap-5">
@@ -414,7 +425,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                       setIsEditingPomoTime(true);
                     }}
                     className={`text-[28px] font-black leading-none tabular-nums cursor-pointer transition-colors hover:opacity-85 ${
-                      pomodoroActive ? (isFocus ? 'text-[#0071E3]' : 'text-emerald-600') : 'text-slate-800 dark:text-slate-200'
+                      pomodoroActive ? 'text-[#0071E3]' : 'text-slate-800 dark:text-slate-200'
                     }`}
                     style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
                     title="클릭하여 시간 수정"
@@ -429,7 +440,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                     }}
                     className="text-[9px] font-bold text-slate-400 mt-0.5 flex items-center gap-0.5 hover:text-[#0071E3] transition"
                   >
-                    {isFocus ? '집중' : '휴식'} <Edit2 className="w-2.5 h-2.5 opacity-60" />
+                    집중 <Edit2 className="w-2.5 h-2.5 opacity-60" />
                   </button>
                 </>
               )}
@@ -444,31 +455,26 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
               className={`w-full rounded-2xl text-xs font-black py-3 transition active:scale-95 ${
                 pomodoroActive
                   ? 'bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-slate-300'
-                  : isFocus
-                    ? 'bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-[0_4px_16px_rgba(0,113,227,0.35)]'
-                    : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_4px_16px_rgba(16,185,129,0.35)]'
+                  : 'bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-[0_4px_16px_rgba(0,113,227,0.35)]'
               }`}
             >
               {pomodoroActive
                 ? (<><Pause className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />일시 정지</>)
-                : (<><Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />{isFocus ? '집중 시작' : '휴식 시작'}</>)}
+                : (<><Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />집중 시작</>)}
             </button>
             <button
               type="button"
               onClick={() => {
                 setPomodoroActive(false);
-                setPomodoroMode('focus');
-                setPomodoroSeconds(3000);
-                focusTotalRef.current = 3000;
+                setPomodoroSeconds(FOCUS_SECONDS);
+                focusTotalRef.current = FOCUS_SECONDS;
                 clearStoredPomodoro();
               }}
               className="w-full rounded-2xl border border-slate-200 dark:border-white/10 hover:bg-slate-50 text-slate-500 dark:text-slate-400 py-2.5 text-xs font-bold transition active:scale-95"
             >
               ↺ 리셋
             </button>
-            {isFocus && (
-              <p className="text-center text-[10px] font-bold text-slate-400">타이머를 끝까지 완주해야 1세션으로 기록돼요.</p>
-            )}
+            <p className="text-center text-[10px] font-bold text-slate-400">타이머를 끝까지 완주해야 1세션으로 기록돼요.</p>
           </div>
         </div>
       </div>
@@ -574,7 +580,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                       setIsEditingPomoTime(true);
                     }}
                     className={`text-6xl font-black leading-none tabular-nums cursor-pointer transition-colors hover:text-[#0071E3]/80 ${
-                      pomodoroActive ? (isFocus ? 'text-[#0071E3]' : 'text-emerald-500') : 'text-white'
+                      pomodoroActive ? 'text-[#0071E3]' : 'text-white'
                     }`}
                     style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}
                     title="클릭하여 시간 수정"
@@ -589,8 +595,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                     }}
                     className="text-xs font-bold text-slate-400 mt-2 flex items-center gap-1 hover:text-white transition"
                   >
-                    {isFocus ? <Target className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
-                    {isFocus ? '집중 세션' : '휴식 세션'} <Edit2 className="w-3 h-3 opacity-60" />
+                    <Target className="w-3 h-3" />
+                    집중 세션 <Edit2 className="w-3 h-3 opacity-60" />
                   </button>
                 </>
               )}
@@ -607,23 +613,20 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
                 className={`flex-1 rounded-2xl text-sm font-black py-3.5 transition active:scale-95 shadow-lg ${
                   pomodoroActive
                     ? 'bg-white/10 hover:bg-white/15 text-white border border-white/10'
-                    : isFocus
-                      ? 'bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-[0_8px_24px_rgba(0,113,227,0.4)]'
-                      : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-[0_8px_24px_rgba(16,185,129,0.4)]'
+                    : 'bg-[#0071E3] hover:bg-[#0077ED] text-white shadow-[0_8px_24px_rgba(0,113,227,0.4)]'
                 }`}
               >
                 {pomodoroActive
                 ? (<><Pause className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />일시 정지</>)
-                : (<><Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />{isFocus ? '집중 시작' : '휴식 시작'}</>)}
+                : (<><Play className="inline h-3.5 w-3.5 -mt-0.5 mr-1" />집중 시작</>)}
               </button>
 
               <button
                 type="button"
                 onClick={() => {
                   setPomodoroActive(false);
-                  setPomodoroMode('focus');
-                  setPomodoroSeconds(3000);
-                  focusTotalRef.current = 3000;
+                  setPomodoroSeconds(FOCUS_SECONDS);
+                  focusTotalRef.current = FOCUS_SECONDS;
                   clearStoredPomodoro();
                 }}
                 className="px-4 py-3.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/5 transition active:scale-95"

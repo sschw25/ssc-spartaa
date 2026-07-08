@@ -6,6 +6,7 @@ import { useReportState } from '@/hooks/use-report-state';
 import { StudentLayout } from '@/components/report/student-layout';
 import { NotificationsSection } from '@/components/report/notifications-section';
 import { HomeOverviewTab } from '@/components/report/home-overview-tab';
+import { PomodoroTimer } from '@/components/report/pomodoro-timer-modal';
 import { TimetableTab } from '@/components/report/timetable-tab';
 import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
@@ -23,7 +24,7 @@ import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MaterialDetailSheet } from '@/components/report/material-detail-sheet';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
-import { Loader2, AlertCircle, BookOpen, Shield } from 'lucide-react';
+import { Loader2, AlertCircle, BookOpen, Shield, Timer } from 'lucide-react';
 import { TabHero } from '@/components/report/tab-hero';
 import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student, SubjectProgress, BookProgress, LectureProgress } from '@/lib/types/student';
 
@@ -220,7 +221,6 @@ function StudentReportInner() {
     updatePlanCompletion,
     updateDeadlineProgress,
     deadlineGoals,
-    deadlineSummary,
     incrementBookIncorrectTag,
     saveMakeupDone,
     adjustStartPoint,
@@ -230,6 +230,7 @@ function StudentReportInner() {
     studyTimeSlots,
     currentMinutes,
     todayDayKey,
+    isLectureTime,
     realignStudentPlans,
     realigningPlans,
     mockExams,
@@ -678,6 +679,23 @@ function StudentReportInner() {
           </section>
         )}
 
+        {isStudentReport && activeTab === 'focus' && (
+          <section id="focus" className="scroll-mt-24 space-y-4">
+            <TabHero
+              eyebrow="Focus"
+              icon={Timer}
+              title="집중"
+              description="뽀모도로 타이머로 몰입해요. 강의 시간이 아니면 전체화면으로 자동 전환돼요."
+            />
+            <PomodoroTimer
+              student={student}
+              setStudent={setStudent}
+              setRewardBanner={setRewardBanner}
+              isLectureTime={isLectureTime}
+            />
+          </section>
+        )}
+
         {isStudentReport && activeTab === 'life' && (
           <section id="life" className="scroll-mt-24 space-y-4">
             <TabHero
@@ -721,7 +739,6 @@ function StudentReportInner() {
           currentBriefingPhrase={currentBriefingPhrase}
           briefingSubMessage={briefingSubMessage}
           rewardBanner={rewardBanner}
-          setRewardBanner={setRewardBanner}
           submitChecklist={submitChecklist}
           checklistForm={checklistForm}
           setChecklistForm={setChecklistForm}
@@ -733,7 +750,6 @@ function StudentReportInner() {
           completedQuests={completedQuests}
           setCompletedQuests={setCompletedQuests}
           deadlineGoals={deadlineGoals}
-          deadlineSummary={deadlineSummary}
           openWeeklyPlan={openWeeklyPlanTab}
           openMakeup={openMakeupTab}
           openTimetable={openTimetableFromSheet}

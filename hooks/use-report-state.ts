@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target } from 'lucide-react';
+import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target, Timer } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
 import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
 import {
@@ -1239,7 +1239,7 @@ export function useReportState() {
     saveProgressPatch('book', materialId, { incorrectTags: nextTags });
   };
 
-  const submitChecklist = async (e: React.FormEvent) => {
+  const submitChecklist = async (e: React.FormEvent, isEdit = false): Promise<boolean> => {
     e.preventDefault();
     setChecklistSubmitting(true);
     try {
@@ -1261,14 +1261,17 @@ export function useReportState() {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
           setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 5000);
         } else {
-          toast.success('오늘 컨디션을 기록했어요.');
+          toast.success(isEdit ? '아침 점검 기록을 수정했어요.' : '오늘 컨디션을 기록했어요.');
         }
+        return true;
       } else {
         toast.error(json?.message || '기록에 실패했어요. 다시 시도해 주세요.');
+        return false;
       }
     } catch {
       // 네트워크 실패 — 입력한 폼 값은 그대로 남아 있어 재시도 가능
       toast.error('네트워크 오류로 기록하지 못했어요. 다시 시도해 주세요.');
+      return false;
     } finally {
       setChecklistSubmitting(false);
     }
@@ -1824,6 +1827,11 @@ export function useReportState() {
   });
   const currentStudyTimeKey = currentPeriod?.studyTime || '';
   const todayDayKey = WEEKDAY_KEY_MAP[kstNow.weekday] || 'mon';
+
+  // 지금 교시에 배정된 인강이 있으면 "강의 수강 중" — 집중(뽀모도로) 탭 자동 전체화면 여부 판정에 사용.
+  const isLectureTime = !!(currentPeriod?.periodKey && todaySchedule.get(currentPeriod.periodKey)?.some(
+    (item) => item.materialType === 'lecture' && !item.isCompleted,
+  ));
   
   // 과목이 "오늘 학습 대상"인지 판정 — 자료별 요일을 union 으로 반영한다.
   // 과목 요일 또는 그 과목의 어떤 자료 요일이라도 오늘을 포함하면 오늘 대상.
@@ -2279,6 +2287,7 @@ export function useReportState() {
     ? [
         { href: '#report-overview', label: '홈', meta: getCampusLabel(student.campus), icon: Home },
         { href: '#learning', label: '학습', meta: `오늘 ${todaySubjects.length}개 · 진도·성적`, icon: BookOpen },
+        { href: '#focus', label: '집중', meta: isLectureTime ? '강의 수강 중' : '뽀모도로 타이머', icon: Timer },
         { href: '#wrong-note', label: '오답 노트', meta: '교재별 오답 사유', icon: Target },
         { href: '#student-requests', label: '신청', meta: `상담 · 반차 ${homeHalfLeft}회`, icon: ClipboardList },
         { href: '#life', label: '생활', meta: `등하원 · 벌점 ${totalPenaltyPoints}점`, icon: Shield },
@@ -2508,5 +2517,6 @@ export function useReportState() {
     studyTimeSlots: STUDY_TIME_SLOTS_MAPPED,
     currentMinutes,
     todayDayKey,
+    isLectureTime,
   };
 }

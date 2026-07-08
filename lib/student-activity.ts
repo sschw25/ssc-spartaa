@@ -7,6 +7,7 @@ export type DailyChecklistEntry = {
   sleep_hours?: number;
   phone_submitted?: boolean;       // 하위호환: phone_status==='submitted' 와 동치
   phone_status?: PhoneStatus;      // 등원 시 휴대폰 처리 방식 (3택)
+  phone_reason?: string;           // 미제출(임시보관함/소지) 사유 — 수정 시 프리필용
   submitted_at?: string;
 };
 
@@ -73,6 +74,7 @@ function copyChecklistRecord(value: unknown): Record<string, DailyChecklistEntry
     if (item.phone_status === 'submitted' || item.phone_status === 'locker' || item.phone_status === 'off_hold') {
       entry.phone_status = item.phone_status;
     }
+    if (typeof item.phone_reason === 'string' && item.phone_reason.trim() !== '') entry.phone_reason = item.phone_reason;
     if (typeof item.submitted_at === 'string') entry.submitted_at = item.submitted_at;
     if (Object.keys(entry).length > 0) output[key] = entry;
   }

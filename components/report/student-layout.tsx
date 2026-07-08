@@ -145,12 +145,14 @@ export function StudentLayout({
   const quickTabItems: QuickTabItem[] = [];
   const homeNavItem = getNavItem('report-overview');
   const learningNavItem = getNavItem('learning');
+  const focusNavItem = getNavItem('focus');
   const requestNavItem = getNavItem('student-requests');
   const lifeNavItem = getNavItem('life');
   const notificationNavItem = getNavItem('student-notifications');
 
   if (homeNavItem) quickTabItems.push({ ...homeNavItem, key: 'report-overview', tabId: 'report-overview' });
   if (learningNavItem) quickTabItems.push({ ...learningNavItem, label: '학습', meta: '오늘·진도·성적', key: 'learning', tabId: 'learning' });
+  if (focusNavItem) quickTabItems.push({ ...focusNavItem, key: 'focus', tabId: 'focus' });
   if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '신청', meta: '상담·반차', key: 'student-requests', tabId: 'student-requests' });
   if (lifeNavItem) quickTabItems.push({ ...lifeNavItem, label: '생활', meta: '등하원·쿠폰', key: 'life', tabId: 'life' });
   if (notificationNavItem) quickTabItems.push({ ...notificationNavItem, key: 'student-notifications', tabId: 'student-notifications' });

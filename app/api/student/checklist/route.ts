@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
       sleep_hours: sleepHoursNum,
       phone_submitted: phoneSubmitted,
       phone_status: phoneStatus,
+      phone_reason: phoneReason, // 수정 시 사유 프리필용(제출완료면 빈 문자열)
       submitted_at: nowIso,
     };
     writeActivityEnvelope(student, noteObj);

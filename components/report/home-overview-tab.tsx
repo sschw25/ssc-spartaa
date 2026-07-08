@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, Smartphone, Archive, PowerOff, ChevronRight, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
 import type { BookProgress, ConsultationBooking, LectureProgress } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
@@ -11,7 +11,6 @@ import { HomeHighlightsPanel } from './home-highlights-panel';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
 import { AttendanceStatusCard } from './attendance-status-card';
-import { PomodoroTimer } from './pomodoro-timer-modal';
 import { TabHero } from './tab-hero';
 import { StreakCard } from './streak-card';
 import { getMakeupLedger, getMakeupObligations } from '@/lib/makeup-ledger';
@@ -79,8 +78,7 @@ interface HomeOverviewTabProps {
   currentBriefingPhrase: string;
   briefingSubMessage: string;
   rewardBanner: { show: boolean; reasons: string[] };
-  setRewardBanner: React.Dispatch<React.SetStateAction<{ show: boolean; reasons: string[] }>>;
-  submitChecklist: (e: React.FormEvent) => Promise<void>;
+  submitChecklist: (e: React.FormEvent, isEdit?: boolean) => Promise<boolean>;
   checklistForm: { sleepHours: number; phoneSubmitted: boolean; phoneStatus: 'submitted' | 'locker' | 'off_hold'; phoneReason: string };
   setChecklistForm: React.Dispatch<React.SetStateAction<{ sleepHours: number; phoneSubmitted: boolean; phoneStatus: 'submitted' | 'locker' | 'off_hold'; phoneReason: string }>>;
   checklistSubmitting: boolean;
@@ -91,14 +89,6 @@ interface HomeOverviewTabProps {
   studyStats: StudyStats | null;
   completedQuests: Record<number, boolean>;
   setCompletedQuests: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
-  deadlineSummary?: {
-    expectedMinutes: number;
-    actualMinutes: number;
-    metToday: boolean;
-    aheadDays: number;
-    riskCount: number;
-    goalCount: number;
-  } | null;
   deadlineGoals?: DeadlineGoal[];
   openWeeklyPlan?: () => void;
   openMakeup?: () => void;
@@ -141,7 +131,6 @@ export function HomeOverviewTab({
   timeGreeting,
   currentBriefingPhrase,
   rewardBanner,
-  setRewardBanner,
   submitChecklist,
   checklistForm,
   setChecklistForm,
@@ -152,7 +141,6 @@ export function HomeOverviewTab({
   studyStats,
   completedQuests,
   setCompletedQuests,
-  deadlineSummary,
   deadlineGoals = [],
   openWeeklyPlan,
   openMakeup,
@@ -189,6 +177,9 @@ export function HomeOverviewTab({
   // 주간목표(deadline) 홈 진도 입력 — 자료별 누적 입력 초안 + 저장 중 id.
   const [deadlineDraft, setDeadlineDraft] = useState<Record<string, string>>({});
   const [deadlineSavingId, setDeadlineSavingId] = useState<string | null>(null);
+  // '오늘 안 함'으로 미룬 항목(주간목표·자율목표 공용) 집합. 저장 id = `${오늘날짜}::${항목id}` 라
+  // 날짜가 바뀌면 자동으로 다시 노출된다. localStorage 저장(기기별) — 서버 저장/마이그레이션 없음.
+  const [daySkips, setDaySkips] = useState<Set<string>>(new Set());
   // 시작점 조정 패널 — 열린 항목 id 만 여기서 관리(입력 상태는 공용 StartPointAdjustPanel 내부).
   const [adjustOpenId, setAdjustOpenId] = useState<string | null>(null);
 
@@ -196,6 +187,9 @@ export function HomeOverviewTab({
   const [makeupOpenId, setMakeupOpenId] = useState<string | null>(null);
   const [makeupAmount, setMakeupAmount] = useState(1);
   const [makeupSaving, setMakeupSaving] = useState(false);
+
+  // 아침 자가 점검표 — 계획 항목과 동일한 토글 패턴(펼쳐서 입력 → 완료 → 수정 가능).
+  const [checklistEditing, setChecklistEditing] = useState(false);
 
   const ddays: DDayEvent[] = student.ddays || [];
 
@@ -280,6 +274,34 @@ export function HomeOverviewTab({
     const month = parts.find(part => part.type === 'month')?.value;
     const day = parts.find(part => part.type === 'day')?.value;
     return `${year}-${month}-${day}`;
+  };
+
+  // '오늘 안 함' 스킵 로드 — 오늘 날짜키로 시작하는 항목만 남기고 나머지(과거)는 정리한다.
+  const daySkipKey = `ssc-day-skips:${student.id}`;
+  React.useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(daySkipKey);
+      if (!raw) return;
+      const arr: string[] = JSON.parse(raw);
+      const todayPrefix = `${getSeoulDateKey()}::`;
+      const todays = arr.filter((id) => id.startsWith(todayPrefix));
+      setDaySkips(new Set(todays));
+      if (todays.length !== arr.length) window.localStorage.setItem(daySkipKey, JSON.stringify(todays));
+    } catch { /* 무시 — 스킵 없음으로 취급 */ }
+  }, [daySkipKey]);
+
+  // 항목 id → 오늘자 스킵 키. 항목 종류(주간·자율) 무관하게 공용.
+  const skipIdFor = (rawId: string) => `${getSeoulDateKey()}::${rawId}`;
+  const isDaySkipped = (rawId: string) => daySkips.has(skipIdFor(rawId));
+  const toggleDaySkip = (rawId: string) => {
+    const key = skipIdFor(rawId);
+    setDaySkips((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      try { window.localStorage.setItem(daySkipKey, JSON.stringify([...next])); } catch { /* 무시 */ }
+      return next;
+    });
   };
 
   // 자료의 오늘 복습 분 — reviewLog[오늘] 조회(계획/자율 공통 배지용). subjects 단일소스에서 찾는다.
@@ -367,11 +389,35 @@ export function HomeOverviewTab({
   const todayChecklistKey = getSeoulDateKey();
   const todayChecklistNote = getSpecialNoteObj();
   const todayChecklist = todayChecklistNote.daily_checklist?.[todayChecklistKey];
+
+  // 아침 자가 점검 코칭 멘트 — 히어로 카드 서브메시지로 노출(예전엔 별도 카드였음).
+  const checklistIsSleepShort = !!todayChecklist && todayChecklist.sleep_hours < 6;
+  const checklistPhoneStatus = todayChecklist ? (todayChecklist.phone_status || (todayChecklist.phone_submitted ? 'submitted' : 'locker')) : null;
+  const checklistPhoneNotSubmitted = !!todayChecklist && checklistPhoneStatus !== 'submitted';
+  const checklistPhoneStatusLabel = checklistPhoneStatus === 'locker' ? '임시보관함' : checklistPhoneStatus === 'off_hold' ? '전원끄고 소지' : '제출 완료';
+  const checklistTone: 'pending' | 'warn' | 'ok' = !todayChecklist
+    ? 'pending'
+    : (checklistIsSleepShort || checklistPhoneNotSubmitted) ? 'warn' : 'ok';
+  const checklistTip = !todayChecklist
+    ? '아침 컨디션(수면·휴대폰)을 기록하면 오늘 브리핑이 더 정확해져요.'
+    : checklistIsSleepShort && checklistPhoneNotSubmitted
+      ? '잠도 부족한데(6시간 미만) 스마트폰까지 옆에 있으면 쉽게 산만해져요. 스마트폰부터 제출해 볼까요?'
+      : checklistIsSleepShort
+        ? '어젯밤 6시간도 못 잤네요. 잠이 부족하면 계획 달성률이 25%쯤 떨어지기 쉬워요.'
+        : checklistPhoneNotSubmitted
+          ? '스마트폰을 아직 제출하지 않았어요. 알림 하나가 몰입을 통째로 깨뜨려요.'
+          : '어젯밤 잠도 충분히 잤고 스마트폰도 깔끔하게 정리했네요. 오늘 계획 100% 달성에 도전해 봐요!';
   const completedPlanCount = todayPlanEntries.filter((entry) => entry.isCompleted).length;
   const activeDeadlineGoals = isStudentReport ? deadlineGoals.filter((goal) => goal.targetAmount > 0) : [];
-  // 기간목표도 '오늘 할 일'에 포함 — 오늘까지 기대치(예상목표치)를 채웠으면 완료로 집계(요약 배지와 동일 기준).
-  // (전엔 일일계획+점검표만 세어 "기간목표 다 했는데 진행률이 안 오른다" 혼동이 있었음)
-  const deadlineDoneToday = activeDeadlineGoals.filter((g) => g.expectedAmount <= 0 || g.actualAmount >= g.expectedAmount * 0.9).length;
+  // '오늘 안 함'으로 미룬 항목은 오늘 목록에서 제외(내일 다시 노출). 미룬 목록은 '되돌리기' 섹션에서 복구.
+  const visibleDeadlineGoals = activeDeadlineGoals.filter((goal) => !isDaySkipped(goal.id));
+  const skippedDeadlineGoals = activeDeadlineGoals.filter((goal) => isDaySkipped(goal.id));
+  const visibleSelfPacedItems = todaySelfPacedItems.filter((item) => !isDaySkipped(item.id));
+  const skippedSelfPacedItems = todaySelfPacedItems.filter((item) => isDaySkipped(item.id));
+  // 주간목표 '오늘 완료' 판정 — 오늘까지 기대치(예상목표치) 90% 이상 채움(요약 배지와 동일 기준).
+  const isDeadlineDoneToday = (g: DeadlineGoal) => g.expectedAmount <= 0 || g.actualAmount >= g.expectedAmount * 0.9;
+  // 기간목표도 '오늘 할 일'에 포함 — 미룬 건 뺀 노출 목록 기준으로 집계.
+  const deadlineDoneToday = visibleDeadlineGoals.filter(isDeadlineDoneToday).length;
 
   // 주말 보강 원장 — 남은 보강(remaining>0) 목록 + 발생분 전체(카운트 판정용).
   const makeupLedger = React.useMemo(
@@ -391,7 +437,7 @@ export function HomeOverviewTab({
   // 토/일엔 보강 발생 자료를 '오늘 할 일'에 포함(remaining==0이면 완료). 평일엔 카운트 미포함.
   const makeupCountTotal = isWeekendToday ? makeupObligations.length : 0;
   const makeupCountDone = isWeekendToday ? makeupObligations.filter((it) => it.remaining <= 0).length : 0;
-  const todayMissionTotal = todayPlanEntries.length + 1 + activeDeadlineGoals.length + makeupCountTotal;
+  const todayMissionTotal = todayPlanEntries.length + 1 + visibleDeadlineGoals.length + makeupCountTotal;
   const todayMissionDone = completedPlanCount + (todayChecklist ? 1 : 0) + deadlineDoneToday + makeupCountDone;
   const todayMissionPercent = todayMissionTotal > 0 ? Math.round((todayMissionDone / todayMissionTotal) * 100) : 0;
 
@@ -461,41 +507,47 @@ export function HomeOverviewTab({
     <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 dark:border-white/10 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
       {isStudentReport ? (
         <div className="stagger-children w-full space-y-5">
-          {/* 상단 3열 요약(모바일도 3열 유지) — 인사·연속출석·D-Day. 각 세로 카드였던 걸 압축 타일로 묶어 스크롤을 줄였다. */}
-          <div className="grid grid-cols-3 gap-2">
-            <div className="flex h-full flex-col rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 text-center shadow-sm">
-              <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
-              </p>
-              <div className="mt-1.5 min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
-                  {student.name}님
-                </p>
-                <p className="mt-0.5 truncate text-[10px] font-medium leading-tight text-[#0071E3]">{timeGreeting}</p>
-                <p className="mt-1 truncate text-[9px] font-medium leading-tight text-slate-400 dark:text-slate-500">{currentBriefingPhrase}</p>
-              </div>
+          {/* 홈 히어로 카드 — 인사·오늘 브리핑·아침 컨디션 코칭 멘트를 한 카드로 묶고, 연속출석·D-Day는 하단 칩으로. */}
+          <div className="rounded-3xl border border-[#0071E3]/15 bg-gradient-to-br from-[#0071E3]/[0.07] via-white to-white dark:from-[#0071E3]/20 dark:via-[#1c1c1e] dark:to-[#1c1c1e] p-5 shadow-sm sm:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-[#0071E3]">
+              {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
+            </p>
+            <h2 className="mt-1.5 text-[20px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+              {student.name}님, {timeGreeting}
+            </h2>
+            <p className="mt-1 text-[12px] font-medium text-slate-500 dark:text-slate-400">{currentBriefingPhrase}</p>
+            <p className={`mt-3 rounded-2xl px-3 py-2.5 text-[11px] font-semibold leading-relaxed ${
+              checklistTone === 'warn'
+                ? 'bg-amber-50 text-amber-800 dark:bg-amber-500/10 dark:text-amber-300'
+                : checklistTone === 'ok'
+                  ? 'bg-emerald-50 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300'
+                  : 'bg-[#0071E3]/[0.06] text-[#0071E3] dark:bg-[#0071E3]/15'
+            }`}>
+              {checklistTip}
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-2">
+              <StreakCard compact />
+
+              <button
+                type="button"
+                onClick={() => setDdayOpen(true)}
+                className="flex h-full flex-col rounded-2xl border border-[#0071E3]/15 bg-white/70 dark:bg-white/5 p-3 text-center shadow-sm transition active:scale-[0.98]"
+                aria-label="D-Day 관리"
+              >
+                <p className="text-[9px] font-semibold uppercase tracking-wide text-[#0071E3]">D-Day</p>
+                {primaryDday ? (
+                  <div className="mt-1.5 min-w-0 flex-1">
+                    <p className="text-[17px] font-semibold leading-none text-[#0071E3] tabular-nums">
+                      {calcDiff(primaryDday.date)}
+                    </p>
+                    <p className="mt-1.5 truncate text-[10px] font-medium leading-tight text-slate-600 dark:text-slate-400">{primaryDday.title}</p>
+                  </div>
+                ) : (
+                  <p className="mt-1.5 flex-1 text-[10px] font-medium leading-tight text-slate-400 dark:text-slate-400">일정 추가</p>
+                )}
+              </button>
             </div>
-
-            <StreakCard compact />
-
-            <button
-              type="button"
-              onClick={() => setDdayOpen(true)}
-              className="flex h-full flex-col rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3 text-center shadow-sm transition active:scale-[0.98]"
-              aria-label="D-Day 관리"
-            >
-              <p className="text-[9px] font-semibold uppercase tracking-wide text-[#0071E3]">D-Day</p>
-              {primaryDday ? (
-                <div className="mt-1.5 min-w-0 flex-1">
-                  <p className="text-[17px] font-semibold leading-none text-[#0071E3] tabular-nums">
-                    {calcDiff(primaryDday.date)}
-                  </p>
-                  <p className="mt-1.5 truncate text-[10px] font-medium leading-tight text-slate-600 dark:text-slate-400">{primaryDday.title}</p>
-                </div>
-              ) : (
-                <p className="mt-1.5 flex-1 text-[10px] font-medium leading-tight text-slate-400 dark:text-slate-400">일정 추가</p>
-              )}
-            </button>
           </div>
 
           <div id="today-mission-card" className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm md:p-5">
@@ -507,7 +559,7 @@ export function HomeOverviewTab({
                 </h2>
                 <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
                   {/* 미션/보상 탭과 혼동되지 않게 집계 기준(계획+기간목표+점검표)을 명시 */}
-                  오늘 계획 {todayPlanEntries.length}건{activeDeadlineGoals.length > 0 ? ` + 기간목표 ${activeDeadlineGoals.length}개` : ''} + 아침 점검표{todayDailyPlan ? ` · ${todayDailyPlan.dateLabel}` : ''}
+                  오늘 계획 {todayPlanEntries.length}건{visibleDeadlineGoals.length > 0 ? ` + 주간목표 ${visibleDeadlineGoals.length}개` : ''} + 아침 점검표{todayDailyPlan ? ` · ${todayDailyPlan.dateLabel}` : ''}
                 </p>
               </div>
               <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 text-[15px] font-semibold text-[#0071E3] tabular-nums">
@@ -526,9 +578,17 @@ export function HomeOverviewTab({
               <button
                 type="button"
                 onClick={() => {
-                  if (!todayChecklist) {
-                    document.getElementById('morning-checklist-card')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  const willOpen = !checklistEditing;
+                  if (willOpen && todayChecklist) {
+                    const status = checklistPhoneStatus || 'submitted';
+                    setChecklistForm({
+                      sleepHours: Number(todayChecklist.sleep_hours) || 7,
+                      phoneStatus: status,
+                      phoneSubmitted: status === 'submitted',
+                      phoneReason: String(todayChecklist.phone_reason || ''),
+                    });
                   }
+                  setChecklistEditing(willOpen);
                 }}
                 className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition active:scale-[0.99] ${
                   todayChecklist
@@ -547,16 +607,91 @@ export function HomeOverviewTab({
                   </span>
                   <span className="mt-0.5 block truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
                     {todayChecklist
-                      ? `수면 ${todayChecklist.sleep_hours}시간 · 휴대폰 기록 완료`
+                      ? `수면 ${todayChecklist.sleep_hours}시간 · 휴대폰 ${checklistPhoneStatusLabel}`
                       : '컨디션을 기록하면 오늘 할 일 진행률에 반영돼요'}
                   </span>
                 </span>
                 <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
                   todayChecklist ? 'bg-white text-emerald-700 dark:bg-white/10 dark:text-emerald-300' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'
                 }`}>
-                  {todayChecklist ? '완료' : '기록'}
+                  {todayChecklist ? (checklistEditing ? '접기' : '수정') : (checklistEditing ? '접기' : '기록')}
                 </span>
               </button>
+
+              {checklistEditing && (
+                <form
+                  onSubmit={async (e) => {
+                    const ok = await submitChecklist(e, !!todayChecklist);
+                    if (ok) setChecklistEditing(false);
+                  }}
+                  className="rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 p-4 space-y-4"
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <label htmlFor="sleepHoursInput" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">어젯밤 수면 시간</label>
+                    <select
+                      id="sleepHoursInput"
+                      value={checklistForm.sleepHours}
+                      onChange={(e) => setChecklistForm(f => ({ ...f, sleepHours: Number(e.target.value) }))}
+                      className="h-11 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 text-[13px] font-semibold text-slate-700 dark:text-slate-300 focus:border-[#0071E3] focus:outline-none"
+                    >
+                      {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map(h => (
+                        <option key={h} value={h}>{h}시간</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">등원 시 휴대폰</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {([
+                        ['submitted', '제출완료', Smartphone],
+                        ['locker', '임시보관함', Archive],
+                        ['off_hold', '전원끄고소지', PowerOff],
+                      ] as Array<['submitted' | 'locker' | 'off_hold', string, LucideIcon]>).map(([val, label, Icon]) => (
+                        <button
+                          key={val}
+                          type="button"
+                          onClick={() => setChecklistForm(f => ({ ...f, phoneStatus: val, phoneSubmitted: val === 'submitted' }))}
+                          className={`min-h-14 rounded-2xl border px-1.5 py-2.5 text-[11px] font-semibold leading-tight transition active:scale-95 ${
+                            checklistForm.phoneStatus === val
+                              ? 'bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 border-[#0071E3] text-[#0071E3]'
+                              : 'bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                          }`}
+                        >
+                          <Icon className="mx-auto mb-0.5 h-4 w-4" />
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                    {checklistForm.phoneStatus !== 'submitted' && (
+                      <textarea
+                        value={checklistForm.phoneReason}
+                        onChange={(e) => setChecklistForm(f => ({ ...f, phoneReason: e.target.value }))}
+                        rows={2}
+                        placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요 (관리자에게 전달돼요)"
+                        className="w-full rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/40 dark:bg-amber-500/10 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-amber-400 focus:outline-none resize-none"
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setChecklistEditing(false)}
+                      className="rounded-full border border-slate-200 dark:border-white/10 px-5 py-2.5 text-[12px] font-semibold text-slate-500 dark:text-slate-400 transition hover:bg-white dark:hover:bg-white/5 active:scale-95"
+                    >
+                      닫기
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
+                      className="flex-1 rounded-full bg-slate-900 dark:bg-white py-2.5 text-[12px] font-semibold text-white dark:text-slate-900 shadow-sm transition hover:bg-slate-800 dark:hover:bg-slate-100 active:scale-95 disabled:opacity-50"
+                    >
+                      {checklistSubmitting ? '저장 중...' : todayChecklist ? '수정 저장' : '컨디션 기록 완료'}
+                    </button>
+                  </div>
+                </form>
+              )}
 
               {todayPlanEntries.length > 0 ? (
                 todayPlanEntries.map((entry, index) => {
@@ -792,33 +927,168 @@ export function HomeOverviewTab({
                     </div>
                   );
                 })
-              ) : todaySelfPacedItems.length === 0 ? (
+              ) : visibleSelfPacedItems.length === 0 && visibleDeadlineGoals.length === 0 && skippedDeadlineGoals.length === 0 && skippedSelfPacedItems.length === 0 ? (
                 <p className="rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 px-4 py-5 text-center text-xs font-medium text-slate-500 dark:text-slate-400">
                   오늘 배정된 항목이 없어요. 학습 계획을 확인해 보세요.
                 </p>
               ) : null}
 
-              {/* 자율 목표 그룹 — selfPaced 자료(분량 자유·누적 입력). 오늘 할 일 완료 카운트에 포함하지 않는다. */}
-              {todaySelfPacedItems.length > 0 && (
-                <div className="mt-1 space-y-2.5 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      <Target className="h-3.5 w-3.5 text-[#0071E3]" />
-                      자율 목표
-                    </p>
-                    <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
-                      오늘 할 일 완료와 별도
-                    </span>
-                  </div>
+              {/* 주간목표(기간목표) — 오늘 할 일 목록에 통합. '주간목표' 태그 + 오늘 목표량 + '오늘 안 함'(내일 다시 노출). */}
+              {visibleDeadlineGoals.map((goal) => {
+                const done = goal.actualAmount >= goal.targetAmount;
+                const metToday = isDeadlineDoneToday(goal);
+                const recommend = Math.min(Math.max(0, goal.targetAmount - goal.actualAmount), Math.max(0, goal.todayRecommend));
+                const startAt = Math.min(goal.targetAmount, goal.actualAmount + 1); // 오늘 시작 위치(근사)
+                const draftVal = deadlineDraft[goal.id] ?? String(goal.actualAmount);
+                const isSaving = deadlineSavingId === goal.id;
+                return (
+                  <div
+                    key={goal.id}
+                    className={`rounded-2xl border p-3 transition ${
+                      done || metToday
+                        ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10'
+                        : goal.behind
+                          ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10'
+                          : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${
+                        done || metToday ? 'border-emerald-200 bg-emerald-500 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-300 dark:text-slate-600'
+                      }`}>
+                        <Target className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <button
+                              type="button"
+                              disabled={!openMaterialDetail}
+                              onClick={(e) => { e.stopPropagation(); openMaterialDetail?.(goal.materialType, goal.materialId); }}
+                              aria-label={`${goal.subject} ${goal.title} 상세 보기`}
+                              className="block w-full min-w-0 text-left disabled:cursor-default"
+                            >
+                              <p className="flex flex-wrap items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                <span className="truncate">{goal.subject} · {goal.title}</span>
+                                <span className="inline-flex shrink-0 items-center rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#0071E3]">주간목표</span>
+                                {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
+                              </p>
+                              <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">이번 주 {goal.rangeText}</p>
+                            </button>
+                          </div>
+                          <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                            done || metToday ? 'bg-white text-emerald-700 dark:bg-white/10 dark:text-emerald-300' : goal.behind ? 'bg-white text-amber-700 dark:bg-white/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+                          }`}>
+                            {done ? '주간 완료' : metToday ? '오늘 완료' : `${goal.actualAmount}/${goal.targetAmount}${goal.unit}`}
+                          </span>
+                        </div>
 
-                  {todaySelfPacedItems.map((item) => {
+                        {!done && (
+                          <p className="mt-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                            {metToday
+                              ? '오늘치는 다 채웠어요. 더 해도 좋아요!'
+                              : recommend > 0
+                                ? <>오늘은 <span className="font-semibold text-[#0071E3]">{startAt}{goal.unit}</span>부터 · 오늘 목표 <span className="font-semibold text-[#0071E3]">{recommend}{goal.unit}</span></>
+                                : '오늘 권장량 없음'}
+                          </p>
+                        )}
+
+                        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                          {saveStudySlot && (
+                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
+                              교시
+                              <select
+                                value={goal.studySlot || ''}
+                                disabled={slotSavingId === goal.id}
+                                onChange={async (e) => {
+                                  const next = e.target.value;
+                                  setSlotSavingId(goal.id);
+                                  try {
+                                    const ok = await saveStudySlot(goal.materialType, goal.materialId, next);
+                                    if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
+                                    else toast.error('교시 배치에 실패했어요.');
+                                  } finally {
+                                    setSlotSavingId(null);
+                                  }
+                                }}
+                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                              >
+                                {STUDY_SLOT_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          {updateDeadlineProgress && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">진행</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={goal.targetAmount}
+                                value={draftVal}
+                                onChange={(e) => setDeadlineDraft((d) => ({ ...d, [goal.id]: e.target.value }))}
+                                className="h-8 w-16 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-right text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
+                              />
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{goal.unit}</span>
+                              <button
+                                type="button"
+                                disabled={isSaving || draftVal === String(goal.actualAmount)}
+                                onClick={async () => {
+                                  const val = Math.max(0, Math.round(Number(draftVal) || 0));
+                                  setDeadlineSavingId(goal.id);
+                                  try {
+                                    const ok = await updateDeadlineProgress(goal.materialType, goal.materialId, goal.planId, val);
+                                    if (ok) { toast.success('진도를 저장했어요.'); setDeadlineDraft((d) => { const n = { ...d }; delete n[goal.id]; return n; }); }
+                                    else toast.error('진도 저장에 실패했어요.');
+                                  } finally {
+                                    setDeadlineSavingId(null);
+                                  }
+                                }}
+                                className="h-8 rounded-full bg-[#0071E3] px-3 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-95 disabled:opacity-50"
+                              >
+                                {isSaving ? '저장 중' : '저장'}
+                              </button>
+                            </div>
+                          )}
+                          {!done && !metToday && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                toggleDaySkip(goal.id);
+                                toast('오늘은 이 주간목표를 건너뛸게요. 아래 "오늘 미룬 목표"에서 되돌릴 수 있어요.', {
+                                  action: { label: '되돌리기', onClick: () => toggleDaySkip(goal.id) },
+                                });
+                              }}
+                              className="ml-auto inline-flex h-8 items-center rounded-full border border-slate-200 dark:border-white/10 px-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                            >
+                              오늘 안 함
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* 자율목표 — selfPaced 자료(분량 자유·누적 입력). 주간목표처럼 태그 카드로 목록에 통일. 완료 카운트엔 미포함(별도). */}
+              {visibleSelfPacedItems.map((item) => {
                     const isOpen = selfPacedOpenId === item.id;
                     const reviewMin = reviewMinFor(item.materialType, item.materialId);
                     return (
-                      <div key={item.id} className={`rounded-xl border p-3 transition ${
+                      <div key={item.id} className={`rounded-2xl border p-3 transition ${
                         item.loggedToday ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isOpen ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
                       }`}>
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3">
+                          <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${
+                            item.loggedToday ? 'border-emerald-200 bg-emerald-500 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-300 dark:text-slate-600'
+                          }`}>
+                            <Sparkles className="h-4 w-4" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             {/* 제목 탭 → 자료 상세 시트 ('오늘 입력' 버튼과 충돌 없게 별도 버튼) */}
                             <button
@@ -831,8 +1101,9 @@ export function HomeOverviewTab({
                               aria-label={`${item.subject} ${item.title} 상세 보기`}
                               className="block w-full min-w-0 text-left disabled:cursor-default"
                             >
-                              <p className="flex items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                              <p className="flex flex-wrap items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
                                 <span className="truncate">{item.subject} · {item.title}</span>
+                                <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400">자율목표</span>
                                 {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
                               </p>
                               <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
@@ -865,35 +1136,51 @@ export function HomeOverviewTab({
                           )}
                         </div>
 
-                        {/* 시간표 배치 — 자료별 학생 지정 슬롯. 미지정이면 시간표에 안 뜨고 여기(그날 할일)에만 노출. */}
-                        {saveStudySlot && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
-                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                              <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
-                              시간표 배치
-                            </label>
-                            <select
-                              value={item.studyTime || ''}
-                              disabled={slotSavingId === item.id}
-                              onChange={async (e) => {
-                                const next = e.target.value;
-                                setSlotSavingId(item.id);
-                                try {
-                                  const ok = await saveStudySlot(item.materialType, item.materialId, next);
-                                  if (ok) toast.success(next ? `시간표 ${formatSlotLabel(next)}에 배치했어요.` : '시간표에서 내렸어요.');
-                                  else toast.error('시간대 설정에 실패했어요. 다시 시도해 주세요.');
-                                } finally {
-                                  setSlotSavingId(null);
-                                }
+                        {/* 시간표 배치(선택) + 오늘 안 함 — 자료별 학생 지정 슬롯. 미지정이면 시간표엔 안 뜨고 여기에만 노출. */}
+                        <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                          {saveStudySlot && (
+                            <>
+                              <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
+                                시간표 배치
+                              </label>
+                              <select
+                                value={item.studyTime || ''}
+                                disabled={slotSavingId === item.id}
+                                onChange={async (e) => {
+                                  const next = e.target.value;
+                                  setSlotSavingId(item.id);
+                                  try {
+                                    const ok = await saveStudySlot(item.materialType, item.materialId, next);
+                                    if (ok) toast.success(next ? `시간표 ${formatSlotLabel(next)}에 배치했어요.` : '시간표에서 내렸어요.');
+                                    else toast.error('시간대 설정에 실패했어요. 다시 시도해 주세요.');
+                                  } finally {
+                                    setSlotSavingId(null);
+                                  }
+                                }}
+                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                              >
+                                {STUDY_SLOT_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </>
+                          )}
+                          {!item.loggedToday && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                toggleDaySkip(item.id);
+                                toast('오늘은 이 자율목표를 건너뛸게요. 아래 "오늘 미룬 목표"에서 되돌릴 수 있어요.', {
+                                  action: { label: '되돌리기', onClick: () => toggleDaySkip(item.id) },
+                                });
                               }}
-                              className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                              className="ml-auto inline-flex h-8 items-center rounded-full border border-slate-200 dark:border-white/10 px-3 text-[11px] font-semibold text-slate-400 dark:text-slate-500 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
                             >
-                              {STUDY_SLOT_OPTIONS.map((opt) => (
-                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
+                              오늘 안 함
+                            </button>
+                          )}
+                        </div>
 
                         {isOpen && !item.loggedToday && (
                           <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
@@ -964,9 +1251,38 @@ export function HomeOverviewTab({
                             </div>
                           </div>
                         )}
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
+
+              {/* 오늘 미룬 목표(주간·자율 공용) — '오늘 안 함' 한 항목을 여기서 되돌린다. 내일이면 자동으로 다시 노출. */}
+              {(skippedDeadlineGoals.length + skippedSelfPacedItems.length) > 0 && (
+                <div className="mt-1 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/60 dark:bg-white/5 p-3">
+                  <p className="mb-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    오늘 미룬 목표 {skippedDeadlineGoals.length + skippedSelfPacedItems.length}개 · 내일 다시 알려드려요
+                  </p>
+                  <div className="space-y-1.5">
+                    {[
+                      ...skippedDeadlineGoals.map((g) => ({ id: g.id, label: `${g.subject} · ${g.title}`, tag: '주간목표' })),
+                      ...skippedSelfPacedItems.map((it) => ({ id: it.id, label: `${it.subject} · ${it.title}`, tag: '자율목표' })),
+                    ].map((row) => (
+                      <div key={row.id} className="flex items-center justify-between gap-2 rounded-xl bg-white dark:bg-[#1c1c1e] px-3 py-2">
+                        <span className="flex min-w-0 items-center gap-1.5">
+                          <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${row.tag === '주간목표' ? 'bg-[#0071E3]/10 text-[#0071E3] dark:bg-[#0071E3]/20' : 'bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-400'}`}>{row.tag}</span>
+                          <span className="truncate text-[12px] font-semibold text-slate-700 dark:text-slate-300">{row.label}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleDaySkip(row.id)}
+                          className="shrink-0 rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-3 py-1 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-95"
+                        >
+                          되돌리기
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1092,176 +1408,17 @@ export function HomeOverviewTab({
               )}
             </div>
 
-            {/* 기간 목표 요약 한 줄 — 자세한 진행/입력은 미션 탭에서 (오늘 계획과 별도 → 카드 하단) */}
-            {deadlineSummary && deadlineSummary.goalCount > 0 && (
-              <div
-                className={`mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-2xl border px-3.5 py-2.5 text-[11px] font-semibold break-keep ${
-                  deadlineSummary.metToday
-                    ? 'border-emerald-100 bg-emerald-50/60 dark:border-emerald-500/25 dark:bg-emerald-500/10'
-                    : 'border-amber-200/60 bg-amber-50/70 dark:border-amber-500/25 dark:bg-amber-500/10'
-                }`}
-              >
-                <span className="inline-flex items-center gap-1.5 text-slate-700 dark:text-slate-300">
-                  <Target className="h-3.5 w-3.5 text-[#0071E3]" />
-                  기간 목표 {deadlineSummary.goalCount}개
-                </span>
-                {deadlineSummary.metToday ? (
-                  <span className="text-emerald-600 dark:text-emerald-400">
-                    오늘치 완료{deadlineSummary.aheadDays > 0 ? ` · 약 ${deadlineSummary.aheadDays}일치 앞섬` : ''}
-                  </span>
-                ) : (
-                  <span className="text-amber-600 dark:text-amber-400 tabular-nums">
-                    진행 {deadlineSummary.actualMinutes}분 / 예상목표치 {deadlineSummary.expectedMinutes}분
-                  </span>
-                )}
-                {deadlineSummary.riskCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-400">
-                    <AlertTriangle className="h-3.5 w-3.5" />
-                    뒤처진 자료 {deadlineSummary.riskCount}개
-                  </span>
-                )}
-              </div>
-            )}
-
-            {activeDeadlineGoals.length > 0 && (
-              <div className="mt-3 space-y-2 rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                    <Target className="h-3.5 w-3.5 text-[#0071E3]" />
-                    주간 목표 페이스
-                  </p>
-                  <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
-                    오늘 계획과 별도
-                  </span>
-                </div>
-
-                {activeDeadlineGoals.map((goal) => {
-                  const done = goal.actualAmount >= goal.targetAmount;
-                  const recommend = Math.min(Math.max(0, goal.targetAmount - goal.actualAmount), Math.max(0, goal.todayRecommend));
-                  // 예상목표치(오늘까지 누적 기대) 90% 이상이면 오늘 완료 표시. 홈은 요약만 — 입력은 실행계획 탭.
-                  const metToday = goal.expectedAmount > 0 && goal.actualAmount >= goal.expectedAmount * 0.9;
-
-                  return (
-                    <div key={goal.id} className="rounded-xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          {/* 제목 탭 → 해당 자료 상세 시트 */}
-                          <button
-                            type="button"
-                            disabled={!openMaterialDetail}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              openMaterialDetail?.(goal.materialType, goal.materialId);
-                            }}
-                            aria-label={`${goal.subject} ${goal.title} 상세 보기`}
-                            className="block w-full min-w-0 text-left disabled:cursor-default"
-                          >
-                            <p className="flex items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
-                              <span className="truncate">{goal.subject} · {goal.title}</span>
-                              {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
-                            </p>
-                            <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                              이번 주 목표: {goal.rangeText}
-                            </p>
-                          </button>
-                        </div>
-                        <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-semibold ${
-                          done ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : goal.behind ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
-                        }`}>
-                          {done ? '주간 완료' : `${goal.actualAmount}/${goal.targetAmount}${goal.unit}`}
-                        </span>
-                      </div>
-
-                      <div className="mt-2 grid gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 sm:grid-cols-2">
-                        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
-                          오늘 권장: <span className={metToday ? 'text-emerald-600 dark:text-emerald-400' : 'text-[#0071E3]'}>{metToday ? '완료' : recommend > 0 ? `${recommend}${goal.unit}` : '권장량 없음'}</span>
-                        </p>
-                        <p className="rounded-lg bg-slate-50 dark:bg-white/5 px-2.5 py-1.5">
-                          예상목표치: <span className="text-slate-800 dark:text-slate-200">{goal.expectedAmount}{goal.unit}</span>
-                        </p>
-                      </div>
-
-                      {/* 교시 배치(D) + 홈 진도 입력(C) */}
-                      {(saveStudySlot || updateDeadlineProgress) && (
-                        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
-                          {saveStudySlot && (
-                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                              <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
-                              교시
-                              <select
-                                value={goal.studySlot || ''}
-                                disabled={slotSavingId === goal.id}
-                                onChange={async (e) => {
-                                  const next = e.target.value;
-                                  setSlotSavingId(goal.id);
-                                  try {
-                                    const ok = await saveStudySlot(goal.materialType, goal.materialId, next);
-                                    if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
-                                    else toast.error('교시 배치에 실패했어요.');
-                                  } finally {
-                                    setSlotSavingId(null);
-                                  }
-                                }}
-                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
-                              >
-                                {STUDY_SLOT_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
-                            </label>
-                          )}
-                          {updateDeadlineProgress && (
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">진행</span>
-                              <input
-                                type="number"
-                                min={0}
-                                max={goal.targetAmount}
-                                value={deadlineDraft[goal.id] ?? String(goal.actualAmount)}
-                                onChange={(e) => setDeadlineDraft((d) => ({ ...d, [goal.id]: e.target.value }))}
-                                className="h-8 w-16 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-right text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
-                              />
-                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{goal.unit}</span>
-                              <button
-                                type="button"
-                                disabled={deadlineSavingId === goal.id || (deadlineDraft[goal.id] ?? String(goal.actualAmount)) === String(goal.actualAmount)}
-                                onClick={async () => {
-                                  const val = Math.max(0, Math.round(Number(deadlineDraft[goal.id] ?? goal.actualAmount) || 0));
-                                  setDeadlineSavingId(goal.id);
-                                  try {
-                                    const ok = await updateDeadlineProgress(goal.materialType, goal.materialId, goal.planId, val);
-                                    if (ok) { toast.success('진도를 저장했어요.'); setDeadlineDraft((d) => { const n = { ...d }; delete n[goal.id]; return n; }); }
-                                    else toast.error('진도 저장에 실패했어요.');
-                                  } finally {
-                                    setDeadlineSavingId(null);
-                                  }
-                                }}
-                                className="h-8 rounded-full bg-[#0071E3] px-3 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-95 disabled:opacity-50"
-                              >
-                                {deadlineSavingId === goal.id ? '저장 중' : '저장'}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-                <div className="flex flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                    여기서 바로 입력하거나, 주차별 상세는 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 조정해요.
-                  </p>
-                  {openWeeklyPlan && (
-                    <button
-                      type="button"
-                      onClick={openWeeklyPlan}
-                      className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-[0.98] sm:self-auto"
-                    >
-                      <CalendarDays className="h-3.5 w-3.5" />
-                      진도 확인·수정
-                    </button>
-                  )}
-                </div>
+            {/* 주간목표 주차별 상세·조정 빠른 링크 — 상세 진행/입력은 위 통합 카드에서, 주차별은 학습계획 탭에서. */}
+            {visibleDeadlineGoals.length > 0 && openWeeklyPlan && (
+              <div className="mt-3 flex items-center justify-end">
+                <button
+                  type="button"
+                  onClick={openWeeklyPlan}
+                  className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[11px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-[0.98]"
+                >
+                  <CalendarDays className="h-3.5 w-3.5" />
+                  주간 계획 확인·수정
+                </button>
               </div>
             )}
           </div>
@@ -1306,143 +1463,6 @@ export function HomeOverviewTab({
               </div>
             </div>
           )}
-
-          {/* 🔵 뽀모도로 타이머 & 아침 자가 점검표 위젯 레이아웃 (가로 2열 그리드) */}
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
-            {/* 1. 뽀모도로 타이머 */}
-            <PomodoroTimer
-              student={student}
-              setStudent={setStudent}
-              setRewardBanner={setRewardBanner}
-            />
-
-            {/* 2. 아침 자가 점검표 & 코멘팅 팁 */}
-            {(() => {
-              const note = getSpecialNoteObj();
-              const todayKey = getSeoulDateKey();
-              const checklist = note.daily_checklist?.[todayKey];
-
-              if (!checklist) {
-                return (
-                  <form id="morning-checklist-card" onSubmit={submitChecklist} className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 shadow-sm flex flex-col justify-between gap-5 sm:p-6">
-                    <div>
-                      <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-200">아침 자가 점검표</p>
-                      <p className="mt-1 text-[11px] font-medium leading-5 text-slate-400 dark:text-slate-400">매일 아침 본인의 컨디션과 환경을 스스로 기록하세요.</p>
-                    </div>
-
-                    <div className="space-y-5">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <label htmlFor="sleepHoursInput" className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">어젯밤 수면 시간</label>
-                        <div className="flex items-center gap-2">
-                          <select
-                            id="sleepHoursInput"
-                            value={checklistForm.sleepHours}
-                            onChange={(e) => setChecklistForm(f => ({ ...f, sleepHours: Number(e.target.value) }))}
-                            className="h-11 rounded-2xl border border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-white/5 px-3 text-[13px] font-semibold text-slate-700 dark:text-slate-300 focus:border-[#0071E3] focus:outline-none"
-                          >
-                            {[1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12].map(h => (
-                              <option key={h} value={h}>{h}시간</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2.5">
-                        <label className="text-[13px] font-semibold text-slate-700 dark:text-slate-300">등원 시 휴대폰</label>
-                        <div className="grid grid-cols-3 gap-2">
-                          {([
-                            ['submitted', '제출완료', Smartphone],
-                            ['locker', '임시보관함', Archive],
-                            ['off_hold', '전원끄고소지', PowerOff],
-                          ] as Array<['submitted' | 'locker' | 'off_hold', string, LucideIcon]>).map(([val, label, Icon]) => (
-                            <button
-                              key={val}
-                              type="button"
-                              onClick={() => setChecklistForm(f => ({ ...f, phoneStatus: val, phoneSubmitted: val === 'submitted' }))}
-                              className={`min-h-14 rounded-2xl border px-1.5 py-2.5 text-[11px] font-semibold leading-tight transition active:scale-95 ${
-                                checklistForm.phoneStatus === val
-                                  ? 'bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 border-[#0071E3] text-[#0071E3]'
-                                  : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 hover:border-slate-300'
-                              }`}
-                            >
-                              <Icon className="mx-auto mb-0.5 h-4 w-4" />
-                              {label}
-                            </button>
-                          ))}
-                        </div>
-                        {checklistForm.phoneStatus !== 'submitted' && (
-                          <textarea
-                            value={checklistForm.phoneReason}
-                            onChange={(e) => setChecklistForm(f => ({ ...f, phoneReason: e.target.value }))}
-                            rows={2}
-                            placeholder="휴대폰을 제출하지 못하는 사유를 적어 주세요 (관리자에게 전달돼요)"
-                            className="w-full rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/40 dark:bg-amber-500/10 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-amber-400 focus:outline-none resize-none"
-                          />
-                        )}
-                        <p className="text-[11px] font-medium leading-5 text-slate-400 dark:text-slate-400">휴대폰은 원칙적으로 제출이에요. 부득이하면 임시보관함/전원끄고소지를 사유와 함께 신청해 주세요.</p>
-                      </div>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={checklistSubmitting || (checklistForm.phoneStatus !== 'submitted' && !checklistForm.phoneReason.trim())}
-                      className="w-full rounded-full bg-slate-900 py-3 text-[13px] font-semibold text-white shadow-sm transition hover:bg-slate-800 active:scale-95 disabled:opacity-50"
-                    >
-                      {checklistSubmitting ? '기록 중...' : '컨디션 기록 완료'}
-                    </button>
-                  </form>
-                );
-              }
-
-              const isSleepShort = checklist.sleep_hours < 6;
-              const phoneStatusLabel = checklist.phone_status === 'locker' ? '임시보관함'
-                : checklist.phone_status === 'off_hold' ? '전원끄고 소지'
-                : (checklist.phone_status === 'submitted' || checklist.phone_submitted) ? '제출 완료' : '미제출';
-              const isPhoneNotSubmitted = checklist.phone_status ? checklist.phone_status !== 'submitted' : !checklist.phone_submitted;
-
-              let bannerBg = 'bg-emerald-50 border-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:border-emerald-500/25 dark:text-emerald-300';
-              let BannerIcon = CheckCircle2;
-              let bannerTitle = '기분 좋은 출발이에요! 아침 공부를 시작해 볼까요?';
-              let bannerTips = '어젯밤 잠도 충분히 잤고 스마트폰도 깔끔하게 정리했네요. 오늘 계획 100% 달성에 도전해 봐요!';
-
-              if (isSleepShort || isPhoneNotSubmitted) {
-                bannerBg = 'bg-amber-50 border-amber-100/80 text-amber-900 dark:bg-amber-500/10 dark:border-amber-500/25 dark:text-amber-300';
-                BannerIcon = AlertTriangle;
-                bannerTitle = '오전 집중을 방해할 요인이 있어요.';
-
-                if (isSleepShort && isPhoneNotSubmitted) {
-                  bannerTips = '잠도 부족한데(6시간 미만) 스마트폰까지 옆에 있으면 쉽게 산만해져요. 가볍게 스트레칭하고 스마트폰부터 제출해 볼까요?';
-                } else if (isSleepShort) {
-                  bannerTips = '어젯밤 6시간도 못 잤네요. 잠이 부족하면 계획 달성률이 25%쯤 떨어지기 쉬워요. 가끔 찬물로 세수하며 잠을 깨워 봐요!';
-                } else {
-                  bannerTips = '스마트폰을 아직 제출하지 않았어요. 알림 하나가 몰입을 통째로 깨뜨려요. 지금 자습실 밖 수납함에 넣어 볼까요?';
-                }
-              }
-
-              return (
-                <div id="morning-checklist-card" className={`rounded-3xl border ${bannerBg} p-5 shadow-sm space-y-2.5 flex flex-col justify-between`}>
-                  <div>
-                    <div className="flex justify-between items-center">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">아침의 약속 & 코멘팅 팁</p>
-                      <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500">기록 시각: {new Date(checklist.submitted_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-
-                    <div className="space-y-1 mt-2">
-                      <h4 className="text-xs font-black flex items-center gap-1">
-                        <BannerIcon className="h-4 w-4 shrink-0" /> {bannerTitle}
-                      </h4>
-                      <p className="text-[10px] font-bold leading-relaxed opacity-90">{bannerTips}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4 text-[9px] font-black text-slate-500/80 dark:text-slate-400 border-t border-slate-100/50 dark:border-white/10 pt-2.5">
-                    <span>어젯밤 수면: <strong className="text-slate-800 dark:text-slate-200">{checklist.sleep_hours}시간</strong></span>
-                    <span>휴대폰: <strong className="text-slate-800 dark:text-slate-200">{phoneStatusLabel}</strong></span>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
 
           {/* 홈 상태 카드 4개 */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
