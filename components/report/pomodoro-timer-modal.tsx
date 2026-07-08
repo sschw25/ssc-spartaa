@@ -342,8 +342,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner }: Pomodoro
           </div>
         </div>
 
-        {/* SVG 링 + 타이머 */}
-        <div className="flex items-center gap-5">
+        {/* SVG 링 + 타이머 — flex-1 로 헤더 아래 남는 세로공간을 채우고 가운데 정렬(옆 카드가 더 커도 안 밀림) */}
+        <div className="flex flex-1 items-center gap-5">
           <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
             <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
               <defs>
