@@ -713,7 +713,7 @@ function StudentReportInner() {
           checklistSubmitting={checklistSubmitting}
           activeTab={lifeActiveTab}
           studyTimeLabels={studyTimeLabels}
-          scheduledSlotLabels={scheduledSlotLabels}
+          scheduledSlotLabels={isStudentReport ? scheduledSlotLabels : undefined}
           studyStats={studyStats}
           completedQuests={completedQuests}
           setCompletedQuests={setCompletedQuests}
