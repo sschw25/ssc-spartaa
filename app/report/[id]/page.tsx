@@ -729,6 +729,7 @@ function StudentReportInner() {
           deadlineGoals={deadlineGoals}
           deadlineSummary={deadlineSummary}
           openWeeklyPlan={openWeeklyPlanTab}
+          openTimetable={openTimetableFromSheet}
           consultationBookings={consultationBookings}
           pendingMealCount={pendingMealCount}
           pendingMockCount={pendingMockExams.length}

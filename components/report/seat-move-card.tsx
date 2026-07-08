@@ -246,7 +246,8 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                   </div>
                 )}
 
-                <div className="overflow-auto px-5 py-4">
+                <p className="px-5 pt-2 text-center text-[10px] font-semibold text-slate-400 dark:text-slate-500 sm:hidden">← 좌우로 넘겨 전체 배치도를 확인하세요 →</p>
+                <div className="overflow-x-auto overflow-y-hidden px-5 py-4">
                   {(() => {
                     const page = CAMPUS_LAYOUTS[data.campus][Math.min(pageIdx, CAMPUS_LAYOUTS[data.campus].length - 1)];
                     const cols = Math.max(...page.rows.map((r) => r.length));
@@ -254,7 +255,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                       <div className="min-w-fit space-y-1">
                         {page.rows.map((row, ri) => (
                           <React.Fragment key={ri}>
-                            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(1.9rem, 1fr))` }}>
+                            <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(1.6rem, 1fr))` }}>
                               {Array.from({ length: cols }).map((_, ci) => {
                                 const cell = row[ci] ?? null;
                                 if (cell == null) return <div key={ci} />;

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, Home, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, AlertTriangle, Smartphone, Archive, PowerOff, Circle, ChevronRight, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
 import type { BookProgress, ConsultationBooking, LectureProgress } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
@@ -101,6 +101,7 @@ interface HomeOverviewTabProps {
   } | null;
   deadlineGoals?: DeadlineGoal[];
   openWeeklyPlan?: () => void;
+  openTimetable?: () => void;
   // 홈 최상단 '확인할 특이사항' 패널 데이터·내비게이션 (학생 리포트 전용, 옵셔널 — 학부모 호출부 미전달).
   consultationBookings?: ConsultationBooking[];
   pendingMealCount?: number;
@@ -153,6 +154,7 @@ export function HomeOverviewTab({
   deadlineSummary,
   deadlineGoals = [],
   openWeeklyPlan,
+  openTimetable,
   consultationBookings = [],
   pendingMealCount = 0,
   pendingMockCount = 0,
@@ -457,13 +459,6 @@ export function HomeOverviewTab({
     <div id="report-overview" className={`scroll-mt-24 border-b border-slate-100 dark:border-white/10 pb-8 flex-col md:flex-row justify-between md:items-start gap-6 ${!isStudentReport || activeTab === 'report-overview' ? 'flex' : 'hidden print:flex'}`}>
       {isStudentReport ? (
         <div className="stagger-children w-full space-y-5">
-          {/* 홈 대표카드 + 연속출석(미션 탭 해체로 홈으로 이동) */}
-          <TabHero
-            eyebrow="Home"
-            icon={Home}
-            title="홈"
-            description="오늘 할 일과 연속출석을 한곳에서 확인해요."
-          />
           {/* 상단 3열 요약(모바일도 3열 유지) — 인사·연속출석·D-Day. 각 세로 카드였던 걸 압축 타일로 묶어 스크롤을 줄였다. */}
           <div className="grid grid-cols-3 gap-2">
             <div className="flex h-full flex-col rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 shadow-sm">
@@ -1448,11 +1443,22 @@ export function HomeOverviewTab({
 
           {/* 홈 상태 카드 4개 */}
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/80 dark:bg-white/5 p-3.5">
-              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">지금 할 공부</p>
-              <p className="mt-2 text-xs font-black text-slate-800 dark:text-slate-200 leading-tight truncate">{currentSubjectText}</p>
-              <p className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-400">{currentStudyLabel}</p>
-            </div>
+            {(() => {
+              const Tag = openTimetable ? 'button' : 'div';
+              return (
+                <Tag
+                  {...(openTimetable ? { type: 'button' as const, onClick: openTimetable } : {})}
+                  className={`rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/80 dark:bg-white/5 p-3.5 text-left ${openTimetable ? 'transition hover:border-[#0071E3]/30 hover:bg-[#0071E3]/[0.03] active:scale-[0.99]' : ''}`}
+                >
+                  <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">
+                    지금 할 공부
+                    {openTimetable && <ChevronRight className="h-3 w-3 text-slate-300 dark:text-slate-600" />}
+                  </p>
+                  <p className="mt-2 text-xs font-black text-slate-800 dark:text-slate-200 leading-tight truncate">{currentSubjectText}</p>
+                  <p className="mt-1 text-[10px] font-bold text-slate-400 dark:text-slate-400">{currentStudyLabel}</p>
+                </Tag>
+              );
+            })()}
             <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3.5">
               <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]">오늘 누적 시간</p>
               <p className="mt-2 text-base font-black text-[#0071E3] tabular-nums" style={{ fontVariantNumeric: 'tabular-nums' }}>
