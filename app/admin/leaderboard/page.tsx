@@ -121,11 +121,11 @@ export default function WeeklyLeaderboardPage() {
     if (!hasMinutes) return 'bg-[#F5F5F7] dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-black/[0.03] dark:border-white/10';
     switch (rank) {
       case 1:
-        return 'bg-amber-100/80 dark:bg-amber-500/10 text-amber-800 border border-amber-200/50 dark:border-white/10 font-black shadow-sm';
+        return 'bg-amber-100/80 dark:bg-amber-500/15 text-amber-800 dark:text-amber-300 border border-amber-200/50 dark:border-amber-500/25 font-black shadow-sm';
       case 2:
         return 'bg-slate-100/80 dark:bg-white/10 text-slate-800 dark:text-slate-200 border border-slate-200/50 dark:border-white/10 font-black shadow-sm';
       case 3:
-        return 'bg-orange-100/80 dark:bg-orange-500/10 text-orange-800 border border-orange-200/50 dark:border-white/10 font-black shadow-sm';
+        return 'bg-orange-100/80 dark:bg-orange-500/15 text-orange-800 dark:text-orange-300 border border-orange-200/50 dark:border-orange-500/25 font-black shadow-sm';
       default:
         return 'bg-[#F5F5F7] dark:bg-white/5 text-slate-700 dark:text-slate-300 font-bold border border-black/[0.02] dark:border-white/10';
     }
@@ -298,7 +298,7 @@ export default function WeeklyLeaderboardPage() {
                         <td className="px-6 py-4 text-slate-500 dark:text-slate-400">{campusLabel(student.campus)}</td>
                         <td className="px-6 py-4">
                           {student.isOpen ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-100 dark:border-white/10 px-2 py-0.5 rounded-full">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-500/15 border border-emerald-100 dark:border-emerald-500/25 px-2 py-0.5 rounded-full">
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                               학습중
                             </span>

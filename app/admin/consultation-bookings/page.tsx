@@ -32,7 +32,7 @@ const SOURCE_META: Record<'admin' | 'student', { label: string; short: string; d
     label: '대리 예약',
     short: '대리',
     dot: 'bg-sky-500',
-    chip: 'bg-sky-100 text-sky-700 dark:bg-sky-500/10',
+    chip: 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300',
   },
   student: {
     label: '셀프 예약',
@@ -498,7 +498,7 @@ export default function AdminConsultationBookingsPage() {
                           </span>
                         ); })()}
                       </div>
-                      <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/10' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10'}`}>
+                      <span className={`shrink-0 text-[10px] font-black px-2 py-0.5 rounded-full ${fromAdmin ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'}`}>
                         {fromAdmin ? '학생 승인 대기' : '학생 변경 요청'}
                       </span>
                     </div>
@@ -620,7 +620,7 @@ export default function AdminConsultationBookingsPage() {
                         <th key={d.date} className={`px-2 py-2 font-black border-b border-l border-black/[0.05] dark:border-white/10 min-w-[88px] ${isToday ? 'text-[#0071E3]' : 'text-slate-900 dark:text-slate-100'}`}>
                           <div>{dateLabel(d.date, d.weekday)}</div>
                           <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{d.counselor}</div>
-                          {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 dark:bg-red-500/10 px-1.5 text-[9px] font-black text-red-600">만석</span>}
+                          {full && <span className="inline-block mt-0.5 rounded-full bg-red-100 dark:bg-red-500/15 px-1.5 text-[9px] font-black text-red-600 dark:text-red-300">만석</span>}
                           <button
                             type="button"
                             onClick={() => toggleFullday(campus, d.date, campusBlackouts)}
@@ -655,9 +655,9 @@ export default function AdminConsultationBookingsPage() {
                                     title={`학생 정보 보기 · ${sm.label}`}
                                     className={`relative w-full rounded-lg px-1.5 py-1 text-[11px] font-bold transition-colors ${
                                       bk.status === 'done'
-                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10'
+                                        ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
                                         : bk.status === 'noshow'
-                                        ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10'
+                                        ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
                                         : 'bg-[#0071E3]/10 text-[#0071E3] hover:bg-red-50 hover:text-red-600 dark:bg-[#0071E3]/15 dark:hover:bg-red-500/10'
                                     }`}
                                   >
@@ -675,10 +675,10 @@ export default function AdminConsultationBookingsPage() {
                                     </span>
                                   ); })()}
                                   {bk.status === 'done' && (
-                                    <span className="inline-block w-full rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700">완료</span>
+                                    <span className="inline-block w-full rounded-full bg-emerald-100 dark:bg-emerald-500/15 px-1.5 py-0.5 text-center text-[9px] font-black text-emerald-700 dark:text-emerald-300">완료</span>
                                   )}
                                   {bk.status === 'noshow' && (
-                                    <span className="inline-block w-full rounded-full bg-amber-100 dark:bg-amber-500/10 px-1.5 py-0.5 text-center text-[9px] font-black text-amber-700">노쇼</span>
+                                    <span className="inline-block w-full rounded-full bg-amber-100 dark:bg-amber-500/15 px-1.5 py-0.5 text-center text-[9px] font-black text-amber-700 dark:text-amber-300">노쇼</span>
                                   )}
                                   {isPast && bk.status === 'booked' && (
                                     <div className="flex gap-0.5">
@@ -701,7 +701,7 @@ export default function AdminConsultationBookingsPage() {
                                     </div>
                                   )}
                                   {bk.reschedule && (
-                                    <span className={`inline-block w-full rounded-full px-1.5 py-0.5 text-center text-[9px] font-black ${bk.reschedule.by === 'admin' ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/10' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/10'}`}>
+                                    <span className={`inline-block w-full rounded-full px-1.5 py-0.5 text-center text-[9px] font-black ${bk.reschedule.by === 'admin' ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'}`}>
                                       {bk.reschedule.by === 'admin' ? '학생승인대기' : '변경요청'}
                                     </span>
                                   )}

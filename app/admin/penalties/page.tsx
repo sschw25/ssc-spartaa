@@ -138,7 +138,7 @@ export default function PenaltiesPage() {
                 onClick={() => setCampusFilter(c)}
                 className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                   campusFilter === c
-                    ? 'border-slate-900 bg-slate-900 text-white'
+                    ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_4px_12px_rgba(0,113,227,0.25)]'
                     : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                 }`}
               >
@@ -219,13 +219,13 @@ export default function PenaltiesPage() {
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-1.5">
                             {penaltyCount > 0 && (
-                              <span className="flex items-center gap-0.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 px-2 py-0.5 text-[10px] font-black">
+                              <span className="flex items-center gap-0.5 rounded-lg bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-300 px-2 py-0.5 text-[10px] font-black">
                                 <TrendingDown className="w-2.5 h-2.5" />
                                 {penaltyCount}건
                               </span>
                             )}
                             {bonusCount > 0 && (
-                              <span className="flex items-center gap-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 px-2 py-0.5 text-[10px] font-black">
+                              <span className="flex items-center gap-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 px-2 py-0.5 text-[10px] font-black">
                                 <TrendingUp className="w-2.5 h-2.5" />
                                 {bonusCount}건
                               </span>

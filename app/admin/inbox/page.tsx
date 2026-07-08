@@ -1045,19 +1045,19 @@ export default function AdminInboxPage() {
                       {/* 상태 타임라인 뱃지 */}
                       <span className="flex items-center gap-1 shrink-0">
                         {item.tone === 'amber' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-black text-amber-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 px-2.5 py-0.5 text-[10px] font-black text-amber-700 dark:bg-amber-500/15 dark:border-amber-500/25 dark:text-amber-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
                             접수중
                           </span>
                         )}
                         {item.tone === 'blue' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 px-2.5 py-0.5 text-[10px] font-black text-[#0071E3]">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-[#0071E3]/10 border border-[#0071E3]/20 px-2.5 py-0.5 text-[10px] font-black text-[#0071E3] dark:bg-[#0071E3]/20">
                             <span className="w-1.5 h-1.5 rounded-full bg-[#0071E3] animate-pulse" />
                             처리중
                           </span>
                         )}
                         {item.tone === 'emerald' && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 text-[10px] font-black text-emerald-700 dark:bg-emerald-500/15 dark:border-emerald-500/25 dark:text-emerald-300">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
                             완료
                           </span>

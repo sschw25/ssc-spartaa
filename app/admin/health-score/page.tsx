@@ -460,7 +460,7 @@ export default function HealthScorePage() {
                               topFactors.map((factor) => (
                                 <span
                                   key={factor.key}
-                                  className="rounded-full bg-black/[0.04] dark:bg-white/5 px-2 py-1 text-[11px] font-medium text-[#4A4A4F] dark:text-slate-300"
+                                  className="rounded-full bg-black/[0.04] dark:bg-white/5 px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300"
                                 >
                                   {factor.label} +{factor.contribution}
                                 </span>
@@ -514,7 +514,7 @@ export default function HealthScorePage() {
                     return (
                       <div key={factor.label}>
                         <div className="mb-1.5 flex items-center justify-between gap-3">
-                          <span className="text-[12px] font-medium text-[#4A4A4F] dark:text-slate-300">{factor.label}</span>
+                          <span className="text-[12px] font-medium text-slate-600 dark:text-slate-300">{factor.label}</span>
                           <span className="text-[12px] font-semibold tabular-nums text-slate-900 dark:text-slate-100">{factor.value}</span>
                         </div>
                         <div className="h-2 overflow-hidden rounded-full bg-black/[0.04] dark:bg-white/5">

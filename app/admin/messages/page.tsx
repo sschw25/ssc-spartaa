@@ -292,7 +292,7 @@ export default function MessagesPage() {
                   onClick={() => setCampusFilter(c)}
                   className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 ${
                     campusFilter === c
-                      ? 'border-slate-900 bg-slate-900 text-white'
+                      ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_4px_12px_rgba(0,113,227,0.25)]'
                       : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
