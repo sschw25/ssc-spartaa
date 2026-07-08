@@ -43,6 +43,10 @@ export function daysUntil(ymd: string | undefined, todayKey: string): number | n
 // 동일한 contact 포함 매칭으로 반영한다(설정된 이벤트가 없으면 기존 센터-only 동작과 동일).
 export function isOtEventTargetedToStudent(event: OtEvent, student: Student): boolean {
   if (event.campus && event.campus !== 'all' && event.campus !== student.campus) return false;
+  // 명시 수신자 목록이 정의되면 그 학생에게만 노출 (미정의면 아래 targetExamTypes 폴백)
+  if (event.recipientStudentIds && event.recipientStudentIds.length) {
+    return event.recipientStudentIds.includes(student.id);
+  }
   const types = (event.targetExamTypes || []).map((t) => t.trim()).filter(Boolean);
   if (types.length === 0) return true;
   const contact = student.contact || '';

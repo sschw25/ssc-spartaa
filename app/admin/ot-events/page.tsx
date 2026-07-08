@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Student, OtEvent, OtParticipation } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { AdminNavActions } from '@/components/admin/admin-nav-actions';
+import { RecipientPickerModal } from '@/components/admin/recipient-picker-modal';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
@@ -42,6 +43,7 @@ export default function OtEventsPage() {
   const [newCampus, setNewCampus] = useState<string>('all');
   const [adding, setAdding] = useState(false);
   const [notifyingEventId, setNotifyingEventId] = useState<string | null>(null);
+  const [pickerEvent, setPickerEvent] = useState<OtEvent | null>(null);
 
   const handleLogout = async () => {
     try { await fetch('/api/admin/auth/logout', { method: 'POST' }); } catch {}
@@ -112,19 +114,37 @@ export default function OtEventsPage() {
     } catch { toast.error('네트워크 에러'); }
   };
 
-  const notifyToStudents = async (eventId: string, action: 'send' | 'cancel' = 'send') => {
+  const cancelNotify = async (eventId: string) => {
     if (notifyingEventId) return;
-    if (action === 'cancel' && !(await confirm({ title: '발송된 OT 참여 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
+    if (!(await confirm({ title: '발송된 OT 참여 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
     setNotifyingEventId(eventId);
     try {
       const res = await fetch('/api/admin/ot-events', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, action }),
+        body: JSON.stringify({ eventId, action: 'cancel' }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(action === 'cancel' ? 'OT 참여 알림을 취소했습니다.' : '학생들에게 OT 참여 확인 알림을 발송했습니다.');
+        toast.success('OT 참여 알림을 취소했습니다.');
         setEvents((prev) => prev.map((e) => (e.id === eventId ? json.event : e)));
+      } else { toast.error(json.message || '처리 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setNotifyingEventId(null); }
+  };
+
+  // 수신자 체크리스트에서 확정한 학생에게만 발송
+  const sendNotify = async (eventId: string, studentIds: string[]) => {
+    if (notifyingEventId) return;
+    setNotifyingEventId(eventId);
+    try {
+      const res = await fetch('/api/admin/ot-events', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, action: 'send', studentIds }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`OT 참여 확인 알림을 ${studentIds.length}명에게 발송했습니다.`);
+        setEvents((prev) => prev.map((e) => (e.id === eventId ? json.event : e)));
+        setPickerEvent(null);
       } else { toast.error(json.message || '처리 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setNotifyingEventId(null); }
   };
@@ -251,8 +271,8 @@ export default function OtEventsPage() {
                       </div>
                     </div>
                   </button>
-                  <button type="button" disabled={!!notifyingEventId} onClick={() => notifyToStudents(event.id, event.notifiedAt ? 'cancel' : 'send')}
-                    title={event.notifiedAt ? `발송: ${new Date(event.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
+                  <button type="button" disabled={!!notifyingEventId} onClick={() => (event.notifiedAt ? cancelNotify(event.id) : setPickerEvent(event))}
+                    title={event.notifiedAt ? `발송: ${new Date(event.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '수신 대상 선택 후 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
                       event.notifiedAt ? 'border border-red-100 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100' : 'bg-blue-600 text-white hover:bg-blue-700'
                     }`}>
@@ -372,6 +392,20 @@ export default function OtEventsPage() {
           </div>
         )}
       </main>
+
+      {pickerEvent && (
+        <RecipientPickerModal
+          key={pickerEvent.id}
+          eventName={pickerEvent.name}
+          kindLabel="OT"
+          students={students}
+          campus={pickerEvent.campus}
+          targetExamTypes={pickerEvent.targetExamTypes}
+          sending={!!notifyingEventId}
+          onCancel={() => setPickerEvent(null)}
+          onSend={(ids) => sendNotify(pickerEvent.id, ids)}
+        />
+      )}
     </div>
   );
 }

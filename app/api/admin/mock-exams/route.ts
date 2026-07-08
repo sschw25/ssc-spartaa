@@ -86,7 +86,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
 
-  let body: { examId?: unknown; action?: unknown };
+  let body: { examId?: unknown; action?: unknown; studentIds?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -107,7 +107,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, message: '해당 캠퍼스 모의고사를 변경할 권한이 없습니다.' }, { status: 403 });
     }
     const cancel = body?.action === 'cancel';
-    const exam = await notifyMockExam(examId, cancel ? null : new Date().toISOString());
+    // 발송 시 체크된 명시 수신자 목록(studentIds). 정의되면 이 학생에게만 노출(미정의면 targetExamTypes 폴백).
+    // 취소 시엔 []로 초기화 — 재발송 전 상태를 폴백으로 복귀시켜 예기치 않은 제한 노출을 막는다.
+    let recipientStudentIds: string[] | undefined;
+    if (cancel) {
+      recipientStudentIds = [];
+    } else if (Array.isArray(body?.studentIds)) {
+      recipientStudentIds = [...new Set(
+        (body.studentIds as unknown[]).filter((v): v is string => typeof v === 'string' && v.length > 0),
+      )].slice(0, 2000);
+    }
+    const exam = await notifyMockExam(examId, cancel ? null : new Date().toISOString(), recipientStudentIds);
     return NextResponse.json({ success: true, exam });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : '처리 실패';

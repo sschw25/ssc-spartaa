@@ -659,9 +659,9 @@ export async function deleteMockExam(id: string): Promise<void> {
   return deleteMockExamSupabase(id);
 }
 
-export async function notifyMockExam(id: string, notifiedAt: string | null): Promise<MockExam> {
+export async function notifyMockExam(id: string, notifiedAt: string | null, recipientStudentIds?: string[]): Promise<MockExam> {
   requireSupabase();
-  return notifyMockExamSupabase(id, notifiedAt);
+  return notifyMockExamSupabase(id, notifiedAt, recipientStudentIds);
 }
 
 // ── OT 일정 ──
@@ -680,9 +680,9 @@ export async function deleteOtEvent(id: string): Promise<void> {
   return deleteOtEventSupabase(id);
 }
 
-export async function notifyOtEvent(id: string, notifiedAt: string | null): Promise<OtEvent> {
+export async function notifyOtEvent(id: string, notifiedAt: string | null, recipientStudentIds?: string[]): Promise<OtEvent> {
   requireSupabase();
-  return notifyOtEventSupabase(id, notifiedAt);
+  return notifyOtEventSupabase(id, notifiedAt, recipientStudentIds);
 }
 
 // ── 학원 캘린더 일정 & 참여 미션 ──

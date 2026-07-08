@@ -578,6 +578,7 @@ function rowToMockExam(r: any): MockExam {
     name: r.name,
     date: r.date,
     targetExamTypes: Array.isArray(r.target_exam_types) ? r.target_exam_types : [],
+    recipientStudentIds: Array.isArray(r.recipient_student_ids) && r.recipient_student_ids.length ? r.recipient_student_ids : undefined,
     campus: r.campus || undefined,
     createdAt: r.created_at || '',
     notifiedAt: r.notified_at || undefined,
@@ -599,6 +600,7 @@ export async function saveMockExamSupabase(exam: MockExam): Promise<MockExam> {
     name: exam.name,
     date: exam.date,
     target_exam_types: exam.targetExamTypes || [],
+    recipient_student_ids: exam.recipientStudentIds && exam.recipientStudentIds.length ? exam.recipientStudentIds : [],
     campus: exam.campus || null,
     created_at: exam.createdAt,
     notified_at: exam.notifiedAt || null,
@@ -620,11 +622,17 @@ export async function deleteMockExamSupabase(id: string): Promise<void> {
   if (error) throw error;
 }
 
-// 모의고사 학생 알림 발송 표시 (notified_at 설정)
-export async function notifyMockExamSupabase(id: string, notifiedAt: string | null): Promise<MockExam> {
+// 모의고사 학생 알림 발송 표시 (notified_at 설정). recipientStudentIds 전달 시 명시 수신자도 갱신.
+export async function notifyMockExamSupabase(
+  id: string,
+  notifiedAt: string | null,
+  recipientStudentIds?: string[],
+): Promise<MockExam> {
+  const patch: Record<string, unknown> = { notified_at: notifiedAt };
+  if (recipientStudentIds !== undefined) patch.recipient_student_ids = recipientStudentIds;
   const { data, error } = await getClient()
     .from('mock_exams')
-    .update({ notified_at: notifiedAt })
+    .update(patch)
     .eq('id', id)
     .select()
     .single();
@@ -640,6 +648,7 @@ function rowToOtEvent(r: any): OtEvent {
     date: r.date,
     message: r.message || undefined,
     targetExamTypes: r.target_exam_types || [],
+    recipientStudentIds: Array.isArray(r.recipient_student_ids) && r.recipient_student_ids.length ? r.recipient_student_ids : undefined,
     campus: r.campus || undefined,
     createdAt: r.created_at || '',
     notifiedAt: r.notified_at || undefined,
@@ -662,6 +671,7 @@ export async function saveOtEventSupabase(event: OtEvent): Promise<OtEvent> {
     date: event.date,
     message: event.message || null,
     target_exam_types: event.targetExamTypes || [],
+    recipient_student_ids: event.recipientStudentIds && event.recipientStudentIds.length ? event.recipientStudentIds : [],
     campus: event.campus || null,
     created_at: event.createdAt,
     notified_at: event.notifiedAt || null,
@@ -680,10 +690,16 @@ export async function deleteOtEventSupabase(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function notifyOtEventSupabase(id: string, notifiedAt: string | null): Promise<OtEvent> {
+export async function notifyOtEventSupabase(
+  id: string,
+  notifiedAt: string | null,
+  recipientStudentIds?: string[],
+): Promise<OtEvent> {
+  const patch: Record<string, unknown> = { notified_at: notifiedAt };
+  if (recipientStudentIds !== undefined) patch.recipient_student_ids = recipientStudentIds;
   const { data, error } = await getClient()
     .from('ot_events')
-    .update({ notified_at: notifiedAt })
+    .update(patch)
     .eq('id', id)
     .select()
     .single();

@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Student, MockExam, MockExamParticipation } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { AdminNavActions } from '@/components/admin/admin-nav-actions';
+import { RecipientPickerModal } from '@/components/admin/recipient-picker-modal';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
@@ -71,6 +72,7 @@ export default function MockExamPage() {
 
   // 학생에게 참여 확인 알림 발송
   const [notifyingExamId, setNotifyingExamId] = useState<string | null>(null);
+  const [pickerExam, setPickerExam] = useState<MockExam | null>(null);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -163,20 +165,45 @@ export default function MockExamPage() {
     }
   };
 
-  const notifyExamToStudents = async (examId: string, action: 'send' | 'cancel' = 'send') => {
+  const cancelNotify = async (examId: string) => {
     if (notifyingExamId) return;
-    if (action === 'cancel' && !(await confirm({ title: '발송된 모의고사 참여 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
+    if (!(await confirm({ title: '발송된 모의고사 참여 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
     setNotifyingExamId(examId);
     try {
       const res = await fetch('/api/admin/mock-exams', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examId, action }),
+        body: JSON.stringify({ examId, action: 'cancel' }),
       });
       const json = await res.json();
       if (json.success) {
-        toast.success(action === 'cancel' ? '모의고사 참여 알림을 취소했습니다.' : '학생들에게 참여 확인 알림을 발송했습니다.');
+        toast.success('모의고사 참여 알림을 취소했습니다.');
         setExams((prev) => prev.map((e) => (e.id === examId ? json.exam : e)));
+      } else {
+        toast.error(json.message || '처리 실패');
+      }
+    } catch {
+      toast.error('네트워크 에러');
+    } finally {
+      setNotifyingExamId(null);
+    }
+  };
+
+  // 수신자 체크리스트에서 확정한 학생에게만 발송
+  const sendNotify = async (examId: string, studentIds: string[]) => {
+    if (notifyingExamId) return;
+    setNotifyingExamId(examId);
+    try {
+      const res = await fetch('/api/admin/mock-exams', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId, action: 'send', studentIds }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success(`참여 확인 알림을 ${studentIds.length}명에게 발송했습니다.`);
+        setExams((prev) => prev.map((e) => (e.id === examId ? json.exam : e)));
+        setPickerExam(null);
       } else {
         toast.error(json.message || '처리 실패');
       }
@@ -420,8 +447,8 @@ export default function MockExamPage() {
                   <button
                     type="button"
                     disabled={!!notifyingExamId}
-                    onClick={() => notifyExamToStudents(exam.id, exam.notifiedAt ? 'cancel' : 'send')}
-                    title={exam.notifiedAt ? `발송: ${new Date(exam.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
+                    onClick={() => (exam.notifiedAt ? cancelNotify(exam.id) : setPickerExam(exam))}
+                    title={exam.notifiedAt ? `발송: ${new Date(exam.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '수신 대상 선택 후 발송'}
                     className={`flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 shrink-0 ${
                       exam.notifiedAt
                         ? 'border border-red-100 dark:border-red-500/20 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100'
@@ -632,6 +659,20 @@ export default function MockExamPage() {
           </div>
         )}
       </main>
+
+      {pickerExam && (
+        <RecipientPickerModal
+          key={pickerExam.id}
+          eventName={pickerExam.name}
+          kindLabel="모의고사"
+          students={students}
+          campus={pickerExam.campus}
+          targetExamTypes={pickerExam.targetExamTypes}
+          sending={!!notifyingExamId}
+          onCancel={() => setPickerExam(null)}
+          onSend={(ids) => sendNotify(pickerExam.id, ids)}
+        />
+      )}
     </div>
   );
 }

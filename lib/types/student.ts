@@ -366,6 +366,7 @@ export interface MockExam {
   name: string;          // "6월 모의고사"
   date: string;          // YYYY-MM-DD
   targetExamTypes?: string[]; // 대상 목표시험 유형 ([] = 전체, ['수능','모의고사'] 등)
+  recipientStudentIds?: string[]; // 명시 수신자(알림 발송 시 체크된 학생). 정의되면 이 학생에게만 노출, 미정의면 targetExamTypes 폴백
   campus?: string;       // 대상 센터 (wonju/chuncheon/chungju) — 없거나 'all'이면 전체 센터
   createdAt: string;
   notifiedAt?: string;   // 알림 발송 시각 (ISO)
@@ -398,6 +399,7 @@ export interface OtEvent {
   date: string;          // YYYY-MM-DD (해당 센터의 OT 날짜)
   message?: string;      // 알림과 함께 보낼 안내 메시지
   targetExamTypes?: string[];
+  recipientStudentIds?: string[]; // 명시 수신자(알림 발송 시 체크된 학생). 정의되면 이 학생에게만 노출, 미정의면 targetExamTypes 폴백
   campus?: string;       // 대상 센터 (wonju/chuncheon/chungju) — 없거나 'all'이면 전체 센터
   createdAt: string;
   notifiedAt?: string;   // 알림 발송 시각 (ISO) — 수동 즉시 발송 시. 미설정이어도 D-3부터 자동 노출.
