@@ -120,17 +120,17 @@ export default function DiagnosticsPage() {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-black tracking-tight flex items-center gap-2">
-              <Stethoscope className="w-5 h-5 text-[#0071E3]" /> 계획 정합성 점검
+            <h1 className="text-lg sm:text-xl font-black tracking-tight flex items-center gap-2 break-keep">
+              <Stethoscope className="w-5 h-5 text-[#0071E3] shrink-0" /> 계획 정합성 점검
             </h1>
-            <p className="text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5">
+            <p className="text-[11px] sm:text-xs font-bold text-slate-400 dark:text-slate-400 mt-0.5 break-keep">
               하루 목표 자료의 일일량이 마지막 주에서 희석된(예: 하루 3강인데 계획표엔 2강) 자료를 찾아 재설정합니다.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={scan} disabled={loading}
-            className="shrink-0 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] gap-1.5 font-bold">
+          <Button variant="outline" size="sm" onClick={scan} disabled={loading} aria-label="다시 점검"
+            className="shrink-0 rounded-xl border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] gap-1.5 font-bold px-2.5 sm:px-3">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-            다시 점검
+            <span className="hidden sm:inline">다시 점검</span>
           </Button>
         </div>
 
@@ -156,8 +156,8 @@ export default function DiagnosticsPage() {
             <div className="space-y-4">
               {students.map((s) => (
                 <div key={s.studentId} className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-white/5">
-                    <span className="font-black text-sm truncate">{s.studentName}</span>
+                  <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-white/5">
+                    <span className="font-black text-sm truncate min-w-0">{s.studentName}</span>
                     <span className="text-[10px] font-bold text-slate-400 shrink-0">
                       {CAMPUS_LABEL[s.campus] || s.campus}{s.manager ? ` · ${s.manager}` : ''}
                     </span>
@@ -166,11 +166,11 @@ export default function DiagnosticsPage() {
                     {s.materials.map((m) => {
                       const key = `${s.studentId}_${m.materialId}`;
                       return (
-                        <li key={m.materialId} className="flex items-start gap-3 px-4 py-3">
+                        <li key={m.materialId} className="flex items-start gap-2.5 sm:gap-3 px-3 sm:px-4 py-3">
                           <div className="min-w-0 flex-1 space-y-1">
-                            <div className="flex items-baseline gap-1.5 flex-wrap">
-                              <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100">{m.title}</span>
-                              <span className="text-[10px] font-bold text-slate-400">{m.subjectName} · 하루 {m.goalDaily}{m.unit} 목표</span>
+                            <div className="flex items-baseline gap-x-1.5 gap-y-0.5 flex-wrap">
+                              <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100 break-keep min-w-0">{m.title}</span>
+                              <span className="text-[10px] font-bold text-slate-400 break-keep">{m.subjectName} · 하루 {m.goalDaily}{m.unit} 목표</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {m.weeks.map((w) => (
