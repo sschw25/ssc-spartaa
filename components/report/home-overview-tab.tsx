@@ -461,7 +461,7 @@ export function HomeOverviewTab({
         <div className="stagger-children w-full space-y-5">
           {/* 상단 3열 요약(모바일도 3열 유지) — 인사·연속출석·D-Day. 각 세로 카드였던 걸 압축 타일로 묶어 스크롤을 줄였다. */}
           <div className="grid grid-cols-3 gap-2">
-            <div className="flex h-full flex-col rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 shadow-sm">
+            <div className="flex h-full flex-col rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 text-center shadow-sm">
               <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
               </p>
@@ -479,7 +479,7 @@ export function HomeOverviewTab({
             <button
               type="button"
               onClick={() => setDdayOpen(true)}
-              className="flex h-full flex-col rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3 text-left shadow-sm transition active:scale-[0.98]"
+              className="flex h-full flex-col rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3 text-center shadow-sm transition active:scale-[0.98]"
               aria-label="D-Day 관리"
             >
               <p className="text-[9px] font-semibold uppercase tracking-wide text-[#0071E3]">D-Day</p>
@@ -698,7 +698,7 @@ export function HomeOverviewTab({
                                 }}
                                 className={`ml-auto inline-flex h-8 items-center rounded-full border px-3 text-[11px] font-semibold transition active:scale-95 ${isPending ? 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400' : 'border-[#0071E3]/25 bg-[#0071E3]/[0.06] text-[#0071E3] hover:bg-[#0071E3]/10 dark:bg-[#0071E3]/15'}`}
                               >
-                                {isPending ? '닫기' : '오늘 입력'}
+                                {isPending ? '닫기' : '완료'}
                               </button>
                             </div>
                           )}

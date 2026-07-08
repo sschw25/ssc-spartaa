@@ -90,12 +90,12 @@ export function StreakCard({ compact = false }: StreakCardProps = {}) {
   const coupons = data.leaveCoupons;
 
   if (compact) {
-    // 인사·D-Day 타일과 동일 구조(상단 라벨 → 좌측정렬 내용)로 정렬 통일.
+    // 인사·D-Day 타일과 동일 구조(상단 라벨 → 가운데정렬 내용)로 정렬 통일.
     return (
-      <div className="flex h-full flex-col rounded-2xl border border-orange-100 bg-orange-50/50 p-3 shadow-sm dark:border-orange-500/20 dark:bg-orange-500/10">
+      <div className="flex h-full flex-col rounded-2xl border border-orange-100 bg-orange-50/50 p-3 text-center shadow-sm dark:border-orange-500/20 dark:bg-orange-500/10">
         <p className="text-[9px] font-semibold uppercase tracking-wide text-orange-600/80 dark:text-orange-400/80">연속출석</p>
         <div className="mt-1.5 min-w-0 flex-1">
-          <p className="flex items-center gap-1 leading-none">
+          <p className="flex items-center justify-center gap-1 leading-none">
             <Flame
               className={`h-4 w-4 shrink-0 ${streakCurrent > 0 ? 'text-orange-500 animate-streak-flame' : 'text-slate-300 dark:text-slate-600'}`}
               fill={streakCurrent > 0 ? 'currentColor' : 'none'}
