@@ -661,33 +661,50 @@ export function HomeOverviewTab({
                             </span>
                           </div>
 
-                          {/* 오늘 이 자료를 몇 교시에 할지 학생이 직접 배치(자료별 studySlot). 미지정이면 자동 배치. */}
-                          {saveStudySlot && !entry.isCompleted && (
+                          {/* 교시 배치(studySlot) + 오늘 진도 입력을 한 줄에 — 이 박스 안에서 다 처리. */}
+                          {!entry.isCompleted && (
                             <div data-stop className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
-                              <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
-                                교시 배치
-                              </label>
-                              <select
-                                value={entry.studySlot || ''}
-                                disabled={slotSavingId === entry.id}
-                                onChange={async (e) => {
-                                  const next = e.target.value;
-                                  setSlotSavingId(entry.id);
-                                  try {
-                                    const ok = await saveStudySlot(entry.materialType, entry.materialId, next);
-                                    if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
-                                    else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
-                                  } finally {
-                                    setSlotSavingId(null);
-                                  }
+                              {saveStudySlot && (
+                                <>
+                                  <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                    <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
+                                    교시 배치
+                                  </label>
+                                  <select
+                                    value={entry.studySlot || ''}
+                                    disabled={slotSavingId === entry.id}
+                                    onChange={async (e) => {
+                                      const next = e.target.value;
+                                      setSlotSavingId(entry.id);
+                                      try {
+                                        const ok = await saveStudySlot(entry.materialType, entry.materialId, next);
+                                        if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
+                                        else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
+                                      } finally {
+                                        setSlotSavingId(null);
+                                      }
+                                    }}
+                                    className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                                  >
+                                    {STUDY_SLOT_OPTIONS.map((opt) => (
+                                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                    ))}
+                                  </select>
+                                </>
+                              )}
+                              {/* 오늘 진도 입력 — 완료 패널 토글(왼쪽 체크 동그라미와 동일). '몇 X까지' 절대입력. */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isPending) { setPendingPlanId(null); return; }
+                                  setPendingPlanId(entry.id);
+                                  setPendingAmount(adjustInfo ? adjustInfo.current + (entry.dailyAmount ?? 1) : (entry.dailyAmount ?? 1));
+                                  setReviewMinutesInput(reviewMinFor(entry.materialType, entry.materialId));
                                 }}
-                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                                className={`ml-auto inline-flex h-8 items-center rounded-full border px-3 text-[11px] font-semibold transition active:scale-95 ${isPending ? 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400' : 'border-[#0071E3]/25 bg-[#0071E3]/[0.06] text-[#0071E3] hover:bg-[#0071E3]/10 dark:bg-[#0071E3]/15'}`}
                               >
-                                {STUDY_SLOT_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
+                                {isPending ? '닫기' : '오늘 입력'}
+                              </button>
                             </div>
                           )}
 
