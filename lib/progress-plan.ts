@@ -749,6 +749,17 @@ export function generateDetailedPlans(
   const activeStudyDays = getActiveStudyDays(studyDays);
   const daysCountPerWeek = activeStudyDays.length;
 
+  // 기준점(today)을 '시작일 이후 첫 학습일'로 당긴다. 시작일이 학습일이 아니거나, 특히 첫 주에
+  // 학습일이 아예 없는 경우(예: 목요일 시작 + 월·화만 → 그 주엔 월·화가 없음) 빈 주에 목표가
+  // 잘못 배정(0강이어야 할 주에 하루치)되던 문제를 방지한다. 학습이 실제 시작되는 날부터 계획.
+  if (daysCountPerWeek > 0) {
+    let guard = 0;
+    while (!isStudyDay(today, studyDays) && guard < 14) {
+      today.setDate(today.getDate() + 1);
+      guard++;
+    }
+  }
+
   // 1. 인강 하루 한계 학습량 계산 (문제풀이가 아닌 경우만 제한)
   let maxLecturesPerDay = Infinity;
   if (type === 'lecture' && category !== '문제풀이') {

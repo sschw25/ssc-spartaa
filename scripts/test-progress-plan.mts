@@ -136,4 +136,15 @@ const badStart = generateDetailedPlans(
 );
 assert.ok(badStart.plans.length >= 1);
 
+// E) 첫 주에 학습일이 없는 시작일 — 빈 주에 목표가 배정되면 안 된다(0강이어야 할 주에 5강 버그).
+//    2026-07-09(목) 시작 + 월·화만 → 그 주(07-09~07-12)엔 월·화 없음 → 첫 학습일 07-13(월)부터.
+const emptyFirstWeek = generateDetailedPlans(
+  'lec_efw', 64, 'lecture', 'dailyAmount', 5, 0, undefined, [], ['mon', 'tue'],
+  1.0, undefined, '', undefined, '2026-07-09',
+);
+assert.ok(emptyFirstWeek.plans.length >= 1);
+assert.ok(emptyFirstWeek.plans[0].startDate >= '2026-07-13', `첫 주 시작 ${emptyFirstWeek.plans[0].startDate} (07-13 이상이어야)`);
+assert.equal(emptyFirstWeek.plans[0].targetAmount, 10); // 월·화 2일 × 하루 5강
+assert.equal(emptyFirstWeek.plans[0].dailyAmount, 5);
+
 console.log('progress-plan checks passed');
