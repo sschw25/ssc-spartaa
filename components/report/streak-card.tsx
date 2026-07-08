@@ -16,7 +16,13 @@ type StreakData = {
 
 const SURFACE = 'rounded-xl border border-black/5 bg-white p-5 shadow-sm sm:p-6 dark:border-white/10 dark:bg-[#1c1c1e]';
 
-export function StreakCard() {
+interface StreakCardProps {
+  // true면 홈 상단 3열 요약용 소형 타일로 렌더(🔥+큰숫자+'일 연속'+복구 있으면 작은 '잇기' 버튼).
+  // 미전달 시 기존 풀버전(카드) 그대로.
+  compact?: boolean;
+}
+
+export function StreakCard({ compact = false }: StreakCardProps = {}) {
   const confirm = useConfirm();
   const [data, setData] = useState<StreakData | null>(null);
   const [repairing, setRepairing] = useState(false);
@@ -82,6 +88,39 @@ export function StreakCard() {
   const streakBest = data.streak.best;
   const streakRepair = data.streakRepair;
   const coupons = data.leaveCoupons;
+
+  if (compact) {
+    return (
+      <div className="flex h-full flex-col rounded-2xl border border-orange-100 bg-orange-50/50 p-3 shadow-sm dark:border-orange-500/20 dark:bg-orange-500/10">
+        <p className="text-[9px] font-semibold uppercase tracking-wide text-orange-600/80 dark:text-orange-400/80">연속출석</p>
+        <div className="mt-1.5 flex flex-1 flex-col items-center justify-center gap-0.5 text-center">
+          <Flame
+            className={`h-5 w-5 ${streakCurrent > 0 ? 'text-orange-500 animate-streak-flame' : 'text-slate-300 dark:text-slate-600'}`}
+            fill={streakCurrent > 0 ? 'currentColor' : 'none'}
+            strokeWidth={streakCurrent > 0 ? 1.5 : 1.8}
+          />
+          <p className="flex items-baseline gap-0.5">
+            <span className="text-[17px] font-semibold tabular-nums text-slate-900 dark:text-slate-100">{streakCurrent}</span>
+            <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">일 연속</span>
+          </p>
+          {streakRepair ? (
+            <button
+              type="button"
+              onClick={repairStreak}
+              disabled={repairing || coupons < streakRepair.cost}
+              className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-orange-500 px-2 py-0.5 text-[9px] font-semibold text-white transition active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {repairing ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : '잇기'}
+            </button>
+          ) : (
+            <p className="truncate text-[9px] font-medium text-slate-400 dark:text-slate-500">
+              {streakCurrent > 0 ? '이어가는 중' : '등원하면 시작'}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <section className={SURFACE}>

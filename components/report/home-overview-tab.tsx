@@ -215,7 +215,6 @@ export function HomeOverviewTab({
     return aRank - bRank || a.date.localeCompare(b.date);
   });
   const primaryDday = ddaySummary[0];
-  const secondaryDdays = ddaySummary.slice(1, 3);
 
   const handleAddDday = async () => {
     if (!ddayTitle.trim() || !ddayDate) return;
@@ -465,36 +464,42 @@ export function HomeOverviewTab({
             title="홈"
             description="오늘 할 일과 연속출석을 한곳에서 확인해요."
           />
-          <StreakCard />
-          {/* 압축 히어로 — 1줄 인사 + 날짜. 390px 첫 화면에서 '오늘 할 일 요약'이 바로 보이게 낮췄다. */}
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-              <h1 className="min-w-0 truncate text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100 md:text-xl">
-                {student.name}님, {timeGreeting} 👋
-              </h1>
-              <p className="shrink-0 text-[11px] font-medium text-slate-400 dark:text-slate-400">
+          {/* 상단 3열 요약(모바일도 3열 유지) — 인사·연속출석·D-Day. 각 세로 카드였던 걸 압축 타일로 묶어 스크롤을 줄였다. */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex h-full flex-col rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 shadow-sm">
+              <p className="truncate text-[9px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' })}
               </p>
+              <div className="mt-1.5 min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 dark:text-slate-100">
+                  {student.name}님
+                </p>
+                <p className="mt-0.5 truncate text-[10px] font-medium leading-tight text-[#0071E3]">{timeGreeting}</p>
+                <p className="mt-1 truncate text-[9px] font-medium leading-tight text-slate-400 dark:text-slate-500">{currentBriefingPhrase}</p>
+              </div>
             </div>
-            <p className="text-[12px] font-medium text-[#0071E3]">{currentBriefingPhrase}</p>
-          </div>
 
-          {/* 확인할 특이사항 — 홈 최상단 통합 패널(휴가·도시락·상담·미응답요청·주말보강·외출반영). 특이사항 없으면 렌더 안 함. */}
-          <HomeHighlightsPanel
-            leaveRequests={student.leaveRequests || []}
-            makeupNotices={recentMakeupNotices}
-            awayReplans={recentAwayReplans}
-            consultationBookings={consultationBookings}
-            pendingMealCount={pendingMealCount}
-            pendingMockCount={pendingMockCount}
-            pendingOtCount={pendingOtCount}
-            pendingCampusCount={pendingCampusCount}
-            pendingSaturdayCount={pendingSaturdayCount}
-            openConsultation={openConsultation}
-            openNotifications={openNotifications}
-            openLeaveRequests={openLeaveRequests}
-            openWeeklyPlan={openWeeklyPlan}
-          />
+            <StreakCard compact />
+
+            <button
+              type="button"
+              onClick={() => setDdayOpen(true)}
+              className="flex h-full flex-col rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3 text-left shadow-sm transition active:scale-[0.98]"
+              aria-label="D-Day 관리"
+            >
+              <p className="text-[9px] font-semibold uppercase tracking-wide text-[#0071E3]">D-Day</p>
+              {primaryDday ? (
+                <div className="mt-1.5 min-w-0 flex-1">
+                  <p className="text-[17px] font-semibold leading-none text-[#0071E3] tabular-nums">
+                    {calcDiff(primaryDday.date)}
+                  </p>
+                  <p className="mt-1.5 truncate text-[10px] font-medium leading-tight text-slate-600 dark:text-slate-400">{primaryDday.title}</p>
+                </div>
+              ) : (
+                <p className="mt-1.5 flex-1 text-[10px] font-medium leading-tight text-slate-400 dark:text-slate-400">일정 추가</p>
+              )}
+            </button>
+          </div>
 
           <div id="today-mission-card" className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm md:p-5">
             <div className="flex items-start justify-between gap-4">
@@ -1238,6 +1243,23 @@ export function HomeOverviewTab({
             )}
           </div>
 
+          {/* 확인할 특이사항 — 홈 최상단 통합 패널(휴가·도시락·상담·미응답요청·주말보강·외출반영). 특이사항 없으면 렌더 안 함. 오늘 할 일 요약 다음 순서. */}
+          <HomeHighlightsPanel
+            leaveRequests={student.leaveRequests || []}
+            makeupNotices={recentMakeupNotices}
+            awayReplans={recentAwayReplans}
+            consultationBookings={consultationBookings}
+            pendingMealCount={pendingMealCount}
+            pendingMockCount={pendingMockCount}
+            pendingOtCount={pendingOtCount}
+            pendingCampusCount={pendingCampusCount}
+            pendingSaturdayCount={pendingSaturdayCount}
+            openConsultation={openConsultation}
+            openNotifications={openNotifications}
+            openLeaveRequests={openLeaveRequests}
+            openWeeklyPlan={openWeeklyPlan}
+          />
+
           {/* 🔵 리워드 달성 배너 알림 */}
           {rewardBanner.show && (
             <div className="no-print relative overflow-hidden rounded-3xl border border-emerald-300/60 dark:border-emerald-500/30 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-500/15 dark:to-teal-500/10 p-5 shadow-[0_8px_24px_rgba(16,185,129,0.12)] animate-fade-in-up">
@@ -1260,48 +1282,6 @@ export function HomeOverviewTab({
               </div>
             </div>
           )}
-
-          {/* D-Day 요약 카드 — '오늘 할 일'보다 아래(정보위계) */}
-          <button
-            type="button"
-            onClick={() => setDdayOpen(true)}
-            className="no-print w-full rounded-2xl border border-[#0071E3]/10 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3.5 text-left shadow-[inset_0_2px_4px_rgba(0,0,0,0.015)] transition hover:border-[#0071E3]/25 active:scale-[0.99]"
-            aria-label="D-Day 관리"
-          >
-            <span className="flex items-center justify-between gap-2">
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#0071E3]">
-                <CalendarDays className="h-3.5 w-3.5" />
-                D-Day
-              </span>
-              <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-1 text-[10px] font-semibold text-slate-400 dark:text-slate-400 shadow-sm">관리</span>
-            </span>
-            {primaryDday ? (
-              <>
-                <span className="mt-2 flex items-end justify-between gap-3">
-                  <span className="min-w-0">
-                    <span className="block truncate text-[13px] font-semibold text-slate-900 dark:text-slate-100">{primaryDday.title}</span>
-                    <span className="mt-0.5 block text-[10px] font-medium text-slate-400 dark:text-slate-400">{primaryDday.date}</span>
-                  </span>
-                  <span className="shrink-0 text-[18px] font-semibold leading-none text-[#0071E3] tabular-nums">
-                    {calcDiff(primaryDday.date)}
-                  </span>
-                </span>
-                {secondaryDdays.length > 0 && (
-                  <span className="mt-2 flex flex-wrap gap-1.5">
-                    {secondaryDdays.map((d) => (
-                      <span key={d.id} className="max-w-full truncate rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400 shadow-sm">
-                        {calcDiff(d.date)} · {d.title}
-                      </span>
-                    ))}
-                  </span>
-                )}
-              </>
-            ) : (
-              <span className="mt-2 block rounded-xl border border-dashed border-[#0071E3]/20 bg-white/70 dark:bg-[#1c1c1e]/95 px-3 py-2 text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                등록된 일정이 없습니다.
-              </span>
-            )}
-          </button>
 
           {/* 🔵 뽀모도로 타이머 & 아침 자가 점검표 위젯 레이아웃 (가로 2열 그리드) */}
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
