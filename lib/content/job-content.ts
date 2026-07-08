@@ -10,7 +10,7 @@ export const jobContent: StreamContent = {
     description: '단기 자격증 취득부터 꾸준한 NCS 대비까지.\n혼자 버티는 독서실 대신\n체계적으로 관리되는 베이스캠프에서 준비하세요.',
   },
   worries: {
-    title: '길어지는 공백기,\n취업준비생의 진짜 걱정',
+    title: '길어지는 공백기,\n취업준비생의 현실적인 고민',
     subtitle: '혼자 버티는 독서실 대신, 관리되는 베이스캠프.',
     items: [
       {

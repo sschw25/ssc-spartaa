@@ -5,9 +5,9 @@ export const imyongContent: StreamContent = {
   id: 'imyong',
   name: '임용시험',
   hero: {
-    title: '{{region}} 임용고시 준비\n합격의 마지막 관문 절대 몰입 공간',
-    subtitle: '초/중/고 임용 수험생을 위한\n친목 차단과 순공 시간 극대화',
-    description: '방대한 암기량 앞에 흔들리는 마음을 다잡아 드립니다.\n적막한 몰입 속에서\n암기의 숨소리만 허용되는 공간입니다.',
+    title: '{{region}} 임용고시 준비,\n조용히 오래 몰입하는 공간',
+    subtitle: '초·중등·유아 임용 수험생을 위한\n정숙한 환경과 순공시간 관리',
+    description: '방대한 암기량 앞에서 흔들리지 않도록,\n사적 대화가 없는 정숙한 환경에서\n회독과 암기에만 집중하는 하루를 만듭니다.',
   },
   examInfo: {
     title: '2027학년도 임용,\n핵심 일정과 전략',
@@ -53,8 +53,8 @@ export const imyongContent: StreamContent = {
     ],
   },
   worries: {
-    title: '방대한 암기, 외로운 싸움 —\n임용 수험생의 진짜 걱정',
-    subtitle: '의지가 아니라 환경이 합격을 만든다.',
+    title: '방대한 암기량, 외로운 수험 생활.\n임용 수험생의 걱정을 압니다',
+    subtitle: '의지가 아니라 환경이 합격을 만듭니다.',
     items: [
       {
         icon: 'BookMarked',
@@ -68,7 +68,7 @@ export const imyongContent: StreamContent = {
         worry: '친목·잡담에\n시간과 집중이 샌다',
         worryDetail: '같은 목표의 사람들이 모이면 정보 교류는 좋지만, 사적 대화가 시작되면 순공시간이 무너집니다. 임용은 절대적인 암기 시간 확보가 관건입니다.',
         solution: '원내 사적 대화 차단 + 조용한 몰입',
-        solutionDetail: '스터디 매칭은 지원하되 원내 개인 간 사적 대화는 엄격히 금지해, 오직 공부에만 에너지를 쓰게 합니다. 암기의 숨소리만 허용되는 면학 분위기를 출결·통제로 끝까지 유지합니다.',
+        solutionDetail: '스터디 매칭은 지원하되 원내 개인 간 사적 대화는 엄격히 금지해, 오직 공부에만 에너지를 쓰게 합니다. 페이지 넘기는 소리만 들리는 면학 분위기를 출결과 관리로 끝까지 유지합니다.',
       },
       {
         icon: 'PencilRuler',

@@ -40,11 +40,11 @@ const FAQ_LIST = [
   },
   {
     question: '수업에 결석하면 보강이 가능한가요?',
-    answer: '면접반은 단기 집중 과정으로 운영되어 별도의 개인 보강 수업은 진행되지 않습니다. 다만 결석 시 해당 차시의 수업 자료와 상세 피드백 과제를 완벽히 전달해 드려 학습에 공백이 없도록 철저히 안내해 드립니다.',
+    answer: '면접반은 단기 집중 과정으로 운영되어 별도의 개인 보강 수업은 진행되지 않습니다. 다만 결석 시 해당 차시의 수업 자료와 상세 피드백 과제를 빠짐없이 전달해 학습에 공백이 생기지 않도록 안내해 드립니다.',
   },
   {
     question: '기술직이나 특수직렬 수강생도 도움을 받을 수 있나요?',
-    answer: '네, 물론입니다. 매년 기계, 토목, 건축 등 특수 및 기술직렬 최종 합격자를 다수 배출해 온 데이터가 구축되어 있어 신뢰할 수 있습니다. 면접 공통 주제 외에도 특수직렬 맞춤형 기출 질문 및 답변 팁이 정리된 전문 자료를 제공합니다. 전공 및 직렬 특화 질문이 핵심인 만큼, 1:1 개인코멘팅 밀착반을 수강하시면 합격 확률을 극대화하실 수 있습니다.',
+    answer: '네, 물론입니다. 매년 기계, 토목, 건축 등 특수 및 기술직렬 최종 합격자를 다수 배출해 온 데이터가 구축되어 있어 신뢰할 수 있습니다. 면접 공통 주제 외에도 특수직렬 맞춤형 기출 질문 및 답변 팁이 정리된 전문 자료를 제공합니다. 전공 및 직렬 특화 질문이 핵심인 만큼, 1:1 개인코멘팅 밀착반을 수강하시면 전공 질문까지 한층 탄탄하게 대비할 수 있습니다.',
   },
 ]
 
@@ -119,10 +119,10 @@ export default function WonjuInterviewPage() {
         <div className="max-w-4xl mx-auto px-4 text-center">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-[#007AFF] text-xs font-semibold mb-6">
             <Sparkles size={12} />
-            2026 최종 합격을 향한 마지막 단 하나의 선택
+            2026 지방직·교육행정직 면접 대비반
           </div>
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight text-[#1D1D1F] leading-tight mb-6">
-            원주 공무원 면접학원의 절대 기준<br />
+            원주 공무원 면접학원<br />
             <span className="text-[#007AFF]">SSC스파르타 원주 면접반</span>
           </h1>
           <p className="text-base md:text-lg text-[#86868B] max-w-2xl mx-auto mb-10 leading-relaxed">
@@ -168,7 +168,7 @@ export default function WonjuInterviewPage() {
             </div>
             <h3 className="text-lg font-semibold mb-2">체계적인 금요 자율스터디</h3>
             <p className="text-[#86868B] text-sm leading-relaxed">
-              매주 금요일 오전 원주캠퍼스에서 진행되는 실전 자율스터디. 3~5명씩 조를 편성하고 면접관과 수험생 역할을 상호 교대하며 말문이 트이도록 무한 훈련합니다.
+              매주 금요일 오전 원주캠퍼스에서 진행되는 실전 자율스터디. 3~5명씩 조를 편성하고 면접관과 수험생 역할을 서로 바꿔가며, 말문이 트일 때까지 반복 훈련합니다.
             </p>
           </div>
           <div className="bg-white p-8 rounded-2xl border border-[#E5E7EB] shadow-sm">
@@ -177,7 +177,7 @@ export default function WonjuInterviewPage() {
             </div>
             <h3 className="text-lg font-semibold mb-2">강원·충북·경기 지역 특화 분석</h3>
             <p className="text-[#86868B] text-sm leading-relaxed">
-              강원 및 충북 전역, 경기도까지 아우르는 지자체별 정책·현안 완벽 분석. 행정직뿐만 아니라 기계, 토목, 건축 등 기술직 및 특수직렬 맞춤 예상 질문과 합격자 배출 데이터를 바탕으로 면접에 특화된 대비를 제공합니다.
+              강원 및 충북 전역, 경기도까지 아우르는 지자체별 정책·현안 심층 분석. 행정직뿐만 아니라 기계, 토목, 건축 등 기술직 및 특수직렬 맞춤 예상 질문과 합격자 배출 데이터를 바탕으로 면접에 특화된 대비를 제공합니다.
             </p>
           </div>
         </div>
@@ -188,7 +188,7 @@ export default function WonjuInterviewPage() {
         <div className="max-w-4xl mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-3">수강 과정 & 등록 수강료</h2>
-            <p className="text-sm md:text-base text-[#86868B]">수강생의 준비 수준과 필요에 맞춰 스마트한 코스를 제안합니다.</p>
+            <p className="text-sm md:text-base text-[#86868B]">준비 수준과 필요에 맞는 과정을 선택하세요.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -331,7 +331,7 @@ export default function WonjuInterviewPage() {
             <div>
               <h4 className="font-semibold text-[#1D1D1F] mb-1">지자체 지역현안 및 직렬별 기출 분석 (강원·충북·경기 특화)</h4>
               <p className="text-[#86868B] text-sm leading-relaxed mb-2">
-                강원·충북·경기 지역 핵심 도정 및 지자체별 역점 사업 완벽 요약. 일반 행정직 및 기계, 토목, 건축 등 기술직/특수직렬 기출 및 전공 질문 완벽 대비.
+                강원·충북·경기 지역 핵심 도정 및 지자체별 역점 사업 요약 정리. 일반 행정직 및 기계, 토목, 건축 등 기술직/특수직렬 기출 및 전공 질문 집중 대비.
               </p>
               <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-0.5 rounded bg-[#F5F5F7] text-[#86868B]">
                 <BookOpen size={13} />
@@ -363,7 +363,7 @@ export default function WonjuInterviewPage() {
             <div>
               <h4 className="font-semibold text-[#1D1D1F] mb-1">금요 면접 자율스터디 (오전 09:30~12:30)</h4>
               <p className="text-[#86868B] text-sm leading-relaxed">
-                SSC스파르타가 제공하는 면접 스터디 커리큘럼에 맞춰 센터 매니저가 스터디 조를 편성합니다. 서로 면접관과 수험생이 되어 자소서 피드백, 모의 문답을 주 1회씩 무한 훈련합니다.
+                SSC스파르타가 제공하는 면접 스터디 커리큘럼에 맞춰 센터 매니저가 스터디 조를 편성합니다. 서로 면접관과 수험생이 되어 자소서 피드백, 모의 문답을 주 1회씩 반복 훈련합니다.
               </p>
             </div>
           </div>
@@ -494,7 +494,7 @@ export default function WonjuInterviewPage() {
             단 12시간, 최종합격으로 가는 마지막 관문
           </h2>
           <p className="text-white/70 text-sm md:text-base max-w-lg mx-auto mb-8">
-            필기합격의 감동을 최종 합격의 기쁨으로 바꾸십시오. 치밀한 커리큘럼과 엄격한 관리로 함께하겠습니다.
+            필기 합격이 최종 합격으로 이어지도록, 치밀한 커리큘럼과 밀착 피드백으로 함께합니다.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <a

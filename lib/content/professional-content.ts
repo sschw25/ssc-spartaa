@@ -47,8 +47,8 @@ export const professionalContent: StreamContent = {
     timeline: [],
   },
   worries: {
-    title: '나이 들어 시작한 도전,\n성인 수험생의 진짜 걱정',
-    subtitle: '의지는 흔들린다. 시스템은 흔들리지 않는다.',
+    title: '일과 생활 위에 얹은 도전,\n성인 수험생의 현실적인 고민',
+    subtitle: '의지가 흔들리는 날에도 시스템은 그대로 돌아갑니다.',
     items: [
       {
         icon: 'AlarmClock',
@@ -69,7 +69,7 @@ export const professionalContent: StreamContent = {
         worry: '방대한 분량,\n회독 관리가 안 된다',
         worryDetail: '전문자격은 과목 수와 분량이 방대해 계획 없이 진도를 빼면 시험 직전에 회독이 부족해집니다. 혼자서는 진도 점검이 느슨해지기 쉽습니다.',
         solution: '코멘터 플래너 점검 + 회독 계획 재조정',
-        solutionDetail: '코멘터가 주기적으로 플래너를 점검해 과목별 진도를 단일 소스로 추적하고, 밀리는 과목이 보이면 회독 계획을 개인별로 재조정합니다. 실행력을 높이는 것이 관리의 핵심입니다.',
+        solutionDetail: '코멘터가 주기적으로 플래너를 점검해 과목별 진도를 한눈에 추적하고, 밀리는 과목이 보이면 회독 계획을 개인별로 재조정합니다. 실행력을 높이는 것이 관리의 핵심입니다.',
       },
       {
         icon: 'Heart',
@@ -82,7 +82,7 @@ export const professionalContent: StreamContent = {
   },
   management: {
     title: 'SSC스파르타\n전문자격 관리 시스템',
-    subtitle: '성인 수험생을 위해 설계된 관리 장치들.\n오직 합격이라는 결과를 위한 시스템.',
+    subtitle: '성인 수험생을 위해 설계된 관리 장치들.\n합격까지의 변수를 하나씩 줄입니다.',
     features: [
       {
         icon: 'CheckSquare',
