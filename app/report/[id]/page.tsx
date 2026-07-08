@@ -194,6 +194,8 @@ function StudentReportInner() {
     weeklyDailyPlans,
     todayDailyPlan,
     todayPlanEntries,
+    todaySchedule,
+    scheduledSlotLabels,
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,
@@ -711,6 +713,7 @@ function StudentReportInner() {
           checklistSubmitting={checklistSubmitting}
           activeTab={lifeActiveTab}
           studyTimeLabels={studyTimeLabels}
+          scheduledSlotLabels={scheduledSlotLabels}
           studyStats={studyStats}
           completedQuests={completedQuests}
           setCompletedQuests={setCompletedQuests}
@@ -740,6 +743,7 @@ function StudentReportInner() {
           activeTab={learningActiveTab}
           weekDaySlots={weekDaySlots}
           studyTimeSlots={studyTimeSlots}
+          todaySchedule={isStudentReport ? todaySchedule : undefined}
           openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
         />
 

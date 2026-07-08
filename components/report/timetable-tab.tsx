@@ -5,6 +5,7 @@ import { Clock, Calendar, Coffee, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Student, SubjectProgress } from '@/lib/types/student';
 import { ACADEMY_TIMETABLE, slotMatchesPeriod } from '@/lib/academy-timetable';
+import type { AssignedScheduleItem } from '@/lib/today-schedule';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { getMaterialStudyDays } from '@/lib/progress-plan';
 import { getAwayRangesForDay, type WeekdayKey } from '@/lib/away-impact';
@@ -35,6 +36,8 @@ interface TimetableTabProps {
   activeTab: string;
   weekDaySlots: Array<{ key: DayKey; label: string }>;
   studyTimeSlots: Array<{ key: string; label: string; timeRange: string; periodLabel: string }>;
+  // 오늘 계획 자동 배치(교시별). 전달 시 이걸로 렌더(미지정 자료도 교시에 노출). 미전달=학부모 뷰 폴백.
+  todaySchedule?: Map<string, AssignedScheduleItem[]>;
   // 교시 항목 탭 → 자료 상세 시트(학생 뷰 전용, 미전달 시 비활성).
   openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
 }
@@ -49,6 +52,7 @@ export function TimetableTab({
   activeTab,
   weekDaySlots,
   studyTimeSlots,
+  todaySchedule,
   openMaterialDetail,
 }: TimetableTabProps) {
 
@@ -154,7 +158,26 @@ export function TimetableTab({
                 current?: number;
               }> = [];
 
-              if (isStudyPeriod && period.studyTime) {
+              // 자동 배치 스케줄(todaySchedule) 우선 — 미지정 자료도 배정 교시에 노출된다.
+              // 미전달(학부모 뷰 등)이면 기존 subject.studyTime 블록 매칭으로 폴백.
+              if (isStudyPeriod && todaySchedule) {
+                (todaySchedule.get(period.periodKey || '') || []).forEach((it) => {
+                  matchedPlans.push({
+                    subjectName: it.subjectName,
+                    title: it.title,
+                    type: it.materialType,
+                    materialId: it.materialId,
+                    range: it.range,
+                    amount: it.amount,
+                    speed: it.speed,
+                    isCompleted: it.isCompleted,
+                    actualAmount: it.actualAmount,
+                    unit: it.unit,
+                    selfPaced: it.selfPaced,
+                    current: it.current,
+                  });
+                });
+              } else if (isStudyPeriod && period.studyTime) {
                 todaySubjects.forEach(subject => {
                   if (subject.studyTime === period.studyTime) {
                     // 교재 계획 체크

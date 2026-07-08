@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, patchStudentProgress } from '@/lib/store';
 import type { LeaveRequest } from '@/lib/types/student';
-import { accrueMakeupAndNotify } from '@/lib/makeup-ledger';
+import { notifyMakeupLeave } from '@/lib/makeup-ledger';
 import {
   LEAVE_TYPES,
   getLeaveTypeLabel,
@@ -139,8 +139,8 @@ export async function POST(req: NextRequest) {
     };
     student.leaveRequests = [...existing, request];
 
-    // 자동 승인(반차)된 신청은 그 즉시 주말 보강 원장에 발생량을 스냅샷 가산(멱등).
-    if (autoApprove) accrueMakeupAndNotify(student, request);
+    // 자동 승인된 개인사정/병가는 "이번 주말 보강 반영" heads-up 알림(멱등). 정해진 반차/휴식은 알림 없음.
+    if (autoApprove) notifyMakeupLeave(student, request);
 
     const saved = await patchStudentProgress(student, originalUpdatedAt);
     if (saved === 'conflict') continue;

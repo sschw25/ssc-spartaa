@@ -1,10 +1,13 @@
-// 주말 보강 원장(makeup ledger) — 휴가로 빠진 학습분을 추적·누적·완료입력 가능한 원장의 단일 소스.
-// 순수 함수만 둔다. 승인 훅(3경로)이 accrueMakeupForLeave 로 발생량을 스냅샷 가산하고,
-// 학생이 /api/student/makeup 으로 logMakeupDone 을 눌러 완료분을 누적(진도 동반 회복)한다.
-//
-// 파생형(getWeekendMakeupItems/getMakeupAmount 창 스코프 + 쿠폰 이월)을 대체 — 이월은 자동 누적으로 흡수.
-import type { BookProgress, LectureProgress, LeaveRequest, MakeupNotice, Student } from '@/lib/types/student';
+// 주말 보강 원장(makeup ledger) — "주중(월~금) 못 지킨 계획분량을 주말에 보강"의 단일 소스.
+// Phase 2(2026-07-08): per-event 적립 → **토요일 주간 정산(파생·자기교정)** 으로 전환.
+//   owed = Σ(주중 계획 일일량) − Σ(주중 완료분) − (정해진 반차/휴식 면제분).
+//   → 개인사정·병가·무단이탈·지각·그냥 못한 것 전부 자연히 미달분에 포함(사유 불문).
+//   → 정해진 반차/휴식·쿠폰 교환권만 면제(보강 없이 계획이 밀림). 학생이 평일에 따라잡으면 owed 0(자기교정).
+//   done 은 주 단위(makeupWeekKey)로 스코프 — 지난 주 완료분이 이번 주 owed 를 상쇄하지 않는다.
+import type { BookProgress, LectureProgress, LeaveRequest, MakeupNotice, Student, SubjectProgress } from '@/lib/types/student';
 import { getActiveStudyDays, getMaterialStudyDays } from '@/lib/progress-plan';
+import { getPlanDailyCompletion } from '@/lib/student-activity';
+import { weekKeyOf, addDaysToDateKey } from '@/lib/makeup-carryover';
 
 export type MaterialType = 'book' | 'lecture';
 
@@ -16,8 +19,8 @@ export interface MakeupLedgerItem {
   subjectName: string;
   materialTitle: string;
   unit: string;             // 'p' | '강' 등
-  owed: number;
-  done: number;
+  owed: number;             // 이번 주 미달분(파생)
+  done: number;             // 이번 주 보강 완료분
   remaining: number;        // max(0, owed - done)
 }
 
@@ -30,12 +33,22 @@ export interface AccruedItem {
 }
 
 const DAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
+// 주중 = 월~금(offset 0~4, weekKey=월요일 기준). 주말(토/일)에 이 미달분을 보강한다.
+const WEEKDAY_OFFSET = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
 
 // 날짜 문자열(YYYY-MM-DD, KST 캘린더)의 요일 키. 로컬 자정 Date 로 계산(leave.date 와 동일 기준).
 function dayKeyOf(dateKey: string): string {
   const [y, m, d] = dateKey.split('-').map(Number);
   const dt = new Date(y, (m || 1) - 1, d || 1);
   return DAY_KEYS[dt.getDay()];
+}
+
+// 기본 오늘(KST) — 호출부 미지정 시. leave.date/weekKeyOf 와 동일한 KST 캘린더 기준.
+function kstTodayKey(): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  return parts; // en-CA → YYYY-MM-DD
 }
 
 // 휴가 → 면제 슬롯. use-report-state/timetable-tab 의 resolveLeaveSlot·getLeaveExemptions 와 동일 규칙.
@@ -48,84 +61,75 @@ function resolveLeaveSlot(leave: LeaveRequest): 'morning' | 'afternoon' | 'night
   return 'fullday'; // 병가·개인반차(슬롯 미지정) → 하루 종일
 }
 
+// 면제(defer) 휴가: 정해진 반차(오전/오후/야간)·휴식권(fullday)·쿠폰 교환권 사용.
+// 이들은 보강 없이 계획이 밀린다 → 주간 미달분에서 제외.
+// 개인사정(personal_*)·병가(sick)는 면제 아님 → 미달분에 남아 주말 보강 대상.
+function isDeferLeave(leave: LeaveRequest): boolean {
+  if (leave.usedCredit || leave.usedCoupon) return true;
+  const t = leave.type;
+  return t === 'morning' || t === 'afternoon' || t === 'night' || t === 'fullday';
+}
+
+// 특정 날짜에 이 과목 슬롯을 면제하는 정해진 휴가가 있는가(그 날 계획분을 미달분에서 제외).
+function isDeferLeaveOnDay(student: Student, dateKey: string, studyTime?: string): boolean {
+  for (const req of student.leaveRequests || []) {
+    if (req.status !== 'approved' || req.date !== dateKey) continue;
+    if (!isDeferLeave(req)) continue;
+    const slot = resolveLeaveSlot(req);
+    if (slot === 'fullday') return true;
+    if (studyTime && slot === studyTime) return true;
+  }
+  return false;
+}
+
 const materialUnit = (material: BookProgress | LectureProgress, type: MaterialType): string =>
   type === 'book' ? ((material as BookProgress).unit || 'p') : '강';
 
 const materialTitle = (material: BookProgress | LectureProgress, type: MaterialType): string =>
   type === 'book' ? (material as BookProgress).title : (material as LectureProgress).name;
 
-// leave.date 에 활성인 일일 계획의 일일량. 없으면 null.
-function activeDailyAmount(material: BookProgress | LectureProgress, dateKey: string): number | null {
-  const active = (material.detailedPlans || []).find(
-    (p) => !p.periodType && p.startDate <= dateKey && dateKey <= p.endDate,
-  );
-  if (!active) return null;
-  return Math.max(1, Math.round(active.dailyAmount ?? Math.ceil((active.targetAmount || 1) / 6)));
-}
+const subjectMaterials = (subject: SubjectProgress): Array<{ m: BookProgress | LectureProgress; type: MaterialType }> => [
+  ...(subject.books || []).map((m) => ({ m, type: 'book' as const })),
+  ...(subject.lectures || []).map((m) => ({ m, type: 'lecture' as const })),
+];
 
-// 1) 승인 휴가 1건 → 자료별 보강 발생량을 material.makeupOwed 에 스냅샷 가산(멱등).
-//    이미 leave.makeupAccruedAt 있으면 재가산하지 않는다. 반환된 accrued 로 알림을 만든다.
-export function accrueMakeupForLeave(
+// 자료 1건의 이번 주(월~오늘, 최대 금요일) 미달분. 정해진 휴가일은 제외, 완료분은 차감.
+function weeklyMaterialShortfall(
   student: Student,
-  leave: LeaveRequest,
-): { accrued: AccruedItem[] } {
-  const accrued: AccruedItem[] = [];
-  if (leave.makeupAccruedAt) return { accrued }; // 이미 가산됨(멱등).
-  if (leave.status !== 'approved') return { accrued };
-
-  const slot = resolveLeaveSlot(leave);
-  const exemptedSlots: Array<'morning' | 'afternoon' | 'night'> =
-    slot === 'fullday' ? ['morning', 'afternoon', 'night'] : [slot];
-  const leaveDayKey = dayKeyOf(leave.date);
-
-  for (const subject of student.subjects || []) {
-    const studyTime = subject.studyTime;
-    // 슬롯 매칭: 과목 studyTime 이 면제 슬롯에 포함돼야(fullday 면 오전/오후/야간 배정 자료 전부).
-    if (!studyTime || !exemptedSlots.includes(studyTime as 'morning' | 'afternoon' | 'night')) continue;
-
-    const materials: Array<{ m: BookProgress | LectureProgress; type: MaterialType }> = [
-      ...(subject.books || []).map((m) => ({ m, type: 'book' as const })),
-      ...(subject.lectures || []).map((m) => ({ m, type: 'lecture' as const })),
-    ];
-
-    for (const { m, type } of materials) {
-      // 자료 학습요일이 휴가일 요일을 포함해야(미설정이면 기본 월~토).
-      const days = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, m.studyDays));
-      if (!days.includes(leaveDayKey)) continue;
-
-      const dailyAmt = activeDailyAmount(m, leave.date);
-      if (dailyAmt === null || dailyAmt <= 0) continue;
-
-      const unit = materialUnit(m, type);
-      m.makeupOwed = (m.makeupOwed || 0) + dailyAmt;
-      m.makeupHistory = [...(m.makeupHistory || []), { leaveDate: leave.date, leaveType: leave.type, amount: dailyAmt }];
-      accrued.push({ subjectName: subject.name, materialTitle: materialTitle(m, type), amount: dailyAmt, unit, materialType: type });
-    }
+  subject: SubjectProgress,
+  material: BookProgress | LectureProgress,
+  weekKey: string,
+  todayKey: string,
+): number {
+  const studyDays = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, material.studyDays));
+  let planned = 0;
+  let done = 0;
+  for (let i = 0; i < WEEKDAY_OFFSET.length; i++) {
+    const dayKey = addDaysToDateKey(weekKey, i);
+    if (dayKey > todayKey) break;                       // 아직 안 온 요일은 집계 제외(초과집계 방지)
+    if (!studyDays.includes(WEEKDAY_OFFSET[i])) continue;
+    const plan = (material.detailedPlans || []).find(
+      (p) => !p.periodType && p.startDate <= dayKey && dayKey <= p.endDate,
+    );
+    if (!plan) continue;                                // 일일 계획 없음(기간목표·자율·미설정) → 미달 판정 제외
+    if (isDeferLeaveOnDay(student, dayKey, subject.studyTime)) continue; // 정해진 휴가 면제
+    const daily = Math.max(1, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6)));
+    planned += daily;
+    const comp = getPlanDailyCompletion(plan, dayKey);
+    if (comp.isCompleted) done += typeof comp.actualAmount === 'number' ? comp.actualAmount : daily;
   }
-
-  if (accrued.length > 0) {
-    leave.makeupAccruedAt = new Date().toISOString();
-  }
-  return { accrued };
+  return Math.max(0, planned - done);
 }
 
-// 2) 남은 보강(remaining>0) 자료 원장. makeup-tab / 홈 주말 보강 박스의 단일 소스.
-export function getMakeupLedger(student: Student): MakeupLedgerItem[] {
-  return getMakeupObligations(student).filter((it) => it.remaining > 0);
-}
-
-// 보강이 발생한(owed>0) 전체 자료(완료분 포함). 홈 '오늘 할 일' 카운트(총/완료) 판정용.
-export function getMakeupObligations(student: Student): MakeupLedgerItem[] {
+// 보강 대상(owed>0) 전체 자료(완료분 포함). 홈 '오늘 할 일' 카운트(총/완료) 판정용.
+export function getMakeupObligations(student: Student, todayKey: string = kstTodayKey()): MakeupLedgerItem[] {
+  const weekKey = weekKeyOf(todayKey);
   const out: MakeupLedgerItem[] = [];
   for (const subject of student.subjects || []) {
-    const materials: Array<{ m: BookProgress | LectureProgress; type: MaterialType }> = [
-      ...(subject.books || []).map((m) => ({ m, type: 'book' as const })),
-      ...(subject.lectures || []).map((m) => ({ m, type: 'lecture' as const })),
-    ];
-    for (const { m, type } of materials) {
-      const owed = m.makeupOwed || 0;
+    for (const { m, type } of subjectMaterials(subject)) {
+      const owed = weeklyMaterialShortfall(student, subject, m, weekKey, todayKey);
       if (owed <= 0) continue;
-      const done = m.makeupDone || 0;
+      const done = m.makeupWeekKey === weekKey ? m.makeupDone || 0 : 0;
       out.push({
         id: `makeup_${subject.id}_${m.id}`,
         materialId: m.id,
@@ -143,29 +147,39 @@ export function getMakeupObligations(student: Student): MakeupLedgerItem[] {
   return out;
 }
 
-// 3) 학생이 보강을 완료 입력 — makeupDone 누적 + 진도(currentPage/completedLectures) 동반 회복.
-//    자료 없으면 null. applied<=0 이면 아무 것도 바꾸지 않고 {applied:0, remaining} 반환.
+// 남은 보강(remaining>0) 자료 원장. makeup-tab / 홈 주말 보강 박스의 단일 소스.
+export function getMakeupLedger(student: Student, todayKey: string = kstTodayKey()): MakeupLedgerItem[] {
+  return getMakeupObligations(student, todayKey).filter((it) => it.remaining > 0);
+}
+
+// 학생이 보강을 완료 입력 — makeupDone(주 스코프) 누적 + 진도(currentPage/completedLectures) 동반 회복.
+// 자료 없으면 null. applied<=0 이면 아무 것도 바꾸지 않고 {applied:0, remaining} 반환.
 export function logMakeupDone(
   student: Student,
   materialId: string,
   materialType: MaterialType,
   amount: number,
+  todayKey: string = kstTodayKey(),
 ): { applied: number; remaining: number } | null {
+  const weekKey = weekKeyOf(todayKey);
+  let foundSubject: SubjectProgress | null = null;
   let found: BookProgress | LectureProgress | null = null;
   for (const subject of student.subjects || []) {
     const list = materialType === 'book' ? subject.books || [] : subject.lectures || [];
     const m = list.find((it) => it.id === materialId);
-    if (m) { found = m; break; }
+    if (m) { foundSubject = subject; found = m; break; }
   }
-  if (!found) return null;
+  if (!found || !foundSubject) return null;
 
-  const owed = found.makeupOwed || 0;
-  const done = found.makeupDone || 0;
-  const remaining = Math.max(0, owed - done);
+  const owed = weeklyMaterialShortfall(student, foundSubject, found, weekKey, todayKey);
+  // 주가 바뀌면 지난 주 done 은 0으로 리셋(주 스코프).
+  const doneStored = found.makeupWeekKey === weekKey ? found.makeupDone || 0 : 0;
+  const remaining = Math.max(0, owed - doneStored);
   const applied = Math.max(0, Math.min(Math.round(Number(amount) || 0), remaining));
   if (applied <= 0) return { applied: 0, remaining };
 
-  found.makeupDone = done + applied;
+  found.makeupWeekKey = weekKey;
+  found.makeupDone = doneStored + applied;
   // 진도 정합 — 보강 N = 진도 N 회복(총량 상한).
   if (materialType === 'book') {
     const b = found as BookProgress;
@@ -178,7 +192,7 @@ export function logMakeupDone(
   return { applied, remaining: Math.max(0, owed - found.makeupDone) };
 }
 
-// 4) accrued(자료별) → 알림 1건. 빈 배열이면 null.
+// accrued(자료별) → 알림 1건. 빈 배열이면 null.
 export function buildMakeupNotice(accrued: AccruedItem[], nowIso: string): MakeupNotice | null {
   if (accrued.length === 0) return null;
   return {
@@ -188,13 +202,38 @@ export function buildMakeupNotice(accrued: AccruedItem[], nowIso: string): Makeu
   };
 }
 
-// 승인 훅 공용 — accrue 실행 후 발생분이 있으면 makeupNotices 에 append(최근 30건 유지).
-// 반환된 알림(없으면 null)은 호출부가 추가 처리(로그 등)에 쓸 수 있다.
-export function accrueMakeupAndNotify(student: Student, leave: LeaveRequest): MakeupNotice | null {
-  const { accrued } = accrueMakeupForLeave(student, leave);
-  const notice = buildMakeupNotice(accrued, new Date().toISOString());
-  if (notice) {
-    student.makeupNotices = [...(student.makeupNotices || []), notice].slice(-30);
+// 개인사정/병가 휴가 승인 시 "이번 주말 보강에 반영돼요" heads-up 알림(멱등).
+// owed 는 주간 정산으로 파생하므로 여기서 원장을 건드리지 않는다 — 알림(예상 분량)만 남긴다.
+// 정해진 반차/휴식(defer)은 보강 없이 계획이 밀리므로 알림도 없다.
+export function notifyMakeupLeave(student: Student, leave: LeaveRequest): MakeupNotice | null {
+  if (leave.status !== 'approved') return null;
+  if (leave.makeupAccruedAt) return null; // 이미 알림 보냄(멱등).
+  if (isDeferLeave(leave)) return null;   // 정해진 휴가 → 보강 없음.
+
+  const slot = resolveLeaveSlot(leave);
+  const exemptedSlots: Array<'morning' | 'afternoon' | 'night'> =
+    slot === 'fullday' ? ['morning', 'afternoon', 'night'] : [slot];
+  const leaveDayKey = dayKeyOf(leave.date);
+
+  const items: AccruedItem[] = [];
+  for (const subject of student.subjects || []) {
+    const studyTime = subject.studyTime;
+    if (!studyTime || !exemptedSlots.includes(studyTime as 'morning' | 'afternoon' | 'night')) continue;
+    for (const { m, type } of subjectMaterials(subject)) {
+      const days = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, m.studyDays));
+      if (!days.includes(leaveDayKey)) continue;
+      const plan = (m.detailedPlans || []).find(
+        (p) => !p.periodType && p.startDate <= leave.date && leave.date <= p.endDate,
+      );
+      if (!plan) continue;
+      const daily = Math.max(1, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6)));
+      items.push({ subjectName: subject.name, materialTitle: materialTitle(m, type), amount: daily, unit: materialUnit(m, type), materialType: type });
+    }
   }
+  if (items.length === 0) return null;
+
+  leave.makeupAccruedAt = new Date().toISOString();
+  const notice = buildMakeupNotice(items, new Date().toISOString());
+  if (notice) student.makeupNotices = [...(student.makeupNotices || []), notice].slice(-30);
   return notice;
 }

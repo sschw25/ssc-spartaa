@@ -89,8 +89,9 @@ export interface BookProgress {
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
   // ── 주말 보강 원장(makeup ledger) ── 마이그레이션 불필요(subjects jsonb에 통째 저장).
   makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
-  makeupDone?: number;     // 누적 보강 완료량(학생 입력).
-  makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용).
+  makeupDone?: number;     // 이번 주 보강 완료량(학생 입력, makeupWeekKey 주 스코프).
+  makeupWeekKey?: string;  // makeupDone 이 속한 주(월요일 YYYY-MM-DD). 주 바뀌면 done 0 리셋(주간 정산).
+  makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용, 레거시).
   // 시작점 조정 감사 로그 — 학생이 오늘 시작점(current)을 옮긴 기록. 최근 30개 캡.
   // auto=true(자동 승인 즉시 반영)만 하루 누적 자동승인 한도 계산에 쓴다. 마이그레이션 불필요(JSON).
   adjustLog?: Array<{ date: string; from: number; to: number; auto: boolean; reason?: string }>;
@@ -123,8 +124,9 @@ export interface LectureProgress {
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
   // ── 주말 보강 원장(makeup ledger) ── 마이그레이션 불필요(subjects jsonb에 통째 저장).
   makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
-  makeupDone?: number;     // 누적 보강 완료량(학생 입력).
-  makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용).
+  makeupDone?: number;     // 이번 주 보강 완료량(학생 입력, makeupWeekKey 주 스코프).
+  makeupWeekKey?: string;  // makeupDone 이 속한 주(월요일 YYYY-MM-DD). 주 바뀌면 done 0 리셋(주간 정산).
+  makeupHistory?: Array<{ leaveDate: string; leaveType: string; amount: number }>; // 발생 근거(표시용, 레거시).
   // 시작점 조정 감사 로그 — 학생이 오늘 시작점(current)을 옮긴 기록. 최근 30개 캡.
   // auto=true(자동 승인 즉시 반영)만 하루 누적 자동승인 한도 계산에 쓴다. 마이그레이션 불필요(JSON).
   adjustLog?: Array<{ date: string; from: number; to: number; auto: boolean; reason?: string }>;

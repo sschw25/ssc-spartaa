@@ -4,7 +4,7 @@ import { updateStudentById } from '@/lib/store';
 import { isLeaveType } from '@/lib/leave';
 import { appendThreadMessage } from '@/lib/thread';
 import { readActivityEnvelope, writeActivityEnvelope } from '@/lib/student-activity';
-import { accrueMakeupAndNotify } from '@/lib/makeup-ledger';
+import { notifyMakeupLeave } from '@/lib/makeup-ledger';
 import type { LeaveRequest } from '@/lib/types/student';
 
 // 관리자: 학생 대신 휴가/반차 수기 등록 (쿼터 무시, 즉시 승인 가능)
@@ -50,8 +50,8 @@ export async function POST(
 
   const result = await updateStudentById(id, (student) => {
     student.leaveRequests = [...(student.leaveRequests || []), newRequest];
-    // 즉시 승인으로 등록된 건은 그 즉시 주말 보강 원장에 발생량을 스냅샷 가산(멱등).
-    if (newRequest.status === 'approved') accrueMakeupAndNotify(student, newRequest);
+    // 즉시 승인 개인사정/병가는 "이번 주말 보강 반영" heads-up 알림(멱등). 실제 owed 는 주간 정산으로 파생.
+    if (newRequest.status === 'approved') notifyMakeupLeave(student, newRequest);
   });
 
   if (result === 'not_found') {
@@ -150,9 +150,9 @@ export async function PATCH(
       target.status = status;
       target.reviewedAt = status === 'pending' ? undefined : nowIso;
       target.acknowledgedAt = status === 'pending' ? nowIso : undefined;
-      // 승인으로 전이한 경우에만 주말 보강 원장에 발생량을 스냅샷 가산(멱등 — 재승인해도 재가산 없음).
-      // pending/rejected 전이는 가산하지 않는다.
-      if (status === 'approved') accrueMakeupAndNotify(student, target);
+      // 승인 전이 시 개인사정/병가는 "이번 주말 보강 반영" heads-up 알림(멱등 — 재승인해도 재알림 없음).
+      // 정해진 반차/휴식은 알림 없음(계획이 밀림). 실제 owed 는 주간 정산으로 파생.
+      if (status === 'approved') notifyMakeupLeave(student, target);
     }
   });
 

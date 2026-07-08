@@ -20,6 +20,7 @@ import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { deriveDeadlineGoals } from '@/lib/deadline-goals';
 import { getMaterialStudyDays, getLeaveExemptions } from '@/lib/progress-plan';
 import { getAwayImpactSlots } from '@/lib/away-impact';
+import { getTodayScheduleItems, getBlockedPeriodKeys, assignItemsToPeriods, getPeriodNumLabel, type AssignedScheduleItem } from '@/lib/today-schedule';
 import { buildDisplayThread } from '@/lib/thread';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
@@ -1693,6 +1694,33 @@ export function useReportState() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.subjects]);
 
+  // 오늘 계획 자동 배치(Phase 1) — 미지정 자료도 빈 교시에 배정해 "시간표처럼" 노출.
+  // 타임테이블(교시별 렌더)과 홈 '오늘 할 일'(배정 교시 라벨)이 공유하는 단일 소스.
+  // 훅 순서 규칙상 아래 `if (!student)` early-return 앞에 둔다(날짜 키는 내부에서 산출).
+  const todaySchedule = useMemo(() => {
+    if (!student) return new Map<string, AssignedScheduleItem[]>();
+    const _today = new Date();
+    _today.setHours(0, 0, 0, 0);
+    const dateKey = formatDateKey(_today);
+    const dayKey = WEEK_DAY_SLOTS_BY_DATE[_today.getDay()].key;
+    const items = getTodayScheduleItems(student, dateKey, dayKey);
+    const blocked = getBlockedPeriodKeys(student, dateKey, dayKey);
+    return assignItemsToPeriods(items, blocked);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.subjects, student?.leaveRequests, student?.awaySchedules]);
+
+  // 홈 '오늘 할 일' 항목 id → 배정 교시 라벨('3교시'). '미지정' 대체 표시용.
+  const scheduledSlotLabels = useMemo(() => {
+    const rec: Record<string, string> = {};
+    todaySchedule.forEach((items) => {
+      items.forEach((it) => {
+        const label = getPeriodNumLabel(it.periodKey);
+        if (label) rec[it.id] = label;
+      });
+    });
+    return rec;
+  }, [todaySchedule]);
+
   // ────────────────────────────────────────────────────────────────────────────
 
   // ---------------- 데이터 가공 연산들 ----------------
@@ -2393,6 +2421,8 @@ export function useReportState() {
     weeklyDailyPlans,
     todayDailyPlan,
     todayPlanEntries,
+    todaySchedule,
+    scheduledSlotLabels,
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,

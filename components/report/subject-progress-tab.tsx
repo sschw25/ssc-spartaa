@@ -9,7 +9,7 @@ import {
   getMaterialBenchmark,
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
-import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getMaterialStudyDays } from '@/lib/progress-plan';
+import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getDeferLeaveExemptions, getMaterialStudyDays } from '@/lib/progress-plan';
 import { getMakeupLedger } from '@/lib/makeup-ledger';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
 import { LearningRequestPanel } from '@/components/report/learning-request-panel';
@@ -173,6 +173,8 @@ export function SubjectProgressTab({
   const leaveDates = React.useMemo(() => getLeaveDates(student), [student]);
   // 슬롯-특정 부분면제(반차는 그 슬롯만) — 보강량 계산에 사용.
   const leaveExemptions = React.useMemo(() => getLeaveExemptions(student), [student]);
+  // defer(정해진 반차/휴식)만 — 창(마감) 연장용. 정해진 휴가로 잃은 학습일만큼 뒤처짐 판정 창을 뒤로 민다.
+  const deferExemptions = React.useMemo(() => getDeferLeaveExemptions(student), [student]);
 
   // ── 주말 보강 원장 — 자료별 남은 보강(remaining) 배지. 입력·완료는 학습 '보강' 탭에서 한다. ──
   const makeupRemainingById = React.useMemo(() => {
@@ -303,8 +305,8 @@ export function SubjectProgressTab({
     today.setHours(0, 0, 0, 0);
     // 승인된 휴가(반차/휴식 등)는 그날 기대치에서 면제 — 순수 휴가로는 '느림'이 뜨지 않게 오버레이를 넘긴다.
     // 반차는 slot-특정 부분면제라 과목 studyTime 을 함께 전달(없으면 비율 폴백).
-    const expectedByStart = getExpectedFromPlans(plans, today, studyDays, student.createdAt, false, leaveDates, leaveExemptions, subjectStudyTime);
-    const expectedByEnd = getExpectedFromPlans(plans, today, studyDays, student.createdAt, true, leaveDates, leaveExemptions, subjectStudyTime);
+    const expectedByStart = getExpectedFromPlans(plans, today, studyDays, student.createdAt, false, leaveDates, leaveExemptions, subjectStudyTime, deferExemptions);
+    const expectedByEnd = getExpectedFromPlans(plans, today, studyDays, student.createdAt, true, leaveDates, leaveExemptions, subjectStudyTime, deferExemptions);
     if (expectedByStart === null || expectedByEnd === null) return null;
     if (current > expectedByEnd) return '계획보다 빠름';
     if (current >= expectedByStart) return '계획대로 진행중';

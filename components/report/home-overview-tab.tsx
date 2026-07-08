@@ -84,6 +84,8 @@ interface HomeOverviewTabProps {
   checklistSubmitting: boolean;
   activeTab: string;
   studyTimeLabels: Record<string, string>;
+  // 오늘 할 일 항목 id → 자동 배정 교시 라벨('3교시'). 있으면 '미지정' 대신 노출.
+  scheduledSlotLabels?: Record<string, string>;
   studyStats: StudyStats | null;
   completedQuests: Record<number, boolean>;
   setCompletedQuests: React.Dispatch<React.SetStateAction<Record<number, boolean>>>;
@@ -141,6 +143,7 @@ export function HomeOverviewTab({
   checklistSubmitting,
   activeTab,
   studyTimeLabels,
+  scheduledSlotLabels,
   studyStats,
   completedQuests,
   setCompletedQuests,
@@ -604,7 +607,7 @@ export function HomeOverviewTab({
                                   {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
                                 </p>
                                 <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                                  {studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
+                                  {scheduledSlotLabels?.[entry.id] || studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
                                 </p>
                               </button>
                               {reviewMinFor(entry.materialType, entry.materialId) > 0 && (

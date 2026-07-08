@@ -74,6 +74,26 @@ const shortAmount = generateDetailedPlans('book_short', 3, 'book', 'deadlineWeek
 assert.equal(shortAmount.plans.length, 3);
 assert.deepEqual(shortAmount.plans.map((p) => p.targetAmount), [1, 1, 1]);
 
+// ── 하루 목표(dailyAmount) 방식: 매주 일일량 고정 ──────────────────────────
+// 회귀: 마지막 부분 주가 ceil(잔량/6일)로 희석돼 "하루 3강 목표인데 계획표엔 일일 2강"으로
+// 나오던 버그. 이제 모든 주가 목표 일일량(3)을 유지하고, 그 주 분량이 더 적으면 그만큼만.
+const dailyRate = generateDetailedPlans(
+  'lec_daily', 60, 'lecture', 'dailyAmount', 3, 0, undefined, [],
+  ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
+);
+// 마지막 주 포함 모든 주 dailyAmount === 3 (그 주 분량이 3 미만인 주만 예외).
+dailyRate.plans.forEach((p) => {
+  const expected = Math.min(3, p.targetAmount);
+  assert.equal(p.dailyAmount, expected, `주${p.weekNumber} dailyAmount=${p.dailyAmount} (기대 ${expected})`);
+});
+// 총 50강(마지막 주 잔량 2강) → 그 주는 dailyAmount 2(min(3,2)), 1 아님.
+const dailyTail = generateDetailedPlans(
+  'lec_daily_tail', 50, 'lecture', 'dailyAmount', 3, 0, undefined, [],
+  ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'],
+);
+assert.equal(dailyTail.plans.at(-1)?.targetAmount, 2);
+assert.equal(dailyTail.plans.at(-1)?.dailyAmount, 2);
+
 // ── 계획 시작일(startDateStr) ─────────────────────────────────────────────
 const ALL_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 

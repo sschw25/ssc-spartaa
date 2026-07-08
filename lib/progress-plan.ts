@@ -70,11 +70,23 @@ export interface LeaveExemption {
   full: boolean;            // 하루종일 면제 여부
 }
 
-// 승인된(자동승인 포함) 결석성 휴가를 날짜별 면제로 환산.
-export function getLeaveExemptions(student: Student): Map<string, LeaveExemption> {
+// defer(면제) 휴가: 정해진 반차(오전/오후/야간)·휴식권(fullday)·쿠폰 교환권 사용.
+// 이들은 보강 없이 계획이 밀린다 → 잃은 학습일만큼 창(마감)을 연장한다. makeup-ledger.isDeferLeave 와 동일 규칙.
+function isDeferLeaveType(req: { type?: string; usedCredit?: boolean; usedCoupon?: boolean }): boolean {
+  if (req.usedCredit || req.usedCoupon) return true;
+  const t = req.type;
+  return t === 'morning' || t === 'afternoon' || t === 'night' || t === 'fullday';
+}
+
+// 승인 휴가를 날짜별 면제로 환산(공용). filter 로 부분집합(예: defer 전용)만 뽑는다.
+function buildExemptions(
+  student: Student,
+  filter?: (req: { type?: string; usedCredit?: boolean; usedCoupon?: boolean }) => boolean,
+): Map<string, LeaveExemption> {
   const map = new Map<string, LeaveExemption>();
   for (const req of student.leaveRequests || []) {
     if (req.status !== 'approved') continue;
+    if (filter && !filter(req as { type?: string; usedCredit?: boolean; usedCoupon?: boolean })) continue;
     const date = req.date;
     if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
     const type = req.type as string;
@@ -96,6 +108,16 @@ export function getLeaveExemptions(student: Student): Map<string, LeaveExemption
     map.set(date, cur);
   }
   return map;
+}
+
+// 승인된(자동승인 포함) 결석성 휴가를 날짜별 면제로 환산(전체 — 뒤처짐 기대치 discount용).
+export function getLeaveExemptions(student: Student): Map<string, LeaveExemption> {
+  return buildExemptions(student);
+}
+
+// defer(정해진 반차/휴식·쿠폰권)만 날짜별 면제로 — 창(마감) 연장 계산용. 개인사정/병가는 제외(주말 보강 대상).
+export function getDeferLeaveExemptions(student: Student): Map<string, LeaveExemption> {
+  return buildExemptions(student, isDeferLeaveType);
 }
 
 // 날짜별 총 면제 비율 맵(deadline % 축소용).
@@ -151,6 +173,61 @@ export function countStudyDaysInRange(start: Date, end: Date, studyDays?: string
   return count;
 }
 
+// from 이후 n 학습일 뒤의 날짜(비학습일 건너뜀). n<=0 이면 from 그대로.
+function addStudyDays(from: Date, n: number, studyDays?: string[]): Date {
+  const d = new Date(from); d.setHours(0, 0, 0, 0);
+  const target = Math.round(n);
+  let added = 0;
+  while (added < target) {
+    d.setDate(d.getDate() + 1);
+    if (isStudyDay(d, studyDays)) added++;
+  }
+  return d;
+}
+
+// [start,end] 창 안에서 defer 휴가로 잃은 학습일 수(자료 슬롯 기준 부분면제 합). 창 연장폭.
+function deferStudyDaysInWindow(
+  start: Date, end: Date, studyDays: string[] | undefined,
+  deferExemptions: Map<string, LeaveExemption>, subjectStudyTime?: string,
+): number {
+  let sum = 0;
+  const cur = new Date(start); cur.setHours(0, 0, 0, 0);
+  const last = new Date(end); last.setHours(0, 0, 0, 0);
+  while (cur <= last) {
+    if (isStudyDay(cur, studyDays)) sum += materialLeaveFractionOnDate(deferExemptions.get(toDateKey(cur)), subjectStudyTime);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return sum;
+}
+
+// 자료의 모든 일일계획에 걸친 defer 창 연장폭(학습일). effectiveTargetDate = targetDate + 이만큼.
+export function deferExtensionStudyDays(
+  plans: DetailedPlan[] | undefined, studyDays: string[] | undefined,
+  deferExemptions: Map<string, LeaveExemption>, subjectStudyTime?: string,
+): number {
+  let sum = 0;
+  for (const plan of plans || []) {
+    if (plan.periodType) continue;
+    const s = parseDate(plan.startDate); const e = parseDate(plan.endDate);
+    if (!s || !e) continue;
+    sum += deferStudyDaysInWindow(s, e, studyDays, deferExemptions, subjectStudyTime);
+  }
+  return sum;
+}
+
+// targetDate 를 defer 휴가로 잃은 학습일만큼 뒤로 민 값(표시·daysToTarget용). defer 없으면 원본.
+export function getEffectiveTargetDate(
+  targetDate: string | undefined, plans: DetailedPlan[] | undefined, studyDays: string[] | undefined,
+  deferExemptions: Map<string, LeaveExemption>, subjectStudyTime?: string,
+): string | undefined {
+  if (!targetDate) return targetDate;
+  const ext = deferExtensionStudyDays(plans, studyDays, deferExemptions, subjectStudyTime);
+  if (ext < 0.5) return targetDate;
+  const base = parseDate(targetDate);
+  if (!base) return targetDate;
+  return toDateKey(addStudyDays(base, ext, studyDays));
+}
+
 function getExpectedWithinCurrentPlan(plan: DetailedPlan, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>, leaveExemptions?: Map<string, LeaveExemption>, subjectStudyTime?: string) {
   const start = parseDate(plan.startDate);
   const end = parseDate(plan.endDate);
@@ -194,7 +271,7 @@ function isSameDay(a: Date | null, b: Date) {
   return Boolean(a && a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate());
 }
 
-export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>, leaveExemptions?: Map<string, LeaveExemption>, subjectStudyTime?: string) {
+export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: Date, studyDays?: string[], createdAt?: string, inclusiveToday = false, leaveDates?: Set<string>, leaveExemptions?: Map<string, LeaveExemption>, subjectStudyTime?: string, deferExemptions?: Map<string, LeaveExemption>) {
   if (!plans || plans.length === 0) return null;
 
   // 기간 목표(periodType) plan 은 일일 진도 기대치 계산에서 제외(요일 무관·별도 페이스로 판정).
@@ -209,11 +286,17 @@ export function getExpectedFromPlans(plans: DetailedPlan[] | undefined, today: D
     const end = parseDate(plan.endDate);
     if (!start || !end) continue;
 
+    // defer(정해진 반차/휴식) 휴가로 잃은 학습일만큼 창 끝을 뒤로 민다 → 창-끝 절벽 제거(마감 밀기).
+    // deferExemptions 미제공 시 원래 end(동작 불변).
+    const effEnd = deferExemptions
+      ? addStudyDays(end, deferStudyDaysInWindow(start, end, studyDays, deferExemptions, subjectStudyTime), studyDays)
+      : end;
+
     if (today < start) {
       return latestPastPlan ? parsePlanEndAmount(latestPastPlan) : 0;
     }
 
-    if (today <= end) {
+    if (today <= effEnd) {
       return getExpectedWithinCurrentPlan(plan, today, studyDays, createdAt, inclusiveToday, leaveDates, leaveExemptions, subjectStudyTime);
     }
 
@@ -233,6 +316,7 @@ function buildItem(
   leaveDates?: Set<string>,
   leaveExemptions?: Map<string, LeaveExemption>,
   subjectStudyTime?: string,
+  deferExemptions?: Map<string, LeaveExemption>,
 ): ManagedProgressItem {
   const total = type === 'book'
     ? (material as BookProgress).totalPages
@@ -257,7 +341,11 @@ function buildItem(
   // 목표(계획) 미설정 자료는 달력 선형 추정(과거 getExpectedLinear 폴백)으로 뒤처짐을 만들지
   // 않는다 — 기대치 null → 판정 제외(no-plan). 기간 목표(deadline) 전용 자료도 여기서는 null
   // (deriveDeadlineGoals 가 마감 위험 판정의 단일 소스).
-  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates, leaveExemptions, subjectStudyTime);
+  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates, leaveExemptions, subjectStudyTime, deferExemptions);
+  // defer(정해진 반차/휴식)로 잃은 학습일만큼 표시 마감을 뒤로 민다(daysToTarget 도 동일 기준).
+  const effectiveTargetDate = deferExemptions
+    ? getEffectiveTargetDate(material.targetDate, material.detailedPlans, studyDays, deferExemptions, subjectStudyTime)
+    : material.targetDate;
   const expectedToday = rawExpectedToday === null
     ? null
     : isFreshToday
@@ -286,12 +374,12 @@ function buildItem(
     title,
     total,
     current,
-    targetDate: material.targetDate,
+    targetDate: effectiveTargetDate,
     expectedToday,
     shortage,
     status,
     planKind,
-    daysToTarget: diffDays(today, material.targetDate),
+    daysToTarget: diffDays(today, effectiveTargetDate),
     daysToConsultation: diffDays(today, student.nextConsultationDate),
   };
 }
@@ -304,16 +392,17 @@ export function getManagedProgressItems(students: Student[], today = new Date())
   return students.flatMap((student) => {
     const leaveDates = getLeaveDates(student);
     const exemptions = getLeaveExemptions(student);
+    const deferExemptions = getDeferLeaveExemptions(student);
     if (student.subjects && student.subjects.length > 0) {
       return student.subjects.flatMap((subject) => [
-        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', day, getMaterialStudyDays(subject.studyDays, book.studyDays), leaveDates, exemptions, subject.studyTime)),
-        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', day, getMaterialStudyDays(subject.studyDays, lecture.studyDays), leaveDates, exemptions, subject.studyTime)),
+        ...(subject.books || []).map((book) => buildItem(student, subject.name, book, 'book', day, getMaterialStudyDays(subject.studyDays, book.studyDays), leaveDates, exemptions, subject.studyTime, deferExemptions)),
+        ...(subject.lectures || []).map((lecture) => buildItem(student, subject.name, lecture, 'lecture', day, getMaterialStudyDays(subject.studyDays, lecture.studyDays), leaveDates, exemptions, subject.studyTime, deferExemptions)),
       ]);
     }
 
     return [
-      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', day, undefined, leaveDates, exemptions)),
-      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', day, undefined, leaveDates, exemptions)),
+      ...(student.books || []).map((book) => buildItem(student, '기본', book, 'book', day, undefined, leaveDates, exemptions, undefined, deferExemptions)),
+      ...(student.lectures || []).map((lecture) => buildItem(student, '기본', lecture, 'lecture', day, undefined, leaveDates, exemptions, undefined, deferExemptions)),
     ];
   });
 }
@@ -829,7 +918,11 @@ export function generateDetailedPlans(
     phaseStartWeek: Date,
     firstWeekFromDate?: Date,
     // 첫 주(i===0) plan.startDate 를 이 문자열로 강제(명시 시작일 기능). 미지정 시 그 주 월요일.
-    firstWeekStartOverride?: string
+    firstWeekStartOverride?: string,
+    // 하루 목표(dailyAmount 방식) — 지정 시 매주 이 값을 dailyAmount 로 고정한다(그 주 분량이 더 적으면
+    // 그만큼만). 미지정(weeks 방식·회독)이면 종전대로 ceil(그주분량/그주학습일)로 역산한다.
+    // 지정 시: 마지막 부분 주가 ceil(잔량/6일)로 희석돼 "하루 3강 목표인데 계획표엔 일일 2강"으로 보이던 버그 방지.
+    fixedDailyAmount?: number
   ) => {
     let remainingAmount = phaseAmount;
     let currentStart = new Date(phaseStartWeek);
@@ -853,8 +946,12 @@ export function generateDetailedPlans(
       const unit = customUnit || (type === 'book' ? 'p' : '강');
       const rangeText = `${passNumber}회독 ${fromNum}${unit} ~ ${toNum}${unit}`;
       const dailyDays = getStudyDaysInWeek(currentStart, i === 0 ? firstWeekFromDate : undefined);
-      
-      let dailyAmount = Math.ceil(thisWeekAmount / dailyDays);
+
+      // 하루 목표(dailyAmount 방식): 매주 목표 일일량을 유지(그 주 분량이 더 적으면 그만큼만).
+      // 그 외(weeks 방식·회독): 주간 분량을 그 주 학습일로 나눠 역산.
+      let dailyAmount = fixedDailyAmount != null
+        ? Math.max(1, Math.min(fixedDailyAmount, thisWeekAmount))
+        : Math.ceil(thisWeekAmount / dailyDays);
       if (type === 'lecture' && category !== '문제풀이' && maxLecturesPerDay !== Infinity) {
         dailyAmount = Math.min(dailyAmount, maxLecturesPerDay);
       }
@@ -884,6 +981,8 @@ export function generateDetailedPlans(
   let totalWeeks = 1;
   let firstWeekAmount = planAmount;
   let amountPerWeek = 0;
+  // 하루 목표(dailyAmount 방식)일 때만 매주 고정할 일일량. weeks 방식은 undefined(주간→일일 역산 유지).
+  let fixedDailyRate: number | undefined;
 
   if (goalType === 'weeks') {
     let baseWeeks = Math.max(1, Math.round(adjustedGoalValue));
@@ -907,6 +1006,7 @@ export function generateDetailedPlans(
     }
   } else if (goalType === 'dailyAmount') {
     const targetDaily = Math.max(1, Math.round(adjustedGoalValue));
+    fixedDailyRate = targetDaily;
     firstWeekAmount = Math.min(planAmount, targetDaily * firstWeekDays);
     const remainingForOthers = planAmount - firstWeekAmount;
     if (remainingForOthers <= 0) {
@@ -929,7 +1029,7 @@ export function generateDetailedPlans(
     : undefined;
 
   if (planAmount > 0) {
-    appendPlansByWeeklyAmount(1, planAmount, safeCurrentAmount, firstWeekAmount, amountPerWeek, totalWeeks, startOfWeek, today, firstWeekStartOverride);
+    appendPlansByWeeklyAmount(1, planAmount, safeCurrentAmount, firstWeekAmount, amountPerWeek, totalWeeks, startOfWeek, today, firstWeekStartOverride, fixedDailyRate);
   }
 
   const enabledReviewPasses = reviewPasses
