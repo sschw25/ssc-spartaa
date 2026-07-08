@@ -663,7 +663,7 @@ export function HomeOverviewTab({
 
                           {/* 오늘 이 자료를 몇 교시에 할지 학생이 직접 배치(자료별 studySlot). 미지정이면 자동 배치. */}
                           {saveStudySlot && !entry.isCompleted && (
-                            <div data-stop className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                            <div data-stop className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
                               <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                                 <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
                                 교시 배치
@@ -853,7 +853,7 @@ export function HomeOverviewTab({
 
                         {/* 시간표 배치 — 자료별 학생 지정 슬롯. 미지정이면 시간표에 안 뜨고 여기(그날 할일)에만 노출. */}
                         {saveStudySlot && (
-                          <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
                             <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                               <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
                               시간표 배치
@@ -1169,7 +1169,7 @@ export function HomeOverviewTab({
 
                       {/* 교시 배치(D) + 홈 진도 입력(C) */}
                       {(saveStudySlot || updateDeadlineProgress) && (
-                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                        <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
                           {saveStudySlot && (
                             <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                               <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
