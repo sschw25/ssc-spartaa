@@ -453,7 +453,7 @@ export function ExecutionPlanTab({
                     </div>
                     <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] font-black ${
                       entry.done
-                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700'
+                        ? 'bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                         : entry.active
                           ? entry.goal?.behind
                             ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-700'
@@ -500,7 +500,7 @@ export function ExecutionPlanTab({
                   {entry.active && entry.goal && !entry.done && (
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       {metToday ? (
-                        <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-3 py-2 text-[11px] font-black text-emerald-700">
+                        <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full bg-emerald-100 dark:bg-emerald-500/10 px-3 py-2 text-[11px] font-black text-emerald-700 dark:text-emerald-300">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           오늘 완료
                         </span>

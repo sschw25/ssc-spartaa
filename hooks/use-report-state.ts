@@ -1577,6 +1577,8 @@ export function useReportState() {
                     isCompleted: dailyCompletion.isCompleted,
                     actualAmount: dailyCompletion.actualAmount,
                     studyTime: subject.studyTime || '',
+                    // 자료별 학생 지정 슬롯 — 오늘 할 일에서 교시 배치 select 값. 없으면 '' (과목 슬롯/자동배치로 표시).
+                    studySlot: lecture.studySlot || '',
                     rangeText: plan.rangeText,
                     dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
                     dailyLabel: getDailyAmountLabel(plan),
@@ -1602,6 +1604,8 @@ export function useReportState() {
                     isCompleted: dailyCompletion.isCompleted,
                     actualAmount: dailyCompletion.actualAmount,
                     studyTime: subject.studyTime || '',
+                    // 자료별 학생 지정 슬롯 — 오늘 할 일에서 교시 배치 select 값. 없으면 '' (과목 슬롯/자동배치로 표시).
+                    studySlot: book.studySlot || '',
                     rangeText: plan.rangeText,
                     dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
                     dailyLabel: getDailyAmountLabel(plan),
@@ -1710,6 +1714,8 @@ export function useReportState() {
   }, [student?.subjects, student?.leaveRequests, student?.awaySchedules]);
 
   // 홈 '오늘 할 일' 항목 id → 배정 교시 라벨('3교시'). '미지정' 대체 표시용.
+  // + 항목 id → 교시 순위(정렬용). p0=0 … p8=8, 미배정=99.
+  const PERIOD_ORDER = ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8'];
   const scheduledSlotLabels = useMemo(() => {
     const rec: Record<string, string> = {};
     todaySchedule.forEach((items) => {
@@ -1719,6 +1725,17 @@ export function useReportState() {
       });
     });
     return rec;
+  }, [todaySchedule]);
+
+  // 항목 id → 배정 교시 순위(홈 '오늘 할 일' 교시순 정렬용).
+  const scheduledPeriodRank = useMemo(() => {
+    const rec: Record<string, number> = {};
+    todaySchedule.forEach((items, periodKey) => {
+      const rank = PERIOD_ORDER.indexOf(periodKey);
+      items.forEach((it) => { rec[it.id] = rank < 0 ? 99 : rank; });
+    });
+    return rec;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [todaySchedule]);
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -1899,7 +1916,10 @@ export function useReportState() {
   const todayDailyPlan = weeklyDailyPlans
     .flatMap((week) => week.days)
     .find((day) => day.dateKey === todayDateKey);
-  const todayPlanEntries = todayDailyPlan?.entries || [];
+  // 배정 교시 순서로 정렬(0교시→심야). 교시 미배정은 뒤로, 동순위는 기존 순서 유지(안정 정렬).
+  const todayPlanEntries = [...(todayDailyPlan?.entries || [])].sort(
+    (a, b) => (scheduledPeriodRank[a.id] ?? 99) - (scheduledPeriodRank[b.id] ?? 99),
+  );
 
   // formatNotificationDate, truncateNotificationText, parseDateOnly 는 모듈 스코프 함수
 

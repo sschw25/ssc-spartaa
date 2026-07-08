@@ -319,7 +319,7 @@ export function SubjectProgressTab({
         return 'bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/20 dark:border-white/10';
       case '계획대로 진행중':
       case '계획대로 진행':
-        return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:border-white/10';
+        return 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-white/10';
       case '계획보다 느림':
         return 'bg-amber-50 dark:bg-amber-500/10 text-amber-700 border-amber-200 dark:border-white/10';
       case '진도 정체':
@@ -849,7 +849,7 @@ export function SubjectProgressTab({
                           )}
 
                           {renderMakeupBadge(b.id)}
-                          {isStudentReport && <InputHeatmap inputLog={b.inputLog} studyDays={getMaterialStudyDays(sub.studyDays, b.studyDays)} leaveDates={leaveDates} />}
+                          {isStudentReport && <InputHeatmap inputLog={b.inputLog} studyDays={getMaterialStudyDays(sub.studyDays, b.studyDays)} leaveDates={leaveDates} detailedPlans={b.detailedPlans} unit={b.unit || 'p'} isSelfPaced={b.goalType === 'selfPaced'} reviewLog={b.reviewLog} />}
 
                           {isStudentReport && (
                             <BenchmarkSection type="book" subject={sub.name} name={b.title} studentId={student.id} audience="student" />
@@ -1090,7 +1090,7 @@ export function SubjectProgressTab({
                           )}
 
                           {renderMakeupBadge(l.id)}
-                          {isStudentReport && <InputHeatmap inputLog={l.inputLog} studyDays={getMaterialStudyDays(sub.studyDays, l.studyDays)} leaveDates={leaveDates} />}
+                          {isStudentReport && <InputHeatmap inputLog={l.inputLog} studyDays={getMaterialStudyDays(sub.studyDays, l.studyDays)} leaveDates={leaveDates} detailedPlans={l.detailedPlans} unit="강" isSelfPaced={l.goalType === 'selfPaced'} reviewLog={l.reviewLog} />}
 
                           {isStudentReport && (
                             <BenchmarkSection type="lecture" subject={sub.name} name={l.name} studentId={student.id} audience="student" />

@@ -693,6 +693,7 @@ function StudentReportInner() {
           saveStudySlot={saveStudySlot}
           adjustStartPoint={adjustStartPoint}
           saveMakeupDone={saveMakeupDone}
+          updateDeadlineProgress={updateDeadlineProgress}
           pendingPlanId={pendingPlanId}
           setPendingPlanId={setPendingPlanId}
           pendingAmount={pendingAmount}
@@ -889,6 +890,7 @@ function StudentReportInner() {
           materialId={materialSheet.materialId}
           studyTimeLabels={studyTimeLabels}
           adjustStartPoint={adjustStartPoint}
+          saveStudySlot={saveStudySlot}
           onClose={closeMaterialDetail}
           onOpenSubjectProgress={openSubjectProgressFromSheet}
           onOpenTimetable={openTimetableFromSheet}

@@ -30,6 +30,7 @@ type DailyPlanEntry = {
   isCompleted: boolean;
   actualAmount?: number;
   studyTime: string;
+  studySlot: string;
   rangeText: string;
   dailyAmount: number;
   dailyLabel: string;
@@ -64,6 +65,7 @@ interface HomeOverviewTabProps {
   saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
   adjustStartPoint?: (materialType: 'book' | 'lecture', materialId: string, newValue: number, reason?: string) => Promise<StartPointAdjustResult>;
   saveMakeupDone?: (materialType: 'book' | 'lecture', materialId: string, amount: number) => Promise<boolean>;
+  updateDeadlineProgress?: (materialType: 'book' | 'lecture', materialId: string, planId: string, amount: number) => Promise<boolean>;
   pendingPlanId: string | null;
   setPendingPlanId: (id: string | null) => void;
   pendingAmount: number;
@@ -124,6 +126,7 @@ export function HomeOverviewTab({
   saveStudySlot,
   adjustStartPoint,
   saveMakeupDone,
+  updateDeadlineProgress,
   pendingPlanId,
   setPendingPlanId,
   pendingAmount,
@@ -179,6 +182,9 @@ export function HomeOverviewTab({
   const [selfPacedSaving, setSelfPacedSaving] = useState(false);
   // 자율 학습 시간표 배치(studySlot) 저장 중인 항목 id.
   const [slotSavingId, setSlotSavingId] = useState<string | null>(null);
+  // 주간목표(deadline) 홈 진도 입력 — 자료별 누적 입력 초안 + 저장 중 id.
+  const [deadlineDraft, setDeadlineDraft] = useState<Record<string, string>>({});
+  const [deadlineSavingId, setDeadlineSavingId] = useState<string | null>(null);
   // 시작점 조정 패널 — 열린 항목 id 만 여기서 관리(입력 상태는 공용 StartPointAdjustPanel 내부).
   const [adjustOpenId, setAdjustOpenId] = useState<string | null>(null);
 
@@ -562,7 +568,14 @@ export function HomeOverviewTab({
                   const adjustUnit = unit || (entry.materialType === 'lecture' ? '강' : 'p');
                   const isAdjustOpen = adjustInfo !== null && adjustOpenId === entry.id;
                   return (
-                    <div key={entry.id} className={`rounded-2xl border p-3 transition ${
+                    <div
+                      key={entry.id}
+                      // 카드 아무 데나 탭 → 자료 상세 시트. 내부 버튼/입력/패널은 guard 로 제외해 오작동 방지.
+                      onClick={openMaterialDetail ? (e) => {
+                        if ((e.target as HTMLElement).closest('button, input, select, textarea, a, label, [data-stop]')) return;
+                        openMaterialDetail(entry.materialType, entry.materialId);
+                      } : undefined}
+                      className={`rounded-2xl border p-3 transition ${openMaterialDetail ? 'cursor-pointer' : ''} ${
                       entry.isCompleted ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isPending ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
                     }`}>
                       <div className="flex items-start gap-3">
@@ -604,9 +617,14 @@ export function HomeOverviewTab({
                               >
                                 <p className={`flex items-center gap-1 text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 dark:text-emerald-300 line-through decoration-emerald-500/40' : 'text-slate-900 dark:text-slate-100'}`}>
                                   <span className="truncate">{entry.subject} · {entry.title}</span>
-                                  {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
+                                  {openMaterialDetail && (
+                                    <span className="ml-0.5 inline-flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-slate-300 dark:text-slate-600">
+                                      자세히
+                                      <ChevronRight className="h-3 w-3" />
+                                    </span>
+                                  )}
                                 </p>
-                                <p className="mt-1 truncate text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                                <p className="mt-1 truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                   {scheduledSlotLabels?.[entry.id] || studyTimeLabels[entry.studyTime] || '미지정'} · {entry.type} · {entry.dailyLabel}
                                 </p>
                               </button>
@@ -620,15 +638,13 @@ export function HomeOverviewTab({
                                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                                     오늘은 <span className="font-semibold text-[#0071E3]">{Math.min(adjustInfo.total, adjustInfo.current + 1)}{adjustUnit}</span>부터 시작해요
                                   </span>
-                                  {!isAdjustOpen && (
-                                    <button
-                                      type="button"
-                                      onClick={() => setAdjustOpenId(entry.id)}
-                                      className="rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.05] px-2 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-95 dark:bg-[#0071E3]/15"
-                                    >
-                                      시작점 조정
-                                    </button>
-                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => setAdjustOpenId((prev) => (prev === entry.id ? null : entry.id))}
+                                    className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold transition active:scale-95 ${isAdjustOpen ? 'border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400' : 'border-[#0071E3]/25 bg-[#0071E3]/[0.05] text-[#0071E3] hover:bg-[#0071E3]/10 dark:bg-[#0071E3]/15'}`}
+                                  >
+                                    {isAdjustOpen ? '닫기' : '시작점 조정'}
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -639,8 +655,38 @@ export function HomeOverviewTab({
                             </span>
                           </div>
 
+                          {/* 오늘 이 자료를 몇 교시에 할지 학생이 직접 배치(자료별 studySlot). 미지정이면 자동 배치. */}
+                          {saveStudySlot && !entry.isCompleted && (
+                            <div data-stop className="mt-2.5 flex items-center justify-between gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                              <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                                <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
+                                교시 배치
+                              </label>
+                              <select
+                                value={entry.studySlot || ''}
+                                disabled={slotSavingId === entry.id}
+                                onChange={async (e) => {
+                                  const next = e.target.value;
+                                  setSlotSavingId(entry.id);
+                                  try {
+                                    const ok = await saveStudySlot(entry.materialType, entry.materialId, next);
+                                    if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
+                                    else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
+                                  } finally {
+                                    setSlotSavingId(null);
+                                  }
+                                }}
+                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                              >
+                                {STUDY_SLOT_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+
                           {isPending && (
-                            <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
+                            <div data-stop className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
                               <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">실제로 얼마나 했나요?</p>
                               <div className="mt-2 flex items-center gap-2">
                                 <button
@@ -705,14 +751,16 @@ export function HomeOverviewTab({
                           )}
 
                           {isAdjustOpen && adjustInfo && adjustStartPoint && (
-                            <StartPointAdjustPanel
-                              materialType={entry.materialType}
-                              materialId={entry.materialId}
-                              unit={adjustUnit}
-                              info={adjustInfo}
-                              adjustStartPoint={adjustStartPoint}
-                              onClose={() => setAdjustOpenId(null)}
-                            />
+                            <div data-stop>
+                              <StartPointAdjustPanel
+                                materialType={entry.materialType}
+                                materialId={entry.materialId}
+                                unit={adjustUnit}
+                                info={adjustInfo}
+                                adjustStartPoint={adjustStartPoint}
+                                onClose={() => setAdjustOpenId(null)}
+                              />
+                            </div>
                           )}
                         </div>
                       </div>
@@ -1105,12 +1153,75 @@ export function HomeOverviewTab({
                         </p>
                       </div>
 
+                      {/* 교시 배치(D) + 홈 진도 입력(C) */}
+                      {(saveStudySlot || updateDeadlineProgress) && (
+                        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+                          {saveStudySlot && (
+                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
+                              교시
+                              <select
+                                value={goal.studySlot || ''}
+                                disabled={slotSavingId === goal.id}
+                                onChange={async (e) => {
+                                  const next = e.target.value;
+                                  setSlotSavingId(goal.id);
+                                  try {
+                                    const ok = await saveStudySlot(goal.materialType, goal.materialId, next);
+                                    if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
+                                    else toast.error('교시 배치에 실패했어요.');
+                                  } finally {
+                                    setSlotSavingId(null);
+                                  }
+                                }}
+                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                              >
+                                {STUDY_SLOT_OPTIONS.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                ))}
+                              </select>
+                            </label>
+                          )}
+                          {updateDeadlineProgress && (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">진행</span>
+                              <input
+                                type="number"
+                                min={0}
+                                max={goal.targetAmount}
+                                value={deadlineDraft[goal.id] ?? String(goal.actualAmount)}
+                                onChange={(e) => setDeadlineDraft((d) => ({ ...d, [goal.id]: e.target.value }))}
+                                className="h-8 w-16 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-right text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
+                              />
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{goal.unit}</span>
+                              <button
+                                type="button"
+                                disabled={deadlineSavingId === goal.id || (deadlineDraft[goal.id] ?? String(goal.actualAmount)) === String(goal.actualAmount)}
+                                onClick={async () => {
+                                  const val = Math.max(0, Math.round(Number(deadlineDraft[goal.id] ?? goal.actualAmount) || 0));
+                                  setDeadlineSavingId(goal.id);
+                                  try {
+                                    const ok = await updateDeadlineProgress(goal.materialType, goal.materialId, goal.planId, val);
+                                    if (ok) { toast.success('진도를 저장했어요.'); setDeadlineDraft((d) => { const n = { ...d }; delete n[goal.id]; return n; }); }
+                                    else toast.error('진도 저장에 실패했어요.');
+                                  } finally {
+                                    setDeadlineSavingId(null);
+                                  }
+                                }}
+                                className="h-8 rounded-full bg-[#0071E3] px-3 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-95 disabled:opacity-50"
+                              >
+                                {deadlineSavingId === goal.id ? '저장 중' : '저장'}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
                 <div className="flex flex-col gap-2 pt-0.5 sm:flex-row sm:items-center sm:justify-between">
                   <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500">
-                    진도 입력은 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 해요.
+                    여기서 바로 입력하거나, 주차별 상세는 <span className="font-bold text-[#0071E3]">학습계획 · 주간 계획</span> 탭에서 조정해요.
                   </p>
                   {openWeeklyPlan && (
                     <button

@@ -5,7 +5,8 @@ import { X, BookOpen, Tv, ChevronRight, CalendarDays, Clock, Target, History, Fi
 import type { Student, BookProgress, LectureProgress, SubjectProgress, DetailedPlan } from '@/lib/types/student';
 import { getMaterialStudyDays, getLeaveDates, toDateKey } from '@/lib/progress-plan';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
-import { formatSlotLabel } from '@/lib/academy-timetable';
+import { formatSlotLabel, STUDY_SLOT_OPTIONS } from '@/lib/academy-timetable';
+import { toast } from 'sonner';
 import { InputHeatmap } from './input-heatmap';
 import { StartPointAdjustPanel, type StartPointAdjustInfo, type StartPointAdjustResult } from './start-point-adjust-panel';
 
@@ -36,6 +37,8 @@ interface MaterialDetailSheetProps {
     reason?: string,
   ) => Promise<StartPointAdjustResult>;
   onClose: () => void;
+  // 자료별 교시 배치(studySlot) 저장 — 있으면 시간대 칩이 편집 select 로 바뀐다.
+  saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
   // 연결 링크 — 탭 전환은 페이지의 기존 콜백 패턴(selectReportTab)을 그대로 탄다.
   onOpenSubjectProgress: () => void;
   onOpenTimetable: () => void;
@@ -58,11 +61,13 @@ export function MaterialDetailSheet({
   studyTimeLabels,
   adjustStartPoint,
   onClose,
+  saveStudySlot,
   onOpenSubjectProgress,
   onOpenTimetable,
   onOpenChangeRequest,
 }: MaterialDetailSheetProps) {
   const [adjustOpen, setAdjustOpen] = useState(false);
+  const [slotSaving, setSlotSaving] = useState(false);
 
   // ESC 로 닫기 + 열려 있는 동안 배경 스크롤 잠금.
   useEffect(() => {
@@ -187,7 +192,8 @@ export function MaterialDetailSheet({
       aria-label={`${subjectName} ${title} 상세`}
     >
       <div
-        className="glass-strong flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/50 dark:border-white/10 sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px]"
+        // 시트 표면 — glass-strong(72% 흰색)이 어두운 오버레이 위에서 회색빛으로 보여, 학생 시트는 더 하얀 유리로.
+        className="flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/60 dark:border-white/10 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_10px_40px_rgba(0,0,0,0.15)] sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. 헤더 — 과목·자료명·종류·단위 + 닫기 */}
@@ -343,10 +349,37 @@ export function MaterialDetailSheet({
                   </span>
                 ))}
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                <Clock className="h-3 w-3" />
-                {slotLabel}
-              </span>
+              {saveStudySlot ? (
+                <label className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  <Clock className="h-3 w-3 text-[#0071E3]" />
+                  <span>교시</span>
+                  <select
+                    value={material.studySlot || ''}
+                    disabled={slotSaving}
+                    onChange={async (e) => {
+                      const next = e.target.value;
+                      setSlotSaving(true);
+                      try {
+                        const ok = await saveStudySlot(materialType, materialId, next);
+                        if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
+                        else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
+                      } finally {
+                        setSlotSaving(false);
+                      }
+                    }}
+                    className="rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+                  >
+                    {STUDY_SLOT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  <Clock className="h-3 w-3" />
+                  {slotLabel}
+                </span>
+              )}
             </div>
           </div>
 
@@ -356,7 +389,7 @@ export function MaterialDetailSheet({
               <FileText className="h-3.5 w-3.5 text-[#0071E3]" />
               공부한 날
             </p>
-            <InputHeatmap inputLog={material.inputLog} studyDays={studyDays} leaveDates={leaveDates} />
+            <InputHeatmap inputLog={material.inputLog} studyDays={studyDays} leaveDates={leaveDates} detailedPlans={material.detailedPlans} unit={unit} isSelfPaced={isSelfPaced} reviewLog={material.reviewLog} />
           </div>
 
           {/* 5. 기록 — 최근 완료·복습·시작점 조정 이력 */}

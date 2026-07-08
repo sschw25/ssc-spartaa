@@ -22,6 +22,7 @@ export interface TodayScheduleItem {
   actualAmount?: number;
   selfPaced?: boolean;
   current?: number;                 // selfPaced 누적
+  weekly?: boolean;                 // 주간목표(deadline) 자료 — 학생이 교시 지정 시 노출
   pinnedSlot: string;               // '' | morning|afternoon|night | p0..p8 (학생 지정)
 }
 
@@ -124,7 +125,22 @@ export function getTodayScheduleItems(student: Student, todayKey: string, todayD
     const active = (m.detailedPlans || []).find(
       (p) => !p.periodType && p.startDate <= todayKey && todayKey <= p.endDate,
     );
-    if (!active) return;
+    if (!active) {
+      // 주간목표(deadline) 자료: 학생이 교시를 직접 지정한 경우에만 하루 계획표에 노출(주간 목표로).
+      const dl = (m.detailedPlans || []).find(
+        (p) => p.periodType === 'deadline' && p.startDate <= todayKey && todayKey <= p.endDate,
+      );
+      if (dl && pinnedSlot) {
+        items.push({
+          id: `dl_${subject.id}_${m.id}_${dl.id}`,
+          subjectName: subject.name, title: materialTitle(m, type),
+          materialType: type, materialId: m.id, planId: dl.id,
+          amount: Math.max(0, Math.round(dl.targetAmount || 0)), unit, range: dl.rangeText,
+          weekly: true, pinnedSlot,
+        });
+      }
+      return;
+    }
     const amount = active.dailyAmount || Math.ceil((active.targetAmount || 1) / 6);
     const comp = getPlanDailyCompletion(active, todayKey);
     items.push({

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 
 // 시작점 조정용 자료 현황 — adjustInfoFor(home-overview-tab)와 동일 shape.
 // 임계치는 전체 분량의 1/10(최소 1) — 서버(progress/adjust)와 동일 규칙(안내 표시용).
@@ -90,7 +91,8 @@ export function StartPointAdjustPanel({
         ±{info.threshold}{unit}까지는 바로 반영돼요
         {info.usedToday > 0 ? ` · 오늘 남은 자동 조정 ${adjustRemaining}${unit}` : ''}
       </p>
-      <p className="mt-1 text-[10px] font-medium text-slate-400 dark:text-slate-400">
+      <p className="mt-1.5 flex items-center gap-1 rounded-lg bg-amber-50 dark:bg-amber-500/10 px-2 py-1 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
+        <AlertTriangle className="h-3 w-3 shrink-0" />
         조정하면 이번 주 완료 체크가 초기화될 수 있어요
       </p>
       {adjustNeedsRequest && (

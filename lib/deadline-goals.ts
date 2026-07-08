@@ -16,6 +16,7 @@ export interface DeadlineGoal {
   materialType: 'book' | 'lecture';
   materialId: string;
   planId: string;
+  studySlot: string;         // 자료별 교시 배치('' | morning/afternoon/night | p0..p8)
   periodWeeks: number;
   targetAmount: number;
   actualAmount: number;
@@ -129,6 +130,7 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
           materialType,
           materialId: material.id,
           planId: plan.id,
+          studySlot: material.studySlot || '',
           periodWeeks: plan.periodWeeks || 1,
           targetAmount,
           actualAmount: pace.actualAmount,

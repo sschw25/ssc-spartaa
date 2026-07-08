@@ -11,7 +11,6 @@ import { LEAVE_TYPE_ICON } from '@/components/leave-type-icon';
 import {
   COUPONS_PER_EXTRA_HALFDAY,
   LEAVE_TYPES,
-  LEAVE_TYPE_ORDER,
   LEAVE_SLOT_OPTIONS,
   LEAVE_SLOT_LABELS,
   MONTHLY_FULLDAY_QUOTA,
@@ -100,7 +99,7 @@ export function ConsultationTab({
   const getTimelineStatusBadge = (status: string, adminReply?: string, autoApproved?: boolean) => {
     if (status === 'approved') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
           {autoApproved && <Zap className="w-3 h-3" />}
           {autoApproved ? '자동 승인' : '승인'}
@@ -117,7 +116,7 @@ export function ConsultationTab({
     }
     if (status === 'resolved' || status === 'completed') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
           처리완료
         </span>
@@ -259,58 +258,71 @@ export function ConsultationTab({
             {/* 이번 달(선택일 기준) 잔여 한도 + 병가 사용 + 쿠폰 */}
             <div className="grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
               <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-2.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">반차 잔여</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">반차 잔여</p>
                 <p className="mt-0.5 text-sm font-black text-[#0071E3]">{halfLeft}<span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">/{MONTHLY_HALFDAY_QUOTA}</span></p>
                 {credits.halfday > 0 && <p className="text-[9px] font-black text-amber-600">+{credits.halfday} 추가권</p>}
               </div>
               <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-2.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">휴식권 잔여</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">휴식권 잔여</p>
                 <p className="mt-0.5 text-sm font-black text-[#0071E3]">{fullLeft}<span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">/{MONTHLY_FULLDAY_QUOTA}</span></p>
                 {credits.fullday > 0 && <p className="text-[9px] font-black text-amber-600">+{credits.fullday} 추가권</p>}
               </div>
               <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-2.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">병가(이번달)</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">병가(이번달)</p>
                 <p className="mt-0.5 text-sm font-black text-slate-700 dark:text-slate-300">{usage.sick}<span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">건</span></p>
               </div>
               <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-2.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">쿠폰</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">쿠폰</p>
                 <p className="mt-0.5 flex items-center gap-1 text-sm font-black text-slate-700 dark:text-slate-300"><Ticket className="w-4 h-4" /> {leaveCoupons}</p>
               </div>
             </div>
             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도 무관(영수증 밴드 증빙) · 반차 추가는 쿠폰 {COUPONS_PER_EXTRA_HALFDAY}개 필요</p>
 
-            {/* 종류 선택 */}
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {LEAVE_TYPE_ORDER.map((t) => {
-                const info = LEAVE_TYPES[t];
-                const LeaveIcon = LEAVE_TYPE_ICON[t];
-                const active = leaveForm.type === t;
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setLeaveForm((f) => ({
-                      ...f,
-                      type: t,
-                      // 시간대 선택이 필요한 종류로 바꾸면 기본 시간대(첫 옵션)를 자동 지정, 아니면 해제
-                      slot: leaveNeedsSlot(t) ? (LEAVE_SLOT_OPTIONS[t]![0]) : undefined,
-                    }))}
-                    className={`flex flex-col items-start gap-0.5 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 shadow-sm' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:border-[#0071E3]/40'}`}
-                  >
-                    <span className="flex items-center gap-1.5 text-[12px] font-black text-slate-700 dark:text-slate-300">
-                      <LeaveIcon className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-[#0071E3]' : 'text-slate-400'}`} />
-                      {info?.label}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">{info?.slot}</span>
-                  </button>
-                );
-              })}
+            {/* 종류 선택 — 승인 방식별로 그룹핑(바로 승인 vs 코멘터 검토)해 학생이 예측 가능하게 */}
+            <div className="space-y-3">
+              {([
+                { title: '바로 승인돼요', hint: '잔여 한도 내 자동 승인', auto: true, types: ['morning', 'afternoon', 'night'] as LeaveType[] },
+                { title: '코멘터 검토 후 승인', hint: '휴식권 · 개인사정 · 병가', auto: false, types: ['fullday', 'personal_halfday', 'personal_fullday', 'sick'] as LeaveType[] },
+              ]).map((group) => (
+                <div key={group.title} className="space-y-1.5">
+                  <div className="flex items-center gap-1.5 px-0.5">
+                    <span className={`text-[10px] font-black ${group.auto ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'}`}>{group.title}</span>
+                    <span className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">{group.hint}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {group.types.map((t) => {
+                      const info = LEAVE_TYPES[t];
+                      const LeaveIcon = LEAVE_TYPE_ICON[t];
+                      const active = leaveForm.type === t;
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => setLeaveForm((f) => ({
+                            ...f,
+                            type: t,
+                            // 시간대 선택이 필요한 종류로 바꾸면 기본 시간대(첫 옵션)를 자동 지정, 아니면 해제
+                            slot: leaveNeedsSlot(t) ? (LEAVE_SLOT_OPTIONS[t]![0]) : undefined,
+                          }))}
+                          className={`flex flex-col items-start gap-0.5 rounded-2xl border px-3 py-2.5 text-left transition active:scale-[0.97] ${active ? 'border-[#0071E3] bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 shadow-sm' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] hover:border-[#0071E3]/40'}`}
+                        >
+                          <span className="flex items-center gap-1.5 text-[12px] font-black text-slate-700 dark:text-slate-300">
+                            <LeaveIcon className={`h-3.5 w-3.5 shrink-0 ${active ? 'text-[#0071E3]' : 'text-slate-400'}`} />
+                            {info?.label}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400 dark:text-slate-400">{info?.slot}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* 시간대 선택 — 개인사정 반차(오전/오후/야간) · 병가(오전/오후/야간/하루종일) */}
             {leaveNeedsSlot(leaveForm.type) && (
               <div className="space-y-1.5">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">시간대 선택</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">시간대 선택</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {(LEAVE_SLOT_OPTIONS[leaveForm.type] || []).map((s) => {
                     const sActive = leaveForm.slot === s;
@@ -439,7 +451,7 @@ export function ConsultationTab({
               return (
                 (upcoming.length > 0 || past.length > 0) && (
                   <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">내 휴가 신청 내역</p>
+                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">내 휴가 신청 내역</p>
 
                     {/* 예정·진행 중 (사용일이 오늘 이후) — 자동 승인된 반차 포함 */}
                     {upcoming.map((r) => renderItem(r, false))}
@@ -534,7 +546,7 @@ export function ConsultationTab({
           return (
             (pending.length > 0 || resolved.length > 0) && (
               <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">내 건의사항 내역</p>
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">내 건의사항 내역</p>
 
                 {/* 대기중 건의사항 */}
                 {pending.map((r) => (

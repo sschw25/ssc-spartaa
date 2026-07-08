@@ -155,6 +155,7 @@ export function TimetableTab({
                 actualAmount?: number;
                 unit?: string;
                 selfPaced?: boolean;
+                weekly?: boolean;
                 current?: number;
               }> = [];
 
@@ -174,6 +175,7 @@ export function TimetableTab({
                     actualAmount: it.actualAmount,
                     unit: it.unit,
                     selfPaced: it.selfPaced,
+                    weekly: it.weekly,
                     current: it.current,
                   });
                 });
@@ -326,6 +328,15 @@ export function TimetableTab({
                                     자율 목표
                                   </Badge>
                                 </>
+                              ) : pl.weekly ? (
+                                <>
+                                  <span className="font-bold text-slate-500 dark:text-slate-400">
+                                    주간 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
+                                  </span>
+                                  <Badge className="bg-amber-50 dark:bg-amber-500/10 hover:bg-amber-50 text-amber-700 dark:text-amber-300 text-[9px] border-amber-100 dark:border-white/10 font-bold px-1.5 py-0 rounded border">
+                                    주간 목표
+                                  </Badge>
+                                </>
                               ) : (
                                 <span className="font-bold text-slate-500 dark:text-slate-400">
                                   오늘 목표: {pl.amount}{pl.unit} ({pl.range.split(' ').slice(1).join(' ') || pl.range})
@@ -337,7 +348,7 @@ export function TimetableTab({
                                 </span>
                               )}
                               {pl.speed && pl.speed !== 1.0 && (
-                                <Badge className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-50 text-emerald-700 text-[9px] border-emerald-100 font-bold px-1 py-0 rounded border-0">
+                                <Badge className="bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-50 text-emerald-700 dark:text-emerald-300 text-[9px] border-emerald-100 font-bold px-1 py-0 rounded border-0">
                                   {pl.speed}배속 적용됨
                                 </Badge>
                               )}

@@ -121,7 +121,7 @@ export function LearningRequestPanel({
   const getTimelineStatusBadge = (status: string, adminReply?: string) => {
     if (status === 'approved') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
           승인
         </span>
@@ -137,7 +137,7 @@ export function LearningRequestPanel({
     }
     if (status === 'resolved' || status === 'completed') {
       return (
-        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700">
+        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-white/10 px-2 py-0.5 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
           처리완료
         </span>
@@ -196,7 +196,7 @@ export function LearningRequestPanel({
         </div>
 
         {realignRequested ? (
-          <div className="rounded-2xl border border-emerald-200 dark:border-white/10 bg-emerald-50/70 dark:bg-emerald-500/10 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 flex items-center gap-1.5">
+          <div className="rounded-2xl border border-emerald-200 dark:border-white/10 bg-emerald-50/70 dark:bg-emerald-500/10 px-3.5 py-2.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
             코멘터에게 계획 재조정 요청을 보냈어요. 검토 후 반영하거나 상담을 안내해 드릴게요. (아래 ‘학습 관련 요청’에서 진행 상황 확인)
           </div>
