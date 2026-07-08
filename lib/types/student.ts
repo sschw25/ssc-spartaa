@@ -600,6 +600,8 @@ export interface Student {
   consultationCancellations?: ConsultationBooking[];
   // 쿠폰 지급 내역 (리포트 API가 rewards_log에서 정규화해 전달 — 학생 홈 '쿠폰 지급' 알림/내역용)
   couponGrants?: RewardGrant[];
+  // 자리이동 신청 내역 (리포트 API가 app_settings seat_move_requests에서 본인 건만 추려 전달 — 학생 알림 승인/반려용)
+  seatMoveRequests?: SeatMoveRequest[];
 }
 
 // 쿠폰 지급 1건 (student_state.rewards_log 정규화). 미션 달성/OT/행사 참여로 지급될 때 기록.

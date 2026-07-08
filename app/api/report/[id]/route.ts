@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { compare } from 'bcryptjs';
 import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
-import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams, getConsultationBookings } from '@/lib/store';
-import type { ConsultationBooking } from '@/lib/types/student';
+import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams, getConsultationBookings, getSeatMoveRequests } from '@/lib/store';
+import type { ConsultationBooking, SeatMoveRequest } from '@/lib/types/student';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
@@ -28,6 +28,7 @@ function buildMaskedStudent(
   consultationBookings: ConsultationBooking[] = [],
   consultationHistory: ConsultationHistoryEntry[] = [],
   consultationCancellations: ConsultationBooking[] = [],
+  seatMoveRequests: SeatMoveRequest[] = [],
 ) {
   return {
     id: student.id,
@@ -74,6 +75,8 @@ function buildMaskedStudent(
           consultationBookings,
           consultationHistory,
           consultationCancellations,
+          // 자리이동 신청(본인 건) — 학생 홈 알림에서 승인/반려 상태변화를 노출. 신청 화면은 SeatMoveCard 가 별도 조회.
+          seatMoveRequests,
           // 반차/휴식권 잔여에 교환 추가권을 합산(getLeaveCredits)하려면 본인 교환 내역이 필요 —
           // 누락 시 서버는 신청을 허용하는데 화면은 '0회 남음'으로 보이는 불일치가 난다.
           rewardRedemptions: student.rewardRedemptions || [],
@@ -242,7 +245,13 @@ export async function GET(
         && (b.cancelledBy === 'admin' || b.cancelledBy === 'system')
         && (b.cancelledAt || '') >= cancelCutoff)
       .sort((a, b) => (b.cancelledAt || '').localeCompare(a.cancelledAt || ''));
-    const maskedStudent = buildMaskedStudent(student, audience, myBookings, consultationHistory, consultationCancellations);
+    // 자리이동 신청(본인 건) — 학생 리포트에만. app_settings seat_move_requests:{campus} 에서 추려 전달.
+    const mySeatMoves = audience === 'student'
+      ? (await getSeatMoveRequests(student.campus).catch(() => []))
+          .filter((r) => r.studentId === student.id)
+          .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
+      : [];
+    const maskedStudent = buildMaskedStudent(student, audience, myBookings, consultationHistory, consultationCancellations, mySeatMoves);
     const mockExams = filterMockExamsForStudent(allExams, student);
 
     // core: 무거운 집계(전학생 벤치마크·순공통계) 없이 즉시 반환 — extras 가 뒤따라온다.

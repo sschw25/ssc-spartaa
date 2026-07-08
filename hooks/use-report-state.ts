@@ -2077,6 +2077,34 @@ export function useReportState() {
       };
     });
 
+  // 자리이동 신청 — 학생이 확인해야 할 상태변화(승인/반려)만 알림으로. 대기 중 건은 신청 화면(SeatMoveCard)에서 다룬다.
+  // id 에 processedAt(처리 시각)을 포함해, 확인(dismiss) 후 다시 처리되면(재신청→재처리) 새 알림으로 재노출된다.
+  const seatMoveNotifications = (student.seatMoveRequests || [])
+    .filter((r) => r.status === 'approved' || r.status === 'rejected')
+    .map((r) => {
+      const seatPath = `${r.fromSeat != null ? `${r.fromSeat}번` : '미배정'} → ${r.toSeat}번`;
+      if (r.status === 'approved') {
+        return {
+          id: `seat-move-approved-${r.id}-${r.processedAt || ''}`,
+          tone: 'emerald' as const,
+          label: '자리이동 승인',
+          title: '자리이동 신청이 승인됐어요',
+          body: `${seatPath} 자리로 옮겨졌어요. 새 자리에서 학습을 이어가 주세요.`,
+          date: r.processedAt || r.createdAt,
+          priority: 2,
+        };
+      }
+      return {
+        id: `seat-move-rejected-${r.id}-${r.processedAt || ''}`,
+        tone: 'red' as const,
+        label: '자리이동 반려',
+        title: '자리이동 신청이 반려됐어요',
+        body: `${seatPath} 신청이 반려됐어요.${r.rejectReason ? `\n사유: ${r.rejectReason}` : ''}\n자리이동 탭에서 다른 자리로 다시 신청할 수 있어요.`,
+        date: r.processedAt || r.createdAt,
+        priority: 1,
+      };
+    });
+
   // 상담 결과/취소 알림은 최근 14일 이내만 노출(오래된 히스토리 홍수 방지).
   const recentConsultationCutoffKey = formatDateKey(new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000));
   const consultationHistoryEntries = ((student as any).consultationHistory as Array<{
@@ -2230,7 +2258,7 @@ export function useReportState() {
       : []),
   ];
 
-  const allStudentNotifications = [...requestNotifications, ...suggestionNotifications, ...leaveNotifications, ...systemNotifications].sort((a, b) => {
+  const allStudentNotifications = [...requestNotifications, ...suggestionNotifications, ...leaveNotifications, ...seatMoveNotifications, ...systemNotifications].sort((a, b) => {
     const priorityDiff = a.priority - b.priority;
     if (priorityDiff !== 0) return priorityDiff;
     return (b.date || '').localeCompare(a.date || '');
