@@ -591,7 +591,8 @@ export function HomeOverviewTab({
                               updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, false, undefined, entry.dateKey);
                             } else {
                               setPendingPlanId(entry.id);
-                              setPendingAmount(entry.dailyAmount ?? 1);
+                              // '몇 X까지'(절대) 입력 — 자료 현황 있으면 현재 진도+오늘목표를 기본값(오늘 목표 끝)으로.
+                              setPendingAmount(adjustInfo ? adjustInfo.current + (entry.dailyAmount ?? 1) : (entry.dailyAmount ?? 1));
                               setReviewMinutesInput(reviewMinFor(entry.materialType, entry.materialId));
                             }
                           }}
@@ -692,11 +693,14 @@ export function HomeOverviewTab({
 
                           {isPending && (
                             <div data-stop className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
-                              <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">실제로 얼마나 했나요?</p>
+                              <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">{adjustInfo ? `지금 몇 ${adjustUnit}까지 했나요?` : '실제로 얼마나 했나요?'}</p>
+                              {adjustInfo && (
+                                <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">이전 {adjustInfo.current}{adjustUnit} · 오늘 목표 {entry.dailyAmount}{adjustUnit}</p>
+                              )}
                               <div className="mt-2 flex items-center gap-2">
                                 <button
                                   type="button"
-                                  onClick={() => setPendingAmount((v) => Math.max(0, v - 1))}
+                                  onClick={() => setPendingAmount((v) => Math.max(adjustInfo ? adjustInfo.current : 0, v - 1))}
                                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
                                 >
                                   -
@@ -732,7 +736,9 @@ export function HomeOverviewTab({
                                     if (completionSaving) return;
                                     setCompletionSaving(true);
                                     try {
-                                      const ok = await updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, pendingAmount, entry.dateKey, reviewMinutesInput);
+                                      // '까지'(절대) 입력이면 그날 한 양(delta)으로 환산해 저장. 자료 현황 없으면 기존 방식(당일 양) 그대로.
+                                      const dayAmount = adjustInfo ? Math.max(0, pendingAmount - adjustInfo.current) : pendingAmount;
+                                      const ok = await updatePlanCompletion(entry.materialType, entry.materialId, entry.planId, true, dayAmount, entry.dateKey, reviewMinutesInput);
                                       // 성공 시에만 패널 닫기 — 실패하면 입력값 그대로 유지(실패 토스트는 저장 훅에서).
                                       if (ok) setPendingPlanId(null);
                                     } finally {
@@ -835,7 +841,7 @@ export function HomeOverviewTab({
                               onClick={() => {
                                 if (isOpen) { setSelfPacedOpenId(null); return; }
                                 setSelfPacedOpenId(item.id);
-                                setSelfPacedAmount(1);
+                                setSelfPacedAmount(item.current); // '몇 X까지' 절대 입력 — 현재 누적에서 시작
                                 setSelfPacedReview(reviewMin);
                               }}
                               className="shrink-0 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-1.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-95"
@@ -877,11 +883,12 @@ export function HomeOverviewTab({
 
                         {isOpen && !item.loggedToday && (
                           <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
-                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">오늘 얼마나 했나요?</p>
+                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">지금 몇 {item.unit}까지 했나요?</p>
+                            <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">이전 누적 {item.current}{item.unit}</p>
                             <div className="mt-2 flex items-center gap-2">
                               <button
                                 type="button"
-                                onClick={() => setSelfPacedAmount((v) => Math.max(0, v - 1))}
+                                onClick={() => setSelfPacedAmount((v) => Math.max(item.current, v - 1))}
                                 className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
                               >
                                 -
@@ -912,12 +919,14 @@ export function HomeOverviewTab({
                             <div className="mt-3 flex gap-2">
                               <button
                                 type="button"
-                                disabled={selfPacedSaving || !saveSelfPacedToday}
+                                disabled={selfPacedSaving || !saveSelfPacedToday || (selfPacedAmount <= item.current && !selfPacedReview)}
                                 onClick={async () => {
                                   if (selfPacedSaving || !saveSelfPacedToday) return;
                                   setSelfPacedSaving(true);
                                   try {
-                                    const ok = await saveSelfPacedToday(item.materialType, item.materialId, selfPacedAmount, selfPacedReview);
+                                    // '까지'(절대) 입력 → 증가분(delta)만 저장 훅에 전달.
+                                    const delta = Math.max(0, selfPacedAmount - item.current);
+                                    const ok = await saveSelfPacedToday(item.materialType, item.materialId, delta, selfPacedReview);
                                     if (ok) {
                                       setSelfPacedOpenId(null);
                                       toast.success('오늘 학습을 기록했어요.');
