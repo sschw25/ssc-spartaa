@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
-import { getManagedProgressItems, getStudentTodayTotalStudyTimeMin } from '@/lib/progress-plan';
+import { getManagedProgressItems, getStudentTodayTotalStudyTimeMin, type ManagedProgressItem } from '@/lib/progress-plan';
 import { isWeeklyGradeMissing } from '@/lib/student-flags';
 import { AddStudentModal } from '@/components/admin/add-student-modal';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
@@ -626,6 +626,26 @@ function ConsultationContent() {
   const visibleStudents = sortedStudents.slice(0, studentLimit);
   const visibleProgressItems = filteredProgressItems.slice(0, progressLimit);
 
+  // 진도 지연 뷰: 같은 학생의 여러 지연 항목을 하나로 묶어 보여준다.
+  // 그룹 순서는 정렬된 항목의 첫 등장 순서를 따르므로 기존 정렬(부족분/상태/이름)이 그룹 수준에서 유지된다.
+  const groupProgressByStudent = quickFilter === 'behind';
+  type ProgressGroup = { studentId: string; studentName: string; campus: string; manager: string; items: ManagedProgressItem[] };
+  const progressGroups: ProgressGroup[] = (() => {
+    if (!groupProgressByStudent) return [];
+    const map = new Map<string, ProgressGroup>();
+    for (const item of filteredProgressItems) {
+      const existing = map.get(item.studentId);
+      if (existing) existing.items.push(item);
+      else map.set(item.studentId, { studentId: item.studentId, studentName: item.studentName, campus: item.campus, manager: item.manager, items: [item] });
+    }
+    return Array.from(map.values());
+  })();
+  // 묶음 뷰는 그룹(학생) 단위로 페이지네이션해 한 학생의 항목이 더보기 경계에서 갈리지 않게 한다.
+  const visibleProgressGroups = progressGroups.slice(0, progressLimit);
+  const hasMoreProgress = groupProgressByStudent
+    ? progressGroups.length > visibleProgressGroups.length
+    : filteredProgressItems.length > visibleProgressItems.length;
+
   const getProgressStatusStyle = (status: string) => {
     switch (status) {
       case 'behind': return 'bg-red-50 dark:bg-red-500/10 text-red-700 border-red-100 dark:border-red-500/20';
@@ -643,6 +663,279 @@ function ConsultationContent() {
       case 'on-track': return '진행중';
       default: return planKind === 'deadline' ? '기간 목표' : '목표 미설정';
     }
+  };
+
+  // 진도 관리표 행/카드 렌더러 (묶음 뷰·평면 뷰가 공유). hideStudent=true 면 학생 식별은 그룹 헤더가 대신하므로 셀에서 생략.
+  const renderProgressRow = (item: ManagedProgressItem, hideStudent = false) => (
+    <tr key={`${item.studentId}_${item.itemId}`} className="border-b border-black/[0.04] dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/5 transition-colors align-middle">
+
+      <td className="p-3.5 pl-6 font-bold text-slate-900 dark:text-slate-100 min-w-[240px]">
+        <div className="flex items-start gap-2">
+          <span className="shrink-0">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
+          <div className="min-w-0">
+            <p className="truncate">{item.title}</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
+          </div>
+        </div>
+      </td>
+
+      <td className="p-3.5">
+        {hideStudent ? (
+          <span className="text-[10px] text-slate-500 dark:text-slate-400">{getCampusLabel(item.campus)} · {item.manager || '담당자'}</span>
+        ) : (
+          <>
+            <span
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenStudentDetail(item.studentId);
+              }}
+              className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 w-fit"
+            >
+              <User className="w-3.5 h-3.5 shrink-0" />
+              {item.studentName}
+            </span>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{getCampusLabel(item.campus)} · {item.manager || '담당자'}</p>
+          </>
+        )}
+      </td>
+
+      <td className="p-3.5 text-center">
+        <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${getProgressStatusStyle(item.status)}`}>
+          {getProgressStatusLabel(item.status, item.planKind)}
+        </span>
+      </td>
+
+      <td className={`p-3.5 text-center font-bold ${item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+        {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}
+      </td>
+
+      <td className="p-3.5 text-center font-bold text-slate-900 dark:text-slate-100">
+        {item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}
+      </td>
+
+      <td className="p-3.5 text-center">
+        <div className="min-w-[170px] space-y-2">
+          <div className="inline-flex items-center justify-center gap-1.5">
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'dec');
+              }}
+              className="w-6.5 h-6.5 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
+            >
+              <Minus className="w-2.5 h-2.5" />
+            </Button>
+            <Input
+              type="number"
+              min={0}
+              max={item.total}
+              value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
+              onChange={(e) => {
+                const rawValue = Number(e.target.value);
+                const nextValue = Math.min(item.total, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
+                setProgressDrafts(prev => ({
+                  ...prev,
+                  [getProgressDraftKey(item.studentId, item.itemId)]: nextValue,
+                }));
+              }}
+              onBlur={() => {
+                const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+                  handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+                  e.currentTarget.blur();
+                }
+              }}
+              className="h-7 w-16 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-center text-xs font-bold"
+            />
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.type === 'book' ? 'p' : '강'}</span>
+            <Button
+              size="icon"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'inc');
+              }}
+              className="w-6.5 h-6.5 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
+            >
+              <Plus className="w-2.5 h-2.5" />
+            </Button>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={item.total}
+            value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
+            onChange={(e) => {
+              setProgressDrafts(prev => ({
+                ...prev,
+                [getProgressDraftKey(item.studentId, item.itemId)]: Number(e.target.value),
+              }));
+            }}
+            onMouseUp={() => {
+              const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+              handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+            }}
+            onTouchEnd={() => {
+              const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+              handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+            }}
+            className="h-2 w-full cursor-pointer accent-[#0071E3]"
+          />
+        </div>
+      </td>
+
+      <td className="p-3.5 pr-6 text-center text-slate-700 dark:text-slate-300">
+        <div className="space-y-1">
+          <p className="text-[10px]">상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</p>
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">목표 {item.targetDate || '-'}</p>
+        </div>
+      </td>
+
+    </tr>
+  );
+
+  const renderProgressCard = (item: ManagedProgressItem, hideStudent = false) => {
+    const progressPercent = item.total > 0 ? Math.round((item.current / item.total) * 100) : 0;
+    return (
+      <div
+        key={`${item.studentId}_${item.itemId}`}
+        className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+      >
+        <div className="space-y-3">
+          <div className="flex justify-between items-start gap-2">
+            <div className="min-w-0">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">{item.subjectName}</span>
+              <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5">
+                {item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />} {item.title}
+              </h4>
+            </div>
+            <span className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[9px] font-bold shrink-0 ${getProgressStatusStyle(item.status)}`}>
+              {getProgressStatusLabel(item.status, item.planKind)}
+            </span>
+          </div>
+
+          {!hideStudent && (
+            <div className="pt-2 border-t border-black/[0.03] dark:border-white/10 space-y-1">
+              <div className="flex items-center justify-between">
+                <span
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOpenStudentDetail(item.studentId);
+                  }}
+                  className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 text-[11px]"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  {item.studentName}
+                </span>
+                <Badge className={`rounded-md text-[9px] px-1.5 py-0.5 border shrink-0 ${getCampusBadgeColor(item.campus)}`}>
+                  {getCampusLabel(item.campus)}
+                </Badge>
+              </div>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">담당: {item.manager || '담당자'}</p>
+            </div>
+          )}
+
+          <div className="bg-[#F5F5F7] dark:bg-white/5 p-2.5 rounded-xl space-y-2">
+            <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
+              <span>오늘 기준 권장: <strong className="text-slate-900 dark:text-slate-100">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}</strong></span>
+              <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}</strong></span>
+            </div>
+            <div className="h-1.5 rounded-full bg-white dark:bg-white/10 overflow-hidden border border-black/[0.03] dark:border-white/10">
+              <div
+                className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#0071E3]'}`}
+                style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center text-[9px] text-slate-500 dark:text-slate-400">
+              <span>진행도</span>
+              <span className="font-bold text-slate-900 dark:text-slate-100">{progressPercent}%</span>
+            </div>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between gap-1.5">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'dec')}
+                className="w-7 h-7 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
+              >
+                <Minus className="w-3 h-3" />
+              </Button>
+              <div className="flex-1 flex items-center justify-center gap-1 bg-[#F5F5F7] dark:bg-white/5 rounded-lg h-7 px-2">
+                <Input
+                  type="number"
+                  min={0}
+                  max={item.total}
+                  value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
+                  onChange={(e) => {
+                    const rawValue = Number(e.target.value);
+                    const nextValue = Math.min(item.total, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
+                    setProgressDrafts(prev => ({
+                      ...prev,
+                      [getProgressDraftKey(item.studentId, item.itemId)]: nextValue,
+                    }));
+                  }}
+                  onBlur={() => {
+                    const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+                    handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+                      handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+                      e.currentTarget.blur();
+                    }
+                  }}
+                  className="h-5 w-12 border-none bg-transparent p-0 text-center text-xs font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">/ {item.total}{item.type === 'book' ? 'p' : '강'}</span>
+              </div>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'inc')}
+                className="w-7 h-7 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
+              >
+                <Plus className="w-3 h-3" />
+              </Button>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={item.total}
+              value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
+              onChange={(e) => {
+                setProgressDrafts(prev => ({
+                  ...prev,
+                  [getProgressDraftKey(item.studentId, item.itemId)]: Number(e.target.value),
+                }));
+              }}
+              onMouseUp={() => {
+                const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+              }}
+              onTouchEnd={() => {
+                const draftKey = getProgressDraftKey(item.studentId, item.itemId);
+                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
+              }}
+              className="h-2 w-full cursor-pointer accent-[#0071E3]"
+            />
+          </div>
+        </div>
+
+        <div className="mt-4 pt-3 border-t border-black/[0.03] dark:border-white/10 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
+          <span>상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</span>
+          <span>목표 {item.targetDate || '-'}</span>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -870,8 +1163,7 @@ function ConsultationContent() {
                    quickFilter === 'behind' ? '진도 지연: ' :
                    quickFilter === 'stagnant' ? '진도 정체: ' :
                    quickFilter === 'missing_grade' ? '성적 미입력: ' : '검색 결과: '}
-                  {quickFilter === 'behind' ? filteredProgressItems.length : filteredStudents.length}
-                  {quickFilter === 'behind' ? '건' : '명'}
+                  {quickFilter === 'behind' ? `${progressGroups.length}명 · ${filteredProgressItems.length}건` : `${filteredStudents.length}명`}
                 </span>
               </div>
             </div>
@@ -1301,287 +1593,78 @@ function ConsultationContent() {
                         </tr>
                       </thead>
                       <tbody>
-                        {visibleProgressItems.map((item) => (
-                          <tr key={`${item.studentId}_${item.itemId}`} className="border-b border-black/[0.04] dark:border-white/10 hover:bg-black/[0.01] dark:hover:bg-white/5 transition-colors align-middle">
-
-                            <td className="p-3.5 pl-6 font-bold text-slate-900 dark:text-slate-100 min-w-[240px]">
-                              <div className="flex items-start gap-2">
-                                <span className="shrink-0">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
-                                <div className="min-w-0">
-                                  <p className="truncate">{item.title}</p>
-                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
-                                </div>
-                              </div>
-                            </td>
-
-                            <td className="p-3.5">
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenStudentDetail(item.studentId);
-                                }}
-                                className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 w-fit"
-                              >
-                                <User className="w-3.5 h-3.5 shrink-0" />
-                                {item.studentName}
-                              </span>
-                              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{getCampusLabel(item.campus)} · {item.manager || '담당자'}</p>
-                            </td>
-
-                            <td className="p-3.5 text-center">
-                              <span className={`inline-flex items-center justify-center rounded-full border px-2.5 py-1 text-[10px] font-bold ${getProgressStatusStyle(item.status)}`}>
-                                {getProgressStatusLabel(item.status, item.planKind)}
-                              </span>
-                            </td>
-
-                            <td className={`p-3.5 text-center font-bold ${item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                              {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}
-                            </td>
-
-                            <td className="p-3.5 text-center font-bold text-slate-900 dark:text-slate-100">
-                              {item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}
-                            </td>
-
-                            <td className="p-3.5 text-center">
-                              <div className="min-w-[170px] space-y-2">
-                                <div className="inline-flex items-center justify-center gap-1.5">
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'dec');
-                                    }}
-                                    className="w-6.5 h-6.5 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
-                                  >
-                                    <Minus className="w-2.5 h-2.5" />
-                                  </Button>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    max={item.total}
-                                    value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
-                                    onChange={(e) => {
-                                      const rawValue = Number(e.target.value);
-                                      const nextValue = Math.min(item.total, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
-                                      setProgressDrafts(prev => ({
-                                        ...prev,
-                                        [getProgressDraftKey(item.studentId, item.itemId)]: nextValue,
-                                      }));
-                                    }}
-                                    onBlur={() => {
-                                      const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                      handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                        handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                                        e.currentTarget.blur();
-                                      }
-                                    }}
-                                    className="h-7 w-16 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-center text-xs font-bold"
-                                  />
-                                  <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.type === 'book' ? 'p' : '강'}</span>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'inc');
-                                    }}
-                                    className="w-6.5 h-6.5 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
-                                  >
-                                    <Plus className="w-2.5 h-2.5" />
-                                  </Button>
-                                </div>
-                                <input
-                                  type="range"
-                                  min={0}
-                                  max={item.total}
-                                  value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
-                                  onChange={(e) => {
-                                    setProgressDrafts(prev => ({
-                                      ...prev,
-                                      [getProgressDraftKey(item.studentId, item.itemId)]: Number(e.target.value),
-                                    }));
-                                  }}
-                                  onMouseUp={() => {
-                                    const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                    handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                                  }}
-                                  onTouchEnd={() => {
-                                    const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                    handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                                  }}
-                                  className="h-2 w-full cursor-pointer accent-[#0071E3]"
-                                />
-                              </div>
-                            </td>
-
-                            <td className="p-3.5 pr-6 text-center text-slate-700 dark:text-slate-300">
-                              <div className="space-y-1">
-                                <p className="text-[10px]">상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</p>
-                                <p className="text-[10px] text-slate-500 dark:text-slate-400">목표 {item.targetDate || '-'}</p>
-                              </div>
-                            </td>
-
-                          </tr>
-                        ))}
+                        {groupProgressByStudent
+                          ? visibleProgressGroups.map((group) => (
+                              <React.Fragment key={group.studentId}>
+                                <tr className="bg-[#F5F5F7] dark:bg-white/[0.06] border-b border-black/[0.06] dark:border-white/10">
+                                  <td colSpan={7} className="px-6 py-2.5">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleOpenStudentDetail(group.studentId);
+                                        }}
+                                        className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 w-fit"
+                                      >
+                                        <User className="w-3.5 h-3.5 shrink-0" />
+                                        {group.studentName}
+                                      </span>
+                                      <span className="text-[10px] text-slate-500 dark:text-slate-400">{getCampusLabel(group.campus)} · {group.manager || '담당자'}</span>
+                                      <span className="ml-auto text-[10px] font-bold text-red-600 bg-red-500/10 rounded-full px-2 py-0.5">지연 {group.items.length}건</span>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {group.items.map((item) => renderProgressRow(item, true))}
+                              </React.Fragment>
+                            ))
+                          : visibleProgressItems.map((item) => renderProgressRow(item))}
                       </tbody>
                     </table>
                   </div>
                 </div>
+              ) : groupProgressByStudent ? (
+                /* 교재/강의 진도 카드형 뷰 — 학생별 묶음 */
+                <div className="space-y-6">
+                  {visibleProgressGroups.map((group) => (
+                    <div key={group.studentId} className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <span
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenStudentDetail(group.studentId);
+                          }}
+                          className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 text-[13px]"
+                        >
+                          <User className="w-4 h-4" />
+                          {group.studentName}
+                        </span>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">{getCampusLabel(group.campus)} · {group.manager || '담당자'}</span>
+                        <span className="ml-auto text-[10px] font-bold text-red-600 bg-red-500/10 rounded-full px-2 py-0.5">지연 {group.items.length}건</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                        {group.items.map((item) => renderProgressCard(item, true))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               ) : (
                 /* 교재/강의 진도 카드형 뷰 */
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                  {visibleProgressItems.map((item) => {
-                    const progressPercent = item.total > 0 ? Math.round((item.current / item.total) * 100) : 0;
-                    return (
-                      <div
-                        key={`${item.studentId}_${item.itemId}`}
-                        className="bg-white dark:bg-[#1c1c1e] border border-black/[0.05] dark:border-white/10 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-                      >
-                        <div className="space-y-3">
-                          <div className="flex justify-between items-start gap-2">
-                            <div className="min-w-0">
-                              <span className="text-[10px] text-slate-500 dark:text-slate-400">{item.subjectName}</span>
-                              <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate mt-0.5">
-                                {item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />} {item.title}
-                              </h4>
-                            </div>
-                            <span className={`inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[9px] font-bold shrink-0 ${getProgressStatusStyle(item.status)}`}>
-                              {getProgressStatusLabel(item.status, item.planKind)}
-                            </span>
-                          </div>
-
-                          <div className="pt-2 border-t border-black/[0.03] dark:border-white/10 space-y-1">
-                            <div className="flex items-center justify-between">
-                              <span
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleOpenStudentDetail(item.studentId);
-                                }}
-                                className="font-bold text-[#0071E3] hover:underline cursor-pointer flex items-center gap-1 text-[11px]"
-                              >
-                                <User className="w-3.5 h-3.5" />
-                                {item.studentName}
-                              </span>
-                              <Badge className={`rounded-md text-[9px] px-1.5 py-0.5 border shrink-0 ${getCampusBadgeColor(item.campus)}`}>
-                                {getCampusLabel(item.campus)}
-                              </Badge>
-                            </div>
-                            <p className="text-[10px] text-slate-500 dark:text-slate-400">담당: {item.manager || '담당자'}</p>
-                          </div>
-
-                          <div className="bg-[#F5F5F7] dark:bg-white/5 p-2.5 rounded-xl space-y-2">
-                            <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
-                              <span>오늘 기준 권장: <strong className="text-slate-900 dark:text-slate-100">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}</strong></span>
-                              <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}</strong></span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-white dark:bg-white/10 overflow-hidden border border-black/[0.03] dark:border-white/10">
-                              <div
-                                className={`h-full rounded-full ${item.type === 'book' ? 'bg-[#0071E3]' : 'bg-[#0071E3]'}`}
-                                style={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
-                              />
-                            </div>
-                            <div className="flex justify-between items-center text-[9px] text-slate-500 dark:text-slate-400">
-                              <span>진행도</span>
-                              <span className="font-bold text-slate-900 dark:text-slate-100">{progressPercent}%</span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2 pt-1">
-                            <div className="flex items-center justify-between gap-1.5">
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                onClick={() => handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'dec')}
-                                className="w-7 h-7 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
-                              >
-                                <Minus className="w-3 h-3" />
-                              </Button>
-                              <div className="flex-1 flex items-center justify-center gap-1 bg-[#F5F5F7] dark:bg-white/5 rounded-lg h-7 px-2">
-                                <Input
-                                  type="number"
-                                  min={0}
-                                  max={item.total}
-                                  value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
-                                  onChange={(e) => {
-                                    const rawValue = Number(e.target.value);
-                                    const nextValue = Math.min(item.total, Math.max(0, Number.isFinite(rawValue) ? rawValue : 0));
-                                    setProgressDrafts(prev => ({
-                                      ...prev,
-                                      [getProgressDraftKey(item.studentId, item.itemId)]: nextValue,
-                                    }));
-                                  }}
-                                  onBlur={() => {
-                                    const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                    handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                      handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                                      e.currentTarget.blur();
-                                    }
-                                  }}
-                                  className="h-5 w-12 border-none bg-transparent p-0 text-center text-xs font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
-                                />
-                                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">/ {item.total}{item.type === 'book' ? 'p' : '강'}</span>
-                              </div>
-                              <Button
-                                size="icon"
-                                variant="outline"
-                                onClick={() => handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'inc')}
-                                className="w-7 h-7 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 shrink-0"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </Button>
-                            </div>
-                            <input
-                              type="range"
-                              min={0}
-                              max={item.total}
-                              value={progressDrafts[getProgressDraftKey(item.studentId, item.itemId)] ?? item.current}
-                              onChange={(e) => {
-                                setProgressDrafts(prev => ({
-                                  ...prev,
-                                  [getProgressDraftKey(item.studentId, item.itemId)]: Number(e.target.value),
-                                }));
-                              }}
-                              onMouseUp={() => {
-                                const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                              }}
-                              onTouchEnd={() => {
-                                const draftKey = getProgressDraftKey(item.studentId, item.itemId);
-                                handleQuickAdjustProgress(item.studentId, item.type, item.itemId, 'set', progressDrafts[draftKey] ?? item.current);
-                              }}
-                              className="h-2 w-full cursor-pointer accent-[#0071E3]"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="mt-4 pt-3 border-t border-black/[0.03] dark:border-white/10 flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
-                          <span>상담 {item.daysToConsultation === null ? '-' : item.daysToConsultation < 0 ? `${Math.abs(item.daysToConsultation)}일 경과` : `${item.daysToConsultation}일 남음`}</span>
-                          <span>목표 {item.targetDate || '-'}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  {visibleProgressItems.map((item) => renderProgressCard(item))}
                 </div>
               )}
 
               {/* 더 보기 (진도 항목) */}
-              {filteredProgressItems.length > visibleProgressItems.length && (
+              {hasMoreProgress && (
                 <div className="flex justify-center pt-2">
                   <Button
                     variant="outline"
                     onClick={() => setProgressLimit((n) => n + PAGE_SIZE)}
                     className="rounded-full border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-xs h-9 px-5 font-bold hover:bg-[#F5F5F7] dark:hover:bg-white/5"
                   >
-                    더 보기 ({visibleProgressItems.length}/{filteredProgressItems.length})
+                    {groupProgressByStudent
+                      ? `더 보기 (${visibleProgressGroups.length}/${progressGroups.length}명)`
+                      : `더 보기 (${visibleProgressItems.length}/${filteredProgressItems.length})`}
                   </Button>
                 </div>
               )}
