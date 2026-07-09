@@ -32,22 +32,19 @@ export async function loadStreakInputs(student: Student, now: Date = new Date())
   const sinceDate = getSeoulDateKey(new Date(now.getTime() - STREAK_WINDOW_DAYS * 24 * 60 * 60 * 1000));
   const todayKey = getSeoulDateKey(now);
 
-  // 등원일 — Supabase 미설정 로컬 환경에서는 조회 불가하므로 방어적으로 빈 집합 처리.
-  let attendedDateKeys = new Set<string>();
-  if (activeBackend() === 'supabase') {
-    try {
-      const sessions = await getStudySessions(student.id, sinceDate);
-      attendedDateKeys = new Set(sessions.map((s) => s.date));
-    } catch {
-      // 조회 실패 시 스트릭은 정당사유 데이터만으로 방어적으로 계산
-    }
-  }
+  // 등원일 + 좌석 이탈마크 — 서로 독립적인 두 쿼리라 병렬로 조회한다(순차 대비 대기시간 절반).
+  // 각각 실패해도 방어적으로 빈 결과 처리(스트릭 과대계산 방지).
+  const [sessions, marks] = await Promise.all([
+    activeBackend() === 'supabase' ? getStudySessions(student.id, sinceDate).catch(() => null) : Promise.resolve(null),
+    getStudentSeatAbsenceMarks(student.id, sinceDate, todayKey).catch(() => null),
+  ]);
+
+  const attendedDateKeys = new Set<string>(sessions ? sessions.map((s) => s.date) : []);
 
   // 일괄결석 처리일: 그 날 seat 마크가 운영 교시(1~7) 전부 X면 센터 사정의 하루 전체 처리로 보고,
   // 등원 스캔이 없어도 스트릭이 끊기지 않는 스킵일로 취급한다(운영 정책).
   const skipDateKeys = new Set<string>();
-  try {
-    const marks = await getStudentSeatAbsenceMarks(student.id, sinceDate, todayKey);
+  if (marks) {
     const byDate = new Map<string, Set<number>>();
     for (const m of marks) {
       const p = parseSeatPeriodKey(m.seatKey);
@@ -59,8 +56,6 @@ export async function loadStreakInputs(student: Student, now: Date = new Date())
     for (const [date, idxs] of byDate) {
       if (idxs.size === OPERATING_PERIODS) skipDateKeys.add(date);
     }
-  } catch {
-    // 마크 조회 실패는 스킵일 없음으로 방어(스트릭이 과대 계산되지는 않음)
   }
 
   const justifiedDateKeys = new Set<string>([

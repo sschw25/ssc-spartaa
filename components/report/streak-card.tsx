@@ -25,11 +25,13 @@ interface StreakCardProps {
 export function StreakCard({ compact = false }: StreakCardProps = {}) {
   const confirm = useConfirm();
   const [data, setData] = useState<StreakData | null>(null);
+  const [loading, setLoading] = useState(true);
   const [repairing, setRepairing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/student/missions-hub', { credentials: 'same-origin', cache: 'no-store' });
+      // 경량 전용 엔드포인트(스트릭만 계산) — 무거운 missions-hub 대신 초기 렌더를 빠르게.
+      const res = await fetch('/api/student/streak', { credentials: 'same-origin', cache: 'no-store' });
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -42,6 +44,8 @@ export function StreakCard({ compact = false }: StreakCardProps = {}) {
       }
     } catch {
       // 실패 시 data 는 null 로 남아 렌더하지 않는다(거짓 0일 방지).
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -82,7 +86,32 @@ export function StreakCard({ compact = false }: StreakCardProps = {}) {
     }
   };
 
-  if (!data) return null;
+  // 로딩 중엔 자리를 잡는 스켈레톤(늦게 툭 튀어나오는 레이아웃 시프트 방지). 실패 시엔 렌더 안 함.
+  if (!data) {
+    if (!loading) return null;
+    if (compact) {
+      return (
+        <div className="flex h-full flex-col rounded-2xl border border-orange-100 bg-orange-50/50 p-3 dark:border-orange-500/20 dark:bg-orange-500/10">
+          <div className="h-2 w-12 rounded bg-orange-200/60 dark:bg-orange-500/20" />
+          <div className="mt-2 flex flex-1 items-center justify-center gap-1.5">
+            <div className="h-4 w-4 animate-pulse rounded-full bg-orange-200/60 dark:bg-orange-500/25" />
+            <div className="h-5 w-10 animate-pulse rounded bg-orange-200/60 dark:bg-orange-500/20" />
+          </div>
+        </div>
+      );
+    }
+    return (
+      <section className={SURFACE}>
+        <div className="flex items-center gap-4">
+          <div className="h-14 w-14 shrink-0 animate-pulse rounded-full bg-orange-100 dark:bg-orange-500/15" />
+          <div className="flex-1 space-y-2">
+            <div className="h-6 w-32 animate-pulse rounded bg-slate-100 dark:bg-white/10" />
+            <div className="h-3 w-48 animate-pulse rounded bg-slate-100 dark:bg-white/10" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   const streakCurrent = data.streak.current ?? 0;
   const streakBest = data.streak.best;
