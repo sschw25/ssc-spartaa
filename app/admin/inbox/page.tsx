@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User, Search, Send, UserPlus
+  Target, BookOpen, Tv, User, Search, Send, UserPlus, BookPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import type { Student, LeaveType, ProposedGoal, ThreadMessage } from '@/lib/types/student';
+import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ThreadMessage } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
 import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
@@ -1278,6 +1278,56 @@ export default function AdminInboxPage() {
                   );
                 })()}
 
+                {/* proposedMaterial 교재/인강 추가 제안 표시 */}
+                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterial && (() => {
+                  const pm: ProposedMaterial = selectedItem.rawItem.proposedMaterial;
+                  const isBook = pm.materialType === 'book';
+                  const unitLabel = isBook ? (pm.unit || 'p') : '강';
+                  const dayLabel: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
+                  const timeLabel: Record<string, string> = { morning: '오전', afternoon: '오후', night: '야간' };
+                  return (
+                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
+                        <BookPlus className="w-3.5 h-3.5" />
+                        교재/인강 추가 요청
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        {isBook
+                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
+                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">{pm.title}</span>
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">{isBook ? '교재' : '인강'}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 text-[10px]">
+                        <span className="inline-flex items-center gap-1 bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
+                          과목: {pm.subjectName}
+                          {pm.isNewSubject && <span className="rounded-full bg-[#0071E3]/10 px-1.5 py-0.5 text-[9px] font-black text-[#0071E3]">신규</span>}
+                        </span>
+                        {(pm.studyDays?.length || pm.studyTime) && (
+                          <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
+                            {pm.studyDays?.length ? pm.studyDays.map((d) => dayLabel[d]).join('·') : ''}
+                            {pm.studyTime ? ` ${timeLabel[pm.studyTime]}` : ''}
+                          </span>
+                        )}
+                        {pm.currentProgress !== undefined && (
+                          <span className="bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 font-bold text-[#0071E3]">
+                            현재 {pm.currentProgress}{unitLabel}
+                          </span>
+                        )}
+                        <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
+                          총량: {pm.total ? `${pm.total}${unitLabel} (예상)` : '자율(총량 미정)'}
+                        </span>
+                      </div>
+                      {pm.note && (
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">메모: {pm.note}</p>
+                      )}
+                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> 승인 시 자율(selfPaced) 자료로 생성됩니다.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 <div className="space-y-2 border-t border-slate-100 dark:border-white/10 pt-4">
                   {selectedItem.type === 'signup' ? (
                     <Button
@@ -1371,7 +1421,7 @@ export default function AdminInboxPage() {
                         className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
                       >
                         <Check className="w-3.5 h-3.5 mr-1" />
-                        {selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
+                        {selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
                       </Button>
                       <Button
                         disabled={processing}

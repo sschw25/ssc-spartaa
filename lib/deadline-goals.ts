@@ -130,7 +130,7 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
           materialType,
           materialId: material.id,
           planId: plan.id,
-          studySlot: material.studySlot || '',
+          studySlot: material.studySlot || material.studyTime || '',
           periodWeeks: plan.periodWeeks || 1,
           targetAmount,
           actualAmount: pace.actualAmount,

@@ -230,6 +230,69 @@ export async function PATCH(
         student.lectures = (student.lectures || []).map(updateLecture);
       }
     }
+
+    // 학생 교재/인강 추가 제안(materialAdd) — 기존 proposedGoal 로직과 별개의 형제 분기.
+    // 항상 selfPaced 자료로 생성(총량 알든 모르든 자율 누적). 해당 과목이 없으면 새로 만들어 붙인다.
+    // createdMaterialId 로 멱등 보장 — 재승인(resolved 토글) 시 자료 중복 생성 방지.
+    if (status === 'resolved' && target.proposedMaterial && !target.proposedMaterial.createdMaterialId) {
+      const pm = target.proposedMaterial;
+      if (!Array.isArray(student.subjects)) student.subjects = [];
+      const wantName = (pm.subjectName || '').trim().toLowerCase();
+      let subject = student.subjects.find((s: any) => String(s.name || '').trim().toLowerCase() === wantName);
+      if (!subject) {
+        subject = {
+          id: `sub_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          name: pm.subjectName.trim(),
+          books: [],
+          lectures: [],
+          updatedAt: nowIso,
+        } as any;
+        student.subjects.push(subject!);
+      }
+      const hasTotal = typeof pm.total === 'number' && pm.total > 0;
+      const clampedCurrent = pm.currentProgress !== undefined
+        ? (clampProgress(pm.currentProgress, hasTotal ? pm.total : 0) ?? 0)
+        : 0;
+      const commonExtra: Record<string, unknown> = {
+        goalType: 'selfPaced',
+        ...(pm.studyDays && pm.studyDays.length > 0 ? { studyDays: pm.studyDays } : {}),
+        ...(pm.studyTime ? { studyTime: pm.studyTime } : {}),
+        ...(hasTotal ? { totalIsEstimate: true } : {}),
+      };
+      if (pm.materialType === 'book') {
+        const newBook: any = {
+          id: `book_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          title: pm.title,
+          totalPages: hasTotal ? pm.total : 0,
+          currentPage: clampedCurrent,
+          updatedAt: nowIso,
+          category: '기본',
+          ...(pm.unit ? { unit: pm.unit } : {}),
+          ...commonExtra,
+        };
+        subject!.books = [...(subject!.books || []), newBook];
+        pm.createdMaterialId = newBook.id;
+      } else {
+        const newLecture: any = {
+          id: `lec_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          name: pm.title,
+          totalLectures: hasTotal ? pm.total : 0,
+          completedLectures: clampedCurrent,
+          updatedAt: nowIso,
+          category: '기본',
+          speedMultiplier: 1.0,
+          ...commonExtra,
+        };
+        subject!.lectures = [...(subject!.lectures || []), newLecture];
+        pm.createdMaterialId = newLecture.id;
+      }
+      subject!.updatedAt = nowIso;
+
+      const noticeText = '요청하신 자료를 추가했어요. 총량을 알게 되면 예상 강의 수를 입력할 수 있어요.';
+      appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
+      target.adminReply = noticeText;
+      target.repliedAt = nowIso;
+    }
   }
   });
 

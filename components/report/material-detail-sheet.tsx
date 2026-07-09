@@ -39,6 +39,8 @@ interface MaterialDetailSheetProps {
   onClose: () => void;
   // 자료별 교시 배치(studySlot) 저장 — 있으면 시간대 칩이 편집 select 로 바뀐다.
   saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
+  // selfPaced 자료의 예상 총 분량 저장(셀프서비스) — 있으면 진도 현황에 예상 총량 입력이 뜬다.
+  saveEstimatedTotal?: (materialType: 'book' | 'lecture', materialId: string, estimatedTotal: number) => Promise<boolean>;
   // 연결 링크 — 탭 전환은 페이지의 기존 콜백 패턴(selectReportTab)을 그대로 탄다.
   onOpenSubjectProgress: () => void;
   onOpenTimetable: () => void;
@@ -62,6 +64,7 @@ export function MaterialDetailSheet({
   adjustStartPoint,
   onClose,
   saveStudySlot,
+  saveEstimatedTotal,
   onOpenSubjectProgress,
   onOpenTimetable,
   onOpenChangeRequest,
@@ -231,17 +234,37 @@ export function MaterialDetailSheet({
               진도 현황
             </p>
             {isSelfPaced ? (
-              <div className="mt-2.5 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-[17px] font-semibold text-[#0071E3] tabular-nums">누적 {current}{unit}</p>
-                  <p className="mt-0.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
-                    자율 학습 자료예요. 한 만큼 기록하면 누적돼요.
-                  </p>
+              <>
+                <div className="mt-2.5 flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[17px] font-semibold text-[#0071E3] tabular-nums">
+                      누적 {current}{unit}
+                      {total > 0 && <span className="ml-1 text-[12px] font-medium text-slate-400">/ {total}{unit}</span>}
+                    </p>
+                    <p className="mt-0.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
+                      자율 학습 자료예요. 한 만큼 기록하면 누적돼요.
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-full bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[10px] font-semibold text-[#0071E3]">
+                    자율 목표
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-full bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[10px] font-semibold text-[#0071E3]">
-                  자율 목표
-                </span>
-              </div>
+                {total > 0 && (
+                  <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-slate-100 dark:bg-white/10">
+                    <div className="h-full rounded-full bg-[#0071E3] transition-all duration-500" style={{ width: `${percent}%` }} />
+                  </div>
+                )}
+                {saveEstimatedTotal && (
+                  <SelfPacedTotalInput
+                    materialType={materialType}
+                    materialId={materialId}
+                    unit={unit}
+                    currentTotal={total}
+                    isEstimate={!!material.totalIsEstimate}
+                    onSave={saveEstimatedTotal}
+                  />
+                )}
+              </>
             ) : total > 0 ? (
               <>
                 <div className="mt-2.5 flex items-end justify-between gap-3">
@@ -491,6 +514,79 @@ export function MaterialDetailSheet({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// selfPaced 자료의 예상 총 분량 입력 — 학생 셀프서비스. 예측 OK, 저장해도 계획은 안 생기고 진행률만 보여요.
+function SelfPacedTotalInput({
+  materialType,
+  materialId,
+  unit,
+  currentTotal,
+  isEstimate,
+  onSave,
+}: {
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  unit: string;
+  currentTotal: number;
+  isEstimate: boolean;
+  onSave: (materialType: 'book' | 'lecture', materialId: string, estimatedTotal: number) => Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState(currentTotal > 0 ? String(currentTotal) : '');
+  const [saving, setSaving] = useState(false);
+
+  // 다른 자료로 시트가 바뀌거나 총량이 갱신되면 입력값을 동기화.
+  useEffect(() => {
+    setDraft(currentTotal > 0 ? String(currentTotal) : '');
+  }, [materialId, currentTotal]);
+
+  const parsed = Math.max(0, Math.min(99999, Math.round(Number(draft) || 0)));
+  const dirty = parsed !== (currentTotal > 0 ? currentTotal : 0);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const ok = await onSave(materialType, materialId, parsed);
+      if (ok) toast.success(parsed > 0 ? `예상 총 ${parsed}${unit}(으)로 저장했어요.` : '예상 분량을 지웠어요.');
+      else toast.error('저장에 실패했어요. 다시 시도해 주세요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 rounded-2xl border border-dashed border-[#0071E3]/25 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/10 p-3">
+      <div className="flex items-center gap-1.5">
+        <p className="text-[11px] font-semibold text-[#0071E3]">예상 총 분량 입력</p>
+        {isEstimate && currentTotal > 0 && (
+          <span className="rounded-full bg-[#0071E3]/[0.08] dark:bg-[#0071E3]/20 px-1.5 py-0.5 text-[9px] font-semibold text-[#0071E3]">예상</span>
+        )}
+      </div>
+      <p className="mt-1 break-keep text-[10px] font-medium text-slate-400 dark:text-slate-400">
+        전체 분량을 알게 되면 입력해요. 예측이어도 괜찮아요. 진행률만 보이고 계획은 바뀌지 않아요.
+      </p>
+      <div className="mt-2 flex items-center gap-1.5">
+        <input
+          type="number"
+          min={0}
+          value={draft}
+          disabled={saving}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder={`예: 64${unit}처럼 알면 입력`}
+          className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-900 dark:text-slate-100 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+        />
+        <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{unit}</span>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving || !dirty}
+          className="shrink-0 rounded-xl bg-[#0071E3] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-95 disabled:opacity-40"
+        >
+          {saving ? '저장 중' : '저장'}
+        </button>
       </div>
     </div>
   );

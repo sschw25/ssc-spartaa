@@ -1,5 +1,8 @@
-import type { ConsultationLog, ProposedGoal, Student } from '@/lib/types/student';
+import type { ConsultationLog, ProposedGoal, ProposedMaterial, Student } from '@/lib/types/student';
 import { getLeaveTypeLabel } from '@/lib/leave';
+
+const STUDY_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+const STUDY_TIME_KEYS = ['morning', 'afternoon', 'night', ''] as const;
 
 const PROPOSED_GOAL_TYPES = ['weeks', 'weeklyAmount', 'dailyAmount', 'deadlineWeeks'] as const;
 
@@ -62,12 +65,58 @@ export function normalizeProposedGoal(raw: unknown): ProposedGoal | undefined {
   return normalized;
 }
 
+// 학생이 직접 만들어 신청하는 교재/인강 추가 제안(materialAdd)을 서버에서 정규화.
+// 관리자 승인 시 selfPaced 자료로 생성되므로 저장 시점에 필드 단위로 방어한다. 필수(과목명·자료명) 없으면 폐기(undefined).
+export function normalizeProposedMaterial(raw: unknown): ProposedMaterial | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const m = raw as Record<string, unknown>;
+
+  const subjectName = typeof m.subjectName === 'string' ? m.subjectName.trim().slice(0, 50) : '';
+  const title = typeof m.title === 'string' ? m.title.trim().slice(0, 100) : '';
+  if (!subjectName || !title) return undefined; // 과목명/자료명 없는 제안은 폐기
+
+  const materialType = m.materialType === 'lecture' ? 'lecture' : 'book';
+  const normalized: ProposedMaterial = { subjectName, materialType, title };
+
+  if (m.isNewSubject === true) normalized.isNewSubject = true;
+
+  const totalNum = Number(m.total);
+  if (Number.isFinite(totalNum) && totalNum >= 1) {
+    normalized.total = Math.min(99999, Math.round(totalNum));
+  }
+  if (typeof m.unit === 'string') {
+    const unit = m.unit.trim().slice(0, 10);
+    if (unit) normalized.unit = unit;
+  }
+  const currentNum = Number(m.currentProgress);
+  if (Number.isFinite(currentNum) && currentNum >= 0) {
+    normalized.currentProgress = Math.min(999999, Math.round(currentNum));
+  }
+  if (Array.isArray(m.studyDays)) {
+    const days = m.studyDays.filter(
+      (d): d is (typeof STUDY_DAY_KEYS)[number] =>
+        typeof d === 'string' && (STUDY_DAY_KEYS as readonly string[]).includes(d),
+    );
+    if (days.length > 0) normalized.studyDays = Array.from(new Set(days));
+  }
+  if ((STUDY_TIME_KEYS as readonly unknown[]).includes(m.studyTime)) {
+    normalized.studyTime = m.studyTime as ProposedMaterial['studyTime'];
+  }
+  if (typeof m.note === 'string') {
+    const note = m.note.trim().slice(0, 500);
+    if (note) normalized.note = note;
+  }
+
+  return normalized;
+}
+
 export const REQUEST_TYPE_LABEL: Record<NonNullable<ConsultationLog['requestType']>, string> = {
   progress: '진도 정정',
   subject: '과목 변경',
   plan: '학습계획',
   halfDay: '반차 신청',
   restPass: '휴식권 신청',
+  materialAdd: '교재/인강 추가',
   etc: '기타',
 };
 

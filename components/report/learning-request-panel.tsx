@@ -2,7 +2,13 @@
 
 import React from 'react';
 import { MessageSquare, Plus, Trash2, CheckCircle2, Calendar, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb } from 'lucide-react';
-import { ProposedGoal, Student } from '@/lib/types/student';
+import { ProposedGoal, ProposedMaterial, Student } from '@/lib/types/student';
+import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
+
+const MA_DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
+type MaDay = (typeof MA_DAY_ORDER)[number];
+const MA_DAY_LABELS: Record<MaDay, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
+const MA_TIME_LABELS: Record<'morning' | 'afternoon' | 'night', string> = { morning: '오전', afternoon: '오후', night: '야간' };
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
@@ -28,7 +34,7 @@ interface LearningRequestPanelProps {
   requestSubmitting: boolean;
   requestCustomOpen: boolean;
   setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal) => Promise<void>;
+  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial) => Promise<void>;
   cancelRequest: (id: string) => Promise<void>;
   showRequestHistory: boolean;
   setShowRequestHistory: (show: boolean) => void;
@@ -53,6 +59,86 @@ export function LearningRequestPanel({
 }: LearningRequestPanelProps) {
   const [showRealignBox, setShowRealignBox] = React.useState(false);
   const [validationError, setValidationError] = React.useState('');
+  // 교재/인강 추가 신청 — 이 컴포넌트 로컬 state 로만 관리(공유 requestForm 오염 금지).
+  const subjectNames = React.useMemo(
+    () => Array.from(new Set((student.subjects || []).map((s) => (s.name || '').trim()).filter(Boolean))),
+    [student.subjects],
+  );
+  const [materialAddOpen, setMaterialAddOpen] = React.useState(false);
+  const [maSubjectMode, setMaSubjectMode] = React.useState<'existing' | 'new'>(subjectNames.length > 0 ? 'existing' : 'new');
+  const [maForm, setMaForm] = React.useState({
+    subjectName: subjectNames[0] || '',
+    newSubjectName: '',
+    materialType: 'book' as 'book' | 'lecture',
+    title: '',
+    studyDays: [] as MaDay[],
+    studyTime: '' as 'morning' | 'afternoon' | 'night' | '',
+    currentProgress: '',
+    total: '',
+    unit: '',
+    note: '',
+  });
+  const [maError, setMaError] = React.useState('');
+
+  const resetMaForm = () => {
+    setMaForm({
+      subjectName: subjectNames[0] || '',
+      newSubjectName: '',
+      materialType: 'book',
+      title: '',
+      studyDays: [],
+      studyTime: '',
+      currentProgress: '',
+      total: '',
+      unit: '',
+      note: '',
+    });
+    setMaSubjectMode(subjectNames.length > 0 ? 'existing' : 'new');
+    setMaError('');
+  };
+
+  const toggleMaDay = (day: MaDay) => {
+    setMaForm((f) => ({
+      ...f,
+      studyDays: f.studyDays.includes(day) ? f.studyDays.filter((d) => d !== day) : [...f.studyDays, day],
+    }));
+  };
+
+  const submitMaterialAdd = async () => {
+    const subjName = (maSubjectMode === 'new' ? maForm.newSubjectName : maForm.subjectName).trim();
+    const title = maForm.title.trim();
+    if (!subjName) { setMaError('과목을 선택하거나 입력해 주세요.'); return; }
+    if (!title) { setMaError('자료명을 입력해 주세요.'); return; }
+    setMaError('');
+
+    const typeLabel = maForm.materialType === 'book' ? '교재' : '인강';
+    const unitLabel = maForm.materialType === 'book' ? (maForm.unit.trim() || 'p') : '강';
+    const daysStr = MA_DAY_ORDER.filter((d) => maForm.studyDays.includes(d)).map((d) => MA_DAY_LABELS[d]).join('·');
+    const timeStr = maForm.studyTime ? MA_TIME_LABELS[maForm.studyTime] : '';
+    const parts: string[] = [subjName, `${typeLabel} "${title}"`];
+    const schedule = [daysStr, timeStr].filter(Boolean).join(' ');
+    if (schedule) parts.push(schedule);
+    if (maForm.currentProgress) parts.push(`현재 ${maForm.currentProgress}${unitLabel}`);
+    const message = `[교재/인강 추가] ${parts.join(' · ')}` + (maForm.note.trim() ? `\n메모: ${maForm.note.trim()}` : '');
+
+    const isNewSubject = maSubjectMode === 'new' || !subjectNames.some((n) => n.toLowerCase() === subjName.toLowerCase());
+    const proposedMaterial: ProposedMaterial = {
+      subjectName: subjName,
+      isNewSubject,
+      materialType: maForm.materialType,
+      title,
+      total: maForm.total ? Number(maForm.total) : undefined,
+      unit: maForm.materialType === 'book' && maForm.unit.trim() ? maForm.unit.trim() : undefined,
+      currentProgress: maForm.currentProgress ? Number(maForm.currentProgress) : undefined,
+      studyDays: maForm.studyDays.length > 0 ? maForm.studyDays : undefined,
+      studyTime: maForm.studyTime || undefined,
+      note: maForm.note.trim() || undefined,
+    };
+
+    await sendRequest('materialAdd', message, undefined, proposedMaterial);
+    resetMaForm();
+    setMaterialAddOpen(false);
+  };
   // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코멘터에게 '요청'으로 전달
   const [realignRequesting, setRealignRequesting] = React.useState<null | 'keepTargetDate' | 'keepPace'>(null);
   const [realignRequested, setRealignRequested] = React.useState(false);
@@ -79,6 +165,7 @@ export function LearningRequestPanel({
     plan: '학습계획',
     halfDay: '휴식신청',
     restPass: '휴식권 신청',
+    materialAdd: '교재/인강 추가',
     etc: '기타',
   };
 
@@ -258,6 +345,200 @@ export function LearningRequestPanel({
               </button>
             ))}
           </div>
+
+          {/* 교재/인강 직접 추가 신청 — 학생이 자료를 만들어 신청하면 코멘터가 채워서 생성해요 */}
+          <button
+            type="button"
+            onClick={() => setMaterialAddOpen((v) => !v)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 py-2.5 text-[11px] font-bold text-[#0071E3] transition hover:bg-[#0071E3]/[0.08]"
+          >
+            <BookPlus className={`w-4 h-4 transition-transform ${materialAddOpen ? 'rotate-12' : ''}`} />
+            {materialAddOpen ? '교재/인강 추가 닫기' : '교재/인강 직접 추가하기'}
+          </button>
+
+          {materialAddOpen && (
+            <form
+              onSubmit={(e) => { e.preventDefault(); if (!requestSubmitting) submitMaterialAdd(); }}
+              className="space-y-3 rounded-2xl border border-[#0071E3]/15 bg-white/70 dark:bg-[#1c1c1e]/95 p-3"
+            >
+              <div className="flex items-start gap-1.5 rounded-xl border border-[#0071E3]/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 p-2.5 text-[10px] font-bold leading-normal text-[#0071E3]">
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>강의 수·소요 시간은 몰라도 돼요. 코멘터가 채워서 만들어 드려요.</span>
+              </div>
+
+              {/* 과목 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">과목</label>
+                {subjectNames.length > 0 && (
+                  <div className="flex gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setMaSubjectMode('existing')}
+                      className={`rounded-full px-3 py-1 text-[10px] font-bold transition ${maSubjectMode === 'existing' ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      기존 과목
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMaSubjectMode('new')}
+                      className={`rounded-full px-3 py-1 text-[10px] font-bold transition ${maSubjectMode === 'new' ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      새 과목 직접 입력
+                    </button>
+                  </div>
+                )}
+                {maSubjectMode === 'existing' && subjectNames.length > 0 ? (
+                  <select
+                    value={maForm.subjectName}
+                    onChange={(e) => setMaForm((f) => ({ ...f, subjectName: e.target.value }))}
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                  >
+                    {subjectNames.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={maForm.newSubjectName}
+                    onChange={(e) => { setMaForm((f) => ({ ...f, newSubjectName: e.target.value })); setMaError(''); }}
+                    placeholder="예: 한국사"
+                    maxLength={50}
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                  />
+                )}
+              </div>
+
+              {/* 유형 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">유형</label>
+                <div className="flex gap-1.5">
+                  {([['book', '교재'], ['lecture', '인강']] as const).map(([v, label]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setMaForm((f) => ({ ...f, materialType: v }))}
+                      className={`flex-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition ${maForm.materialType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 자료명 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">자료명</label>
+                <input
+                  type="text"
+                  value={maForm.title}
+                  onChange={(e) => { setMaForm((f) => ({ ...f, title: e.target.value })); setMaError(''); }}
+                  placeholder={maForm.materialType === 'book' ? '예: 기본서 한국사' : '예: 교육학 기본강의'}
+                  maxLength={100}
+                  className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                />
+              </div>
+
+              {/* 학습 요일 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">학습 요일 <span className="font-medium text-slate-400">(선택)</span></label>
+                <div className="flex flex-wrap gap-1.5">
+                  {MA_DAY_ORDER.map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleMaDay(day)}
+                      className={`grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold transition ${maForm.studyDays.includes(day) ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      {MA_DAY_LABELS[day]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 시간대 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">시간대 <span className="font-medium text-slate-400">(선택)</span></label>
+                <div className="flex flex-wrap gap-1.5">
+                  {STUDY_TIME_SLOTS.map((slot) => (
+                    <button
+                      key={slot.key}
+                      type="button"
+                      onClick={() => setMaForm((f) => ({ ...f, studyTime: f.studyTime === slot.key ? '' : slot.key }))}
+                      className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${maForm.studyTime === slot.key ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      {slot.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 현재 진도 + 총량/단위 */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">현재 진도 <span className="font-medium text-slate-400">(선택)</span></label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={0}
+                      value={maForm.currentProgress}
+                      onChange={(e) => setMaForm((f) => ({ ...f, currentProgress: e.target.value }))}
+                      placeholder="예: 0"
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                    />
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{maForm.materialType === 'book' ? (maForm.unit.trim() || 'p') : '강'}</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">총량 <span className="font-medium text-slate-400">(선택)</span></label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      value={maForm.total}
+                      onChange={(e) => setMaForm((f) => ({ ...f, total: e.target.value }))}
+                      placeholder="예: 64강처럼 알면 입력, 몰라도 돼요"
+                      className="w-full min-w-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                    />
+                    {maForm.materialType === 'book' ? (
+                      <input
+                        type="text"
+                        value={maForm.unit}
+                        onChange={(e) => setMaForm((f) => ({ ...f, unit: e.target.value }))}
+                        placeholder="p"
+                        maxLength={10}
+                        className="w-12 shrink-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                      />
+                    ) : (
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">강</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* 희망 메모 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">희망 메모 <span className="font-medium text-slate-400">(선택)</span></label>
+                <textarea
+                  value={maForm.note}
+                  onChange={(e) => setMaForm((f) => ({ ...f, note: e.target.value }))}
+                  placeholder="예: 매일 조금씩 듣고 싶어요"
+                  rows={2}
+                  maxLength={500}
+                  className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                />
+              </div>
+
+              {maError && <p className="text-[10px] font-bold text-red-500">{maError}</p>}
+              <button
+                type="submit"
+                disabled={requestSubmitting}
+                className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+              >
+                {requestSubmitting ? '신청 중...' : '이 자료 추가 신청하기'}
+              </button>
+            </form>
+          )}
 
           {/* 직접 작성 토글 */}
           <button

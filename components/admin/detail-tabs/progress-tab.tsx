@@ -20,7 +20,7 @@ import {
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
 import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 import { toast } from 'sonner';
-import { Plus, Minus, Trash2, Calendar, User, Phone, CheckCircle, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Minus, Trash2, Calendar, User, Phone, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
 import { LearningConsultationPanel } from '@/components/admin/detail-tabs/learning-consultation-panel';
 import { LectureReviewRecommender } from '@/components/admin/detail-tabs/lecture-review-recommender';
@@ -73,6 +73,50 @@ function MaterialStudyDayPicker({
   );
 }
 
+// 자료별 학습 시간대(관리자 지정) 선택기 — 과목이 아닌 이 교재/강의만의 시간표 슬롯을 지정한다.
+// 자율(selfPaced) 자료는 학생이 직접 교시(studySlot)를 고르므로 여기 값이 있어도 학생 지정이 우선한다.
+function MaterialStudyTimePicker({
+  subId,
+  materialId,
+  type,
+  studyTime,
+  onChange,
+}: {
+  subId: string;
+  materialId: string;
+  type: 'book' | 'lecture';
+  studyTime?: string;
+  onChange: (subId: string, materialId: string, type: 'book' | 'lecture', studyTime: 'morning' | 'afternoon' | 'night' | '') => void;
+}) {
+  const current = STUDY_TIME_SLOTS.find((slot) => slot.key === studyTime);
+  return (
+    <div className="space-y-1">
+      <Label className="text-[9px] text-slate-500 dark:text-slate-400">
+        이 자료 학습 시간 <span className="font-semibold text-[#0071E3]">{current ? '개별 지정' : '미지정(시간표 제외)'}</span>
+      </Label>
+      <Select
+        value={studyTime || 'none'}
+        onValueChange={(value) => onChange(subId, materialId, type, value === 'none' ? '' : value as 'morning' | 'afternoon' | 'night')}
+      >
+        <SelectTrigger className="h-8 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10">
+          <SelectValue placeholder="시간대 선택" />
+        </SelectTrigger>
+        <SelectContent className="bg-white dark:bg-[#1c1c1e]">
+          <SelectItem value="none" className="text-[10px]">미지정 (시간표에 표시 안 함)</SelectItem>
+          {STUDY_TIME_SLOTS.map((slot) => (
+            <SelectItem key={slot.key} value={slot.key} className="text-[10px]">
+              {slot.displayLabel} ({slot.timeRange})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {current && (
+        <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">{current.periodLabel}</p>
+      )}
+    </div>
+  );
+}
+
 // 시작점 조정 이력 — 학생이 시작점(current)을 옮긴 감사 로그(adjustLog) 읽기 전용 노출.
 // 최근 5개(최신 먼저). (자동)=하루 한도 내 즉시 반영 / (승인)=신청 후 관리자 승인 반영.
 // 표시는 학생 화면과 동일하게 "시작점"(=current+1) 기준. 사유는 괄호+툴팁.
@@ -121,7 +165,6 @@ export function ProgressTab() {
     customUnitInput,
     debouncedQuickPlanText,
     dropdownRef,
-    editingGoals,
     editingMaterialEstimatedMinutes,
     editingMaterialSpeedMultiplier,
     editingMaterialId,
@@ -135,7 +178,7 @@ export function ProgressTab() {
     handleDeleteSubject,
     handleSaveMaterial,
     handleToggleMaterialStudyDay,
-    handleUpdateSubjectStudyTime,
+    updateMaterialStudyTime,
     hasSearchedIntegrated,
     integratedSearchResults,
     integratedSearchTimerRef,
@@ -171,7 +214,6 @@ export function ProgressTab() {
     setCslManager,
     setCslNextDate,
     setCustomUnitInput,
-    setEditingGoals,
     setEditingMaterialEstimatedMinutes,
     setEditingMaterialSpeedMultiplier,
     setEditingMaterialId,
@@ -198,7 +240,6 @@ export function ProgressTab() {
     setShowGuideDetail,
     setShowIntegratedSuggestions,
     setSortOrder,
-    setSubjectsState,
     setWeeklyPlanRanges,
     showGuideDetail,
     showIntegratedSuggestions,
@@ -899,49 +940,8 @@ export function ProgressTab() {
                                 </div>
                               </div>
 
-                              <div className="space-y-1.5 p-3 rounded-xl bg-white dark:bg-white/5 border border-black/[0.04] dark:border-white/10">
-                          <Label className="text-[10px] font-bold text-slate-900 dark:text-slate-100">학생용 시간표 학습 시간</Label>
-                          <Select
-                            value={sub.studyTime || 'none'}
-                            onValueChange={(value) => handleUpdateSubjectStudyTime(sub.id, value === 'none' ? '' : value as 'morning' | 'afternoon' | 'night')}
-                          >
-                            <SelectTrigger className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100">
-                              <SelectValue placeholder="학습 시간 선택" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white dark:bg-[#1c1c1e]">
-                              <SelectItem value="none" className="text-xs">미지정</SelectItem>
-                              {STUDY_TIME_SLOTS.map((slot) => (
-                                <SelectItem key={slot.key} value={slot.key} className="text-xs">
-                                  {slot.displayLabel} ({slot.timeRange})
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          {sub.studyTime && (
-                            <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">
-                              {STUDY_TIME_SLOTS.find((slot) => slot.key === sub.studyTime)?.periodLabel}
-                            </p>
-                          )}
-                          {/* 학습 요일은 과목이 아니라 각 교재/강의(자료) 단위에서 설정한다. */}
-                        </div>
-
-                        {/* 학습 목표 설정 */}
-                        <div className="space-y-1.5 p-3 rounded-xl bg-black/[0.02] dark:bg-white/5 border border-black/[0.03] dark:border-white/10">
-                          <Label className="text-[10px] font-bold text-slate-900 dark:text-slate-100 flex items-center">
-                            <CheckCircle className="w-3.5 h-3.5 mr-1 text-[#0071E3]" />
-                            {sub.name} 학습 목표
-                          </Label>
-                          <Textarea
-                            placeholder={`이 과목의 세부 목표를 입력하세요 (예: 6월 모평 2등급 달성, 시발점 완독)`}
-                            value={editingGoals[sub.id] || ''}
-                            onChange={(e) => {
-                              const newGoal = e.target.value;
-                              setEditingGoals(prev => ({ ...prev, [sub.id]: newGoal }));
-                              setSubjectsState(prev => prev.map(s => s.id === sub.id ? { ...s, learningGoal: newGoal } : s));
-                            }}
-                            className="w-full rounded-lg border-black/[0.08] dark:border-white/10 text-xs min-h-[48px] bg-white dark:bg-white/5 dark:text-slate-100 p-2"
-                          />
-                        </div>
+                              {/* 시간(시간표 슬롯)·학습 목표는 과목이 아니라 각 교재/강의(자료) 단위에서 설정한다.
+                                  → 아래 '교재 진도 및 목표일 설정' 각 자료 카드의 시간대/학습 목표 필드 참고. */}
 
                         {/* 1. 학습 교재 관리 */}
                         <div className="space-y-3.5">
@@ -1263,14 +1263,23 @@ export function ProgressTab() {
                                           </div>
                                         )}
 
-                                        <MaterialStudyDayPicker
-                                          subId={sub.id}
-                                          materialId={book.id}
-                                          type="book"
-                                          subjectStudyDays={sub.studyDays}
-                                          materialStudyDays={book.studyDays}
-                                          onToggle={handleToggleMaterialStudyDay}
-                                        />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <MaterialStudyTimePicker
+                                            subId={sub.id}
+                                            materialId={book.id}
+                                            type="book"
+                                            studyTime={book.studyTime}
+                                            onChange={updateMaterialStudyTime}
+                                          />
+                                          <MaterialStudyDayPicker
+                                            subId={sub.id}
+                                            materialId={book.id}
+                                            type="book"
+                                            subjectStudyDays={sub.studyDays}
+                                            materialStudyDays={book.studyDays}
+                                            onToggle={handleToggleMaterialStudyDay}
+                                          />
+                                        </div>
                                       </div>
                                     </div>
 
@@ -1734,21 +1743,30 @@ export function ProgressTab() {
                                           </div>
                                         )}
 
-                                        <MaterialStudyDayPicker
-                                          subId={sub.id}
-                                          materialId={lec.id}
-                                          type="lecture"
-                                          subjectStudyDays={sub.studyDays}
-                                          materialStudyDays={lec.studyDays}
-                                          onToggle={handleToggleMaterialStudyDay}
-                                        />
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                          <MaterialStudyTimePicker
+                                            subId={sub.id}
+                                            materialId={lec.id}
+                                            type="lecture"
+                                            studyTime={lec.studyTime}
+                                            onChange={updateMaterialStudyTime}
+                                          />
+                                          <MaterialStudyDayPicker
+                                            subId={sub.id}
+                                            materialId={lec.id}
+                                            type="lecture"
+                                            subjectStudyDays={sub.studyDays}
+                                            materialStudyDays={lec.studyDays}
+                                            onToggle={handleToggleMaterialStudyDay}
+                                          />
+                                        </div>
                                       </div>
 
                                       <div className="mt-2">
                                         <LectureReviewRecommender
                                           estimatedMinutesPerUnit={lec.estimatedMinutesPerUnit}
                                           speedMultiplier={lec.speedMultiplier}
-                                          studyTime={sub.studyTime}
+                                          studyTime={lec.studyTime || sub.studyTime}
                                         />
                                       </div>
                                     </div>

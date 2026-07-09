@@ -602,7 +602,7 @@ export function SubjectProgressTab({
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = isSelfPaced ? null : getPlanStatus(b.currentPage, b.detailedPlans, getMaterialStudyDays(sub.studyDays, b.studyDays), sub.studyTime);
+                      const status = isSelfPaced ? null : getPlanStatus(b.currentPage, b.detailedPlans, getMaterialStudyDays(sub.studyDays, b.studyDays), b.studyTime || sub.studyTime);
                       const paceComparison = isSelfPaced ? null : formatPaceComparison(
                         getMaterialDailyPace(b.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'book', b.title)
@@ -879,7 +879,7 @@ export function SubjectProgressTab({
                       const totalPlans = oneMonthPlans.length;
                       const completedPlans = oneMonthPlans.filter(isPlanCompleted).length;
                       const planPercent = totalPlans > 0 ? Math.round((completedPlans / totalPlans) * 100) : 0;
-                      const status = isSelfPaced ? null : getPlanStatus(l.completedLectures, l.detailedPlans, getMaterialStudyDays(sub.studyDays, l.studyDays), sub.studyTime);
+                      const status = isSelfPaced ? null : getPlanStatus(l.completedLectures, l.detailedPlans, getMaterialStudyDays(sub.studyDays, l.studyDays), l.studyTime || sub.studyTime);
                       const paceComparison = isSelfPaced ? null : formatPaceComparison(
                         getMaterialDailyPace(l.detailedPlans),
                         getMaterialBenchmark(materialBenchmarks, 'lecture', l.name)

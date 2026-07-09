@@ -105,8 +105,8 @@ export function getTodayScheduleItems(student: Student, todayKey: string, todayD
     type: 'book' | 'lecture',
   ) => {
     if (!onToday(subject.studyDays, m.studyDays)) return;
-    // 슬롯은 자료별 studySlot 우선, 없으면 과목 studyTime, 그것도 없으면 미지정.
-    const pinnedSlot = m.studySlot || subject.studyTime || '';
+    // 슬롯은 학생 studySlot(자율) 우선, 없으면 관리자 자료별 studyTime, 그것도 없으면 과목 studyTime(레거시 폴백).
+    const pinnedSlot = m.studySlot || m.studyTime || subject.studyTime || '';
     const unit = materialUnit(m, type);
 
     if (m.goalType === 'selfPaced') {

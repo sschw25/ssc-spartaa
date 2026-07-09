@@ -74,6 +74,9 @@ export interface BookProgress {
   // 자율학습(selfPaced) 자료의 학생 지정 시간대 — 시간표 노출 결정용. 미설정('')이면 시간표 제외(홈 그룹만).
   // 'morning'|'afternoon'|'night'=블록, 'p0'~'p8'=특정 교시(p8=심야). selfPaced 자료에만 의미. 마이그레이션 불필요(JSON).
   studySlot?: string;
+  // 관리자 지정 자료별 학습 시간대 — 과목(studyTime) 대신 자료 단위로 시간표에 배치한다.
+  // 우선순위: 학생 studySlot(자율) > 자료 studyTime(관리자) > 과목 studyTime(레거시 폴백). 마이그레이션 불필요(JSON).
+  studyTime?: 'morning' | 'afternoon' | 'night' | '';
 
   // 개편 추가: 교재별 학습 목표 및 세부 계획
   // selfPaced = 자율 입력(목표 분량·계획 없음). 학생이 그날 한 만큼 누적 입력만 한다(뒤처짐/마감 판정 제외).
@@ -87,6 +90,9 @@ export interface BookProgress {
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
+  // 학생이 셀프서비스로 입력한 예상 총량 여부 — true 면 total(totalPages)이 학생 예측치(관리자 정식 확정 전).
+  // 관리자 전체저장 병합 제외(STUDENT_OWNED_MATERIAL_FIELDS 미포함) → 관리자가 정식 총량 지정 시 예측을 덮어쓴다. 마이그레이션 불필요(JSON).
+  totalIsEstimate?: boolean;
   // ── 주말 보강 원장(makeup ledger) ── 마이그레이션 불필요(subjects jsonb에 통째 저장).
   makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
   makeupDone?: number;     // 이번 주 보강 완료량(학생 입력, makeupWeekKey 주 스코프).
@@ -110,6 +116,9 @@ export interface LectureProgress {
   // 자율학습(selfPaced) 자료의 학생 지정 시간대 — 시간표 노출 결정용. 미설정('')이면 시간표 제외(홈 그룹만).
   // 'morning'|'afternoon'|'night'=블록, 'p0'~'p8'=특정 교시(p8=심야). selfPaced 자료에만 의미. 마이그레이션 불필요(JSON).
   studySlot?: string;
+  // 관리자 지정 자료별 학습 시간대 — 과목(studyTime) 대신 자료 단위로 시간표에 배치한다.
+  // 우선순위: 학생 studySlot(자율) > 자료 studyTime(관리자) > 과목 studyTime(레거시 폴백). 마이그레이션 불필요(JSON).
+  studyTime?: 'morning' | 'afternoon' | 'night' | '';
 
   // 개편 추가: 인강별 학습 목표 및 세부 계획
   // selfPaced = 자율 입력(목표 분량·계획 없음).
@@ -122,6 +131,9 @@ export interface LectureProgress {
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
+  // 학생이 셀프서비스로 입력한 예상 총량 여부 — true 면 total(totalLectures)이 학생 예측치(관리자 정식 확정 전).
+  // 관리자 전체저장 병합 제외(STUDENT_OWNED_MATERIAL_FIELDS 미포함) → 관리자가 정식 총량 지정 시 예측을 덮어쓴다. 마이그레이션 불필요(JSON).
+  totalIsEstimate?: boolean;
   // ── 주말 보강 원장(makeup ledger) ── 마이그레이션 불필요(subjects jsonb에 통째 저장).
   makeupOwed?: number;     // 누적 보강 발생량(승인 시 스냅샷 가산). remaining = max(0, owed-done).
   makeupDone?: number;     // 이번 주 보강 완료량(학생 입력, makeupWeekKey 주 스코프).
@@ -150,6 +162,23 @@ export interface ProposedGoal {
   };
 }
 
+// 학생이 직접 "만들어 신청"하는 교재/인강(자료) 추가 제안. requestType==='materialAdd' 전용.
+// 관리자 승인(resolved) 시 app/api/admin/students/[id]/requests PATCH 가 selfPaced 자료로 생성한다.
+// proposedGoal(기존 자료의 목표 변경)과 별개인 형제 필드 — consultation_logs jsonb 재사용(마이그레이션 불필요).
+export interface ProposedMaterial {
+  subjectName: string;               // 기존 과목명 또는 신규
+  isNewSubject?: boolean;            // 표시용(신규 과목 배지)
+  materialType: 'book' | 'lecture';
+  title: string;
+  total?: number;                    // 학생이 알면(예측 포함). 없으면 자율로 생성
+  unit?: string;                     // 교재 단위(p/강/회 등)
+  currentProgress?: number;          // 현재까지 한 분량
+  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
+  studyTime?: 'morning' | 'afternoon' | 'night' | '';
+  note?: string;                     // 희망 메모
+  createdMaterialId?: string;        // 승인 시 생성한 자료 id — 재승인(resolved 토글) 시 중복 생성 방지(멱등)
+}
+
 // 학생↔관리자 양방향 대화 메시지 (요청/건의/휴가 신청에 누적되는 스레드)
 // adminReply(단일 답변)와 별개로 thread[]에 시간순 메시지를 쌓아 재답변/재재답변을 지원.
 // consultation_logs / leave_requests JSONB 안에 중첩 저장 — 별도 컬럼/마이그레이션 불필요.
@@ -168,7 +197,7 @@ export interface ConsultationLog {
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
   type?: 'learning' | 'life' | 'request' | 'suggestion'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
-  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'etc'; // 신청 분류
+  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
   acknowledgedAt?: string;                                // 관리자가 확인했지만 아직 완료하지 않은 시각 (ISO)
   createdAt?: string;                                     // 신청 시각 (ISO)
@@ -177,6 +206,7 @@ export interface ConsultationLog {
   repliedAt?: string;                                     // 답변 시각 (ISO)
   thread?: ThreadMessage[];                               // 양방향 재답변 대화 (head=content 이후의 추가 메시지들)
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
+  proposedMaterial?: ProposedMaterial;                    // 학생 교재/인강 추가 제안 데이터(materialAdd)
 }
 
 // 상담 담당자 휴무/출장으로 특정 날짜(또는 일부 슬롯)를 예약 불가로 막는 차단 항목.

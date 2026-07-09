@@ -217,9 +217,10 @@ export function notifyMakeupLeave(student: Student, leave: LeaveRequest): Makeup
 
   const items: AccruedItem[] = [];
   for (const subject of student.subjects || []) {
-    const studyTime = subject.studyTime;
-    if (!studyTime || !exemptedSlots.includes(studyTime as 'morning' | 'afternoon' | 'night')) continue;
     for (const { m, type } of subjectMaterials(subject)) {
+      // 슬롯은 자료별 studyTime(관리자 지정) 우선, 없으면 과목 studyTime.
+      const studyTime = m.studyTime || subject.studyTime;
+      if (!studyTime || !exemptedSlots.includes(studyTime as 'morning' | 'afternoon' | 'night')) continue;
       const days = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, m.studyDays));
       if (!days.includes(leaveDayKey)) continue;
       const plan = (m.detailedPlans || []).find(

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
 // normalizeProposedGoal — lib/student-requests 로 이동(시작점 조정 신청 경로와 공유). 동작 동일.
-import { normalizeProposedGoal } from '@/lib/student-requests';
+import { normalizeProposedGoal, normalizeProposedMaterial } from '@/lib/student-requests';
 import type { ConsultationLog } from '@/lib/types/student';
 
-const REQUEST_TYPES = ['progress', 'subject', 'plan', 'halfDay', 'restPass', 'etc'] as const;
+const REQUEST_TYPES = ['progress', 'subject', 'plan', 'halfDay', 'restPass', 'materialAdd', 'etc'] as const;
 
 // 학생이 관리자에게 진도/과목/학습계획 변경 등을 신청 (consultation_logs 재사용, type==='request')
 export async function POST(req: NextRequest) {
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { requestType?: unknown; message?: unknown; proposedGoal?: unknown };
+  let body: { requestType?: unknown; message?: unknown; proposedGoal?: unknown; proposedMaterial?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     requestType,
     status: 'pending',
     proposedGoal: normalizeProposedGoal(body?.proposedGoal),
+    proposedMaterial: normalizeProposedMaterial(body?.proposedMaterial),
     createdAt: nowIso,
   };
 

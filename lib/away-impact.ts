@@ -166,7 +166,7 @@ function replanMaterial(
   const { plans, calculatedTargetDate } = generateDetailedPlans(
     material.id, total, materialType, material.goalType, material.goalValue, current,
     unit, material.reviewPasses || [], afterStudyDays, speed, material.estimatedMinutesPerUnit,
-    subject.studyTime || '', material.category,
+    material.studyTime || subject.studyTime || '', material.category,
   );
   const diff = `주 ${beforeStudyDays.length}일→${afterStudyDays.length}일 · 마감 ${mdOf(beforeTargetDate)}→${mdOf(calculatedTargetDate)}`;
   return {

@@ -225,6 +225,7 @@ function StudentReportInner() {
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,
+    saveEstimatedTotal,
     formatNotificationDate,
     notificationCount,
     notificationPreview,
@@ -647,8 +648,8 @@ function StudentReportInner() {
           </div>
         )}
 
-        {/* 0-1c. 도시락 신청 카드 (학생 전용 · 홈 + 알림 탭에 노출 — 놓치지 않게 홈에서도 보이게) */}
-        {isStudentReport && (activeTab === 'student-notifications' || activeTab === 'report-overview') && mealPlans.length > 0 && (
+        {/* 0-1c. 도시락 신청 카드 (학생 전용 · 알림 탭에서만 노출. 홈은 '확인할 특이사항' amber 알림이 딥링크로 안내) */}
+        {isStudentReport && activeTab === 'student-notifications' && mealPlans.length > 0 && (
           <div className="mx-auto w-full max-w-[680px] px-4 sm:px-5">
             <MealPlanNotice
               plans={mealPlans}
@@ -969,6 +970,7 @@ function StudentReportInner() {
           studyTimeLabels={studyTimeLabels}
           adjustStartPoint={adjustStartPoint}
           saveStudySlot={saveStudySlot}
+          saveEstimatedTotal={saveEstimatedTotal}
           onClose={closeMaterialDetail}
           onOpenSubjectProgress={openSubjectProgressFromSheet}
           onOpenTimetable={openTimetableFromSheet}

@@ -27,7 +27,7 @@ import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Printer, Loader2, Save,
   ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X,
-  CalendarDays, Plus, Trash2, Send, Ticket
+  CalendarDays, Plus, Trash2, Send, Ticket, BookPlus
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -1402,6 +1402,50 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     toast.success('과목별 학습 시간이 설정되었습니다. (자동 저장됨)');
   };
 
+  // 자료별 학습 시간대(관리자 지정) — 과목이 아닌 교재/강의 단위로 시간표 슬롯을 지정한다.
+  // 시간대는 인강 하루 한계 학습량(가용 분)에 영향을 주므로, 목표가 설정된 자료는 즉시 계획을 재생성한다.
+  const updateMaterialStudyTime = (
+    subId: string,
+    materialId: string,
+    type: 'book' | 'lecture',
+    studyTime: 'morning' | 'afternoon' | 'night' | '',
+  ) => {
+    setSubjectsState(prev => prev.map(sub => {
+      if (sub.id !== subId) return sub;
+      const regen = <T extends BookProgress | LectureProgress>(mat: T): T => {
+        const updated: T = { ...mat, studyTime };
+        if (mat.goalType && mat.goalType !== 'selfPaced' && (mat.goalValue || 0) > 0) {
+          const isBook = type === 'book';
+          const { plans, calculatedTargetDate } = generateDetailedPlansLib(
+            materialId,
+            isBook ? (mat as BookProgress).totalPages : (mat as LectureProgress).totalLectures,
+            type,
+            mat.goalType,
+            mat.goalValue || 0,
+            isBook ? (mat as BookProgress).currentPage : (mat as LectureProgress).completedLectures,
+            isBook ? (mat as BookProgress).unit : undefined,
+            mat.reviewPasses || [],
+            getMaterialStudyDays(sub.studyDays, mat.studyDays),
+            isBook ? 1.0 : Number((mat as LectureProgress).speedMultiplier || 1.0),
+            mat.estimatedMinutesPerUnit,
+            studyTime || sub.studyTime,
+            mat.category,
+            planStartOf(materialId),
+          );
+          updated.detailedPlans = plans;
+          updated.targetDate = calculatedTargetDate;
+        }
+        return updated;
+      };
+      if (type === 'book') {
+        return { ...sub, books: sub.books.map(b => (b.id === materialId ? regen(b) : b)) };
+      }
+      return { ...sub, lectures: sub.lectures.map(l => (l.id === materialId ? regen(l) : l)) };
+    }));
+    setIsAutoSaving(true);
+    toast.success('자료별 학습 시간이 설정되었습니다. (자동 저장됨)');
+  };
+
   // 자료별 학습 요일 토글 — 요일은 자료(교재/강의) 단위 단일 소스다.
   // 최초 토글 시 현재 유효요일(자료 미설정이면 기본 월~토)을 실체화한 뒤 편집하며,
   // 목표가 있는 자료(selfPaced 제외)는 새 요일로 주간 계획을 즉시 재생성한다.
@@ -1428,7 +1472,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               const { plans, calculatedTargetDate } = generateDetailedPlansLib(
                 materialId, b.totalPages, 'book', b.goalType, b.goalValue || 0, b.currentPage,
                 b.unit, b.reviewPasses || [], getMaterialStudyDays(sub.studyDays, studyDays),
-                1.0, b.estimatedMinutesPerUnit, sub.studyTime, b.category,
+                1.0, b.estimatedMinutesPerUnit, b.studyTime || sub.studyTime, b.category,
               );
               updated.detailedPlans = plans;
               updated.targetDate = calculatedTargetDate;
@@ -1447,7 +1491,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             const { plans, calculatedTargetDate } = generateDetailedPlansLib(
               materialId, l.totalLectures, 'lecture', l.goalType, l.goalValue || 0, l.completedLectures,
               undefined, l.reviewPasses || [], getMaterialStudyDays(sub.studyDays, studyDays),
-              Number(l.speedMultiplier || 1.0), l.estimatedMinutesPerUnit, sub.studyTime, l.category,
+              Number(l.speedMultiplier || 1.0), l.estimatedMinutesPerUnit, l.studyTime || sub.studyTime, l.category,
             );
             updated.detailedPlans = plans;
             updated.targetDate = calculatedTargetDate;
@@ -1599,7 +1643,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       studyDays,
       speedMultiplier,
       estimatedMinutes,
-      parentSubject?.studyTime,
+      parentMaterial?.studyTime || parentSubject?.studyTime,
       category,
       startDateStr
     );
@@ -1630,7 +1674,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               getMaterialStudyDays(sub.studyDays, updatedBook.studyDays),
               1.0,
               updatedBook.estimatedMinutesPerUnit,
-              sub.studyTime,
+              updatedBook.studyTime || sub.studyTime,
               updatedBook.category,
               planStartOf(bookId)
             );
@@ -1673,7 +1717,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               getMaterialStudyDays(sub.studyDays, updatedLec.studyDays),
               Number(updatedLec.speedMultiplier || 1.0),
               updatedLec.estimatedMinutesPerUnit,
-              sub.studyTime,
+              updatedLec.studyTime || sub.studyTime,
               updatedLec.category,
               planStartOf(lectureId)
             );
@@ -1720,7 +1764,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           getMaterialStudyDays(sub.studyDays, mat.studyDays),
           isBook ? 1.0 : Number((mat as LectureProgress).speedMultiplier || 1.0),
           mat.estimatedMinutesPerUnit,
-          sub.studyTime,
+          mat.studyTime || sub.studyTime,
           mat.category,
           date,
         );
@@ -1778,7 +1822,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 getMaterialStudyDays(sub.studyDays, b.studyDays),
                 1.0,
                 b.estimatedMinutesPerUnit,
-                sub.studyTime,
+                b.studyTime || sub.studyTime,
                 b.category
               );
               newPlans = plans;
@@ -1810,7 +1854,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
               getMaterialStudyDays(sub.studyDays, l.studyDays),
               Number(l.speedMultiplier || 1.0),
               l.estimatedMinutesPerUnit,
-              sub.studyTime,
+              l.studyTime || sub.studyTime,
               l.category
             );
             newPlans = plans;
@@ -4161,6 +4205,41 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                       </div>
                     )}
 
+                    {req.proposedMaterial && (
+                      <div className="rounded-xl border border-blue-100 dark:border-[#0071E3]/20 bg-blue-50/50 dark:bg-[#0071E3]/15 p-2.5 text-[10px] space-y-1 my-1.5">
+                        <p className="font-semibold text-[#0071E3] flex items-center gap-1">
+                          <BookPlus className="w-3 h-3" /> 추가 요청 자료 (승인 시 자율 자료로 생성)
+                        </p>
+                        <p className="font-bold text-slate-600 dark:text-slate-300">
+                          • 과목: {req.proposedMaterial.subjectName}
+                          {req.proposedMaterial.isNewSubject && (
+                            <span className="ml-1 rounded-full bg-[#0071E3]/10 px-1.5 py-0.5 text-[9px] font-semibold text-[#0071E3]">신규</span>
+                          )}
+                        </p>
+                        <p className="font-bold text-slate-600 dark:text-slate-300">
+                          • {req.proposedMaterial.materialType === 'book' ? '교재' : '인강'}: <span className="text-[#0071E3] font-semibold">{req.proposedMaterial.title}</span>
+                        </p>
+                        {(req.proposedMaterial.studyDays?.length || req.proposedMaterial.studyTime) && (
+                          <p className="font-bold text-slate-600 dark:text-slate-300">
+                            • 학습:
+                            {req.proposedMaterial.studyDays?.length ? ` ${req.proposedMaterial.studyDays.map((d) => ({ mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' } as Record<string, string>)[d]).join('·')}` : ''}
+                            {req.proposedMaterial.studyTime ? ` ${({ morning: '오전', afternoon: '오후', night: '야간' } as Record<string, string>)[req.proposedMaterial.studyTime]}` : ''}
+                          </p>
+                        )}
+                        {req.proposedMaterial.currentProgress !== undefined && (
+                          <p className="font-bold text-slate-600 dark:text-slate-300">
+                            • 현재 진도: <span className="text-[#0071E3] font-semibold">{req.proposedMaterial.currentProgress}{req.proposedMaterial.materialType === 'book' ? (req.proposedMaterial.unit || 'p') : '강'}</span>
+                          </p>
+                        )}
+                        <p className="font-bold text-slate-600 dark:text-slate-300">
+                          • 총량: {req.proposedMaterial.total ? <span className="text-[#0071E3] font-semibold">{req.proposedMaterial.total}{req.proposedMaterial.materialType === 'book' ? (req.proposedMaterial.unit || 'p') : '강'} (예상)</span> : <span className="text-slate-400 dark:text-slate-500">자율(총량 미정)</span>}
+                        </p>
+                        {req.proposedMaterial.note && (
+                          <p className="font-bold text-slate-600 dark:text-slate-300">• 메모: {req.proposedMaterial.note}</p>
+                        )}
+                      </div>
+                    )}
+
                     {(sentReplies[req.id] ?? req.adminReply) && (
                       <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
                         내 답변: {sentReplies[req.id] ?? req.adminReply}
@@ -4207,7 +4286,16 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         <span className="sr-only">답변 전송</span>
                       </Button>
 
-                      {req.proposedGoal ? (
+                      {req.proposedMaterial ? (
+                        <Button
+                          size="sm"
+                          disabled={resolvingReqId === req.id}
+                          onClick={() => actOnRequest(req.id, { status: 'resolved', reply: (replyDrafts[req.id] || '').trim() || undefined })}
+                          className="h-8 shrink-0 rounded-lg bg-[#0071E3] hover:bg-[#0077ED] px-2.5 text-[11px] font-bold text-white approve-plan-btn"
+                        >
+                          {resolvingReqId === req.id ? '생성 중' : '승인 및 자료 생성'}
+                        </Button>
+                      ) : req.proposedGoal ? (
                         <Button
                           size="sm"
                           disabled={resolvingReqId === req.id}
@@ -4495,6 +4583,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 handleSaveMaterial,
                 handleToggleMaterialStudyDay,
                 handleUpdateSubjectStudyTime,
+                updateMaterialStudyTime,
                 hasSearchedIntegrated,
                 integratedSearchResults,
                 integratedSearchTimerRef,

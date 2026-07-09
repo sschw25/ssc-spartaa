@@ -284,7 +284,7 @@ export function ConsultationTab({
               </div>
               <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-2.5">
                 <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">쿠폰</p>
-                <p className="mt-0.5 flex items-center gap-1 text-sm font-black text-slate-700 dark:text-slate-300"><Ticket className="w-4 h-4" /> {leaveCoupons}</p>
+                <p className="mt-0.5 flex items-center justify-center gap-1 text-sm font-black text-slate-700 dark:text-slate-300"><Ticket className="w-4 h-4" /> {leaveCoupons}</p>
               </div>
             </div>
             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도 무관(영수증 밴드 증빙) · 반차 추가는 쿠폰 {COUPONS_PER_EXTRA_HALFDAY}개 필요</p>

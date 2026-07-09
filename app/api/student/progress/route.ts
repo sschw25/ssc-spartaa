@@ -153,6 +153,40 @@ function applyStudySlotMutation(
   return { ok: true, updated: { value, total } };
 }
 
+// selfPaced 자료의 학생 예상 총량 입력(셀프서비스) — total 만 세팅 + totalIsEstimate 표시. goalType 은 selfPaced 유지(계획 미생성).
+// selfPaced 자료에만 허용(관리자 정식 목표를 학생이 덮어쓰지 못하게). 대상 자료(최상위+subjects) 모두 반영.
+function applyEstimatedTotalMutation(
+  student: Student,
+  materialType: 'book' | 'lecture',
+  materialId: string,
+  estimatedTotal: number,
+): MutationResult {
+  const nowIso = new Date().toISOString();
+  const materials: Array<BookProgress | LectureProgress> = materialType === 'book'
+    ? [
+        ...((student.books || []).filter((b) => b.id === materialId)),
+        ...((student.subjects || []).flatMap((s) => (s.books || []).filter((b) => b.id === materialId))),
+      ]
+    : [
+        ...((student.lectures || []).filter((l) => l.id === materialId)),
+        ...((student.subjects || []).flatMap((s) => (s.lectures || []).filter((l) => l.id === materialId))),
+      ];
+  if (materials.length === 0) return { ok: false, reason: 'material-not-found' };
+  // selfPaced 자료가 아니면 거부(정식 목표/계획이 걸린 자료의 총량은 학생이 바꿀 수 없다).
+  if (materials.some((m) => m.goalType !== 'selfPaced')) return { ok: false, reason: 'material-not-found' };
+  const hasEstimate = estimatedTotal > 0;
+  materials.forEach((m) => {
+    if (materialType === 'book') (m as BookProgress).totalPages = estimatedTotal;
+    else (m as LectureProgress).totalLectures = estimatedTotal;
+    m.totalIsEstimate = hasEstimate ? true : undefined;
+    m.updatedAt = nowIso;
+  });
+  const value = materialType === 'book'
+    ? (materials[0] as BookProgress).currentPage || 0
+    : (materials[0] as LectureProgress).completedLectures || 0;
+  return { ok: true, updated: { value, total: estimatedTotal } };
+}
+
 function applyProgressMutation(
   student: Student,
   opts: {
@@ -409,6 +443,7 @@ export async function PATCH(req: NextRequest) {
     reviewMinutes?: unknown;
     deadlineAmount?: unknown;
     studySlot?: unknown;
+    estimatedTotal?: unknown;
   };
   try {
     body = await req.json();
@@ -433,6 +468,11 @@ export async function PATCH(req: NextRequest) {
   const deadlineAmount = hasDeadlineAmount ? Number(body.deadlineAmount) : 0;
   // 자율학습 슬롯(studySlot) 설정 — 진도/완료와 독립. 허용 값만.
   const hasStudySlot = body?.studySlot !== undefined;
+  // selfPaced 예상 총량(estimatedTotal) 설정 — 진도/완료와 독립. 0~99999 클램프(0=해제).
+  const hasEstimatedTotal = body?.estimatedTotal !== undefined;
+  const estimatedTotal = hasEstimatedTotal
+    ? Math.min(99999, Math.max(0, Math.round(Number(body.estimatedTotal) || 0)))
+    : 0;
 
   if (!materialType || !materialId) {
     return NextResponse.json({ success: false, message: '대상 자료 정보가 올바르지 않습니다.' }, { status: 400 });
@@ -488,6 +528,28 @@ export async function PATCH(req: NextRequest) {
       const saved = await patchStudentProgress(student, originalUpdatedAt);
       if (saved === 'conflict') continue;
       return NextResponse.json({ success: true, studySlot: slot });
+    }
+    return NextResponse.json({ success: false, message: '설정 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
+  }
+
+  // selfPaced 예상 총량 설정 — 전용 경로(진도/완료 검증과 분리). selfPaced 자료에만 반영.
+  if (hasEstimatedTotal) {
+    if (!Number.isFinite(estimatedTotal) || estimatedTotal < 0) {
+      return NextResponse.json({ success: false, message: '예상 분량이 올바르지 않습니다.' }, { status: 400 });
+    }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const student = await getStudentById(studentId);
+      if (!student) {
+        return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const originalUpdatedAt = student.updatedAt ?? '';
+      const result = applyEstimatedTotalMutation(student, materialType as 'book' | 'lecture', materialId, estimatedTotal);
+      if (!result.ok) {
+        return NextResponse.json({ success: false, message: '해당 자율 학습 자료를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const saved = await patchStudentProgress(student, originalUpdatedAt);
+      if (saved === 'conflict') continue;
+      return NextResponse.json({ success: true, total: result.updated.total });
     }
     return NextResponse.json({ success: false, message: '설정 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
   }

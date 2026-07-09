@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target, Timer, CalendarDays } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
+import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, ProposedMaterial, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -1147,6 +1147,55 @@ export function useReportState() {
     }
   };
 
+  // 자율 입력(selfPaced) 자료의 예상 총 분량 입력 — 학생 셀프서비스(관리자 개입 없음). 즉시 반영.
+  // total(totalPages/totalLectures) 만 바꾸고 goalType 은 selfPaced 유지(계획 생성 안 함). totalIsEstimate=true.
+  const saveEstimatedTotal = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    estimatedTotal: number,
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, estimatedTotal }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        mutationSeqRef.current += 1;
+        const nextTotal = Number(json.total) || 0;
+        const hasEstimate = nextTotal > 0;
+        setStudent((prev) => {
+          if (!prev) return prev;
+          const patchList = <T extends { id: string }>(list?: T[]) =>
+            (list || []).map((m) =>
+              m.id === materialId
+                ? {
+                    ...m,
+                    ...(materialType === 'book' ? { totalPages: nextTotal } : { totalLectures: nextTotal }),
+                    totalIsEstimate: hasEstimate ? true : undefined,
+                  }
+                : m,
+            );
+          return {
+            ...prev,
+            subjects: (prev.subjects || []).map((s) => ({
+              ...s,
+              ...(materialType === 'book' ? { books: patchList(s.books) } : { lectures: patchList(s.lectures) }),
+            })),
+            ...(materialType === 'book'
+              ? { books: patchList(prev.books) }
+              : { lectures: patchList(prev.lectures) }),
+          };
+        });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   // 오늘 시작점 조정 — /api/student/progress/adjust 호출.
   // 자동 승인(auto=true): 서버가 current+계획을 오늘 anchor 로 재생성 → 최소 데이터(subjects 등)만 병합(조용한 갱신).
   //   (리포트 student 는 마스킹 투영이라 전체 교체 대신 진도 관련 필드만 덮는다 — changeRequests 등 파생 필드 보존)
@@ -1277,7 +1326,7 @@ export function useReportState() {
     }
   };
 
-  const sendRequest = async (requestType: string, rawMessage: string, proposedGoal?: ProposedGoal) => {
+  const sendRequest = async (requestType: string, rawMessage: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial) => {
     const message = (rawMessage || '').trim();
     if (!message) {
       setRequestError('신청 내용을 입력해 주세요.');
@@ -1289,7 +1338,7 @@ export function useReportState() {
       const res = await fetch('/api/student/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestType, message, proposedGoal }),
+        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial }),
       });
       const json = await res.json();
       if (res.ok && json.success) {
@@ -2484,6 +2533,7 @@ export function useReportState() {
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,
+    saveEstimatedTotal,
     adjustStartPoint,
     formatNotificationDate,
     notificationCount,

@@ -341,10 +341,12 @@ function buildItem(
   // 목표(계획) 미설정 자료는 달력 선형 추정(과거 getExpectedLinear 폴백)으로 뒤처짐을 만들지
   // 않는다 — 기대치 null → 판정 제외(no-plan). 기간 목표(deadline) 전용 자료도 여기서는 null
   // (deriveDeadlineGoals 가 마감 위험 판정의 단일 소스).
-  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates, leaveExemptions, subjectStudyTime, deferExemptions);
+  // 반차 슬롯-특정 면제는 자료별 슬롯 기준 — 자료 studyTime(관리자 지정) 우선, 없으면 과목 studyTime.
+  const effectiveStudyTime = material.studyTime || subjectStudyTime;
+  const rawExpectedToday = getExpectedFromPlans(material.detailedPlans, today, studyDays, progressBaselineDate, false, leaveDates, leaveExemptions, effectiveStudyTime, deferExemptions);
   // defer(정해진 반차/휴식)로 잃은 학습일만큼 표시 마감을 뒤로 민다(daysToTarget 도 동일 기준).
   const effectiveTargetDate = deferExemptions
-    ? getEffectiveTargetDate(material.targetDate, material.detailedPlans, studyDays, deferExemptions, subjectStudyTime)
+    ? getEffectiveTargetDate(material.targetDate, material.detailedPlans, studyDays, deferExemptions, effectiveStudyTime)
     : material.targetDate;
   const expectedToday = rawExpectedToday === null
     ? null
