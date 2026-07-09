@@ -629,7 +629,7 @@ export function ProgressTab() {
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
                       <Label className="text-[10px] font-bold text-slate-700 dark:text-slate-300">
-                        {newMaterialType === 'book' ? `총 분량 (${newMaterialUnit === 'p' ? '페이지' : newMaterialUnit})` : '총 강의 수'}
+                        {newMaterialType === 'book' ? `총 분량 (${newMaterialUnit === 'p' ? '페이지' : newMaterialUnit})` : '총 강의 수'} <span className="font-medium text-slate-400">(선택)</span>
                       </Label>
                       {newMaterialType === 'book' && (
                         <div className="flex gap-1 items-center">
@@ -681,7 +681,7 @@ export function ProgressTab() {
                     <div className="flex gap-2">
                       <Input
                         type="number"
-                        placeholder={newMaterialType === 'book' ? (newMaterialUnit === 'p' ? "예: 350" : "예: 10") : "예: 30"}
+                        placeholder={newMaterialType === 'book' ? (newMaterialUnit === 'p' ? "예: 350 (몰라도 비워두세요)" : "예: 10 (몰라도 비워두세요)") : "예: 30 (몰라도 비워두세요)"}
                         value={newMaterialTotal || ''}
                         onChange={(e) => setNewMaterialTotal(e.target.value === '' ? '' : Number(e.target.value))}
                         className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100 flex-1"

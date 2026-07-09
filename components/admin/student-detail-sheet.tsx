@@ -2065,26 +2065,29 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const handleSaveMaterial = async () => {
     const subjectName = newMaterialSubject.trim();
     const title = newMaterialTitle.trim();
-    const total = Number(newMaterialTotal);
+    // 총량은 선택 — 몇 강/몇 p인지 몰라도 이름만 등록(총량 0 = 미정, 나중에 설정). 빠른 입력과 동일한 규칙.
+    const parsedTotal = Number(newMaterialTotal);
+    const total = Number.isFinite(parsedTotal) && parsedTotal > 0 ? parsedTotal : 0;
 
     if (!subjectName) return toast.error('과목명을 입력하거나 선택해 주세요.');
     if (!title) return toast.error(newMaterialType === 'book' ? '교재명을 입력해 주세요.' : '인강 강좌명을 입력해 주세요.');
-    if (!total || total <= 0) return toast.error(newMaterialType === 'book' ? '올바른 총 페이지를 지정해주세요.' : '올바른 총 강의 수를 지정해주세요.');
 
-    // 공유 DB 등록 API
-    await fetch('/api/admin/shared-materials', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: newMaterialType,
-        name: title,
-        subject: subjectName,
-        publisher: newMaterialType === 'book' ? newMaterialPublisher.trim() : '',
-        author: newMaterialAuthor.trim(),
-        totalPagesOrLectures: total,
-        unit: newMaterialType === 'book' ? newMaterialUnit : '강'
-      })
-    });
+    // 공유 DB 등록 API — 총량 0(미정)은 총량 필수 검증(400)에 걸리고 자동완성 카탈로그를 오염시키므로 제외(빠른 입력과 동일).
+    if (total > 0) {
+      await fetch('/api/admin/shared-materials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: newMaterialType,
+          name: title,
+          subject: subjectName,
+          publisher: newMaterialType === 'book' ? newMaterialPublisher.trim() : '',
+          author: newMaterialAuthor.trim(),
+          totalPagesOrLectures: total,
+          unit: newMaterialType === 'book' ? newMaterialUnit : '강'
+        })
+      });
+    }
 
     const nowStr = new Date().toISOString();
 

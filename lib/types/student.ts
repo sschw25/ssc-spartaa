@@ -281,7 +281,7 @@ export interface LeaveRequest {
   type: LeaveType;        // 오전/오후/야간 반차, 휴식권(하루종일), 병가
   slot?: 'morning' | 'afternoon' | 'night' | 'fullday'; // 개인사정 반차·병가의 시간대 선택
   date: string;           // 사용 희망일 (YYYY-MM-DD) — 월 한도 집계 기준
-  reason?: string;        // 사유 (옵션 — 병가는 밴드채팅 영수증 증빙 안내)
+  reason?: string;        // 사유 (옵션 — 병가는 신청 후 영수증 사진 첨부 안내)
   status: 'pending' | 'approved' | 'rejected';
   autoApproved?: boolean; // 반차 잔여/추가권으로 신청 즉시 자동 승인된 건 — 학생에게 '자동 승인' 배지로 표시
   usedCoupon?: boolean;   // 쿠폰으로 추가 신청한 건 (관리자 표시용)

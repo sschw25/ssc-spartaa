@@ -182,7 +182,7 @@ export function getLeaveCredits(
   return { halfday: Math.max(0, earnedHalf - usedHalf), fullday: Math.max(0, earnedFull - usedFull) };
 }
 
-// 해당 신청이 기본 월 한도를 초과하는지 (초과 시 쿠폰/밴드채팅 안내 대상).
+// 해당 신청이 기본 월 한도를 초과하는지 (초과 시 쿠폰→추가권 교환 안내 대상).
 // 병가는 한도와 무관하므로 항상 false.
 export function exceedsMonthlyQuota(
   type: LeaveType,

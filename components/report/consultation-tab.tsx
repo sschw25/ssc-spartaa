@@ -252,6 +252,7 @@ export function ConsultationTab({
         // 추가권(교환 반차권/휴식권)이 남아 있으면 기본 한도를 넘어도 신청 가능
         const overQuota = (selCat === 'halfday' && halfLeft <= 0 && credits.halfday <= 0) || (selCat === 'fullday' && fullLeft <= 0 && credits.fullday <= 0);
         const isSick = selCat === 'sick';
+        const isPersonal = selCat === 'personal_halfday' || selCat === 'personal_fullday';
         const [y, m] = selMonth.split('-');
         const monthLabel = `${y}년 ${parseInt(m)}월`;
         const leaveStatusBadge = (s: string, reply?: string, auto?: boolean) => getTimelineStatusBadge(s, reply, auto);
@@ -262,7 +263,7 @@ export function ConsultationTab({
                 <Calendar className="w-4 h-4" /> 휴식 · 반차 · 병가 신청
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
-                반차는 잔여 한도 내에서 <span className="font-black text-emerald-600">신청 즉시 자동 승인</span>돼요(아래 내역에서 확인). 휴식권·개인사정·병가는 코멘터 검토 후 승인돼요. 병가·개인사정은 <span className="font-black">신청 후 24시간 이내에 아래 내역에서 사진(영수증 등)을 첨부</span>할 수 있고, 코멘터가 확인하면 사진은 자동으로 삭제돼요.
+                반차는 잔여 한도 내에서 <span className="font-black text-emerald-600">신청 즉시 자동 승인</span>돼요(아래 내역에서 확인). 휴식권·개인사정·병가는 코멘터 검토 후 승인돼요. <span className="font-black">병가는 병원·약국 영수증, 개인사정은 사유를 증명할 사진</span>을 신청 후 24시간 이내에 아래 내역에서 첨부해 주세요(코멘터 확인 시 자동 삭제). 쿠폰을 반차권·휴식권으로 교환해 두면 개인사정 대신 반차·휴식권으로 신청해 <span className="font-black">증빙 없이</span> 쉴 수 있어요.
               </p>
             </div>
 
@@ -287,7 +288,7 @@ export function ConsultationTab({
                 <p className="mt-0.5 flex items-center justify-center gap-1 text-sm font-black text-slate-700 dark:text-slate-300"><Ticket className="w-4 h-4" /> {leaveCoupons}</p>
               </div>
             </div>
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도 무관(영수증 밴드 증빙) · 반차 추가는 쿠폰 {COUPONS_PER_EXTRA_HALFDAY}개 필요</p>
+            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-400 -mt-1.5">{monthLabel} 기준 · 병가는 한도 무관(병원·약국 영수증) · 반차 추가는 쿠폰 {COUPONS_PER_EXTRA_HALFDAY}개로 반차권 교환</p>
 
             {/* 종류 선택 — 승인 방식별로 그룹핑(바로 승인 vs 코멘터 검토)해 학생이 예측 가능하게 */}
             <div className="space-y-3">
@@ -367,7 +368,7 @@ export function ConsultationTab({
               <textarea
                 value={leaveForm.reason}
                 onChange={(e) => setLeaveForm((f) => ({ ...f, reason: e.target.value }))}
-                placeholder={isSick ? '병가 사유를 적어 주세요. 영수증은 밴드 채팅으로 따로 보내 주세요.' : '사유 (선택) — 예) 병원 진료, 가족 행사'}
+                placeholder={isSick ? '병가 사유를 적어 주세요. 병원·약국 영수증 사진은 신청한 뒤 아래 내역에서 첨부할 수 있어요.' : isPersonal ? '개인사정을 적어 주세요. 사유를 증명할 사진은 신청한 뒤 아래 내역에서 첨부할 수 있어요.' : '사유 (선택) — 예) 병원 진료, 가족 행사'}
                 rows={2}
                 className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
               />
@@ -375,13 +376,18 @@ export function ConsultationTab({
               {/* 안내/경고 */}
               {isSick && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 dark:bg-amber-500/10 px-3 py-2 text-[10px] font-semibold text-amber-800">
-                  <Thermometer className="mr-0.5 inline h-3 w-3 align-[-1.5px]" />병가는 월 한도와 무관해요. 신청한 뒤 <b>아래 내역에서 24시간 이내에 영수증/진단서 사진을 첨부</b>해 주세요(코멘터 확인 시 자동 삭제).
+                  <Thermometer className="mr-0.5 inline h-3 w-3 align-[-1.5px]" />병가는 월 한도와 무관해요. 신청한 뒤 <b>아래 내역에서 24시간 이내에 병원·약국 영수증(또는 진단서) 사진을 첨부</b>해 주세요(코멘터 확인 시 자동 삭제).
+                </div>
+              )}
+              {isPersonal && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50/70 dark:bg-amber-500/10 px-3 py-2 text-[10px] font-semibold text-amber-800">
+                  개인사정은 신청한 뒤 <b>아래 내역에서 24시간 이내에 사유를 증명할 사진을 첨부</b>해 주세요(코멘터 확인 시 자동 삭제). 쿠폰을 반차권·휴식권으로 교환해 두면, 개인사정 대신 <b>반차·휴식권으로 신청해 증빙 없이</b> 쉴 수 있어요.
                 </div>
               )}
               {!isSick && overQuota && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 dark:bg-amber-500/10 px-3 py-2 text-[10px] font-semibold text-amber-800">
                   이번 달 {selCat === 'halfday' ? '반차' : '휴식권'}를 모두 사용했어요.
-                  {selCat === 'halfday' ? ` 추가가 필요하면 쿠폰 ${COUPONS_PER_EXTRA_HALFDAY}개로 신청 가능합니다 — 밴드 채팅으로 문의 후 쿠폰을 제출해 주세요.` : ' 추가가 필요하면 밴드 채팅으로 문의해 주세요.'}
+                  {selCat === 'halfday' ? ` 쿠폰교환소에서 쿠폰 ${COUPONS_PER_EXTRA_HALFDAY}개를 반차권으로 교환하면 여기서 바로 추가 신청할 수 있어요.` : ' 쿠폰교환소에서 쿠폰을 휴식권으로 교환하면 여기서 바로 추가 신청할 수 있어요.'}
                 </div>
               )}
 
@@ -390,7 +396,7 @@ export function ConsultationTab({
                 disabled={leaveSubmitting || (!isSick && overQuota) || !leaveForm.date}
                 className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
               >
-                {leaveSubmitting ? '신청 중...' : (!isSick && overQuota) ? '한도 초과 (밴드 채팅 문의)' : `${getLeaveTypeLabel(leaveForm.type)} 신청하기`}
+                {leaveSubmitting ? '신청 중...' : (!isSick && overQuota) ? '한도 초과 (쿠폰으로 추가권 교환 필요)' : `${getLeaveTypeLabel(leaveForm.type)} 신청하기`}
               </button>
               {leaveError && <p className="text-[10px] font-bold text-red-500">{leaveError}</p>}
             </form>
