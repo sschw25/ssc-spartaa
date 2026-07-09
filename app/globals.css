@@ -665,6 +665,32 @@ body:has(.admin-fluid-ui) {
     display: none !important;
   }
 
+  /* 캘린더 전체화면 관리 오버레이에서 인쇄할 때 — 오버레이/카드 배경·고정위치를 중화해
+     내부 인쇄블록(print:block)만 A4 흐름으로 나오게 한다. sonner 토스트도 제외. */
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+  .print-host {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    background: transparent !important;
+    padding: 0 !important;
+    z-index: auto !important;
+  }
+  .print-host > div {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+  }
+  .print-host .print-mgmt-card {
+    max-width: none !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
   .report-page {
     min-height: auto !important;
     background: #FFFFFF !important;

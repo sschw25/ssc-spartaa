@@ -444,6 +444,9 @@ export interface CampusEvent {
   couponReward?: number;    // 참여자에게 지급할 쿠폰 수
   targetMode?: 'campus' | 'students'; // 대상 선정 방식 (센터 전체 / 특정 인원)
   targetStudentIds?: string[];        // targetMode==='students' 일 때 대상 학생 ID
+  // 알림 발송 시 고른 수신 대상. 정의·비어있지않으면 이 학생에게만 노출(응답 가능),
+  // 미정의(빈배열)면 campus/targetMode 폴백. (모의고사·OT recipientStudentIds 와 동일 규칙)
+  recipientStudentIds?: string[];
   notifiedAt?: string;      // 학생 알림 발송 시각 (ISO)
   rewardedAt?: string;      // 쿠폰 일괄 지급 완료 시각 (ISO)
   createdAt: string;

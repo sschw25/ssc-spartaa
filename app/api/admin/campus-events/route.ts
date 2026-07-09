@@ -155,7 +155,7 @@ export async function PATCH(request: Request) {
   if (!session) {
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
   }
-  let body: { eventId?: unknown; action?: unknown };
+  let body: { eventId?: unknown; action?: unknown; studentIds?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -172,7 +172,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, message: '해당 캠퍼스 일정을 변경할 권한이 없습니다.' }, { status: 403 });
     }
     const cancel = body?.action === 'cancel';
-    const event = await notifyCampusEvent(eventId, cancel ? null : new Date().toISOString());
+    // 취소 시 명시 수신자 초기화(폴백 복귀). 발송 시 studentIds 가 배열이면 그 학생에게만, 아니면 미변경(폴백 유지).
+    let recipientStudentIds: string[] | undefined;
+    if (cancel) {
+      recipientStudentIds = [];
+    } else if (Array.isArray(body?.studentIds)) {
+      recipientStudentIds = Array.from(
+        new Set((body.studentIds as unknown[]).filter((s): s is string => typeof s === 'string')),
+      ).slice(0, 2000);
+    }
+    const event = await notifyCampusEvent(eventId, cancel ? null : new Date().toISOString(), recipientStudentIds);
     return NextResponse.json({ success: true, event });
   } catch (error: unknown) {
     return NextResponse.json({ success: false, message: error instanceof Error ? error.message : '처리 실패' }, { status: 500 });

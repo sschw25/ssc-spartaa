@@ -13,8 +13,6 @@ import {
   CalendarClock,
   UserPlus,
   LayoutGrid,
-  ClipboardCheck,
-  Utensils,
   Shield,
   CalendarHeart,
   CalendarDays,
@@ -61,9 +59,7 @@ const GROUPS: TabGroup[] = [
     items: [
       { icon: ClipboardList, label: '출결 상세', href: '/admin/attendance' },
       { icon: LayoutGrid, label: '좌석 현황판', href: '/admin/seat-board' },
-      { icon: ClipboardCheck, label: '모의고사', href: '/admin/mock-exam' },
-      { icon: CalendarClock, label: 'OT 참여', href: '/admin/ot-events' },
-      { icon: Utensils, label: '도시락 신청', href: '/admin/meals' },
+      // 모의고사·OT·도시락은 학원 캘린더로 통합 — 네비에서 제외.
       { icon: Shield, label: '벌점·상점', href: '/admin/penalties' },
       { icon: CalendarHeart, label: '휴식·반차', href: '/admin/leave-requests' },
       { icon: Ticket, label: '쿠폰', href: '/admin/leave' },

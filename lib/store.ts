@@ -749,9 +749,9 @@ export async function deleteLeaveProof(path: string): Promise<void> {
   return deleteLeaveProofSupabase(path);
 }
 
-export async function notifyCampusEvent(id: string, notifiedAt: string | null): Promise<CampusEvent> {
+export async function notifyCampusEvent(id: string, notifiedAt: string | null, recipientStudentIds?: string[]): Promise<CampusEvent> {
   requireSupabase();
-  return notifyCampusEventSupabase(id, notifiedAt);
+  return notifyCampusEventSupabase(id, notifiedAt, recipientStudentIds);
 }
 
 export async function markCampusEventRewarded(id: string, rewardedAt: string): Promise<CampusEvent> {

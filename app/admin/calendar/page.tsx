@@ -7,11 +7,17 @@ import {
   Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, X, RefreshCw,
   Ticket, Minus, Plus, ChevronDown, PenLine, MessageSquare, ShieldAlert, CalendarHeart,
   ClipboardCheck, CalendarClock, Trash2, Bell, Gift, Search, Pin, GraduationCap,
-  MessageCircle, TriangleAlert, CheckCircle2, Clock, Megaphone, ImagePlus,
+  MessageCircle, TriangleAlert, CheckCircle2, Clock, Megaphone, ImagePlus, Utensils,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { compressImageToJpeg } from '@/lib/image-compress';
-import { Student, LeaveRequest, LeaveType, CampusEvent, MockExam, OtEvent } from '@/lib/types/student';
+import { Student, LeaveRequest, LeaveType, CampusEvent, MockExam, OtEvent, MealPlan, MealDay, MealKind } from '@/lib/types/student';
+import { createPortal } from 'react-dom';
+import { RecipientPickerModal } from '@/components/admin/recipient-picker-modal';
+import { MockExamManager } from '@/components/admin/mock-exam-manager';
+import { OtEventManager } from '@/components/admin/ot-event-manager';
+import { MealPlanManager } from '@/components/admin/meal-plan-manager';
+import { mondayOf, weekRangeLabel, deadlineForMealWeek, toKstIsoFromDateTimeLocal, formatDeadline, MEAL_DAYS, MEAL_DAY_LABELS, MEAL_KIND_LABELS } from '@/lib/meal';
 import { LEAVE_TYPES, getLeaveTypeLabel, COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
 import { LeaveTypeIcon } from '@/components/leave-type-icon';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
@@ -64,6 +70,7 @@ export default function AdminCalendarPage() {
   const [campusEvents, setCampusEvents] = useState<CampusEvent[]>([]);
   const [mockExams, setMockExams] = useState<MockExam[]>([]);
   const [otEvents, setOtEvents] = useState<OtEvent[]>([]);
+  const [mealPlans, setMealPlans] = useState<MealPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [adminCampus, setAdminCampus] = useState<string>('all');
 
@@ -110,6 +117,32 @@ export default function AdminCalendarPage() {
   });
   const [evBusy, setEvBusy] = useState(false);
   const [evStudentSearch, setEvStudentSearch] = useState('');
+
+  // 통합 생성 모달 — 종류 선택(일정/미션 · 모의고사 · OT · 도시락). 공지는 별도 사진 모달.
+  type CreateKind = 'event' | 'mock' | 'ot' | 'meal';
+  const [createKind, setCreateKind] = useState<CreateKind>('event');
+  const [mockForm, setMockForm] = useState<{ name: string; date: string; campus: string; targetTypes: string[] }>(
+    { name: '', date: todayStr, campus: 'all', targetTypes: [] },
+  );
+  const [otForm, setOtForm] = useState<{ name: string; date: string; campus: string; message: string }>(
+    { name: '', date: todayStr, campus: 'all', message: '' },
+  );
+  const [mealForm, setMealForm] = useState<{ weekStart: string; lunch: boolean; dinner: boolean; campus: string; deadline: string; closedDays: MealDay[]; lunchPrice: string; dinnerPrice: string }>(
+    { weekStart: mondayOf(todayStr), lunch: true, dinner: false, campus: 'all', deadline: deadlineForMealWeek(mondayOf(todayStr)), closedDays: [], lunchPrice: '', dinnerPrice: '' },
+  );
+
+  // 전체화면 관리 오버레이 (모의고사 성적/출결, OT 출결·쿠폰, 도시락 정산·인쇄·그리드)
+  const [mockManagerExam, setMockManagerExam] = useState<MockExam | null>(null);
+  const [otManagerEvent, setOtManagerEvent] = useState<OtEvent | null>(null);
+  const [mealManagerPlan, setMealManagerPlan] = useState<MealPlan | null>(null);
+
+  // 알림 대상 선택 피커 — 참여미션/모의고사/OT 공용
+  const [picker, setPicker] = useState<
+    | { kind: 'mission'; id: string; name: string; campus?: string; participations: Map<string, 'accepted' | 'declined' | 'pending'>; pool: Student[] }
+    | { kind: 'mock'; id: string; name: string; campus?: string; targetExamTypes?: string[] }
+    | { kind: 'ot'; id: string; name: string; campus?: string }
+    | null
+  >(null);
 
   // 사진 공지 등록 모달
   const [noticeModalOpen, setNoticeModalOpen] = useState(false);
@@ -185,30 +218,38 @@ export default function AdminCalendarPage() {
     setAddModalOpen(true);
   };
 
-  const openEventModal = () => {
+  const openEventModal = (kind: CreateKind = 'event') => {
+    const campus = adminCampus !== 'all' ? adminCampus : 'all';
     setEvForm({
       title: '', date: selectedDate, endDate: '', startTime: '', endTime: '',
-      campus: adminCampus !== 'all' ? adminCampus : 'all', memo: '', isMission: false, couponReward: 1,
+      campus, memo: '', isMission: false, couponReward: 1,
       targetMode: 'campus', targetStudentIds: [],
       responseMode: 'none', postTaskLabel: '', postTaskDueDate: '', postTaskHref: '',
     });
+    setMockForm({ name: '', date: selectedDate, campus, targetTypes: [] });
+    setOtForm({ name: '', date: selectedDate, campus, message: '' });
+    const wk = mondayOf(selectedDate);
+    setMealForm({ weekStart: wk, lunch: true, dinner: false, campus, deadline: deadlineForMealWeek(wk), closedDays: [], lunchPrice: '', dinnerPrice: '' });
     setEvStudentSearch('');
+    setCreateKind(kind);
     setEventModalOpen(true);
   };
 
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [stuRes, evRes, exRes, otRes] = await Promise.all([
+      const [stuRes, evRes, exRes, otRes, mealRes] = await Promise.all([
         fetch('/api/admin/students', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/admin/campus-events', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/admin/mock-exams', { cache: 'no-store', credentials: 'same-origin' }),
         fetch('/api/admin/ot-events', { cache: 'no-store', credentials: 'same-origin' }),
+        fetch('/api/admin/meal-plans', { cache: 'no-store', credentials: 'same-origin' }),
       ]);
       if (stuRes.ok) { const j = await stuRes.json(); if (j.success) setStudents(j.data || []); }
       if (evRes.ok) { const j = await evRes.json(); if (j.success) setCampusEvents(j.events || []); }
       if (exRes.ok) { const j = await exRes.json(); if (j.success) setMockExams(j.exams || j.data || []); }
       if (otRes.ok) { const j = await otRes.json(); if (j.success) setOtEvents(j.events || []); }
+      if (mealRes.ok) { const j = await mealRes.json(); if (j.success) setMealPlans(j.plans || j.data || []); }
     } catch {
       toast.error('데이터를 불러오지 못했습니다.');
     } finally {
@@ -303,21 +344,184 @@ export default function AdminCalendarPage() {
     } catch { toast.error('네트워크 에러'); }
   };
 
-  const notifyEvent = async (eventId: string, action: 'send' | 'cancel' = 'send') => {
+  const notifyEvent = async (eventId: string, action: 'send' | 'cancel' = 'send', studentIds?: string[]) => {
     if (action === 'cancel' && !(await confirm({ title: '발송된 참여 미션 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
     const key = `notify_${eventId}`;
     setBusy((b) => ({ ...b, [key]: true }));
     try {
       const res = await fetch('/api/admin/campus-events', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, action }),
+        body: JSON.stringify({ eventId, action, ...(studentIds ? { studentIds } : {}) }),
       });
       const json = await res.json();
       if (json.success) {
         setCampusEvents((prev) => prev.map((e) => e.id === eventId ? json.event : e));
-        toast.success(action === 'cancel' ? '참여 미션 알림을 취소했습니다.' : '학생들에게 참여 확인 알림을 발송했습니다.');
+        setPicker(null);
+        toast.success(action === 'cancel' ? '참여 미션 알림을 취소했습니다.'
+          : studentIds ? `${studentIds.length}명에게 참여 확인 알림을 발송했습니다.` : '학생들에게 참여 확인 알림을 발송했습니다.');
       } else { toast.error(json.message || '처리 실패'); }
     } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
+  };
+
+  // ── 캘린더에서 직접 생성: 모의고사 · OT · 도시락 ──
+  const submitMock = async () => {
+    if (!mockForm.name.trim() || !mockForm.date) { toast.error('시험명과 날짜를 입력해 주세요.'); return; }
+    setEvBusy(true);
+    try {
+      const res = await fetch('/api/admin/mock-exams', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ name: mockForm.name.trim(), date: mockForm.date, targetExamTypes: mockForm.targetTypes, campus: mockForm.campus }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setMockExams((prev) => [json.exam, ...prev]);
+        setSelectedDate(json.exam.date);
+        setEventModalOpen(false);
+        toast.success('모의고사 일정이 등록됐습니다.');
+      } else { toast.error(json.message || '등록 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setEvBusy(false); }
+  };
+
+  const submitOt = async () => {
+    if (!otForm.name.trim() || !otForm.date) { toast.error('OT명과 날짜를 입력해 주세요.'); return; }
+    setEvBusy(true);
+    try {
+      const res = await fetch('/api/admin/ot-events', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({ name: otForm.name.trim(), date: otForm.date, campus: otForm.campus, message: otForm.message.trim() }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setOtEvents((prev) => [json.event, ...prev]);
+        setSelectedDate(json.event.date);
+        setEventModalOpen(false);
+        toast.success('OT 일정이 등록됐습니다.');
+      } else { toast.error(json.message || '등록 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setEvBusy(false); }
+  };
+
+  const submitMeal = async () => {
+    const meals: MealKind[] = [];
+    if (mealForm.lunch) meals.push('lunch');
+    if (mealForm.dinner) meals.push('dinner');
+    if (meals.length === 0) { toast.error('점심/저녁 중 하나 이상을 선택해 주세요.'); return; }
+    // 주·센터당 1라운드 불변조건 — 이미 있으면 막고 안내.
+    const dup = mealPlans.some((p) => p.weekStart === mealForm.weekStart && (p.campus || 'all') === (mealForm.campus || 'all'));
+    if (dup) { toast.error('해당 주·센터에는 이미 도시락 라운드가 있습니다. 도시락 관리에서 수정하세요.'); return; }
+    setEvBusy(true);
+    try {
+      const res = await fetch('/api/admin/meal-plans', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({
+          weekStart: mealForm.weekStart, meals, campus: mealForm.campus,
+          deadline: toKstIsoFromDateTimeLocal(mealForm.deadline),
+          closedDays: mealForm.closedDays,
+          lunchPrice: mealForm.lunchPrice || undefined, dinnerPrice: mealForm.dinnerPrice || undefined,
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setMealPlans((prev) => [json.plan, ...prev]);
+        setSelectedDate(json.plan.weekStart);
+        setEventModalOpen(false);
+        toast.success('도시락 라운드가 등록됐습니다.');
+      } else { toast.error(json.message || '등록 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setEvBusy(false); }
+  };
+
+  // ── 모의고사 · OT 학생 알림(선택 발송/취소) ──
+  const notifyMock = async (examId: string, studentIds: string[]) => {
+    const key = `mock_${examId}`;
+    setBusy((b) => ({ ...b, [key]: true }));
+    try {
+      const res = await fetch('/api/admin/mock-exams', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId, action: 'send', studentIds }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMockExams((prev) => prev.map((e) => e.id === examId ? json.exam : e));
+        setPicker(null);
+        toast.success(`${studentIds.length}명에게 모의고사 알림을 발송했습니다.`);
+      } else { toast.error(json.message || '처리 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
+  };
+  const cancelMock = async (examId: string) => {
+    if (!(await confirm({ title: '발송된 모의고사 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
+    const key = `mock_${examId}`;
+    setBusy((b) => ({ ...b, [key]: true }));
+    try {
+      const res = await fetch('/api/admin/mock-exams', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId, action: 'cancel' }),
+      });
+      const json = await res.json();
+      if (json.success) { setMockExams((prev) => prev.map((e) => e.id === examId ? json.exam : e)); toast.success('모의고사 알림을 취소했습니다.'); }
+      else { toast.error(json.message || '처리 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
+  };
+
+  const notifyOt = async (eventId: string, studentIds: string[]) => {
+    const key = `ot_${eventId}`;
+    setBusy((b) => ({ ...b, [key]: true }));
+    try {
+      const res = await fetch('/api/admin/ot-events', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, action: 'send', studentIds }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setOtEvents((prev) => prev.map((e) => e.id === eventId ? json.event : e));
+        setPicker(null);
+        toast.success(`${studentIds.length}명에게 OT 알림을 발송했습니다.`);
+      } else { toast.error(json.message || '처리 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
+  };
+  const cancelOt = async (eventId: string) => {
+    if (!(await confirm({ title: '발송된 OT 알림을 취소할까요?', description: '학생 화면에서 사라지고, 다시 발송할 수 있습니다.', tone: 'danger', confirmText: '취소' }))) return;
+    const key = `ot_${eventId}`;
+    setBusy((b) => ({ ...b, [key]: true }));
+    try {
+      const res = await fetch('/api/admin/ot-events', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId, action: 'cancel' }),
+      });
+      const json = await res.json();
+      if (json.success) { setOtEvents((prev) => prev.map((e) => e.id === eventId ? json.event : e)); toast.success('OT 알림을 취소했습니다.'); }
+      else { toast.error(json.message || '처리 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
+  };
+
+  // ── 도시락 학생 알림(캠퍼스 단위 · 대상 필터 없음) ──
+  const notifyMeal = async (planId: string, action: 'send' | 'cancel') => {
+    if (action === 'cancel' && !(await confirm({ title: '발송된 도시락 알림을 취소할까요?', tone: 'danger', confirmText: '취소' }))) return;
+    const key = `meal_${planId}`;
+    setBusy((b) => ({ ...b, [key]: true }));
+    try {
+      const res = await fetch('/api/admin/meal-plans', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId, ...(action === 'cancel' ? { action: 'cancel' } : {}) }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setMealPlans((prev) => prev.map((p) => p.id === planId ? json.plan : p));
+        toast.success(action === 'cancel' ? '도시락 알림을 취소했습니다.' : '학생들에게 도시락 신청 알림을 발송했습니다.');
+      } else { toast.error(json.message || '처리 실패'); }
+    } catch { toast.error('네트워크 에러'); } finally { setBusy((b) => ({ ...b, [key]: false })); }
+  };
+
+  // 참여미션 알림 피커 오픈 — 후보 풀·응답상태 스냅샷 준비
+  const openMissionPicker = (event: CampusEvent) => {
+    const pool = students.filter((s) => {
+      if (event.targetMode === 'students') return (event.targetStudentIds || []).includes(s.id);
+      return !event.campus || event.campus === 'all' || event.campus === s.campus;
+    });
+    const participations = new Map<string, 'accepted' | 'declined' | 'pending'>();
+    for (const s of pool) {
+      const p = (s.eventParticipations || []).find((x) => x.eventId === event.id);
+      participations.set(s.id, p?.status === 'accepted' ? 'accepted' : p?.status === 'declined' ? 'declined' : 'pending');
+    }
+    setPicker({ kind: 'mission', id: event.id, name: event.title, campus: event.campus, participations, pool });
   };
 
   const grantEventCoupons = async (event: CampusEvent) => {
@@ -405,6 +609,16 @@ export default function AdminCalendarPage() {
     return map;
   }, [otEvents, matchCampus]);
 
+  // 도시락 라운드 — 주(월) 단위. 캘린더 칩은 주 시작(월요일) 칸에 표시.
+  const mealPlansByDate = useMemo(() => {
+    const map: Record<string, MealPlan[]> = {};
+    for (const p of mealPlans) {
+      if (!matchCampus(p.campus)) continue;
+      (map[p.weekStart] ||= []).push(p);
+    }
+    return map;
+  }, [mealPlans, matchCampus]);
+
   const eventsByDate = useMemo(() => {
     const map: Record<string, LeaveEvent[]> = {};
     for (const ev of allEvents) {
@@ -437,8 +651,8 @@ export default function AdminCalendarPage() {
 
   // 캘린더 칸 활동 종합
   const activitiesByDate = useMemo(() => {
-    const map: Record<string, { leaves: number; consultations: number; penalties: number; events: number; missions: number; exams: number; ot: number }> = {};
-    const ensure = (d: string) => (map[d] ||= { leaves: 0, consultations: 0, penalties: 0, events: 0, missions: 0, exams: 0, ot: 0 });
+    const map: Record<string, { leaves: number; consultations: number; penalties: number; events: number; missions: number; exams: number; ot: number; meals: number }> = {};
+    const ensure = (d: string) => (map[d] ||= { leaves: 0, consultations: 0, penalties: 0, events: 0, missions: 0, exams: 0, ot: 0, meals: 0 });
     for (const ev of allEvents) ensure(ev.request.date).leaves += 1;
     for (const s of students) {
       if (campusFilter !== 'all' && s.campus !== campusFilter) continue;
@@ -450,8 +664,9 @@ export default function AdminCalendarPage() {
     }
     for (const [d, list] of Object.entries(mockExamsByDate)) ensure(d).exams += list.length;
     for (const [d, list] of Object.entries(otEventsByDate)) ensure(d).ot += list.length;
+    for (const [d, list] of Object.entries(mealPlansByDate)) ensure(d).meals += list.length;
     return map;
-  }, [students, allEvents, campusFilter, campusEventsByDate, mockExamsByDate, otEventsByDate]);
+  }, [students, allEvents, campusFilter, campusEventsByDate, mockExamsByDate, otEventsByDate, mealPlansByDate]);
 
   const calendarDays = useMemo(() => {
     const date = new Date(currentYear, currentMonth, 1);
@@ -474,6 +689,14 @@ export default function AdminCalendarPage() {
   const selectedCampusEvents = useMemo(() => campusEventsByDate[selectedDate] || [], [campusEventsByDate, selectedDate]);
   const selectedMockExams = useMemo(() => mockExamsByDate[selectedDate] || [], [mockExamsByDate, selectedDate]);
   const selectedOtEvents = useMemo(() => otEventsByDate[selectedDate] || [], [otEventsByDate, selectedDate]);
+  // 선택 날짜가 속한 주(월~금)의 도시락 라운드
+  const selectedMealPlans = useMemo(() => mealPlansByDate[mondayOf(selectedDate)] || [], [mealPlansByDate, selectedDate]);
+
+  // 모의고사 대상 직렬 후보 — 학생 contact(직렬) 고유값
+  const examTypeOptions = useMemo(
+    () => Array.from(new Set(students.map((s) => (s.contact || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ko')),
+    [students],
+  );
 
   const groupedEvents = useMemo(() => {
     const groups: Record<LeaveType, LeaveEvent[]> = {
@@ -526,6 +749,7 @@ export default function AdminCalendarPage() {
   // 미션 대상/통계 계산
   const missionStats = (event: CampusEvent) => {
     const targets = students.filter((s) => {
+      if (event.recipientStudentIds && event.recipientStudentIds.length) return event.recipientStudentIds.includes(s.id);
       if (event.targetMode === 'students') return (event.targetStudentIds || []).includes(s.id);
       return !event.campus || event.campus === 'all' || event.campus === s.campus;
     });
@@ -548,10 +772,10 @@ export default function AdminCalendarPage() {
     );
   }
 
-  const totalSelected = selectedDateEvents.length + selectedCampusEvents.length + selectedMockExams.length + selectedOtEvents.length + selectedDateConsultations.length + selectedDatePenalties.length;
+  const totalSelected = selectedDateEvents.length + selectedCampusEvents.length + selectedMockExams.length + selectedOtEvents.length + selectedMealPlans.length + selectedDateConsultations.length + selectedDatePenalties.length;
 
   return (
-    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
+    <div className="admin-fluid-ui ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans no-print">
       <AdminTopNav
         title="학원 캘린더"
         titleIcon={<CalendarIcon className="w-4 h-4 text-[#0071E3]" />}
@@ -592,8 +816,8 @@ export default function AdminCalendarPage() {
               <Button size="sm" variant="outline" onClick={openNoticeModal} className="rounded-xl border-[#0071E3]/30 text-[#0071E3] hover:bg-[#0071E3]/[0.06] dark:hover:bg-[#0071E3]/15 text-xs font-black h-9 px-3.5">
                 <Megaphone className="w-4 h-4 mr-1" /> 공지 등록
               </Button>
-              <Button size="sm" onClick={openEventModal} className="rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-9 px-3.5 shadow-sm">
-                <Plus className="w-4 h-4 mr-1" /> 일정 등록
+              <Button size="sm" onClick={() => openEventModal()} className="rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-9 px-3.5 shadow-sm">
+                <Plus className="w-4 h-4 mr-1" /> 만들기
               </Button>
             </div>
           </div>
@@ -637,6 +861,7 @@ export default function AdminCalendarPage() {
                           {act.events > 0 && <Pill cls="bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 border-slate-200/60 dark:border-white/10" icon={<Pin className="w-2.5 h-2.5 shrink-0" />} text={`일정 ${act.events}`} />}
                           {act.exams > 0 && <Pill cls="bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/20" icon={<PenLine className="w-2.5 h-2.5 shrink-0" />} text={`모고 ${act.exams}`} />}
                           {act.ot > 0 && <Pill cls="bg-[#F56300]/10 dark:bg-[#F56300]/15 text-[#F56300] border-[#F56300]/20" icon={<GraduationCap className="w-2.5 h-2.5 shrink-0" />} text={`OT ${act.ot}`} />}
+                          {act.meals > 0 && <Pill cls="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 border-emerald-100/60 dark:border-white/10" icon={<Utensils className="w-2.5 h-2.5 shrink-0" />} text="도시락" />}
                           {act.leaves > 0 && <Pill cls="bg-sky-50 dark:bg-sky-500/10 text-sky-700 border-sky-100/60 dark:border-white/10" icon={<Ticket className="w-2.5 h-2.5 shrink-0" />} text={`휴가 ${act.leaves}`} />}
                           {act.consultations > 0 && <Pill cls="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 border-emerald-100/50 dark:border-white/10" icon={<MessageCircle className="w-2.5 h-2.5 shrink-0" />} text={`상담 ${act.consultations}`} />}
                           {act.penalties > 0 && <Pill cls="bg-red-50 dark:bg-red-500/10 text-red-600 border-red-100/60 dark:border-white/10" icon={<TriangleAlert className="w-2.5 h-2.5 shrink-0" />} text={`벌점 ${act.penalties}`} />}
@@ -657,11 +882,11 @@ export default function AdminCalendarPage() {
                 <p className="text-sm font-black text-slate-900 dark:text-slate-100 leading-tight">{selectedDate}</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
                   {totalSelected === 0 ? '기록 없음'
-                    : `일정 ${selectedCampusEvents.length} · 모고 ${selectedMockExams.length} · OT ${selectedOtEvents.length} · 휴가 ${selectedDateEvents.length}`}
+                    : `일정 ${selectedCampusEvents.length} · 모고 ${selectedMockExams.length} · OT ${selectedOtEvents.length} · 도시락 ${selectedMealPlans.length} · 휴가 ${selectedDateEvents.length}`}
                 </p>
               </div>
-              <button onClick={openEventModal} className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#0071E3] bg-[#0071E3]/[0.07] dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/[0.12] rounded-xl px-3 py-1.5 transition-colors shrink-0">
-                <Plus className="w-3.5 h-3.5" /> 일정
+              <button onClick={() => openEventModal()} className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#0071E3] bg-[#0071E3]/[0.07] dark:bg-[#0071E3]/15 hover:bg-[#0071E3]/[0.12] rounded-xl px-3 py-1.5 transition-colors shrink-0">
+                <Plus className="w-3.5 h-3.5" /> 만들기
               </button>
             </div>
 
@@ -670,7 +895,7 @@ export default function AdminCalendarPage() {
                 <div className="flex flex-col items-center justify-center py-20 gap-2">
                   <CalendarIcon className="w-8 h-8 text-slate-200 dark:text-slate-600" />
                   <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">이 날짜에 등록된 일정이 없습니다.</p>
-                  <button onClick={openEventModal} className="mt-1 text-[11px] font-bold text-[#0071E3]">+ 일정 등록하기</button>
+                  <button onClick={() => openEventModal()} className="mt-1 text-[11px] font-bold text-[#0071E3]">+ 일정·모의고사·도시락 만들기</button>
                 </div>
               )}
 
@@ -716,8 +941,8 @@ export default function AdminCalendarPage() {
                                   {stat.rewarded > 0 && <span className="rounded bg-amber-50 dark:bg-amber-500/10 text-amber-600 px-1.5 py-0.5">지급 {stat.rewarded}</span>}
                                 </div>
                                 <div className="flex items-center gap-1.5 pt-1">
-                                  <button disabled={!!busy[`notify_${ev.id}`]} onClick={() => notifyEvent(ev.id, ev.notifiedAt ? 'cancel' : 'send')}
-                                    title={ev.notifiedAt ? `발송: ${new Date(ev.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '학생에게 참여 확인 알림 발송'}
+                                  <button disabled={!!busy[`notify_${ev.id}`]} onClick={() => ev.notifiedAt ? notifyEvent(ev.id, 'cancel') : openMissionPicker(ev)}
+                                    title={ev.notifiedAt ? `발송: ${new Date(ev.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '대상을 골라 참여 확인 알림 발송'}
                                     className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${ev.notifiedAt ? 'border border-red-100 dark:border-white/10 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
                                     {busy[`notify_${ev.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : ev.notifiedAt ? <X className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
                                     {ev.notifiedAt ? '알림 취소' : '학생 알림'}
@@ -778,12 +1003,23 @@ export default function AdminCalendarPage() {
                   <SectionHeader color="bg-[#0071E3]" icon={<ClipboardCheck className="w-3.5 h-3.5 text-[#0071E3]" />} title="모의고사" count={selectedMockExams.length} chip="bg-[#0071E3]/10 dark:bg-[#0071E3]/15 text-[#0071E3] border-[#0071E3]/25" />
                   <div className="px-3 pt-2 space-y-1.5">
                     {selectedMockExams.map((ex) => (
-                      <button key={ex.id} onClick={() => router.push('/admin/mock-exam')}
-                        className="w-full text-left rounded-xl border border-black/[0.05] dark:border-white/10 border-l-[3px] border-l-[#0071E3] bg-white dark:bg-[#1c1c1e] shadow-sm hover:bg-[#F8F9FA] dark:hover:bg-white/5 transition p-3 flex items-center gap-2">
-                        <span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100 flex-1">{ex.name}</span>
-                        <span className="rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 text-[9px] font-black">{campusLabel(ex.campus || 'all')}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
-                      </button>
+                      <div key={ex.id} className="rounded-xl border border-black/[0.05] dark:border-white/10 border-l-[3px] border-l-[#0071E3] bg-white dark:bg-[#1c1c1e] shadow-sm p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100 flex-1 min-w-0 truncate">{ex.name}</span>
+                          <span className="rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 text-[9px] font-black shrink-0">{campusLabel(ex.campus || 'all')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button disabled={!!busy[`mock_${ex.id}`]} onClick={() => ex.notifiedAt ? cancelMock(ex.id) : setPicker({ kind: 'mock', id: ex.id, name: ex.name, campus: ex.campus, targetExamTypes: ex.targetExamTypes })}
+                            title={ex.notifiedAt ? `발송: ${new Date(ex.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '대상을 골라 참여 확인 알림 발송'}
+                            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${ex.notifiedAt ? 'border border-red-100 dark:border-white/10 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20' : 'bg-blue-600 text-white hover:bg-blue-700'}`}>
+                            {busy[`mock_${ex.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : ex.notifiedAt ? <X className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+                            {ex.notifiedAt ? '알림 취소' : '학생 알림'}
+                          </button>
+                          <button onClick={() => setMockManagerExam(ex)} className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5">
+                            성적·관리 <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -795,12 +1031,53 @@ export default function AdminCalendarPage() {
                   <SectionHeader color="bg-[#F56300]" icon={<CalendarClock className="w-3.5 h-3.5 text-[#F56300]" />} title="OT 특별 세션" count={selectedOtEvents.length} chip="bg-[#F56300]/10 dark:bg-[#F56300]/15 text-[#F56300] border-[#F56300]/25" />
                   <div className="px-3 pt-2 space-y-1.5">
                     {selectedOtEvents.map((ot) => (
-                      <button key={ot.id} onClick={() => router.push('/admin/ot-events')}
-                        className="w-full text-left rounded-xl border border-black/[0.05] dark:border-white/10 border-l-[3px] border-l-[#F56300] bg-white dark:bg-[#1c1c1e] shadow-sm hover:bg-[#F8F9FA] dark:hover:bg-white/5 transition p-3 flex items-center gap-2">
-                        <span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100 flex-1">{ot.name}</span>
-                        <span className="rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 text-[9px] font-black">{campusLabel(ot.campus || 'all')}</span>
-                        <ChevronRight className="w-3.5 h-3.5 text-slate-300 dark:text-slate-600" />
-                      </button>
+                      <div key={ot.id} className="rounded-xl border border-black/[0.05] dark:border-white/10 border-l-[3px] border-l-[#F56300] bg-white dark:bg-[#1c1c1e] shadow-sm p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100 flex-1 min-w-0 truncate">{ot.name}</span>
+                          <span className="rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 text-[9px] font-black shrink-0">{campusLabel(ot.campus || 'all')}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button disabled={!!busy[`ot_${ot.id}`]} onClick={() => ot.notifiedAt ? cancelOt(ot.id) : setPicker({ kind: 'ot', id: ot.id, name: ot.name, campus: ot.campus })}
+                            title={ot.notifiedAt ? `발송: ${new Date(ot.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '대상을 골라 OT 알림 발송'}
+                            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${ot.notifiedAt ? 'border border-red-100 dark:border-white/10 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20' : 'bg-[#F56300] text-white hover:bg-[#d95400]'}`}>
+                            {busy[`ot_${ot.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : ot.notifiedAt ? <X className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+                            {ot.notifiedAt ? '알림 취소' : '학생 알림'}
+                          </button>
+                          <button onClick={() => setOtManagerEvent(ot)} className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5">
+                            응답·관리 <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. 도시락 (주 라운드 — 월~금) */}
+              {selectedMealPlans.length > 0 && (
+                <div className="py-3">
+                  <SectionHeader color="bg-emerald-500" icon={<Utensils className="w-3.5 h-3.5 text-emerald-500" />} title="도시락 라운드" count={selectedMealPlans.length} chip="bg-emerald-500/10 dark:bg-emerald-500/15 text-emerald-600 border-emerald-500/25" />
+                  <div className="px-3 pt-2 space-y-1.5">
+                    {selectedMealPlans.map((p) => (
+                      <div key={p.id} className="rounded-xl border border-black/[0.05] dark:border-white/10 border-l-[3px] border-l-emerald-500 bg-white dark:bg-[#1c1c1e] shadow-sm p-3 space-y-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-extrabold text-[13px] text-slate-900 dark:text-slate-100">{weekRangeLabel(p.weekStart)} 주</span>
+                          <span className="rounded bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 text-[9px] font-black">{campusLabel(p.campus || 'all')}</span>
+                          <span className="rounded bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 text-[9px] font-black">{(p.meals || []).map((m) => MEAL_KIND_LABELS[m]).join('·')}</span>
+                          {p.deadline && <span className="text-[9px] font-bold text-slate-400">마감 {formatDeadline(p.deadline)}</span>}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button disabled={!!busy[`meal_${p.id}`]} onClick={() => notifyMeal(p.id, p.notifiedAt ? 'cancel' : 'send')}
+                            title={p.notifiedAt ? `발송: ${new Date(p.notifiedAt).toLocaleString('ko-KR')} · 클릭하면 취소` : '해당 센터 학생에게 도시락 신청 알림 발송'}
+                            className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-black transition active:scale-95 ${p.notifiedAt ? 'border border-red-100 dark:border-white/10 bg-red-50 dark:bg-red-500/10 text-red-600 hover:bg-red-100 dark:hover:bg-red-500/20' : 'bg-emerald-600 text-white hover:bg-emerald-700'}`}>
+                            {busy[`meal_${p.id}`] ? <Loader2 className="w-3 h-3 animate-spin" /> : p.notifiedAt ? <X className="w-3 h-3" /> : <Bell className="w-3 h-3" />}
+                            {p.notifiedAt ? '알림 취소' : '학생 알림'}
+                          </button>
+                          <button onClick={() => setMealManagerPlan(p)} className="ml-auto flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5">
+                            신청·정산 <ChevronRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -941,9 +1218,25 @@ export default function AdminCalendarPage() {
       <Dialog open={eventModalOpen} onOpenChange={setEventModalOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6 max-h-[88vh] overflow-y-auto" aria-describedby={undefined}>
           <DialogHeader>
-            <DialogTitle className="text-base font-black flex items-center gap-2"><CalendarHeart className="w-4 h-4 text-[#0071E3]" /> 일정 등록</DialogTitle>
+            <DialogTitle className="text-base font-black flex items-center gap-2"><CalendarHeart className="w-4 h-4 text-[#0071E3]" /> 캘린더에 등록</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-1">
+            {/* 종류 선택 */}
+            <div className="grid grid-cols-4 gap-1.5">
+              {([
+                ['event', '일정·미션', <CalendarHeart key="i" className="w-3.5 h-3.5" />],
+                ['mock', '모의고사', <ClipboardCheck key="i" className="w-3.5 h-3.5" />],
+                ['ot', 'OT', <CalendarClock key="i" className="w-3.5 h-3.5" />],
+                ['meal', '도시락', <Utensils key="i" className="w-3.5 h-3.5" />],
+              ] as [CreateKind, string, React.ReactNode][]).map(([k, l, ic]) => (
+                <button key={k} type="button" onClick={() => setCreateKind(k)}
+                  className={`flex flex-col items-center gap-1 rounded-xl border py-2 text-[11px] font-black transition ${createKind === k ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5'}`}>
+                  {ic}{l}
+                </button>
+              ))}
+            </div>
+
+            {createKind === 'event' && (<>
             <div className="space-y-1.5">
               <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">일정 이름</Label>
               <input value={evForm.title} onChange={(e) => setEvForm((f) => ({ ...f, title: e.target.value }))} placeholder="예: 클린데이, 개원기념 휴무"
@@ -1080,13 +1373,228 @@ export default function AdminCalendarPage() {
                 </div>
               )}
             </div>
+            </>)}
 
-            <Button onClick={handleEventSubmit} disabled={evBusy || !evForm.title.trim()} className="w-full h-11 rounded-xl bg-slate-900 hover:bg-[#323236] text-white font-extrabold text-sm">
+            {/* 모의고사 필드셋 */}
+            {createKind === 'mock' && (<>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">시험명</Label>
+                <input value={mockForm.name} onChange={(e) => setMockForm((f) => ({ ...f, name: e.target.value }))} placeholder="예: 6월 전국모의고사"
+                  className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">날짜</Label>
+                  <input type="date" value={mockForm.date} onChange={(e) => setMockForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">대상 센터</Label>
+                  <select value={mockForm.campus} onChange={(e) => setMockForm((f) => ({ ...f, campus: e.target.value }))} disabled={adminCampus !== 'all'}
+                    className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3] disabled:opacity-70">
+                    <option value="all">전체 센터</option><option value="wonju">원주</option><option value="chuncheon">춘천</option><option value="chungju">충주</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">대상 직렬 <span className="text-slate-500 dark:text-slate-400 font-medium">(선택 · 미지정 시 센터 전체)</span></Label>
+                <div className="flex flex-wrap gap-1.5">
+                  {examTypeOptions.length === 0 && <span className="text-[11px] font-semibold text-slate-400">등록된 직렬 정보가 없습니다.</span>}
+                  {examTypeOptions.map((t) => {
+                    const on = mockForm.targetTypes.includes(t);
+                    return (
+                      <button key={t} type="button" onClick={() => setMockForm((f) => ({ ...f, targetTypes: on ? f.targetTypes.filter((x) => x !== t) : [...f.targetTypes, t] }))}
+                        className={`rounded-xl px-3 py-1.5 text-[11px] font-black border transition active:scale-95 ${on ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:border-slate-300'}`}>{t}</button>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="text-[11px] font-semibold text-slate-400">등록 후 날짜 패널에서 대상을 골라 알림을 보낼 수 있어요. 성적 입력은 모의고사 관리에서.</p>
+            </>)}
+
+            {/* OT 필드셋 */}
+            {createKind === 'ot' && (<>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">OT명</Label>
+                <input value={otForm.name} onChange={(e) => setOtForm((f) => ({ ...f, name: e.target.value }))} placeholder="예: 신규 원생 오리엔테이션"
+                  className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">날짜</Label>
+                  <input type="date" value={otForm.date} onChange={(e) => setOtForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">대상 센터</Label>
+                  <select value={otForm.campus} onChange={(e) => setOtForm((f) => ({ ...f, campus: e.target.value }))} disabled={adminCampus !== 'all'}
+                    className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3] disabled:opacity-70">
+                    <option value="all">전체 센터</option><option value="wonju">원주</option><option value="chuncheon">춘천</option><option value="chungju">충주</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">안내 메시지 <span className="text-slate-500 dark:text-slate-400 font-medium">(선택)</span></Label>
+                <textarea value={otForm.message} onChange={(e) => setOtForm((f) => ({ ...f, message: e.target.value }))} rows={2} placeholder="학생에게 보여줄 안내"
+                  className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm bg-white dark:bg-[#1c1c1e] px-3 py-2 focus:outline-none focus:border-[#0071E3] resize-none" />
+              </div>
+              <p className="text-[11px] font-semibold text-slate-400">날짜 3일 전부터 학생에게 자동 노출되며, 대상을 골라 즉시 알림도 보낼 수 있어요.</p>
+            </>)}
+
+            {/* 도시락 필드셋 */}
+            {createKind === 'meal' && (<>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">주 (월요일 기준)</Label>
+                <input type="date" value={mealForm.weekStart}
+                  onChange={(e) => { const wk = mondayOf(e.target.value); setMealForm((f) => ({ ...f, weekStart: wk, deadline: deadlineForMealWeek(wk) })); }}
+                  className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                <p className="text-[10px] font-semibold text-slate-400">{weekRangeLabel(mealForm.weekStart)} 주 (월~금) 라운드가 만들어집니다.</p>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">끼니</Label>
+                  <div className="flex gap-1.5">
+                    {([['lunch', '점심'], ['dinner', '저녁']] as const).map(([k, l]) => {
+                      const on = k === 'lunch' ? mealForm.lunch : mealForm.dinner;
+                      return (
+                        <button key={k} type="button" onClick={() => setMealForm((f) => ({ ...f, [k]: !on }))}
+                          className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition ${on ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5'}`}>{l}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">대상 센터</Label>
+                  <select value={mealForm.campus} onChange={(e) => setMealForm((f) => ({ ...f, campus: e.target.value }))} disabled={adminCampus !== 'all'}
+                    className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3] disabled:opacity-70">
+                    <option value="all">전체 센터</option><option value="wonju">원주</option><option value="chuncheon">춘천</option><option value="chungju">충주</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">신청 마감</Label>
+                <input type="datetime-local" value={mealForm.deadline} onChange={(e) => setMealForm((f) => ({ ...f, deadline: e.target.value }))}
+                  className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">신청 안 받는 요일 <span className="text-slate-500 dark:text-slate-400 font-medium">(선택)</span></Label>
+                <div className="flex gap-1.5">
+                  {MEAL_DAYS.map((d) => {
+                    const on = mealForm.closedDays.includes(d);
+                    return (
+                      <button key={d} type="button" onClick={() => setMealForm((f) => ({ ...f, closedDays: on ? f.closedDays.filter((x) => x !== d) : [...f.closedDays, d] }))}
+                        className={`flex-1 rounded-xl border py-2 text-[11px] font-extrabold transition ${on ? 'bg-slate-700 text-white border-slate-700' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5'}`}>{MEAL_DAY_LABELS[d]}</button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {mealForm.lunch && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">점심 단가 <span className="text-slate-500 dark:text-slate-400 font-medium">(선택)</span></Label>
+                    <input type="number" inputMode="numeric" value={mealForm.lunchPrice} onChange={(e) => setMealForm((f) => ({ ...f, lunchPrice: e.target.value }))} placeholder="원"
+                      className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                  </div>
+                )}
+                {mealForm.dinner && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">저녁 단가 <span className="text-slate-500 dark:text-slate-400 font-medium">(선택)</span></Label>
+                    <input type="number" inputMode="numeric" value={mealForm.dinnerPrice} onChange={(e) => setMealForm((f) => ({ ...f, dinnerPrice: e.target.value }))} placeholder="원"
+                      className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                  </div>
+                )}
+              </div>
+              <p className="text-[11px] font-semibold text-slate-400">주·센터당 한 라운드만 만들 수 있어요. 인쇄·정산은 도시락 관리에서.</p>
+            </>)}
+
+            <Button
+              onClick={createKind === 'event' ? handleEventSubmit : createKind === 'mock' ? submitMock : createKind === 'ot' ? submitOt : submitMeal}
+              disabled={evBusy || (createKind === 'event' ? !evForm.title.trim() : createKind === 'mock' ? !mockForm.name.trim() : createKind === 'ot' ? !otForm.name.trim() : !(mealForm.lunch || mealForm.dinner))}
+              className="w-full h-11 rounded-xl bg-slate-900 hover:bg-[#323236] text-white font-extrabold text-sm">
               {evBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : '등록하기'}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 알림 대상 선택 피커 — 참여미션/모의고사/OT 공용 */}
+      {picker && (
+        <RecipientPickerModal
+          key={picker.id}
+          eventName={picker.name}
+          kindLabel={picker.kind === 'mission' ? '참여 미션' : picker.kind === 'mock' ? '모의고사' : 'OT'}
+          students={picker.kind === 'mission' ? picker.pool : students}
+          campus={picker.campus}
+          targetExamTypes={picker.kind === 'mock' ? picker.targetExamTypes : undefined}
+          participations={picker.kind === 'mission' ? picker.participations : undefined}
+          showStatusFilter={picker.kind === 'mission'}
+          sending={picker.kind === 'mission' ? !!busy[`notify_${picker.id}`] : picker.kind === 'mock' ? !!busy[`mock_${picker.id}`] : !!busy[`ot_${picker.id}`]}
+          onCancel={() => setPicker(null)}
+          onSend={(ids) => picker.kind === 'mission' ? notifyEvent(picker.id, 'send', ids) : picker.kind === 'mock' ? notifyMock(picker.id, ids) : notifyOt(picker.id, ids)}
+        />
+      )}
+
+      {/* 모의고사 성적·출결 관리 (전체화면 오버레이) */}
+      {mockManagerExam && createPortal(
+        <div className="fixed inset-0 z-[60] overflow-y-auto print-host" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div className="min-h-full flex items-start justify-center p-3 sm:p-6">
+            <div className="print-mgmt-card w-full max-w-5xl rounded-3xl bg-[#F8F9FA] dark:bg-[#0b0b0c] shadow-2xl">
+              <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 px-5 py-3.5 border-b border-black/[0.06] dark:border-white/10 bg-white/90 dark:bg-[#0b0b0c]/90 backdrop-blur rounded-t-3xl">
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 min-w-0">
+                  <ClipboardCheck className="w-4 h-4 text-[#0071E3] shrink-0" /> <span className="truncate">{mockManagerExam.name} · 성적·출결 관리</span>
+                </h3>
+                <button onClick={() => setMockManagerExam(null)} className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 sm:p-5">
+                <MockExamManager exam={mockManagerExam} students={students} onStudentsChange={setStudents} adminCampus={adminCampus} />
+              </div>
+            </div>
+          </div>
+        </div>, document.body,
+      )}
+
+      {/* OT 출결·쿠폰 관리 (전체화면 오버레이) */}
+      {otManagerEvent && createPortal(
+        <div className="fixed inset-0 z-[60] overflow-y-auto print-host" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div className="min-h-full flex items-start justify-center p-3 sm:p-6">
+            <div className="print-mgmt-card w-full max-w-5xl rounded-3xl bg-[#F8F9FA] dark:bg-[#0b0b0c] shadow-2xl">
+              <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 px-5 py-3.5 border-b border-black/[0.06] dark:border-white/10 bg-white/90 dark:bg-[#0b0b0c]/90 backdrop-blur rounded-t-3xl">
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 min-w-0">
+                  <CalendarClock className="w-4 h-4 text-[#F56300] shrink-0" /> <span className="truncate">{otManagerEvent.name} · OT 출결·쿠폰 관리</span>
+                </h3>
+                <button onClick={() => setOtManagerEvent(null)} className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 sm:p-5">
+                <OtEventManager event={otManagerEvent} students={students} onStudentsChange={setStudents} adminCampus={adminCampus} />
+              </div>
+            </div>
+          </div>
+        </div>, document.body,
+      )}
+
+      {/* 도시락 라운드 관리 (전체화면 오버레이 · A4 인쇄 포함) */}
+      {mealManagerPlan && createPortal(
+        <div className="fixed inset-0 z-[60] overflow-y-auto print-host" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+          <div className="min-h-full flex items-start justify-center p-3 sm:p-6">
+            <div className="print-mgmt-card w-full max-w-5xl rounded-3xl bg-[#F8F9FA] dark:bg-[#0b0b0c] shadow-2xl">
+              <div className="no-print sticky top-0 z-10 flex items-center justify-between gap-2 px-5 py-3.5 border-b border-black/[0.06] dark:border-white/10 bg-white/90 dark:bg-[#0b0b0c]/90 backdrop-blur rounded-t-3xl">
+                <h3 className="text-sm font-black text-slate-900 dark:text-slate-100 flex items-center gap-2 min-w-0">
+                  <Utensils className="w-4 h-4 text-emerald-500 shrink-0" /> <span className="truncate">{weekRangeLabel(mealManagerPlan.weekStart)} 주 도시락 관리</span>
+                </h3>
+                <button onClick={() => setMealManagerPlan(null)} className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0"><X className="w-4 h-4" /></button>
+              </div>
+              <div className="p-4 sm:p-5">
+                <MealPlanManager
+                  plan={mealManagerPlan}
+                  students={students}
+                  onStudentsChange={setStudents}
+                  onPlanChange={(p) => { setMealPlans((prev) => prev.map((x) => (x.id === p.id ? p : x))); setMealManagerPlan(p); }}
+                  onReloadNeeded={loadAll}
+                  adminCampus={adminCampus}
+                />
+              </div>
+            </div>
+          </div>
+        </div>, document.body,
+      )}
 
       {/* 사진 공지 등록 모달 */}
       <Dialog open={noticeModalOpen} onOpenChange={(open) => {

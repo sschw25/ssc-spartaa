@@ -16,35 +16,65 @@ function matchStudent(student: Student, campus: string | undefined, targetExamTy
   return types.some((t) => contact.includes(t));
 }
 
+type PartStatus = 'accepted' | 'declined' | 'pending';
+const STATUS_FILTERS: [PartStatus | 'all', string][] = [
+  ['all', '전체'], ['accepted', '수락'], ['pending', '미응답'], ['declined', '불참'],
+];
+const STATUS_BADGE: Record<PartStatus, { label: string; cls: string }> = {
+  accepted: { label: '수락', cls: 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' },
+  pending: { label: '미응답', cls: 'bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400' },
+  declined: { label: '불참', cls: 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400' },
+};
+
 // 부모는 이벤트별로 조건부 렌더 + key={eventId} 로 마운트해, 열 때마다 매칭 학생 전체 체크로 초기화한다.
 interface RecipientPickerModalProps {
   eventName: string;
-  kindLabel: string;          // 'OT' | '모의고사'
-  students: Student[];        // 관리자 스코프 전체 학생
+  kindLabel: string;          // 'OT' | '모의고사' | '참여 미션'
+  students: Student[];        // 관리자 스코프 전체 학생 (또는 이벤트 후보 풀)
   campus?: string;            // 이벤트 대상 캠퍼스
   targetExamTypes?: string[]; // 이벤트 대상 목표시험 유형
   sending: boolean;
   onCancel: () => void;
   onSend: (studentIds: string[]) => void;
+  // 응답상태 필터(참여 미션 재발송/리마인더용). 제공 시 수락/미응답/불참 필터 + 상태 뱃지 노출.
+  participations?: Map<string, PartStatus>;
+  showStatusFilter?: boolean;
 }
 
 // 알림 발송 전 수신 대상 학생 체크리스트. 직렬 매칭 학생을 전부 체크해 보여주고, 뺄 사람만 해제한다.
 export function RecipientPickerModal({
   eventName, kindLabel, students, campus, targetExamTypes, sending, onCancel, onSend,
+  participations, showStatusFilter,
 }: RecipientPickerModalProps) {
   const matched = useMemo(
     () => students.filter((s) => matchStudent(s, campus, targetExamTypes)),
     [students, campus, targetExamTypes],
   );
 
+  // 직렬(contact) 필터 후보 — 매칭 학생의 고유 직렬값
+  const contactOptions = useMemo(
+    () => Array.from(new Set(matched.map((s) => (s.contact || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b, 'ko')),
+    [matched],
+  );
+
   // 마운트 시 매칭 학생 전부 체크 상태로 초기화 (부모가 이벤트별 key 로 remount)
   const [selected, setSelected] = useState<Set<string>>(() => new Set(matched.map((s) => s.id)));
-  const [campusFilter, setCampusFilter] = useState('all');
+  // 필터는 다중선택(중복선택) — 빈 Set = 전체. 각 차원 내부는 합집합(OR), 차원 간은 교집합(AND).
+  const [campusSel, setCampusSel] = useState<Set<string>>(() => new Set());
+  const [contactSel, setContactSel] = useState<Set<string>>(() => new Set());
+  const [statusSel, setStatusSel] = useState<Set<PartStatus>>(() => new Set());
   const [query, setQuery] = useState('');
+
+  const statusOf = (id: string): PartStatus => participations?.get(id) ?? 'pending';
+  const toggleCampus = (c: string) => setCampusSel((p) => { const n = new Set(p); if (n.has(c)) n.delete(c); else n.add(c); return n; });
+  const toggleContact = (c: string) => setContactSel((p) => { const n = new Set(p); if (n.has(c)) n.delete(c); else n.add(c); return n; });
+  const toggleStatus = (v: PartStatus) => setStatusSel((p) => { const n = new Set(p); if (n.has(v)) n.delete(v); else n.add(v); return n; });
 
   const q = query.trim().toLowerCase();
   const visible = matched.filter((s) => {
-    if (campusFilter !== 'all' && s.campus !== campusFilter) return false;
+    if (campusSel.size && !campusSel.has(s.campus)) return false;
+    if (contactSel.size && !contactSel.has((s.contact || '').trim())) return false;
+    if (showStatusFilter && statusSel.size && !statusSel.has(statusOf(s.id))) return false;
     if (q && !(`${s.name}`.toLowerCase().includes(q) || (s.contact || '').toLowerCase().includes(q))) return false;
     return true;
   });
@@ -90,16 +120,55 @@ export function RecipientPickerModal({
 
         {/* 필터 */}
         <div className="px-5 space-y-2.5">
+          {/* 캠퍼스 — 다중선택(여러 센터 동시 선택 가능) */}
           <div className="flex flex-wrap gap-1.5">
-            {CAMPUS_FILTERS.map((c) => (
-              <button key={c} type="button" onClick={() => setCampusFilter(c)}
-                className={`rounded-xl px-3 py-1.5 text-[11px] font-black border transition active:scale-95 ${
-                  campusFilter === c ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
-                }`}>
-                {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
-              </button>
-            ))}
+            {CAMPUS_FILTERS.map((c) => {
+              const active = c === 'all' ? campusSel.size === 0 : campusSel.has(c);
+              return (
+                <button key={c} type="button" onClick={() => (c === 'all' ? setCampusSel(new Set()) : toggleCampus(c))}
+                  className={`rounded-xl px-3 py-1.5 text-[11px] font-black border transition active:scale-95 ${
+                    active ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                  }`}>
+                  {c === 'all' ? '전체 캠퍼스' : getCampusLabel(c)}
+                </button>
+              );
+            })}
           </div>
+          {/* 직렬 — 다중선택 */}
+          {contactOptions.length > 1 && (
+            <div className="flex flex-wrap gap-1.5">
+              <button type="button" onClick={() => setContactSel(new Set())}
+                className={`rounded-xl px-3 py-1.5 text-[11px] font-black border transition active:scale-95 ${
+                  contactSel.size === 0 ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                }`}>
+                전체 직렬
+              </button>
+              {contactOptions.map((c) => (
+                <button key={c} type="button" onClick={() => toggleContact(c)}
+                  className={`rounded-xl px-3 py-1.5 text-[11px] font-black border transition active:scale-95 ${
+                    contactSel.has(c) ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                  }`}>
+                  {c}
+                </button>
+              ))}
+            </div>
+          )}
+          {/* 응답상태 — 다중선택 */}
+          {showStatusFilter && (
+            <div className="flex flex-wrap gap-1.5">
+              {STATUS_FILTERS.map(([v, label]) => {
+                const active = v === 'all' ? statusSel.size === 0 : statusSel.has(v);
+                return (
+                  <button key={v} type="button" onClick={() => (v === 'all' ? setStatusSel(new Set()) : toggleStatus(v))}
+                    className={`rounded-xl px-3 py-1.5 text-[11px] font-black border transition active:scale-95 ${
+                      active ? 'border-[#0071E3] bg-[#0071E3] text-white' : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                    }`}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="relative">
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="학생명 또는 코멘터 검색"
               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-8 pr-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none" />
@@ -134,6 +203,9 @@ export function RecipientPickerModal({
                     </span>
                     <span className="font-black text-slate-800 dark:text-slate-200 text-[13px]">{s.name}</span>
                     <span className="rounded-md bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 px-1.5 py-0.5 text-[9px] font-black">{getCampusLabel(s.campus)}</span>
+                    {showStatusFilter && (
+                      <span className={`rounded-md px-1.5 py-0.5 text-[9px] font-black ${STATUS_BADGE[statusOf(s.id)].cls}`}>{STATUS_BADGE[statusOf(s.id)].label}</span>
+                    )}
                     {s.contact && <span className="text-[11px] font-semibold text-slate-400 truncate">{s.contact}</span>}
                   </button>
                 );

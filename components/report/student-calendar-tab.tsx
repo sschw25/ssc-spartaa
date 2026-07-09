@@ -100,6 +100,27 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
 
   useEffect(() => { load(); }, [load]);
 
+  // 새로고침 없이 알림 반영: 포커스/가시성 복귀(20초 스로틀) + 화면이 보일 때 60초 폴링.
+  useEffect(() => {
+    let last = Date.now();
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - last < 20_000) return;
+      last = now;
+      load();
+    };
+    const poll = () => { if (document.visibilityState === 'visible') { last = Date.now(); load(); } };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const iv = setInterval(poll, 60_000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      clearInterval(iv);
+    };
+  }, [load]);
+
   // 선택일이 바뀌면 그날 공부 계획 상세를 불러온다.
   useEffect(() => {
     if (!selectedDate) return;

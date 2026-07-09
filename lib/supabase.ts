@@ -730,6 +730,7 @@ function rowToCampusEvent(r: any): CampusEvent {
     couponReward: r.coupon_reward != null ? Number(r.coupon_reward) : undefined,
     targetMode: (r.target_mode === 'students' ? 'students' : (r.target_mode === 'campus' ? 'campus' : undefined)),
     targetStudentIds: Array.isArray(r.target_student_ids) ? r.target_student_ids : [],
+    recipientStudentIds: Array.isArray(r.recipient_student_ids) && r.recipient_student_ids.length ? r.recipient_student_ids : undefined,
     notifiedAt: r.notified_at || undefined,
     rewardedAt: r.rewarded_at || undefined,
     createdAt: r.created_at || '',
@@ -768,6 +769,9 @@ export async function saveCampusEventSupabase(event: CampusEvent): Promise<Campu
     coupon_reward: event.couponReward ?? null,
     target_mode: event.targetMode || null,
     target_student_ids: event.targetStudentIds || [],
+    // recipient_student_ids 는 저장(생성)에서 제외 — 알림 선택 발송(notify) 경로에서만 기록.
+    // 이렇게 하면 마이그레이션 미실행 상태에서도 일정/미션/공지 생성은 정상 동작하고,
+    // '대상 골라 발송' 신규 기능만 컬럼(마이그레이션)에 의존한다.
     notified_at: event.notifiedAt || null,
     rewarded_at: event.rewardedAt || null,
     created_at: event.createdAt,
@@ -787,10 +791,17 @@ export async function deleteCampusEventSupabase(id: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function notifyCampusEventSupabase(id: string, notifiedAt: string | null): Promise<CampusEvent> {
+// 참여 미션 학생 알림 발송 표시 (notified_at 설정). recipientStudentIds 전달 시 명시 수신자도 갱신.
+export async function notifyCampusEventSupabase(
+  id: string,
+  notifiedAt: string | null,
+  recipientStudentIds?: string[],
+): Promise<CampusEvent> {
+  const patch: Record<string, unknown> = { notified_at: notifiedAt };
+  if (recipientStudentIds !== undefined) patch.recipient_student_ids = recipientStudentIds;
   const { data, error } = await getClient()
     .from('campus_events')
-    .update({ notified_at: notifiedAt })
+    .update(patch)
     .eq('id', id)
     .select()
     .single();

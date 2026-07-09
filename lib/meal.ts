@@ -38,6 +38,26 @@ export function mondayOf(ymd: string): string {
   return dt.toISOString().slice(0, 10);
 }
 
+// date-only 일 더하기 (KST 무관)
+export function addDaysYmd(ymd: string, days: number): string {
+  const [y, m, d] = ymd.split('-').map(Number);
+  if (!y || !m || !d) return ymd;
+  const date = new Date(Date.UTC(y, m - 1, d));
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+// 라운드 기본 마감 = 주 시작(월) 3일 전 14:00 (datetime-local 값 형식)
+export function deadlineForMealWeek(weekStart: string): string {
+  return `${addDaysYmd(weekStart, -3)}T14:00`;
+}
+
+// datetime-local(로컬 표기) 값을 KST 기준 절대 ISO 로 변환
+export function toKstIsoFromDateTimeLocal(value: string): string | undefined {
+  if (!value) return undefined;
+  return new Date(`${value}:00+09:00`).toISOString();
+}
+
 // "6/30~7/4" 형태의 주 범위 라벨 (월~금)
 export function weekRangeLabel(weekStart: string): string {
   const [y, m, d] = weekStart.split('-').map(Number);

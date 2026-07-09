@@ -168,6 +168,7 @@ create table if not exists campus_events (
   coupon_reward      integer,                        -- 참여자 지급 쿠폰 수
   target_mode        text,                           -- 'campus' | 'students'
   target_student_ids jsonb not null default '[]'::jsonb,
+  recipient_student_ids jsonb not null default '[]'::jsonb, -- 알림 선택 발송 시 명시 수신자
   notified_at        timestamptz,                    -- 학생 알림 발송 시각
   rewarded_at        timestamptz,                    -- 쿠폰 일괄 지급 완료 시각
   created_at         timestamptz not null default now(),

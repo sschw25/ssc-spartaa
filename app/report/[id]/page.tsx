@@ -60,55 +60,79 @@ function StudentReportInner() {
   const [learningSubTab, setLearningSubTab] = useState<LearningSubTab>('timetable');
   const [lifeSubTab, setLifeSubTab] = useState<LifeSubTab>('attendance-status');
 
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadPending() {
-      try {
-        const [examRes, otRes, campusRes, mealRes] = await Promise.all([
-          fetch('/api/student/mock-exams', { credentials: 'same-origin' }),
-          fetch('/api/student/ot-events', { credentials: 'same-origin' }),
-          fetch('/api/student/campus-events', { credentials: 'same-origin' }),
-          fetch('/api/student/meal-plans', { credentials: 'same-origin' }),
-        ]);
-        if (examRes.ok) {
-          const json = await examRes.json();
-          if (!cancelled && json.success) setPendingMockExams(json.exams || []);
-        }
-        if (otRes.ok) {
-          const json = await otRes.json();
-          if (!cancelled && json.success) setPendingOtEvents(json.events || []);
-        }
-        if (campusRes.ok) {
-          const json = await campusRes.json();
-          if (!cancelled && json.success) setPendingCampusEvents(json.events || []);
-        }
-        if (mealRes.ok) {
-          const json = await mealRes.json();
-          if (!cancelled && json.success) setMealPlans(json.plans || []);
-        }
-      } catch {}
-    }
-
-    loadPending();
-    return () => {
-      cancelled = true;
-    };
+  // 알림(모의고사·OT·참여행사·도시락) 재조회 — 마운트 + 포커스/가시성 복귀 + 주기 폴링에서 공용 호출.
+  // 학생이 응답(아래 handler)하면 seq 를 올려, 그 전에 출발한 stale 응답이 방금 사라진 항목을 되살리지 못하게 막는다.
+  const pendingSeqRef = useRef(0);
+  const loadPending = useCallback(async () => {
+    const seq = pendingSeqRef.current;
+    const fresh = () => pendingSeqRef.current === seq;
+    try {
+      const [examRes, otRes, campusRes, mealRes] = await Promise.all([
+        fetch('/api/student/mock-exams', { credentials: 'same-origin', cache: 'no-store' }),
+        fetch('/api/student/ot-events', { credentials: 'same-origin', cache: 'no-store' }),
+        fetch('/api/student/campus-events', { credentials: 'same-origin', cache: 'no-store' }),
+        fetch('/api/student/meal-plans', { credentials: 'same-origin', cache: 'no-store' }),
+      ]);
+      if (examRes.ok) {
+        const json = await examRes.json();
+        if (fresh() && json.success) setPendingMockExams(json.exams || []);
+      }
+      if (otRes.ok) {
+        const json = await otRes.json();
+        if (fresh() && json.success) setPendingOtEvents(json.events || []);
+      }
+      if (campusRes.ok) {
+        const json = await campusRes.json();
+        if (fresh() && json.success) setPendingCampusEvents(json.events || []);
+      }
+      if (mealRes.ok) {
+        const json = await mealRes.json();
+        if (fresh() && json.success) setMealPlans(json.plans || []);
+      }
+    } catch {}
   }, []);
 
+  // 최초 1회 로드
+  useEffect(() => { loadPending(); }, [loadPending]);
+
+  // 새로고침 없이 알림 반영: 포커스/가시성 복귀(20초 스로틀) + 화면이 보일 때 60초 폴링.
+  useEffect(() => {
+    let last = Date.now(); // 마운트 직후 첫 포커스 즉시 재조회 방지
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - last < 20_000) return;
+      last = now;
+      loadPending();
+    };
+    const poll = () => { if (document.visibilityState === 'visible') { last = Date.now(); loadPending(); } };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    const iv = setInterval(poll, 60_000);
+    return () => {
+      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', refresh);
+      clearInterval(iv);
+    };
+  }, [loadPending]);
+
   const handleMealSaved = useCallback((planId: string, order: import('@/lib/types/student').MealOrder) => {
+    pendingSeqRef.current += 1;
     setMealPlans((prev) => prev.map((p) => (p.id === planId ? { ...p, myOrder: order } : p)));
   }, []);
 
   const handleMockExamResponded = useCallback((examId: string) => {
+    pendingSeqRef.current += 1;
     setPendingMockExams((prev) => prev.filter((e) => e.id !== examId));
   }, []);
 
   const handleOtEventResponded = useCallback((eventId: string) => {
+    pendingSeqRef.current += 1;
     setPendingOtEvents((prev) => prev.filter((e) => e.id !== eventId));
   }, []);
 
   const handleCampusEventResponded = useCallback((eventId: string) => {
+    pendingSeqRef.current += 1;
     setPendingCampusEvents((prev) => prev.filter((e) => e.id !== eventId));
   }, []);
 

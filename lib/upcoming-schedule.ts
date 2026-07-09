@@ -63,6 +63,10 @@ export function isOtEventVisibleToStudent(event: OtEvent, student: Student, toda
 
 // ── 참여미션(캠퍼스 행사): 대상 판정 (app/api/student/campus-events 에서 추출) ─────
 export function isCampusEventTargetedToStudent(event: CampusEvent, student: Student): boolean {
+  // 명시 수신자 목록이 정의되면(알림 선택 발송) 그 학생에게만 노출 — campus/targetMode 폴백 위에서 우선.
+  if (event.recipientStudentIds && event.recipientStudentIds.length) {
+    return event.recipientStudentIds.includes(student.id);
+  }
   if (event.targetMode === 'students') {
     return (event.targetStudentIds || []).includes(student.id);
   }
