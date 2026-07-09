@@ -717,9 +717,15 @@ function rowToCampusEvent(r: any): CampusEvent {
     startTime: r.start_time || undefined,
     endTime: r.end_time || undefined,
     campus: r.campus || undefined,
-    category: (r.category === 'mission' ? 'mission' : 'general'),
+    category: (r.category === 'mission' ? 'mission' : (r.category === 'notice' ? 'notice' : 'general')),
     memo: r.memo || undefined,
     color: r.color || undefined,
+    imageUrl: r.image_url || undefined,
+    imagePath: r.image_path || undefined,
+    responseMode: (r.response_mode === 'attendance' ? 'attendance' : (r.response_mode === 'postTask' ? 'postTask' : 'none')),
+    postTaskLabel: r.post_task_label || undefined,
+    postTaskDueDate: r.post_task_due_date || undefined,
+    postTaskHref: r.post_task_href || undefined,
     isMission: Boolean(r.is_mission),
     couponReward: r.coupon_reward != null ? Number(r.coupon_reward) : undefined,
     targetMode: (r.target_mode === 'students' ? 'students' : (r.target_mode === 'campus' ? 'campus' : undefined)),
@@ -752,6 +758,12 @@ export async function saveCampusEventSupabase(event: CampusEvent): Promise<Campu
     category: event.category || 'general',
     memo: event.memo || null,
     color: event.color || null,
+    image_url: event.imageUrl || null,
+    image_path: event.imagePath || null,
+    response_mode: event.responseMode || 'none',
+    post_task_label: event.postTaskLabel || null,
+    post_task_due_date: event.postTaskDueDate || null,
+    post_task_href: event.postTaskHref || null,
     is_mission: Boolean(event.isMission),
     coupon_reward: event.couponReward ?? null,
     target_mode: event.targetMode || null,
@@ -796,6 +808,140 @@ export async function markCampusEventRewardedSupabase(id: string, rewardedAt: st
     .single();
   if (error) throw error;
   return rowToCampusEvent(data);
+}
+
+// ── 학원 공지 이미지 (Supabase Storage) ────────────────────────
+// 공지 사진은 DB가 아니라 객체 저장소에 둔다. 버킷은 공개(읽기)로, 업로드는 서버(서비스키)만.
+const ANNOUNCEMENTS_BUCKET = 'announcements';
+
+async function ensureAnnouncementsBucket(): Promise<void> {
+  const client = getClient();
+  // 이미 있으면 createBucket 이 에러를 주므로 무시(존재 확인 후 생성).
+  const { data } = await client.storage.getBucket(ANNOUNCEMENTS_BUCKET);
+  if (data) return;
+  const { error } = await client.storage.createBucket(ANNOUNCEMENTS_BUCKET, {
+    public: true,
+    fileSizeLimit: 5 * 1024 * 1024, // 5MB — 압축본만 올라오므로 충분한 상한
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  });
+  if (error) {
+    // 동시 최초 업로드 경쟁으로 이미 만들어졌을 수 있음 — 재확인 후에도 없으면 실패로 처리.
+    const { data: recheck } = await client.storage.getBucket(ANNOUNCEMENTS_BUCKET);
+    if (!recheck) throw error;
+  }
+}
+
+// 공지 이미지 업로드 → { url(공개), path(삭제용 key) }
+export async function uploadAnnouncementImageSupabase(
+  campus: string, dateKey: string, body: ArrayBuffer, contentType: string, ext: string,
+): Promise<{ url: string; path: string }> {
+  await ensureAnnouncementsBucket();
+  const safeCampus = /^[a-z]+$/.test(campus) ? campus : 'all';
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `${safeCampus}/${dateKey}-${Date.now()}-${rand}.${ext}`;
+  const client = getClient();
+  const { error } = await client.storage.from(ANNOUNCEMENTS_BUCKET).upload(path, body, {
+    contentType, upsert: false,
+  });
+  if (error) throw error;
+  const { data } = client.storage.from(ANNOUNCEMENTS_BUCKET).getPublicUrl(path);
+  return { url: data.publicUrl, path };
+}
+
+export async function deleteAnnouncementImageSupabase(path: string): Promise<void> {
+  if (!path) return;
+  try {
+    await getClient().storage.from(ANNOUNCEMENTS_BUCKET).remove([path]);
+  } catch {
+    /* 이미 없으면 무시 */
+  }
+}
+
+// 저장된 경로(key)로 공개 URL 재구성 — 클라이언트가 준 URL을 신뢰하지 않기 위함.
+export function getAnnouncementPublicUrlSupabase(path: string): string {
+  const { data } = getClient().storage.from(ANNOUNCEMENTS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// 업로드 기준(created_at) N일 지난 공지(category='notice') 정리 — 이미지 삭제 후 행 삭제.
+// campus 지정 시 그 센터만(범위 관리자), 미지정 시 전체(전체 관리자). 삭제 건수 반환.
+export async function pruneOldNoticesSupabase(beforeCreatedIso: string, campus?: string): Promise<number> {
+  const client = getClient();
+  let query = client
+    .from('campus_events')
+    .select('id, image_path')
+    .eq('category', 'notice')
+    .lt('created_at', beforeCreatedIso);
+  if (campus) query = query.eq('campus', campus);
+  const { data, error } = await query;
+  if (error) throw error;
+  const rows = data || [];
+  if (rows.length === 0) return 0;
+  const paths = rows.map((r: any) => r.image_path).filter((p: unknown): p is string => typeof p === 'string' && p.length > 0);
+  if (paths.length > 0) {
+    try { await client.storage.from(ANNOUNCEMENTS_BUCKET).remove(paths); } catch { /* 부분 실패 무시 */ }
+  }
+  const ids = rows.map((r: any) => r.id);
+  const { error: delErr } = await client.from('campus_events').delete().in('id', ids);
+  if (delErr) throw delErr;
+  return ids.length;
+}
+
+// ── 휴가 증빙 사진 (Supabase Storage · 비공개) ────────────────────
+// 병가/개인사정 증빙(진료 영수증 등)은 민감정보라 비공개 버킷에 두고, 관리자는 짧은 수명의
+// 서명 URL로만 열람한다. 관리자가 확인(승인/반려)하면 즉시 삭제한다.
+const LEAVE_PROOFS_BUCKET = 'leave-proofs';
+
+async function ensureLeaveProofsBucket(): Promise<void> {
+  const client = getClient();
+  const { data } = await client.storage.getBucket(LEAVE_PROOFS_BUCKET);
+  if (data) {
+    // 민감정보 버킷 — 과거에 public 으로 선생성됐더라도 비공개로 멱등 강제.
+    if (data.public) {
+      try { await client.storage.updateBucket(LEAVE_PROOFS_BUCKET, { public: false }); } catch { /* 권한 등 실패는 무시 */ }
+    }
+    return;
+  }
+  const { error } = await client.storage.createBucket(LEAVE_PROOFS_BUCKET, {
+    public: false, // 비공개 — 서명 URL로만 접근
+    fileSizeLimit: 6 * 1024 * 1024,
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  });
+  if (error) {
+    // 동시 최초 업로드 경쟁으로 이미 만들어졌을 수 있음 — 재확인 후에도 없으면 실패로 처리.
+    const { data: recheck } = await client.storage.getBucket(LEAVE_PROOFS_BUCKET);
+    if (!recheck) throw error;
+  }
+}
+
+// 증빙 업로드 → 경로(key)만 반환(공개 URL 없음). 학생별/신청별 경로.
+export async function uploadLeaveProofSupabase(
+  studentId: string, leaveId: string, body: ArrayBuffer, contentType: string, ext: string,
+): Promise<{ path: string }> {
+  await ensureLeaveProofsBucket();
+  const safeStudent = studentId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'unknown';
+  const safeLeave = leaveId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'leave';
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `${safeStudent}/${safeLeave}-${Date.now()}-${rand}.${ext}`;
+  const { error } = await getClient().storage.from(LEAVE_PROOFS_BUCKET).upload(path, body, { contentType, upsert: false });
+  if (error) throw error;
+  return { path };
+}
+
+// 관리자 열람용 짧은 수명 서명 URL
+export async function signedLeaveProofUrlSupabase(path: string, ttlSec = 120): Promise<string> {
+  const { data, error } = await getClient().storage.from(LEAVE_PROOFS_BUCKET).createSignedUrl(path, ttlSec);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function deleteLeaveProofSupabase(path: string): Promise<void> {
+  if (!path) return;
+  try {
+    await getClient().storage.from(LEAVE_PROOFS_BUCKET).remove([path]);
+  } catch {
+    /* 이미 없으면 무시 */
+  }
 }
 
 // ── 도시락 신청 라운드 마스터 (meal_plans 테이블) ─────────────

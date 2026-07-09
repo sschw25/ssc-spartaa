@@ -147,6 +147,7 @@ export function StudentLayout({
   const learningNavItem = getNavItem('learning');
   const focusNavItem = getNavItem('focus');
   const requestNavItem = getNavItem('student-requests');
+  const calendarNavItem = getNavItem('calendar');
   const lifeNavItem = getNavItem('life');
   const notificationNavItem = getNavItem('student-notifications');
 
@@ -154,6 +155,7 @@ export function StudentLayout({
   if (learningNavItem) quickTabItems.push({ ...learningNavItem, label: '학습', meta: '오늘·진도·성적', key: 'learning', tabId: 'learning' });
   if (focusNavItem) quickTabItems.push({ ...focusNavItem, key: 'focus', tabId: 'focus' });
   if (requestNavItem) quickTabItems.push({ ...requestNavItem, label: '신청', meta: '상담·반차', key: 'student-requests', tabId: 'student-requests' });
+  if (calendarNavItem) quickTabItems.push({ ...calendarNavItem, label: '캘린더', meta: '수험 스케줄러', key: 'calendar', tabId: 'calendar' });
   if (lifeNavItem) quickTabItems.push({ ...lifeNavItem, label: '생활', meta: '등하원·쿠폰', key: 'life', tabId: 'life' });
   if (notificationNavItem) quickTabItems.push({ ...notificationNavItem, key: 'student-notifications', tabId: 'student-notifications' });
   const selectedQuickItem = quickNavActiveKey
@@ -422,14 +424,14 @@ export function StudentLayout({
                         type="button"
                         onClick={() => { haptic('select'); selectStudentTab(item.tabId, item.scrollTargetId, item.key); }}
                         aria-current={active ? 'page' : undefined}
-                        className={`press-spring relative flex min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1.5 transition-colors duration-300 sm:min-w-[64px] sm:px-3.5 ${
+                        className={`press-spring relative flex min-w-[44px] flex-col items-center justify-center gap-0.5 rounded-full px-1 py-1.5 transition-colors duration-300 sm:min-w-[58px] sm:px-3 ${
                           active
                             ? 'bg-[#0071E3]/12 text-[#0071E3]'
                             : 'text-slate-500 hover:bg-black/[0.04] hover:text-slate-900'
                         }`}
                       >
                         <Icon className="h-[18px] w-[18px]" />
-                        <span className={`whitespace-nowrap text-[10px] tracking-tight ${active ? 'font-semibold' : 'font-bold'}`}>
+                        <span className={`whitespace-nowrap text-[9px] tracking-tight sm:text-[10px] ${active ? 'font-semibold' : 'font-bold'}`}>
                           {item.label}
                         </span>
                         {item.tabId === 'student-notifications' && notificationCount > 0 && (

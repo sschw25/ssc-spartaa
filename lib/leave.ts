@@ -27,6 +27,31 @@ export function getLeaveTypeLabel(type?: string): string {
   return (isLeaveType(type) && LEAVE_TYPES[type].label) || '휴가';
 }
 
+// ── 사진 증빙 규칙 ──
+// 병가·개인사정(반차/휴식)은 신청 후 24시간 내 사진 증빙을 첨부할 수 있다.
+// 관리자가 확인(승인/반려)하면 증빙 사진은 즉시 삭제된다.
+export const PROOF_LEAVE_TYPES: LeaveType[] = ['sick', 'personal_halfday', 'personal_fullday'];
+export const PROOF_WINDOW_HOURS = 24;
+
+export function leaveNeedsProof(type?: string): boolean {
+  return isLeaveType(type) && PROOF_LEAVE_TYPES.includes(type);
+}
+
+// 증빙 첨부 마감(신청 시각 + 24h) ISO. createdAt 불량이면 null.
+export function proofDeadlineIso(createdAt?: string): string | null {
+  if (!createdAt) return null;
+  const t = new Date(createdAt).getTime();
+  if (Number.isNaN(t)) return null;
+  return new Date(t + PROOF_WINDOW_HOURS * 3600_000).toISOString();
+}
+
+// 지금(now) 기준 증빙 첨부 가능 여부 — 24시간 창이 아직 열려 있는가.
+export function isProofWindowOpen(createdAt: string | undefined, nowMs: number): boolean {
+  const deadline = proofDeadlineIso(createdAt);
+  if (!deadline) return false;
+  return nowMs <= new Date(deadline).getTime();
+}
+
 // 시간대(교시) 선택 — 개인사정 반차(오전/오후/야간), 병가(오전/오후/야간/하루종일)
 export type LeaveSlot = 'morning' | 'afternoon' | 'night' | 'fullday';
 export const LEAVE_SLOT_LABELS: Record<LeaveSlot, string> = {

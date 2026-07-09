@@ -22,10 +22,12 @@ import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
   isAutoApprovedLeave,
+  leaveNeedsProof,
   kstToday,
   kstYearMonth,
   yearMonthOf,
 } from '@/lib/leave';
+import { LeaveProofAttach } from '@/components/report/leave-proof-attach';
 
 type LeaveSlotValue = 'morning' | 'afternoon' | 'night' | 'fullday';
 export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion' | 'consultation' | 'meal';
@@ -260,7 +262,7 @@ export function ConsultationTab({
                 <Calendar className="w-4 h-4" /> 휴식 · 반차 · 병가 신청
               </h4>
               <p className="mt-1 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
-                반차는 잔여 한도 내에서 <span className="font-black text-emerald-600">신청 즉시 자동 승인</span>돼요(아래 내역에서 확인). 휴식권·개인사정·병가는 코멘터 검토 후 승인되며, 병가는 영수증을 밴드 채팅으로 따로 증빙해 주세요.
+                반차는 잔여 한도 내에서 <span className="font-black text-emerald-600">신청 즉시 자동 승인</span>돼요(아래 내역에서 확인). 휴식권·개인사정·병가는 코멘터 검토 후 승인돼요. 병가·개인사정은 <span className="font-black">신청 후 24시간 이내에 아래 내역에서 사진(영수증 등)을 첨부</span>할 수 있고, 코멘터가 확인하면 사진은 자동으로 삭제돼요.
               </p>
             </div>
 
@@ -373,7 +375,7 @@ export function ConsultationTab({
               {/* 안내/경고 */}
               {isSick && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50/70 dark:bg-amber-500/10 px-3 py-2 text-[10px] font-semibold text-amber-800">
-                  <Thermometer className="mr-0.5 inline h-3 w-3 align-[-1.5px]" />병가는 월 한도와 무관하지만, <b>영수증/진단서를 밴드 채팅으로 반드시 증빙</b>해 주세요.
+                  <Thermometer className="mr-0.5 inline h-3 w-3 align-[-1.5px]" />병가는 월 한도와 무관해요. 신청한 뒤 <b>아래 내역에서 24시간 이내에 영수증/진단서 사진을 첨부</b>해 주세요(코멘터 확인 시 자동 삭제).
                 </div>
               )}
               {!isSick && overQuota && (
@@ -451,6 +453,10 @@ export function ConsultationTab({
                       <div className={`mt-2 rounded-xl border border-[#0071E3]/15 dark:border-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3] ${muted ? 'bg-white dark:bg-[#1c1c1e]' : 'bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15'}`}>
                         코멘터 답변: {r.adminReply}
                       </div>
+                    )}
+                    {/* 병가·개인사정 증빙 — 대기중 건에만 사진 첨부(24h 창). 관리자 확인 시 자동 삭제. */}
+                    {r.status === 'pending' && leaveNeedsProof(r.type) && (
+                      <LeaveProofAttach leaveId={r.id} createdAt={r.createdAt} initialUploadedAt={r.proofUploadedAt} />
                     )}
                     {r.status === 'rejected' && reappealBtn(r)}
                   </div>

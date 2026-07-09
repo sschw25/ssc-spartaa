@@ -1,13 +1,54 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Calendar, Check, X, Loader2, Clock, Timer, ClipboardCheck } from 'lucide-react';
+import { Calendar, Check, X, Loader2, Clock, Timer, ClipboardCheck, ImageIcon } from 'lucide-react';
 import { ConsultationLog, LeaveRequest } from '@/lib/types/student';
 import { StudyStatsCard } from '@/components/report/study-stats-card';
 import { LEAVE_TYPES } from '@/lib/leave';
 import type { DailyChecklistEntry } from '@/lib/student-activity';
+
+// 휴가 증빙 사진 열람 — 짧은 수명 서명 URL을 받아 인라인으로 보여준다.
+// 관리자가 승인/반려하면 서버에서 사진이 즉시 삭제되므로, 이 뷰어는 확인 전 검토용이다.
+function AdminLeaveProofViewer({ studentId, leaveId }: { studentId: string; leaveId: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const view = async () => {
+    if (busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      const res = await fetch(`/api/admin/students/${studentId}/leave-proof?leaveId=${encodeURIComponent(leaveId)}`, { credentials: 'same-origin' });
+      const json = await res.json();
+      if (res.ok && json.success) setUrl(json.url);
+      else setErr(json.message || '열람에 실패했습니다.');
+    } catch {
+      setErr('네트워크 오류가 발생했습니다.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-[#0071E3]/20 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-2 space-y-1.5">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#0071E3]">
+        <ImageIcon className="w-3 h-3" /> 사진 증빙 첨부됨 · 승인/반려 시 자동 삭제
+      </div>
+      {url ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <a href={url} target="_blank" rel="noopener noreferrer"><img src={url} alt="휴가 증빙" className="max-h-72 w-auto rounded-lg border border-black/10" /></a>
+      ) : (
+        <button type="button" onClick={view} disabled={busy} className="inline-flex items-center gap-1 rounded-lg bg-white dark:bg-white/10 border border-[#0071E3]/30 px-2.5 py-1 text-[10px] font-black text-[#0071E3] disabled:opacity-50">
+          {busy ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />} 증빙 사진 보기
+        </button>
+      )}
+      {err && <p className="text-[10px] font-semibold text-red-500">{err}</p>}
+    </div>
+  );
+}
 
 function leaveStatusChip(status: LeaveRequest['status']) {
   if (status === 'approved') return <span className="shrink-0 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-emerald-700">승인</span>;
@@ -37,6 +78,7 @@ interface ConsultTabProps {
   todayPomodoroStats?: { sessions: number; minutes: number };
   todayChecklist?: DailyChecklistEntry | null;
   // 휴가 신청
+  studentId?: string;
   leaveRequests?: LeaveRequest[];
   leaveActionBusy?: Record<string, boolean>;
   leaveReplyDrafts?: Record<string, string>;
@@ -54,6 +96,7 @@ export function ConsultTab({
   todayActivityKey,
   todayPomodoroStats = { sessions: 0, minutes: 0 },
   todayChecklist = null,
+  studentId,
   leaveRequests = [],
   leaveActionBusy = {},
   leaveReplyDrafts = {},
@@ -217,6 +260,11 @@ export function ConsultTab({
                     <div className="rounded-lg border border-[#0071E3]/15 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[11px] font-semibold text-[#0071E3]">
                       답변: {req.adminReply}
                     </div>
+                  )}
+
+                  {/* 사진 증빙 (병가·개인사정) — 첨부돼 있으면 확인 전 검토 */}
+                  {req.proofPath && studentId && (
+                    <AdminLeaveProofViewer studentId={studentId} leaveId={req.id} />
                   )}
 
                   {/* 답변 입력 */}

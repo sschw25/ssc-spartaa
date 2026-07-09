@@ -37,6 +37,13 @@ import {
   deleteCampusEventSupabase,
   notifyCampusEventSupabase,
   markCampusEventRewardedSupabase,
+  uploadAnnouncementImageSupabase,
+  deleteAnnouncementImageSupabase,
+  getAnnouncementPublicUrlSupabase,
+  pruneOldNoticesSupabase,
+  uploadLeaveProofSupabase,
+  signedLeaveProofUrlSupabase,
+  deleteLeaveProofSupabase,
   getMealPlansSupabase,
   saveMealPlanSupabase,
   deleteMealPlanSupabase,
@@ -698,7 +705,48 @@ export async function saveCampusEvent(event: CampusEvent): Promise<CampusEvent> 
 
 export async function deleteCampusEvent(id: string): Promise<void> {
   requireSupabase();
+  // 공지 이미지가 딸린 일정이면 Storage 객체도 함께 정리.
+  try {
+    const target = (await getCampusEventsSupabase()).find((e) => e.id === id);
+    if (target?.imagePath) await deleteAnnouncementImageSupabase(target.imagePath);
+  } catch { /* 조회 실패해도 행 삭제는 진행 */ }
   return deleteCampusEventSupabase(id);
+}
+
+// ── 학원 공지 이미지 (Storage) ──
+export async function uploadAnnouncementImage(
+  campus: string, dateKey: string, body: ArrayBuffer, contentType: string, ext: string,
+): Promise<{ url: string; path: string }> {
+  requireSupabase();
+  return uploadAnnouncementImageSupabase(campus, dateKey, body, contentType, ext);
+}
+
+export async function pruneOldNotices(beforeCreatedIso: string, campus?: string): Promise<number> {
+  requireSupabase();
+  return pruneOldNoticesSupabase(beforeCreatedIso, campus);
+}
+
+export function getAnnouncementPublicUrl(path: string): string {
+  requireSupabase();
+  return getAnnouncementPublicUrlSupabase(path);
+}
+
+// ── 휴가 증빙 사진 (비공개 Storage) ──
+export async function uploadLeaveProof(
+  studentId: string, leaveId: string, body: ArrayBuffer, contentType: string, ext: string,
+): Promise<{ path: string }> {
+  requireSupabase();
+  return uploadLeaveProofSupabase(studentId, leaveId, body, contentType, ext);
+}
+
+export async function signedLeaveProofUrl(path: string, ttlSec?: number): Promise<string> {
+  requireSupabase();
+  return signedLeaveProofUrlSupabase(path, ttlSec);
+}
+
+export async function deleteLeaveProof(path: string): Promise<void> {
+  requireSupabase();
+  return deleteLeaveProofSupabase(path);
 }
 
 export async function notifyCampusEvent(id: string, notifiedAt: string | null): Promise<CampusEvent> {

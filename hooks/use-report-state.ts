@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target, Timer } from 'lucide-react';
+import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target, Timer, CalendarDays } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
 import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
 import {
@@ -2290,6 +2290,7 @@ export function useReportState() {
         { href: '#focus', label: '집중', meta: isLectureTime ? '강의 수강 중' : '뽀모도로 타이머', icon: Timer },
         { href: '#wrong-note', label: '오답 노트', meta: '교재별 오답 사유', icon: Target },
         { href: '#student-requests', label: '신청', meta: `상담 · 반차 ${homeHalfLeft}회`, icon: ClipboardList },
+        { href: '#calendar', label: '캘린더', meta: '내 수험 스케줄러', icon: CalendarDays },
         { href: '#life', label: '생활', meta: `등하원 · 벌점 ${totalPenaltyPoints}점`, icon: Shield },
         { href: '#student-notifications', label: '알림', meta: `${notificationCount}개`, icon: Bell },
         { href: '#coach-feedback', label: '코멘팅 소견', meta: '학생 피드백', icon: MessageSquare },

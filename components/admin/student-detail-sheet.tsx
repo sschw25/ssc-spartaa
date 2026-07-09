@@ -2834,12 +2834,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       });
       const json = await res.json();
       if (res.ok && json.success) {
+        const clearsProof = payload.status === 'approved' || payload.status === 'rejected';
         const updated = leaveRequestsLocal.map(r =>
           r.id === requestId
             ? {
                 ...r,
                 ...(payload.status ? { status: payload.status as LeaveRequest['status'], reviewedAt: new Date().toISOString() } : {}),
                 ...(payload.reply !== undefined ? { adminReply: payload.reply || undefined } : {}),
+                // 확인 시 서버가 증빙 사진을 삭제하므로 로컬에서도 흔적 제거(뷰어 숨김)
+                ...(clearsProof ? { proofPath: undefined, proofUploadedAt: undefined } : {}),
               }
             : r
         );
@@ -4607,6 +4610,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 todayActivityKey={todayActivityKey}
                 todayPomodoroStats={todayPomodoroStats}
                 todayChecklist={todayChecklist}
+                studentId={student?.id}
                 leaveRequests={leaveRequestsLocal}
                 leaveActionBusy={leaveActionBusy}
                 leaveReplyDrafts={leaveReplyDrafts}

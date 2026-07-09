@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
-import { updateStudentById } from '@/lib/store';
+import { updateStudentById, deleteLeaveProof } from '@/lib/store';
 import { isLeaveType } from '@/lib/leave';
 import { appendThreadMessage } from '@/lib/thread';
 import { readActivityEnvelope, writeActivityEnvelope } from '@/lib/student-activity';
@@ -84,6 +84,7 @@ export async function PATCH(
 
   let errorResponse: NextResponse | null = null;
   let couponBalance: number | null = null;
+  let proofPathToDelete: string | undefined; // 확인(승인/반려) 시 즉시 삭제할 증빙 경로
 
   const result = await updateStudentById(id, (student) => {
     // 1) 쿠폰 잔액 조정 (지급/차감)
@@ -150,6 +151,12 @@ export async function PATCH(
       target.status = status;
       target.reviewedAt = status === 'pending' ? undefined : nowIso;
       target.acknowledgedAt = status === 'pending' ? nowIso : undefined;
+      // 관리자가 확인(승인/반려)하면 증빙 사진은 즉시 삭제한다. 경로는 저장 후 지운다.
+      if ((status === 'approved' || status === 'rejected') && target.proofPath) {
+        proofPathToDelete = target.proofPath;
+        target.proofPath = undefined;
+        target.proofUploadedAt = undefined;
+      }
       // 승인 전이 시 개인사정/병가는 "이번 주말 보강 반영" heads-up 알림(멱등 — 재승인해도 재알림 없음).
       // 정해진 반차/휴식은 알림 없음(계획이 밀림). 실제 owed 는 주간 정산으로 파생.
       if (status === 'approved') notifyMakeupLeave(student, target);
@@ -162,6 +169,11 @@ export async function PATCH(
   }
   if (typeof result === 'string') {
     return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+  }
+
+  // 확인 완료된 증빙 사진 즉시 삭제 (저장 성공 후)
+  if (proofPathToDelete) {
+    try { await deleteLeaveProof(proofPathToDelete); } catch { /* 이미 없으면 무시 */ }
   }
 
   if (couponBalance !== null) {

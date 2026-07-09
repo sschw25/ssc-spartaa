@@ -267,6 +267,9 @@ export interface LeaveRequest {
   reappealedAt?: string;  // 반려 후 학생이 재승인 요청한 시각 (ISO) — 인박스에 '재요청'으로 표시
   reappealReason?: string;// 재승인 요청 시 학생이 추가한 메시지
   makeupAccruedAt?: string;// 이 휴가로 주말 보강 원장에 가산 완료한 시각 (ISO) — 멱등 플래그(재가산 금지)
+  // ── 사진 증빙 (병가/개인사정 반차·휴식) ──
+  proofPath?: string;      // 비공개 Storage(leave-proofs) 내 경로(key). 관리자 확인 시 즉시 삭제 → 값 제거.
+  proofUploadedAt?: string;// 증빙 업로드 시각 (ISO)
 }
 
 // 주말 보강 발생 알림 1건 — 휴가 승인 시 발생한 자료별 보강량을 묶어 학생 홈 알림으로 노출.
@@ -408,7 +411,14 @@ export interface OtEvent {
 // ── 학원 캘린더 일정 & 참여 미션 (campus_events 테이블) ─────────────
 // 일반 일정(공지·행사)과 "참여 미션"(대상 선정 → 알림 → 수락 → 행사 후 쿠폰 일괄 지급)을
 // 하나의 엔티티로 통합. isMission=true 이면 미션 필드(couponReward/target/notifiedAt 등) 사용.
-export type CampusEventCategory = 'general' | 'mission';
+// general=일반 일정, mission=참여 미션(쿠폰), notice=사진 공지(매일 학원 공지)
+export type CampusEventCategory = 'general' | 'mission' | 'notice';
+
+// 학생 응답 모드 — 관리자가 일정 등록 시 선택. 참여 미션(isMission)은 항상 'attendance'로 동작.
+//  - none:       알림만 (표시·공지, 응답 없음) — 기본값
+//  - attendance: 참석/불참 응답을 받음 (eventParticipations 재사용)
+//  - postTask:   행사 종료 후 학생이 제출/확인해야 하는 사후과제 (마감일 + 이동 링크)
+export type CampusEventResponseMode = 'none' | 'attendance' | 'postTask';
 
 export interface CampusEvent {
   id: string;
@@ -421,6 +431,14 @@ export interface CampusEvent {
   category: CampusEventCategory;
   memo?: string;            // 안내 메모 (학생 알림에 함께 노출)
   color?: string;           // 캘린더 표시 색 (옵션)
+  // ── 사진 공지 전용 (category==='notice') ──
+  imageUrl?: string;        // 공지 이미지 공개 URL (Supabase Storage)
+  imagePath?: string;       // Storage 내 경로(key) — 삭제/정리용
+  // ── 학생 응답 모드 (모든 일정 공통) ──
+  responseMode?: CampusEventResponseMode; // 미지정=none. 참여 미션은 값과 무관하게 attendance로 취급.
+  postTaskLabel?: string;   // responseMode==='postTask' — 사후 과제 안내 (예: "후기 제출", "성적 입력")
+  postTaskDueDate?: string; // 사후 과제 마감일 YYYY-MM-DD (옵션 — 없으면 종료일/시작일 기준)
+  postTaskHref?: string;    // 사후 과제 이동 링크 (학생 앱 내 경로 또는 URL, 옵션)
   // ── 참여 미션 전용 (category==='mission') ──
   isMission?: boolean;      // 참여 후 쿠폰을 지급하는 미션 여부
   couponReward?: number;    // 참여자에게 지급할 쿠폰 수
@@ -430,6 +448,16 @@ export interface CampusEvent {
   rewardedAt?: string;      // 쿠폰 일괄 지급 완료 시각 (ISO)
   createdAt: string;
   createdBy?: string;       // 등록 관리자
+}
+
+// 학생 본인이 캘린더에 직접 작성하는 개인 일정 (수험 스케줄러).
+// 별도 컬럼 없이 student_state(jsonb).personalSchedule 에 보관 — 마이그레이션 불필요.
+export interface PersonalScheduleItem {
+  id: string;
+  date: string;        // YYYY-MM-DD
+  title: string;
+  memo?: string;
+  createdAt: string;   // ISO
 }
 
 // 학생별 참여 미션 응답 (Student.eventParticipations JSONB)

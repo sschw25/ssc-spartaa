@@ -7,9 +7,10 @@ import {
   Loader2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, X, RefreshCw,
   Ticket, Minus, Plus, ChevronDown, PenLine, MessageSquare, ShieldAlert, CalendarHeart,
   ClipboardCheck, CalendarClock, Trash2, Bell, Gift, Search, Pin, GraduationCap,
-  MessageCircle, TriangleAlert, CheckCircle2, Clock,
+  MessageCircle, TriangleAlert, CheckCircle2, Clock, Megaphone, ImagePlus,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { compressImageToJpeg } from '@/lib/image-compress';
 import { Student, LeaveRequest, LeaveType, CampusEvent, MockExam, OtEvent } from '@/lib/types/student';
 import { LEAVE_TYPES, getLeaveTypeLabel, COUPONS_PER_EXTRA_HALFDAY } from '@/lib/leave';
 import { LeaveTypeIcon } from '@/components/leave-type-icon';
@@ -104,9 +105,80 @@ export default function AdminCalendarPage() {
     title: '', date: todayStr, endDate: '', startTime: '', endTime: '',
     campus: 'all', memo: '', isMission: false, couponReward: 1,
     targetMode: 'campus' as 'campus' | 'students', targetStudentIds: [] as string[],
+    responseMode: 'none' as 'none' | 'attendance' | 'postTask',
+    postTaskLabel: '', postTaskDueDate: '', postTaskHref: '',
   });
   const [evBusy, setEvBusy] = useState(false);
   const [evStudentSearch, setEvStudentSearch] = useState('');
+
+  // 사진 공지 등록 모달
+  const [noticeModalOpen, setNoticeModalOpen] = useState(false);
+  const [noticeForm, setNoticeForm] = useState<{ date: string; campus: string; memo: string; previewUrl: string; blob: Blob | null; fileName: string }>(
+    { date: todayStr, campus: 'all', memo: '', previewUrl: '', blob: null, fileName: '' },
+  );
+  const [noticeBusy, setNoticeBusy] = useState(false);
+
+  const openNoticeModal = () => {
+    setNoticeForm({ date: selectedDate, campus: adminCampus !== 'all' ? adminCampus : 'all', memo: '', previewUrl: '', blob: null, fileName: '' });
+    setNoticeModalOpen(true);
+  };
+
+  const handleNoticeFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { toast.error('이미지 파일만 올릴 수 있어요.'); return; }
+    try {
+      const blob = await compressImageToJpeg(file);
+      setNoticeForm((f) => {
+        if (f.previewUrl) URL.revokeObjectURL(f.previewUrl);
+        return { ...f, blob, previewUrl: URL.createObjectURL(blob), fileName: file.name };
+      });
+    } catch {
+      toast.error('이미지 처리에 실패했어요. 다른 사진으로 시도해 주세요.');
+    }
+  };
+
+  const handleNoticeSubmit = async () => {
+    if (!noticeForm.blob) { toast.error('공지 사진을 선택해 주세요.'); return; }
+    if (!noticeForm.date) { toast.error('날짜를 선택해 주세요.'); return; }
+    setNoticeBusy(true);
+    try {
+      // 1) 압축 이미지 업로드 → 공개 URL
+      const fd = new FormData();
+      fd.append('file', new File([noticeForm.blob], `notice-${noticeForm.date}.jpg`, { type: 'image/jpeg' }));
+      fd.append('date', noticeForm.date);
+      fd.append('campus', noticeForm.campus);
+      const upRes = await fetch('/api/admin/announcement-image', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const upJson = await upRes.json();
+      if (!upRes.ok || !upJson.success) { toast.error(upJson.message || '이미지 업로드에 실패했어요.'); return; }
+
+      // 2) 공지 일정(category=notice) 등록
+      const res = await fetch('/api/admin/campus-events', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+        body: JSON.stringify({
+          category: 'notice',
+          title: noticeForm.memo.trim().slice(0, 40) || '학원 공지',
+          date: noticeForm.date,
+          campus: noticeForm.campus,
+          memo: noticeForm.memo.trim() || undefined,
+          imagePath: upJson.path, // 서버가 이 경로로 공개 URL을 재구성함
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setCampusEvents((prev) => [json.event, ...prev]);
+        setSelectedDate(json.event.date);
+        if (noticeForm.previewUrl) URL.revokeObjectURL(noticeForm.previewUrl);
+        setNoticeModalOpen(false);
+        toast.success('공지가 등록됐습니다.');
+      } else {
+        toast.error(json.message || '등록에 실패했어요.');
+      }
+    } catch {
+      toast.error('등록 중 오류가 발생했어요.');
+    } finally {
+      setNoticeBusy(false);
+    }
+  };
 
   const openAddModal = () => {
     setAddForm({ studentId: '', type: 'morning', date: selectedDate, reason: '', status: 'approved' });
@@ -118,6 +190,7 @@ export default function AdminCalendarPage() {
       title: '', date: selectedDate, endDate: '', startTime: '', endTime: '',
       campus: adminCampus !== 'all' ? adminCampus : 'all', memo: '', isMission: false, couponReward: 1,
       targetMode: 'campus', targetStudentIds: [],
+      responseMode: 'none', postTaskLabel: '', postTaskDueDate: '', postTaskHref: '',
     });
     setEvStudentSearch('');
     setEventModalOpen(true);
@@ -201,6 +274,11 @@ export default function AdminCalendarPage() {
           couponReward: evForm.isMission ? evForm.couponReward : undefined,
           targetMode: evForm.isMission ? evForm.targetMode : undefined,
           targetStudentIds: evForm.isMission && evForm.targetMode === 'students' ? evForm.targetStudentIds : undefined,
+          // 참여 미션이 아닐 때만 응답 모드 전달 (미션은 서버에서 attendance 강제)
+          responseMode: evForm.isMission ? undefined : evForm.responseMode,
+          postTaskLabel: !evForm.isMission && evForm.responseMode === 'postTask' ? evForm.postTaskLabel.trim() || undefined : undefined,
+          postTaskDueDate: !evForm.isMission && evForm.responseMode === 'postTask' ? evForm.postTaskDueDate || undefined : undefined,
+          postTaskHref: !evForm.isMission && evForm.responseMode === 'postTask' ? evForm.postTaskHref.trim() || undefined : undefined,
         }),
       });
       const json = await res.json();
@@ -510,9 +588,14 @@ export default function AdminCalendarPage() {
                 ))}
               </div>
             </div>
-            <Button size="sm" onClick={openEventModal} className="rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-9 px-3.5 shadow-sm">
-              <Plus className="w-4 h-4 mr-1" /> 일정 등록
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={openNoticeModal} className="rounded-xl border-[#0071E3]/30 text-[#0071E3] hover:bg-[#0071E3]/[0.06] dark:hover:bg-[#0071E3]/15 text-xs font-black h-9 px-3.5">
+                <Megaphone className="w-4 h-4 mr-1" /> 공지 등록
+              </Button>
+              <Button size="sm" onClick={openEventModal} className="rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white text-xs font-black h-9 px-3.5 shadow-sm">
+                <Plus className="w-4 h-4 mr-1" /> 일정 등록
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -899,6 +982,44 @@ export default function AdminCalendarPage() {
                 className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm bg-white dark:bg-[#1c1c1e] px-3 py-2 focus:outline-none focus:border-[#0071E3] resize-none" />
             </div>
 
+            {/* 학생 응답 방식 — 참여 미션이면 자동 참석 응답이므로 숨김 */}
+            {!evForm.isMission && (
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">학생 응답 방식</Label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {([
+                    ['none', '알림만', '공지'],
+                    ['attendance', '참석 응답', '참석/불참'],
+                    ['postTask', '사후 과제', '종료 후 제출'],
+                  ] as const).map(([v, l, sub]) => (
+                    <button key={v} type="button" onClick={() => setEvForm((f) => ({ ...f, responseMode: v }))}
+                      className={`rounded-xl border py-2 px-1 text-center transition ${evForm.responseMode === v ? 'bg-[#0071E3] text-white border-[#0071E3]' : 'bg-white dark:bg-[#1c1c1e] text-slate-900 dark:text-slate-100 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/5'}`}>
+                      <span className="block text-[11px] font-extrabold">{l}</span>
+                      <span className={`block text-[9px] font-bold ${evForm.responseMode === v ? 'text-white/70' : 'text-slate-400'}`}>{sub}</span>
+                    </button>
+                  ))}
+                </div>
+                {evForm.responseMode === 'postTask' && (
+                  <div className="space-y-2 pt-1.5">
+                    <input value={evForm.postTaskLabel} onChange={(e) => setEvForm((f) => ({ ...f, postTaskLabel: e.target.value }))} placeholder="과제 안내 (예: 후기 제출, 사진 업로드)"
+                      className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">마감일 <span className="font-medium">(선택)</span></Label>
+                        <input type="date" value={evForm.postTaskDueDate} min={evForm.date} onChange={(e) => setEvForm((f) => ({ ...f, postTaskDueDate: e.target.value }))}
+                          className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">이동 링크 <span className="font-medium">(선택)</span></Label>
+                        <input value={evForm.postTaskHref} onChange={(e) => setEvForm((f) => ({ ...f, postTaskHref: e.target.value }))} placeholder="/report/... 또는 https://"
+                          className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 참여 미션 토글 */}
             <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-3.5 space-y-3">
               <label className="flex items-center gap-2.5 cursor-pointer">
@@ -962,6 +1083,64 @@ export default function AdminCalendarPage() {
 
             <Button onClick={handleEventSubmit} disabled={evBusy || !evForm.title.trim()} className="w-full h-11 rounded-xl bg-slate-900 hover:bg-[#323236] text-white font-extrabold text-sm">
               {evBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : '등록하기'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 사진 공지 등록 모달 */}
+      <Dialog open={noticeModalOpen} onOpenChange={(open) => {
+        if (!open && noticeForm.previewUrl) URL.revokeObjectURL(noticeForm.previewUrl);
+        setNoticeModalOpen(open);
+      }}>
+        <DialogContent className="max-w-md rounded-3xl p-6 max-h-[88vh] overflow-y-auto" aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle className="text-base font-black flex items-center gap-2"><Megaphone className="w-4 h-4 text-[#0071E3]" /> 사진 공지 등록</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              사진은 업로드 전 자동 압축돼요(용량 걱정 없음). 학생 캘린더 해당 날짜에 표시되고, 눌러서 크게 볼 수 있어요.
+            </p>
+
+            {/* 이미지 선택/미리보기 */}
+            <label className="block cursor-pointer">
+              <input type="file" accept="image/*" className="hidden" onChange={(e) => handleNoticeFile(e.target.files?.[0])} />
+              {noticeForm.previewUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={noticeForm.previewUrl} alt="공지 미리보기" className="w-full max-h-64 rounded-2xl object-contain border border-black/[0.08] dark:border-white/10 bg-slate-50 dark:bg-white/5" />
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-black/[0.1] dark:border-white/15 py-10 text-slate-400">
+                  <ImagePlus className="w-7 h-7" />
+                  <span className="text-xs font-bold">공지 사진 선택</span>
+                </div>
+              )}
+            </label>
+            {noticeForm.previewUrl && (
+              <p className="text-center text-[11px] font-bold text-[#0071E3]">사진을 다시 누르면 교체할 수 있어요</p>
+            )}
+
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">날짜</Label>
+                <input type="date" value={noticeForm.date} onChange={(e) => setNoticeForm((f) => ({ ...f, date: e.target.value }))} className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">대상 센터</Label>
+                <select value={noticeForm.campus} onChange={(e) => setNoticeForm((f) => ({ ...f, campus: e.target.value }))} disabled={adminCampus !== 'all'}
+                  className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3] disabled:opacity-70">
+                  <option value="all">전체 센터</option><option value="wonju">원주</option><option value="chuncheon">춘천</option><option value="chungju">충주</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-extrabold text-slate-900 dark:text-slate-100">한 줄 설명 <span className="text-slate-500 dark:text-slate-400 font-medium">(선택)</span></Label>
+              <input value={noticeForm.memo} onChange={(e) => setNoticeForm((f) => ({ ...f, memo: e.target.value }))} placeholder="예: 오늘 하원 시간표 변경 안내"
+                className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm h-10 bg-white dark:bg-[#1c1c1e] px-3 focus:outline-none focus:border-[#0071E3]" />
+            </div>
+
+            <Button onClick={handleNoticeSubmit} disabled={noticeBusy || !noticeForm.blob} className="w-full h-11 rounded-xl bg-[#0071E3] hover:bg-[#005DB9] text-white font-extrabold text-sm">
+              {noticeBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : '공지 등록'}
             </Button>
           </div>
         </DialogContent>

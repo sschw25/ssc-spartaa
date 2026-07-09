@@ -20,11 +20,12 @@ import { PenaltiesTab } from '@/components/report/penalties-tab';
 import { CouponTab } from '@/components/report/coupon-tab';
 import { MockExamNotice } from '@/components/report/mock-exam-notice';
 import { OtEventNotice } from '@/components/report/ot-event-notice';
+import { StudentCalendarTab } from '@/components/report/student-calendar-tab';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MaterialDetailSheet } from '@/components/report/material-detail-sheet';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
-import { Loader2, AlertCircle, BookOpen, Shield, Timer } from 'lucide-react';
+import { Loader2, AlertCircle, BookOpen, Shield, Timer, CalendarDays } from 'lucide-react';
 import { TabHero } from '@/components/report/tab-hero';
 import type { MockExam, OtEvent, CampusEvent, SaturdayLateExcuse, Student, SubjectProgress, BookProgress, LectureProgress } from '@/lib/types/student';
 
@@ -692,6 +693,24 @@ function StudentReportInner() {
               setStudent={setStudent}
               setRewardBanner={setRewardBanner}
               isLectureTime={isLectureTime}
+            />
+          </section>
+        )}
+
+        {isStudentReport && activeTab === 'calendar' && (
+          <section id="calendar" className="scroll-mt-24 space-y-4">
+            <TabHero
+              eyebrow="Calendar"
+              icon={CalendarDays}
+              title="나의 수험 스케줄러"
+              description="학원 일정(OT·모의고사·행사)과 내 반차·상담은 물론, 내가 직접 적은 공부 계획까지 한 달을 한눈에 관리해요."
+            />
+            <StudentCalendarTab
+              onNavigateToGrades={() => {
+                setActiveTab('learning');
+                setLearningSubTab('grade-analysis');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
             />
           </section>
         )}
