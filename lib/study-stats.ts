@@ -1,4 +1,28 @@
 import type { StudySession } from './supabase';
+import { parseSpecialNoteEnvelope } from './student-activity';
+
+// 집중(순공) 분 — 학생 활동봉투 pomodoro_minutes 를 날짜 범위 합산, 재석분(출결) 상한으로 클램프.
+// "순공 ≤ 재석" — 실제 있던 시간보다 집중이 많을 수 없다(어뷰징 방어). 0분·재석0 은 랭킹 제외.
+export function focusMinutesByStudent(
+  students: Array<{ id: string; specialNote?: string | null }>,
+  sinceDate: string,
+  untilDate: string,
+  attendanceByStudent: Record<string, number>,
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  for (const s of students) {
+    const pm = parseSpecialNoteEnvelope(s.specialNote).pomodoro_minutes;
+    if (!pm || typeof pm !== 'object') continue;
+    let sum = 0;
+    for (const [d, v] of Object.entries(pm)) {
+      if (d >= sinceDate && d <= untilDate) sum += Number(v) || 0;
+    }
+    if (sum <= 0) continue;
+    const clamped = Math.min(sum, attendanceByStudent[s.id] || 0);
+    if (clamped > 0) out[s.id] = clamped;
+  }
+  return out;
+}
 
 // 날짜 유틸 (KST, 타임존 안전)
 function seoulToday(now: Date): string {

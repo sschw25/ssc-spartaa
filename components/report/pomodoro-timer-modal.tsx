@@ -1,433 +1,490 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { Maximize2, Minimize2, Edit2, Check, X, Pause, Play, Flag, Loader2 } from 'lucide-react';
+import { Maximize2, Minimize2, Play, Pause, Trophy, Flame, BookOpen, Timer, Infinity as InfinityIcon, Edit2, Check, X, Plus, Minus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 
-const DEFAULT_TARGET_MIN = 10; // 기본 세션 목표(분) — 짧게 여러 번
+// 열품타식 자습 집중 스톱워치.
+//  - 시작하면 카운트업. 화면(탭)이 보이는 동안 누적. 다른 앱 잠깐(≤GRACE) 써도 이어지고,
+//    GRACE 초과로 화면을 떠나 있으면 그 초과분은 인정하지 않고 자동 일시정지.
+//  - 그날 총 집중분을 주기적으로 서버에 SET-max 로 반영(중복적립 없음). 순위는 리더보드가 재석 상한 클램프.
+//  - 전체화면은 '몰입 모드' 옵션(누적과 무관). 태블릿은 Wake Lock 으로 화면 유지.
+const HIDDEN_GRACE_SEC = 300; // 다른 앱/화면꺼짐 이 시간까지는 인정, 초과 시 자동 정지
+const FLUSH_EVERY_SEC = 60;   // 서버 반영 주기
+const RANK_REFRESH_MS = 60000;
 
 interface PomodoroTimerProps {
   student: Student;
   setStudent: React.Dispatch<React.SetStateAction<Student | null>>;
   setRewardBanner: React.Dispatch<React.SetStateAction<{ show: boolean; reasons: string[] }>>;
-  // 지금 교시에 인강이 배정돼 있으면 true — 강의 시청 중이 아닐 때만 탭 진입과 동시에 전체화면(몰입) 진입을 시도한다.
   isLectureTime?: boolean;
 }
 
-// 서울 기준 YYYY-MM-DD
 function seoulDateKey(): string {
-  const parts = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
-  const y = parts.find((p) => p.type === 'year')?.value;
-  const m = parts.find((p) => p.type === 'month')?.value;
-  const d = parts.find((p) => p.type === 'day')?.value;
-  return `${y}-${m}-${d}`;
+  const p = new Intl.DateTimeFormat('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date());
+  return `${p.find((x) => x.type === 'year')?.value}-${p.find((x) => x.type === 'month')?.value}-${p.find((x) => x.type === 'day')?.value}`;
+}
+function fmtDuration(sec: number): string {
+  const m = Math.floor(sec / 60), h = Math.floor(m / 60), mm = m % 60;
+  return h > 0 ? `${h}시간 ${mm}분` : `${mm}분`;
+}
+function fmtClock(sec: number): string {
+  const h = Math.floor(sec / 3600), m = Math.floor((sec % 3600) / 60), s = sec % 60;
+  return h > 0 ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}` : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 }
 
-// 초 → "1시간 23분" / "45분" / "0분"
-function formatDuration(totalSec: number): string {
-  const m = Math.floor(totalSec / 60);
-  const h = Math.floor(m / 60);
-  const mm = m % 60;
-  if (h > 0) return `${h}시간 ${mm}분`;
-  return `${mm}분`;
+interface RankInfo { myMinutes: number; attendanceDay: number; topPercent: number | null; toTop10: number; inTop10: boolean; rank: number | null; liveCount: number; peerAvgDay: number; peerCountDay: number; }
+
+// 학원 자습 시간대(KST 08:00~23:00) 기준, 지금까지 지난 하루 비율(0~1)
+function studyDayFraction(): number {
+  const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hour12: false }).formatToParts(new Date());
+  const h = Number(p.find((x) => x.type === 'hour')?.value) || 0;
+  const m = Number(p.find((x) => x.type === 'minute')?.value) || 0;
+  const START = 8 * 60, END = 23 * 60;
+  return Math.max(0, Math.min(1, ((h * 60 + m) - START) / (END - START)));
 }
 
-// 초 → "MM:SS" (현재 세션 표시)
-function formatClock(totalSec: number): string {
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-}
-
-function StatusPill({ canRun, running }: { canRun: boolean; running: boolean }) {
+// 카운트다운 링 — remainFrac(1→0)에 따라 호가 줄어든다. 뽀모도로 시각화.
+function CountdownRing({ size, stroke, remainFrac, color, children }: { size: number; stroke: number; remainFrac: number; color: string; children: React.ReactNode }) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const frac = Math.max(0, Math.min(1, remainFrac));
   return (
-    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-black transition-all ${
-      canRun ? 'border-[#0071E3] bg-[#0071E3] text-white shadow-[0_2px_8px_rgba(0,113,227,0.35)]'
-      : running ? 'border-amber-300 bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
-      : 'border-[#0071E3]/15 bg-[#0071E3]/8 text-[#0071E3] dark:bg-[#0071E3]/15'
-    }`}>
-      {canRun ? '집중 중' : running ? '일시정지' : '대기'}
-    </span>
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" className="text-slate-200 dark:text-white/10" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={`${frac * c} ${c}`} style={{ transition: 'stroke-dasharray 1s linear' }} />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">{children}</div>
+    </div>
+  );
+}
+
+function ControlButton({ running, big, hasProgress, onStart, onPause }: { running: boolean; big?: boolean; hasProgress: boolean; onStart: () => void; onPause: () => void }) {
+  if (!running) {
+    return (
+      <button type="button" onClick={onStart} className={`rounded-full bg-[#0071E3] font-black text-white shadow-[0_6px_20px_rgba(0,113,227,0.4)] transition hover:bg-[#0077ED] active:scale-95 ${big ? 'px-12 py-4 text-base' : 'w-full py-3.5 text-sm'}`}>
+        <Play className={`-mt-0.5 mr-1.5 inline ${big ? 'h-5 w-5' : 'h-4 w-4'}`} />{hasProgress ? '이어서 집중' : '집중 시작'}
+      </button>
+    );
+  }
+  return (
+    <button type="button" onClick={onPause} className={`rounded-full font-black transition active:scale-95 ${big ? 'glass-clear px-12 py-4 text-base text-white' : 'glass-capsule w-full py-3.5 text-sm text-slate-700 dark:text-slate-200'}`}>
+      <Pause className={`-mt-0.5 mr-1.5 inline ${big ? 'h-5 w-5' : 'h-4 w-4'}`} />일시 정지
+    </button>
   );
 }
 
 export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureTime = false }: PomodoroTimerProps) {
   const todayKey = seoulDateKey();
+  const focusKey = `ssc-focus:${student.id}`;
 
-  // specialNote 활동 봉투에서 오늘 기록된 집중(분)·세션수 초기값
-  const initialNote = (() => {
-    try { return student.specialNote ? JSON.parse(student.specialNote) : {}; } catch { return {}; }
+  const initialServerSec = (() => {
+    try { const n = JSON.parse(student.specialNote || '{}'); return (Number(n?.pomodoro_minutes?.[todayKey]) || 0) * 60; } catch { return 0; }
   })();
-  const [serverMinutes, setServerMinutes] = useState<number>(Number(initialNote?.pomodoro_minutes?.[todayKey]) || 0);
-  const [serverSessions, setServerSessions] = useState<number>(Number(initialNote?.pomodoro_sessions?.[todayKey]) || 0);
 
-  const [sessionSec, setSessionSec] = useState(0);   // 현재 세션 경과(기록 전)
-  const [running, setRunning] = useState(false);      // 학생 집중 의사(시작함)
-  const [isFs, setIsFs] = useState(false);            // 전체화면 여부
-  const [visible, setVisible] = useState(true);       // 탭 보임(document 가시성)
-  const [focused, setFocused] = useState(true);       // 창 포커스
-  const [recording, setRecording] = useState(false);
+  const [todaySec, setTodaySec] = useState(initialServerSec);
+  const [running, setRunning] = useState(false);
+  const [isFs, setIsFs] = useState(false);
+  const [visible, setVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
-
-  const [targetMin, setTargetMin] = useState(DEFAULT_TARGET_MIN);
+  const [rank, setRank] = useState<RankInfo | null>(null);
+  // 모드: 스톱워치(자유 누적) / 뽀모도로(세션 카운트다운). 둘 다 같은 오늘 순공에 누적된다.
+  const [mode, setMode] = useState<'stopwatch' | 'pomodoro'>('stopwatch');
+  const [targetMin, setTargetMin] = useState(25);
+  const [sessionSec, setSessionSec] = useState(0); // 뽀모도로 현재 세션 경과
   const [editingTarget, setEditingTarget] = useState(false);
   const [targetDraft, setTargetDraft] = useState('');
-  const reachedTargetRef = useRef(false);
+  const modeKey = `ssc-focus-mode:${student.id}`;
 
-  const stateKey = `ssc-pomodoro-cu:${student.id}`;
-  const targetKey = `ssc-pomodoro-target:${student.id}`;
-
-  // 전체화면 API 지원 여부 — iOS Safari 등 미지원 환경에서는 전체화면을 요구하지 않는다
-  // (아니면 타이머가 영영 멈춘 채가 됨). 미지원 환경도 앱/탭 전환은 visibilitychange 로 감지해 멈춘다.
-  const fsSupported = typeof document !== 'undefined' && !!document.fullscreenEnabled;
-  const fsOk = fsSupported ? isFs : true;
-  // 활성 조건 — 하나라도 깨지면 시계가 멈춘다(이탈/전체화면 해제 = 일시정지).
-  const canRun = running && visible && focused && fsOk;
-  const todayTotalSec = serverMinutes * 60 + sessionSec;
-  const targetSec = targetMin * 60;
-  const pct = Math.min(sessionSec / targetSec, 1);
+  const todaySecRef = useRef(todaySec);
+  const runningRef = useRef(running);
+  const modeRef = useRef(mode);
+  const targetMinRef = useRef(targetMin);
+  const hiddenAtRef = useRef<number | null>(null);
+  const lastFlushRef = useRef(0);
+  const wakeLockRef = useRef<any>(null);
+  useEffect(() => { todaySecRef.current = todaySec; }, [todaySec]);
+  useEffect(() => { runningRef.current = running; }, [running]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { targetMinRef.current = targetMin; }, [targetMin]);
 
   useEffect(() => { setMounted(true); }, []);
 
-  // 목표 시간 복원
-  useEffect(() => {
-    const t = Number(window.localStorage.getItem(targetKey));
-    if (Number.isFinite(t) && t >= 1 && t <= 180) setTargetMin(t);
-  }, [targetKey]);
-
-  // 현재 세션 경과 복원(같은 날만). 재진입 시 이어서 누적하되 재개는 학생이 직접(자동 시작 안 함).
+  // 로컬 저장 총량 복원(같은 날) — 서버값과 큰 쪽 사용(비감소)
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(stateKey);
-      if (!raw) return;
-      const p = JSON.parse(raw) as { sessionSec?: number; dateKey?: string };
-      if (p.dateKey === todayKey && Number.isFinite(p.sessionSec) && (p.sessionSec || 0) > 0) {
-        setSessionSec(Math.floor(p.sessionSec!));
-      } else {
-        window.localStorage.removeItem(stateKey);
+      const raw = window.localStorage.getItem(focusKey);
+      if (raw) {
+        const p = JSON.parse(raw) as { sec?: number; dateKey?: string };
+        if (p.dateKey === todayKey && Number.isFinite(p.sec)) setTodaySec((prev) => Math.max(prev, Math.floor(p.sec!)));
+        else window.localStorage.removeItem(focusKey);
       }
     } catch { /* noop */ }
-  }, [stateKey, todayKey]);
+  }, [focusKey, todayKey]);
 
-  // 현재 세션 경과 저장(변경 시)
   useEffect(() => {
-    window.localStorage.setItem(stateKey, JSON.stringify({ sessionSec, dateKey: todayKey }));
-  }, [sessionSec, stateKey, todayKey]);
+    window.localStorage.setItem(focusKey, JSON.stringify({ sec: todaySec, dateKey: todayKey }));
+  }, [todaySec, focusKey, todayKey]);
 
-  // 전체화면 변화 감지
+  // 모드·목표 복원/저장
   useEffect(() => {
-    const onFsChange = () => {
-      const fs = !!(document.fullscreenElement || (document as any).webkitFullscreenElement || (document as any).mozFullScreenElement || (document as any).msFullscreenElement);
-      setIsFs(fs);
-    };
-    document.addEventListener('fullscreenchange', onFsChange);
-    document.addEventListener('webkitfullscreenchange', onFsChange);
-    return () => {
-      document.removeEventListener('fullscreenchange', onFsChange);
-      document.removeEventListener('webkitfullscreenchange', onFsChange);
-    };
-  }, []);
-
-  // 탭 가시성 / 창 포커스 감지 — 다른 창/탭으로 넘어가면 멈춘다.
-  useEffect(() => {
-    const onVis = () => setVisible(!document.hidden);
-    const onFocus = () => setFocused(true);
-    const onBlur = () => setFocused(false);
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('focus', onFocus);
-    window.addEventListener('blur', onBlur);
-    setVisible(!document.hidden);
-    // 포커스 초기값은 true 유지(환경에 따라 hasFocus() 가 부정확) — blur 이벤트로만 멈춘다.
-    return () => {
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('focus', onFocus);
-      window.removeEventListener('blur', onBlur);
-    };
-  }, []);
-
-  const toggleFullscreen = useCallback(async () => {
-    const el = document.getElementById('pomodoro-fullscreen-container');
-    if (!el) return;
     try {
-      if (!isFs) {
-        if (el.requestFullscreen) await el.requestFullscreen();
-        else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen();
-      } else if (document.exitFullscreen) {
-        await document.exitFullscreen();
-      } else if ((document as any).webkitExitFullscreen) {
-        await (document as any).webkitExitFullscreen();
+      const raw = window.localStorage.getItem(modeKey);
+      if (raw) {
+        const p = JSON.parse(raw) as { mode?: string; target?: number };
+        if (p.mode === 'pomodoro' || p.mode === 'stopwatch') setMode(p.mode);
+        if (Number.isFinite(p.target) && p.target! >= 1 && p.target! <= 180) setTargetMin(p.target!);
       }
-    } catch { /* 브라우저 정책 등 — 무시 */ }
-  }, [isFs]);
-
-  // 집중 탭 진입 시(강의 시간 아니면·전체화면 지원 시) 전체화면 자동 진입.
+    } catch { /* noop */ }
+  }, [modeKey]);
   useEffect(() => {
-    if (!mounted || isLectureTime || isFs || !fsSupported) return;
-    toggleFullscreen();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, isLectureTime]);
+    window.localStorage.setItem(modeKey, JSON.stringify({ mode, target: targetMin }));
+  }, [mode, targetMin, modeKey]);
 
-  // 세션 기록 — 완료(정지) 시 그 세션 분수를 서버에 반영. 리워드(쿠폰) 미션 연동은 서버가 처리.
-  const recordSession = useCallback(async (minutes: number, opts?: { keepalive?: boolean }) => {
+  // 서버 반영(SET-max) — 중복/재시도 안전
+  const flush = useCallback(async (opts?: { keepalive?: boolean }) => {
+    const minutes = Math.floor(todaySecRef.current / 60);
     if (minutes < 1) return;
     try {
-      const res = await fetch('/api/student/pomodoro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ minutes }),
-        keepalive: !!opts?.keepalive,
+      const res = await fetch('/api/student/focus', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ minutes }), keepalive: !!opts?.keepalive,
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setServerMinutes(json.pomodoroMinutes ?? (serverMinutes + minutes));
-        setServerSessions(json.pomodoroCount ?? (serverSessions + 1));
         setStudent((prev) => (prev ? { ...prev, specialNote: json.specialNote, leaveCoupons: json.leaveCoupons } : prev));
         if (json.rewardGranted) {
           setRewardBanner({ show: true, reasons: json.rewardReasons });
           setTimeout(() => setRewardBanner({ show: false, reasons: [] }), 6000);
         }
-        return true;
       }
-    } catch { /* 아래 false */ }
-    return false;
-  }, [serverMinutes, serverSessions, setStudent, setRewardBanner]);
+    } catch { /* 다음 주기에 재시도 */ }
+  }, [setStudent, setRewardBanner]);
 
-  // 타이머 틱 — canRun 일 때만 1초씩 증가. 목표 도달 시 1회 격려 알림(자동 기록은 안 함).
+  // 실시간 등수 + 재석 (집중 순위 = 리더보드 day)
+  const loadRank = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/leaderboard?studentId=${encodeURIComponent(student.id)}`, { cache: 'no-store' });
+      const j = await res.json();
+      if (res.ok && j.success && j.day) {
+        setRank({ myMinutes: j.day.myMinutes, attendanceDay: j.attendance?.day ?? 0, topPercent: j.day.topPercent, toTop10: j.day.toTop10, inTop10: j.day.inTop10, rank: j.day.rank, liveCount: j.liveCount ?? 0, peerAvgDay: j.peerAvgDay ?? 0, peerCountDay: j.peerCountDay ?? 0 });
+      }
+    } catch { /* 부가정보 */ }
+  }, [student.id]);
+
   useEffect(() => {
-    if (!canRun) return;
-    const iv = setInterval(() => {
-      setSessionSec((prev) => {
-        const next = prev + 1;
-        if (!reachedTargetRef.current && next >= targetSec) {
-          reachedTargetRef.current = true;
-          toast.success(`🎯 ${targetMin}분 집중 달성! 계속 이어가거나 '완료'로 기록하세요.`, { duration: 3500 });
+    loadRank();
+    const iv = setInterval(loadRank, RANK_REFRESH_MS);
+    return () => clearInterval(iv);
+  }, [loadRank]);
+
+  // Wake Lock — 화면 유지(태블릿). 지원 안 하면 무시.
+  const acquireWake = useCallback(async () => {
+    try {
+      if ('wakeLock' in navigator && !wakeLockRef.current) {
+        wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        wakeLockRef.current?.addEventListener?.('release', () => { wakeLockRef.current = null; });
+      }
+    } catch { /* 무시 */ }
+  }, []);
+  const releaseWake = useCallback(() => {
+    try { wakeLockRef.current?.release?.(); } catch { /* 무시 */ }
+    wakeLockRef.current = null;
+  }, []);
+
+  // 전체화면 변화
+  useEffect(() => {
+    const onFs = () => setIsFs(!!(document.fullscreenElement || (document as any).webkitFullscreenElement));
+    document.addEventListener('fullscreenchange', onFs);
+    document.addEventListener('webkitfullscreenchange', onFs);
+    return () => { document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('webkitfullscreenchange', onFs); };
+  }, []);
+
+  // 가시성 — 다른 앱/화면꺼짐. GRACE 이하면 그 시간 인정, 초과면 초과분 버리고 자동 정지.
+  useEffect(() => {
+    const onVis = () => {
+      if (document.hidden) {
+        hiddenAtRef.current = Date.now();
+        setVisible(false);
+      } else {
+        setVisible(true);
+        const hiddenAt = hiddenAtRef.current;
+        hiddenAtRef.current = null;
+        if (hiddenAt && runningRef.current) {
+          const gap = Math.floor((Date.now() - hiddenAt) / 1000);
+          const credit = Math.min(gap, HIDDEN_GRACE_SEC);
+          setTodaySec((prev) => prev + credit);
+          setSessionSec((prev) => prev + credit);
+          if (gap > HIDDEN_GRACE_SEC) { setRunning(false); flush(); }
+          else { acquireWake(); }
         }
+      }
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, [flush, acquireWake]);
+
+  // 틱 — 보이는 동안 running 이면 1초씩. 주기적으로 서버 반영. 두 모드 모두 오늘 순공(todaySec)에 누적.
+  useEffect(() => {
+    if (!running || !visible) return;
+    acquireWake();
+    const iv = setInterval(() => {
+      setTodaySec((prev) => {
+        const next = prev + 1;
+        if (next - lastFlushRef.current >= FLUSH_EVERY_SEC) { lastFlushRef.current = next; flush(); }
         return next;
       });
+      if (modeRef.current === 'pomodoro') {
+        const target = targetMinRef.current;
+        setSessionSec((prev) => {
+          const next = prev + 1;
+          if (next >= target * 60) {
+            // 뽀모도로 세션 완료 — 순공은 그대로 누적된 채, 다음 세션으로(연속).
+            toast.success(`🍅 ${target}분 집중 완료! 순공에 반영됐어요.`, { duration: 3500 });
+            flush();
+            return 0;
+          }
+          return next;
+        });
+      }
     }, 1000);
     return () => clearInterval(iv);
-  }, [canRun, targetSec, targetMin]);
+  }, [running, visible, flush, acquireWake]);
 
-  // 완료 — 현재 세션 기록 후 초기화
-  const finishSession = useCallback(async () => {
-    const minutes = Math.floor(sessionSec / 60);
-    setRunning(false);
-    if (minutes >= 1) {
-      setRecording(true);
-      const ok = await recordSession(minutes);
-      setRecording(false);
-      if (ok) toast.success(`${minutes}분 집중을 기록했어요. 오늘 총 집중이 늘었어요!`);
-      else toast.error('기록 저장에 실패했어요. 잠시 후 다시 시도해 주세요.');
-    } else {
-      toast.info('1분 이상 집중해야 기록돼요.');
-    }
-    setSessionSec(0);
-    reachedTargetRef.current = false;
-    window.localStorage.removeItem(stateKey);
-  }, [sessionSec, recordSession, stateKey]);
-
-  // 언마운트(다른 앱 탭으로 이동 등) 시 미기록 분을 best-effort 로 저장(유실 방지).
-  const sessionSecRef = useRef(sessionSec);
-  useEffect(() => { sessionSecRef.current = sessionSec; }, [sessionSec]);
+  // 언마운트 — 잔여 반영(유실 방지) + wake 해제
   useEffect(() => {
-    return () => {
-      const minutes = Math.floor(sessionSecRef.current / 60);
-      if (minutes >= 1) recordSession(minutes, { keepalive: true });
-    };
+    return () => { flush({ keepalive: true }); releaseWake(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 전체화면에서 Space 로 시작/정지
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!isFs) return;
-      const tag = document.activeElement?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (e.code === 'Space') { e.preventDefault(); setRunning((p) => !p); }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+  const toggleFullscreen = useCallback(async () => {
+    const el = document.getElementById('focus-immersive');
+    if (!el) return;
+    try {
+      if (!isFs) { if (el.requestFullscreen) await el.requestFullscreen(); else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen(); }
+      else if (document.exitFullscreen) await document.exitFullscreen();
+      else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
+    } catch { /* 무시 */ }
   }, [isFs]);
 
-  const start = () => {
-    setRunning(true);
-    if (fsSupported && !isFs && !isLectureTime) toggleFullscreen();
-  };
-  const pauseManual = () => setRunning(false);
-  const resetSession = () => {
-    setRunning(false);
-    setSessionSec(0);
-    reachedTargetRef.current = false;
-    window.localStorage.removeItem(stateKey);
-  };
-
+  const start = () => { setRunning(true); acquireWake(); };
+  const pause = () => { setRunning(false); releaseWake(); flush(); };
+  const switchMode = (m: 'stopwatch' | 'pomodoro') => { setMode(m); if (m === 'pomodoro') setSessionSec(0); };
+  const adjustTarget = (delta: number) => { setTargetMin((prev) => Math.max(1, Math.min(180, prev + delta))); setSessionSec(0); };
   const submitTarget = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const m = parseInt(targetDraft, 10);
-    if (!isNaN(m) && m >= 1 && m <= 180) {
-      setTargetMin(m);
-      window.localStorage.setItem(targetKey, String(m));
-      setEditingTarget(false);
-      reachedTargetRef.current = sessionSec >= m * 60;
-      toast.success(`세션 목표를 ${m}분으로 바꿨어요.`);
-    } else {
-      toast.error('1~180분 사이로 입력해 주세요.');
-    }
+    if (!isNaN(m) && m >= 1 && m <= 180) { setTargetMin(m); setSessionSec(0); setEditingTarget(false); }
+    else toast.error('1~180분 사이로 입력해 주세요.');
   };
+  const pomoRemainSec = Math.max(0, targetMin * 60 - sessionSec);
 
-  // 일시정지 사유(활성인데 canRun 아님)
-  const pauseReason = running && !canRun
-    ? ((!visible || !focused) ? '다른 창으로 넘어갔어요' : (fsSupported && !isFs) ? '전체화면을 벗어났어요' : '')
-    : '';
+  const rankBadge = rank && rank.myMinutes > 0
+    ? (rank.inTop10 && rank.rank ? `오늘 ${rank.rank}위` : rank.topPercent != null ? `오늘 상위 ${rank.topPercent}%` : null)
+    : null;
+  const toTop10Label = rank && !rank.inTop10 && rank.toTop10 > 0 ? `TOP10까지 ${fmtDuration(rank.toTop10 * 60)}` : null;
 
-  // ── SVG 목표 진행 링 ──
-  const R = 58, CIRC = 2 * Math.PI * R;
-  const fsR = 130, fsCIRC = 2 * Math.PI * fsR;
+  const hasProgress = todaySec > 0;
+
+  // 내 최근 하루 평균 순공(분) — specialNote pomodoro_minutes 이력(오늘 제외, 최근 14일 중 기록일)
+  const recentAvgMin = useMemo(() => {
+    try {
+      const pm = JSON.parse(student.specialNote || '{}')?.pomodoro_minutes as Record<string, number> | undefined;
+      if (!pm) return null;
+      const days = Object.entries(pm)
+        .filter(([d, v]) => d !== todayKey && (Number(v) || 0) > 0)
+        .sort((a, b) => (a[0] < b[0] ? 1 : -1)) // 최신순
+        .slice(0, 14);
+      if (days.length < 3) return null; // 표본 부족이면 비교 안 함
+      return days.reduce((s, [, v]) => s + (Number(v) || 0), 0) / days.length;
+    } catch { return null; }
+  }, [student.specialNote, todayKey]);
+
+  // 인사이트 태그 (오늘 집중 카드 안 칩) — 짧은 라벨 + 역할톤
+  const insights: Array<{ key: string; tone: 'up' | 'down' | 'flat'; tag: string }> = [];
+  const todayMin = Math.floor(todaySec / 60);
+  if (recentAvgMin != null) {
+    const frac = studyDayFraction();
+    if (frac > 0.05) {
+      const delta = Math.round(todayMin - recentAvgMin * frac);
+      insights.push({
+        key: 'pace',
+        tone: delta >= 5 ? 'up' : delta <= -5 ? 'down' : 'flat',
+        tag: Math.abs(delta) < 5 ? '평소와 비슷'
+          : delta > 0 ? `평소보다 ${fmtDuration(delta * 60)} 많음` : `평소보다 ${fmtDuration(-delta * 60)} 부족`,
+      });
+    }
+  }
+  if (rank && rank.peerCountDay >= 3) {
+    const d = Math.round(todayMin - rank.peerAvgDay);
+    insights.push({
+      key: 'peer',
+      tone: d >= 5 ? 'up' : d <= -5 ? 'down' : 'flat',
+      tag: Math.abs(d) < 5 ? '원생 평균과 비슷'
+        : d > 0 ? `원생 평균 +${fmtDuration(d * 60)}` : `원생 평균 −${fmtDuration(-d * 60)}`,
+    });
+  }
 
   return (
     <>
-      {/* 인라인 카드 */}
-      <div className={`flex flex-col gap-4 rounded-3xl border p-5 transition-all duration-500 ${
-        canRun ? 'border-[#0071E3]/20 bg-gradient-to-br from-white to-blue-50/60 shadow-[0_8px_32px_rgba(0,113,227,0.12)] dark:from-[#1c1c1e] dark:to-[#0071E3]/15'
-        : 'border-slate-100 bg-white shadow-sm dark:border-white/10 dark:bg-[#1c1c1e]'
-      }`}>
+      {/* 인라인 카드 — iOS26 Liquid Glass */}
+      <div className={`glass-strong flex flex-col gap-4 rounded-[28px] p-5 transition-all duration-500 ${running && visible ? 'ring-2 ring-[#0071E3]/25' : ''}`}>
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">실시간 집중 뽀모도로</p>
+          <p className="text-[11px] font-black uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">자습 집중 · 순공</p>
           <div className="flex items-center gap-1.5">
-            <button type="button" onClick={toggleFullscreen} className="rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 active:scale-95 dark:hover:bg-white/10" title="전체화면 (몰입 모드)">
+            {typeof rank?.liveCount === 'number' && rank.liveCount > 0 && (
+              <span className="glass-capsule inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300">
+                <Flame className="h-2.5 w-2.5 text-emerald-500" /> {rank.liveCount}명 몰입
+              </span>
+            )}
+            <button type="button" onClick={toggleFullscreen} className="glass-capsule grid size-8 place-items-center rounded-full text-slate-500 transition active:scale-90 dark:text-slate-300" title="몰입 모드(전체화면)">
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
-            <StatusPill canRun={canRun} running={running} />
           </div>
         </div>
 
-        {/* 오늘 총 집중 (히어로) */}
-        <div className="rounded-2xl bg-[#0071E3]/[0.05] px-4 py-3 dark:bg-[#0071E3]/10">
-          <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]/70">오늘 총 집중</p>
-          <p className="mt-0.5 text-2xl font-black tabular-nums text-[#0071E3]">{formatDuration(todayTotalSec)}</p>
-          <p className="mt-0.5 text-[10px] font-bold text-slate-400">세션 {serverSessions}회{sessionSec > 0 ? ' · 진행 중 세션 포함' : ''}</p>
+        {isLectureTime && (
+          <p className="rounded-2xl bg-amber-500/10 px-3.5 py-2.5 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-500/15 dark:text-amber-300">
+            <BookOpen className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />지금은 강의 시간이에요 · 자습 집중은 강의 후에 이어가요
+          </p>
+        )}
+
+        {/* 모드 토글 — 세그먼트 컨트롤(글래스 캡슐) */}
+        <div className="glass-capsule inline-flex self-start rounded-full p-1">
+          {([['stopwatch', '스톱워치', InfinityIcon], ['pomodoro', '뽀모도로', Timer]] as const).map(([m, label, Ic]) => (
+            <button key={m} type="button" onClick={() => switchMode(m)}
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[12px] font-bold transition-all active:scale-95 ${mode === m ? 'bg-white text-slate-900 shadow-[0_2px_8px_rgba(0,0,0,0.1)] dark:bg-white/20 dark:text-white' : 'text-slate-500 dark:text-slate-400'}`}>
+              <Ic className="h-3.5 w-3.5" />{label}
+            </button>
+          ))}
         </div>
 
-        <div className="flex flex-1 items-center gap-5">
-          {/* 현재 세션 진행 링 */}
-          <div className="relative shrink-0" style={{ width: 140, height: 140 }}>
-            <svg width="140" height="140" viewBox="0 0 140 140" style={{ transform: 'rotate(-90deg)' }}>
-              <circle cx="70" cy="70" r={R} fill="none" stroke="#F1F5F9" strokeWidth="10" className="dark:stroke-white/10" />
-              <circle cx="70" cy="70" r={R} fill="none" stroke={pct >= 1 ? '#10b981' : '#0071E3'} strokeWidth="10" strokeLinecap="round"
-                strokeDasharray={`${pct * CIRC} ${CIRC}`} style={{ transition: 'stroke-dasharray 0.9s linear' }} />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-[26px] font-black leading-none tabular-nums ${canRun ? 'text-[#0071E3]' : 'text-slate-800 dark:text-slate-200'}`} style={{ letterSpacing: '-0.02em' }}>
-                {formatClock(sessionSec)}
+        {/* 오늘 집중(순공) — 대표 스탯 */}
+        <div className="rounded-3xl bg-[#0071E3]/[0.06] px-5 py-4 ring-1 ring-inset ring-[#0071E3]/10 dark:bg-[#0071E3]/12">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-[#0071E3]/70">오늘 집중(순공)</p>
+              <p className="mt-1 text-[40px] font-black leading-none tabular-nums text-[#0071E3]" style={{ letterSpacing: '-0.02em' }}>{fmtClock(todaySec)}</p>
+              {rank && <p className="mt-1.5 text-[11px] font-bold text-slate-400 dark:text-slate-500">재석 {fmtDuration(rank.attendanceDay)}</p>}
+            </div>
+            {rankBadge && (
+              <span className="glass-capsule inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black text-[#F56300]">
+                <Trophy className="h-3.5 w-3.5" /> {rankBadge}
               </span>
-              {editingTarget ? (
-                <form onSubmit={submitTarget} className="mt-1 flex items-center gap-1">
-                  <input type="number" min={1} max={180} value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} autoFocus
-                    className="w-11 rounded border px-1 py-0.5 text-center text-xs font-black text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0071E3] dark:bg-white/10 dark:text-slate-200" />
-                  <button type="submit" className="rounded bg-[#0071E3] p-1 text-white"><Check className="h-3 w-3" /></button>
-                  <button type="button" onClick={() => setEditingTarget(false)} className="rounded bg-slate-100 p-1 text-slate-400 dark:bg-white/10"><X className="h-3 w-3" /></button>
-                </form>
-              ) : (
-                <button type="button" onClick={() => { setTargetDraft(String(targetMin)); setEditingTarget(true); }} className="mt-0.5 flex items-center gap-0.5 text-[9px] font-bold text-slate-400 transition hover:text-[#0071E3]">
-                  목표 {targetMin}분 <Edit2 className="h-2.5 w-2.5 opacity-60" />
-                </button>
+            )}
+          </div>
+          {/* 인사이트 태그 — 카드 안 칩(역할색: 앞섬=에메랄드 / 뒤=앰버 / 비슷=중립) */}
+          {(insights.length > 0 || toTop10Label) && (
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              {insights.map((ins) => (
+                <span key={ins.key} className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10.5px] font-black break-keep ${
+                  ins.tone === 'up' ? 'bg-emerald-500/12 text-emerald-700 dark:text-emerald-300'
+                  : ins.tone === 'down' ? 'bg-amber-500/12 text-amber-700 dark:text-amber-300'
+                  : 'bg-black/[0.05] text-slate-500 dark:bg-white/10 dark:text-slate-300'}`}>
+                  <span className="text-[9px]">{ins.tone === 'up' ? '▲' : ins.tone === 'down' ? '▼' : '＝'}</span>{ins.tag}
+                </span>
+              ))}
+              {toTop10Label && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#0071E3]/12 px-2.5 py-1 text-[10.5px] font-black text-[#0071E3] break-keep">
+                  🎯 {toTop10Label}
+                </span>
               )}
             </div>
-          </div>
-
-          {/* 컨트롤 */}
-          <div className="flex flex-1 flex-col gap-2">
-            {pauseReason && (
-              <p className="rounded-xl bg-amber-50 px-2.5 py-1.5 text-center text-[10px] font-bold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
-                ⏸ {pauseReason} — {!isFs ? '전체화면으로 돌아오면' : '돌아오면'} 이어져요
-              </p>
-            )}
-            {!running ? (
-              <button type="button" onClick={start} className="w-full rounded-2xl bg-[#0071E3] py-3 text-xs font-black text-white shadow-[0_4px_16px_rgba(0,113,227,0.35)] transition hover:bg-[#0077ED] active:scale-95">
-                <Play className="-mt-0.5 mr-1 inline h-3.5 w-3.5" />{sessionSec > 0 ? '이어서 집중' : '집중 시작'}
-              </button>
-            ) : (
-              <button type="button" onClick={pauseManual} className="w-full rounded-2xl bg-slate-100 py-3 text-xs font-black text-slate-700 transition hover:bg-slate-200 active:scale-95 dark:bg-white/10 dark:text-slate-300">
-                <Pause className="-mt-0.5 mr-1 inline h-3.5 w-3.5" />일시 정지
-              </button>
-            )}
-            <button type="button" onClick={finishSession} disabled={recording || sessionSec < 60}
-              className="w-full rounded-2xl border border-[#0071E3]/25 bg-white py-2.5 text-xs font-black text-[#0071E3] transition hover:bg-[#0071E3]/[0.04] active:scale-95 disabled:opacity-40 dark:bg-white/5 dark:hover:bg-[#0071E3]/15">
-              {recording ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : <><Flag className="-mt-0.5 mr-1 inline h-3.5 w-3.5" />완료하고 기록</>}
-            </button>
-            <button type="button" onClick={resetSession} className="w-full rounded-2xl border border-slate-200 py-2 text-[11px] font-bold text-slate-400 transition hover:bg-slate-50 active:scale-95 dark:border-white/10">
-              ↺ 이번 세션 리셋
-            </button>
-            <p className="text-center text-[10px] font-bold text-slate-400">1분 이상 집중하면 기록돼요. 화면을 벗어나면 자동으로 멈춰요.</p>
-          </div>
+          )}
         </div>
+
+        {/* 뽀모도로 세션 카운트다운 링 */}
+        {mode === 'pomodoro' && (
+          <div className="flex flex-col items-center gap-3 rounded-3xl bg-[#0071E3]/[0.05] py-5 ring-1 ring-inset ring-[#0071E3]/12 dark:bg-[#0071E3]/10">
+            <CountdownRing size={172} stroke={12} remainFrac={pomoRemainSec / (targetMin * 60)} color="#0071E3">
+              <span className="text-[36px] font-black leading-none tabular-nums text-[#0071E3]" style={{ letterSpacing: '-0.02em' }}>{fmtClock(pomoRemainSec)}</span>
+              <span className="mt-1 text-[10px] font-black uppercase tracking-[0.12em] text-[#0071E3]/60">남은 시간</span>
+            </CountdownRing>
+            {editingTarget ? (
+              <form onSubmit={submitTarget} className="glass-capsule flex items-center gap-1 rounded-full p-1">
+                <input type="number" min={1} max={180} value={targetDraft} onChange={(e) => setTargetDraft(e.target.value)} autoFocus
+                  className="w-12 rounded-full bg-transparent px-2 py-0.5 text-center text-xs font-black text-slate-800 focus:outline-none dark:text-slate-100" />
+                <button type="submit" className="grid size-6 place-items-center rounded-full bg-[#0071E3] text-white"><Check className="h-3 w-3" /></button>
+                <button type="button" onClick={() => setEditingTarget(false)} className="grid size-6 place-items-center rounded-full text-slate-400"><X className="h-3 w-3" /></button>
+              </form>
+            ) : (
+              <div className="glass-capsule inline-flex items-center gap-1 rounded-full p-1">
+                <button type="button" onClick={() => adjustTarget(-5)} className="grid size-7 place-items-center rounded-full text-slate-500 transition active:scale-90 hover:text-[#0071E3] dark:text-slate-300"><Minus className="h-3.5 w-3.5" /></button>
+                <button type="button" onClick={() => { setTargetDraft(String(targetMin)); setEditingTarget(true); }} className="inline-flex items-center gap-1 px-2 text-[12px] font-black text-slate-700 dark:text-slate-200">
+                  목표 {targetMin}분 <Edit2 className="h-2.5 w-2.5 opacity-50" />
+                </button>
+                <button type="button" onClick={() => adjustTarget(5)} className="grid size-7 place-items-center rounded-full text-slate-500 transition active:scale-90 hover:text-[#0071E3] dark:text-slate-300"><Plus className="h-3.5 w-3.5" /></button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <ControlButton running={running} hasProgress={hasProgress} onStart={start} onPause={pause} />
+        <p className="text-center text-[10.5px] font-semibold text-slate-400 dark:text-slate-500">화면을 켜두고 공부하면 순공이 쌓여요 · 5분 넘게 벗어나면 자동으로 멈춰요</p>
       </div>
 
-      {/* 전체화면(Zen) — portal 로 body 직속 */}
+      {/* 몰입 모드(전체화면) — 옵션 */}
       {mounted && createPortal(
-        <div id="pomodoro-fullscreen-container"
-          className={`fixed inset-0 z-50 flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-white transition-all duration-300 ${isFs ? 'flex opacity-100 pointer-events-auto' : 'hidden opacity-0 pointer-events-none'}`}>
+        <div id="focus-immersive"
+          style={{ backgroundColor: '#0b0b0c', backgroundImage: 'radial-gradient(60rem 60rem at 50% -10%, rgba(10,132,255,0.2), transparent 60%), radial-gradient(50rem 50rem at 85% 110%, rgba(10,132,255,0.1), transparent 60%)' }}
+          className={`fixed inset-0 z-50 flex-col items-center justify-center text-white transition-all duration-300 ${isFs ? 'flex opacity-100 pointer-events-auto' : 'hidden opacity-0 pointer-events-none'}`}>
           {/* 상단 바 */}
           <div className="pointer-events-auto absolute left-6 right-6 top-6 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${canRun ? 'animate-pulse bg-[#0071E3]' : 'bg-amber-400'}`} />
-              <span className="text-xs font-black uppercase tracking-wider opacity-80">SPARTA ZEN FOCUS</span>
-            </div>
-            <button type="button" onClick={toggleFullscreen} className="rounded-xl bg-white/10 p-2 text-white/70 transition hover:bg-white/20 active:scale-95" title="전체화면 종료">
-              <Minimize2 className="h-4 w-4" />
-            </button>
+            <span className="glass-clear inline-flex items-center gap-2 rounded-full px-3.5 py-1.5">
+              <span className={`h-2 w-2 rounded-full ${running && visible ? 'animate-pulse bg-[#5AA9FF]' : 'bg-white/40'}`} />
+              <span className="text-[11px] font-black uppercase tracking-[0.14em] text-white/80">SPARTA FOCUS</span>
+            </span>
+            <button type="button" onClick={toggleFullscreen} className="glass-clear grid size-10 place-items-center rounded-full text-white/80 transition active:scale-90"><Minimize2 className="h-4 w-4" /></button>
           </div>
 
-          {/* 오늘 총 집중 */}
-          <div className="pointer-events-none absolute top-20 text-center">
-            <p className="text-[11px] font-black uppercase tracking-wider text-white/40">오늘 총 집중</p>
-            <p className="mt-1 text-3xl font-black tabular-nums text-white/90">{formatDuration(todayTotalSec)}</p>
-            <p className="mt-0.5 text-[11px] font-bold text-white/40">세션 {serverSessions}회</p>
-          </div>
-
-          {/* 현재 세션 링 */}
-          <div className="relative" style={{ width: 320, height: 320 }}>
-            <svg width="320" height="320" viewBox="0 0 320 320" style={{ transform: 'rotate(-90deg)' }}>
-              <circle cx="160" cy="160" r={fsR} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="14" />
-              <circle cx="160" cy="160" r={fsR} fill="none" stroke={pct >= 1 ? '#34d399' : '#0071E3'} strokeWidth="14" strokeLinecap="round"
-                strokeDasharray={`${pct * fsCIRC} ${fsCIRC}`} style={{ transition: 'stroke-dasharray 0.9s linear' }} />
-            </svg>
-            <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-[64px] font-black leading-none tabular-nums" style={{ letterSpacing: '-0.02em' }}>{formatClock(sessionSec)}</span>
-              <span className="mt-2 text-sm font-bold text-white/50">목표 {targetMin}분{pct >= 1 ? ' · 달성 ✓' : ''}</span>
+          {/* 중앙 컨트롤 스택 — 모드 전환·타이머·목표조절·시작 모두 전체화면 안에서 */}
+          <div className="pointer-events-auto flex flex-col items-center gap-6">
+            {/* 모드 토글 */}
+            <div className="glass-clear inline-flex rounded-full p-1">
+              {([['stopwatch', '스톱워치', InfinityIcon], ['pomodoro', '뽀모도로', Timer]] as const).map(([m, label, Ic]) => (
+                <button key={m} type="button" onClick={() => switchMode(m)}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-5 py-2 text-[13px] font-bold transition active:scale-95 ${mode === m ? 'bg-white/25 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]' : 'text-white/50'}`}>
+                  <Ic className="h-3.5 w-3.5" />{label}
+                </button>
+              ))}
             </div>
-          </div>
 
-          {/* 일시정지 오버레이 */}
-          {pauseReason && (
-            <div className="pointer-events-auto absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-slate-950/80 backdrop-blur-sm">
-              <p className="text-lg font-black text-white/90">⏸ {pauseReason}</p>
-              <p className="text-sm font-semibold text-white/50">집중 시간이 멈췄어요. 돌아와서 이어가세요.</p>
-              <button type="button" onClick={() => { if (!isFs) toggleFullscreen(); }} className="rounded-2xl bg-[#0071E3] px-6 py-3 text-sm font-black text-white active:scale-95">
-                집중 이어가기
-              </button>
-            </div>
-          )}
+            {rankBadge && <span className="glass-clear inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-sm font-black text-[#F9A870]"><Trophy className="h-4 w-4" /> {rankBadge}</span>}
 
-          {/* 하단 컨트롤 */}
-          <div className="pointer-events-auto absolute bottom-10 flex items-center gap-3">
-            {!running ? (
-              <button type="button" onClick={start} className="rounded-2xl bg-[#0071E3] px-8 py-3.5 text-sm font-black text-white shadow-[0_4px_20px_rgba(0,113,227,0.5)] active:scale-95">
-                <Play className="-mt-0.5 mr-1 inline h-4 w-4" />{sessionSec > 0 ? '이어서 집중' : '집중 시작'}
-              </button>
+            {mode === 'pomodoro' ? (
+              <>
+                <CountdownRing size={300} stroke={16} remainFrac={pomoRemainSec / (targetMin * 60)} color="#5AA9FF">
+                  <span className="text-[76px] font-black leading-none tabular-nums text-[#5AA9FF]" style={{ letterSpacing: '-0.03em' }}>{fmtClock(pomoRemainSec)}</span>
+                  <span className="mt-1 text-[11px] font-black uppercase tracking-[0.16em] text-white/40">세션 남은 시간</span>
+                </CountdownRing>
+                {/* 목표 조절 (−5 / 목표 / +5) */}
+                <div className="glass-clear inline-flex items-center gap-1 rounded-full p-1.5">
+                  <button type="button" onClick={() => adjustTarget(-5)} className="grid size-9 place-items-center rounded-full text-white/70 transition active:scale-90 hover:bg-white/10"><Minus className="h-4 w-4" /></button>
+                  <span className="min-w-[72px] text-center text-sm font-black text-white">목표 {targetMin}분</span>
+                  <button type="button" onClick={() => adjustTarget(5)} className="grid size-9 place-items-center rounded-full text-white/70 transition active:scale-90 hover:bg-white/10"><Plus className="h-4 w-4" /></button>
+                </div>
+                {/* 오늘 총 순공 (누적) */}
+                <div className="glass-clear flex items-center gap-3 rounded-full px-7 py-3">
+                  <span className="text-[11px] font-black uppercase tracking-[0.12em] text-[#8FBFFF]">오늘 총 순공</span>
+                  <span className="text-[26px] font-black leading-none tabular-nums text-white" style={{ letterSpacing: '-0.02em' }}>{fmtClock(todaySec)}</span>
+                </div>
+              </>
             ) : (
-              <button type="button" onClick={pauseManual} className="rounded-2xl bg-white/10 px-8 py-3.5 text-sm font-black text-white active:scale-95">
-                <Pause className="-mt-0.5 mr-1 inline h-4 w-4" />일시 정지
-              </button>
+              <>
+                <p className="text-[11px] font-black uppercase tracking-[0.18em] text-white/40">오늘 집중(순공)</p>
+                <span className="text-[80px] font-black leading-none tabular-nums text-white" style={{ letterSpacing: '-0.03em' }}>{fmtClock(todaySec)}</span>
+                {rank && <span className="glass-clear inline-flex rounded-full px-4 py-1.5 text-sm font-bold text-white/70">재석 {fmtDuration(rank.attendanceDay)}{toTop10Label ? ` · ${toTop10Label}` : ''}</span>}
+              </>
             )}
-            <button type="button" onClick={finishSession} disabled={recording || sessionSec < 60}
-              className="rounded-2xl border border-white/20 px-6 py-3.5 text-sm font-black text-white/90 transition hover:bg-white/10 active:scale-95 disabled:opacity-40">
-              {recording ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Flag className="-mt-0.5 mr-1 inline h-4 w-4" />완료·기록</>}
-            </button>
+
+            <ControlButton running={running} big hasProgress={hasProgress} onStart={start} onPause={pause} />
           </div>
-          <p className="pointer-events-none absolute bottom-4 text-[11px] font-semibold text-white/30">화면을 벗어나면 자동으로 멈춰요 · Space 로 시작/정지</p>
+
+          <p className="pointer-events-none absolute bottom-5 text-[11px] font-semibold text-white/30">화면을 켜두고 공부하세요 · 5분 넘게 벗어나면 자동 정지</p>
         </div>,
         document.body,
       )}

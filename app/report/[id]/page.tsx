@@ -686,7 +686,7 @@ function StudentReportInner() {
               eyebrow="Focus"
               icon={Timer}
               title="집중"
-              description="뽀모도로 타이머로 몰입해요. 강의 시간이 아니면 전체화면으로 자동 전환돼요."
+              description="화면을 켜두고 공부하면 오늘의 순공이 쌓여요. 순위는 이 집중 시간으로 매겨져요(재석 시간 상한)."
             />
             <PomodoroTimer
               student={student}

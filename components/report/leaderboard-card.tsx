@@ -19,6 +19,7 @@ interface Data {
   liveCount?: number;
   week?: Standing;
   day?: Standing;
+  attendance?: { week: number; day: number };
 }
 
 const fmt = (m: number) => {
@@ -100,8 +101,13 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
       <div className="rounded-2xl bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 border border-[#0071E3]/15 p-5">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{periodLabel} 나의 순공</p>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{periodLabel} 나의 집중(순공)</p>
             <p className="text-2xl font-black text-slate-900 dark:text-slate-100 mt-0.5">{fmt(st.myMinutes)}</p>
+            {data.attendance && (
+              <p className="mt-0.5 text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                재석 {fmt(period === 'day' ? data.attendance.day : data.attendance.week)}
+              </p>
+            )}
           </div>
           {st.hasRecord && st.topPercent != null && (
             <span className="inline-flex items-center gap-1 text-sm font-black text-[#F56300] bg-[#F56300]/10 border border-[#F56300]/15 px-3 py-1.5 rounded-full">
@@ -130,7 +136,7 @@ export function LeaderboardCard({ studentId }: { studentId?: string }) {
       {/* 동기부여 메시지 */}
       <MotivationBanner st={st} periodLabel={periodLabel} />
 
-      <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">QR 등하원으로 측정된 {periodLabel} 순공 시간 기준입니다. 다른 학생의 정보는 보이지 않습니다.</p>
+      <p className="text-[10px] text-slate-500 dark:text-slate-400 text-center">순위는 <b>집중 타이머</b>로 기록한 {periodLabel} 순공 기준(재석 시간 상한)이에요. 다른 학생의 정보는 보이지 않습니다.</p>
     </div>
   );
 }
