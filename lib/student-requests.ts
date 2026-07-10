@@ -113,6 +113,19 @@ export function normalizeProposedMaterial(raw: unknown): ProposedMaterial | unde
     const note = m.note.trim().slice(0, 500);
     if (note) normalized.note = note;
   }
+  // 추가 시 원하는 학습 방식(선택). deadlineWeeks/dailyAmount 만 허용, 그 외/미지정은 자율.
+  if (m.goalType === 'deadlineWeeks' || m.goalType === 'dailyAmount') {
+    const gv = Number(m.goalValue);
+    if (Number.isFinite(gv) && gv > 0) {
+      normalized.goalType = m.goalType;
+      normalized.goalValue = m.goalType === 'deadlineWeeks'
+        ? Math.max(1, Math.min(12, Math.round(gv)))
+        : Math.max(1, Math.min(9999, Math.round(gv)));
+      if (m.goalType === 'deadlineWeeks' && typeof m.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(m.targetDate)) {
+        normalized.targetDate = m.targetDate;
+      }
+    }
+  }
 
   return normalized;
 }

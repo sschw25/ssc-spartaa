@@ -1345,13 +1345,26 @@ export default function AdminInboxPage() {
                         <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
                           총량: {pm.total ? `${pm.total}${unitLabel} (예상)` : '자율(총량 미정)'}
                         </span>
+                        {(pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount') && (
+                          <span className="bg-[#0071E3]/10 border border-[#0071E3]/20 rounded-lg px-2 py-0.5 font-black text-[#0071E3]">
+                            계획: {pm.goalType === 'deadlineWeeks'
+                              ? `${pm.targetDate || ''}까지 (약 ${pm.goalValue}주)`
+                              : `하루 ${pm.goalValue}${unitLabel}`}
+                          </span>
+                        )}
                       </div>
                       {pm.note && (
                         <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">메모: {pm.note}</p>
                       )}
-                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
-                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> 승인 시 자율(selfPaced) 자료로 생성됩니다.
-                      </p>
+                      {(() => {
+                        const willPlan = (pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount') && !!pm.total && pm.total > 0;
+                        return (
+                          <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
+                            <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                            {willPlan ? ' 승인 시 위 계획으로 자료가 생성됩니다.' : ' 승인 시 자율(selfPaced) 자료로 생성됩니다.'}
+                          </p>
+                        );
+                      })()}
                     </div>
                   );
                 })()}

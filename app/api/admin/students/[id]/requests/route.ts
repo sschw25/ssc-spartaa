@@ -260,8 +260,15 @@ export async function PATCH(
       const clampedCurrent = pm.currentProgress !== undefined
         ? (clampProgress(pm.currentProgress, hasTotal ? pm.total : 0) ?? 0)
         : 0;
+      // 학생이 추가하면서 고른 학습 방식(마감일/하루분량)은 총량이 있어야 계획 생성 가능. 없으면 자율(selfPaced)로 폴백.
+      const wantsPlan = (pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount')
+        && Number(pm.goalValue) > 0 && hasTotal;
+      const effGoalType: GoalType = wantsPlan ? (pm.goalType as GoalType) : 'selfPaced';
+      const effGoalValue = wantsPlan ? Number(pm.goalValue) : 0;
+      const effStudyDays = getMaterialStudyDays(subject!.studyDays, pm.studyDays);
       const commonExtra: Record<string, unknown> = {
-        goalType: 'selfPaced',
+        goalType: effGoalType,
+        ...(wantsPlan ? { goalValue: effGoalValue } : {}),
         ...(pm.studyDays && pm.studyDays.length > 0 ? { studyDays: pm.studyDays } : {}),
         ...(pm.studyTime ? { studyTime: pm.studyTime } : {}),
         ...(hasTotal ? { totalIsEstimate: true } : {}),
@@ -277,6 +284,14 @@ export async function PATCH(
           ...(pm.unit ? { unit: pm.unit } : {}),
           ...commonExtra,
         };
+        if (wantsPlan) {
+          const { plans, calculatedTargetDate } = generateDetailedPlans(
+            newBook.id, pm.total!, 'book', effGoalType, effGoalValue,
+            clampedCurrent, pm.unit || undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본',
+          );
+          newBook.detailedPlans = plans;
+          newBook.targetDate = calculatedTargetDate;
+        }
         subject!.books = [...(subject!.books || []), newBook];
         pm.createdMaterialId = newBook.id;
       } else {
@@ -290,12 +305,22 @@ export async function PATCH(
           speedMultiplier: 1.0,
           ...commonExtra,
         };
+        if (wantsPlan) {
+          const { plans, calculatedTargetDate } = generateDetailedPlans(
+            newLecture.id, pm.total!, 'lecture', effGoalType, effGoalValue,
+            clampedCurrent, undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본',
+          );
+          newLecture.detailedPlans = plans;
+          newLecture.targetDate = calculatedTargetDate;
+        }
         subject!.lectures = [...(subject!.lectures || []), newLecture];
         pm.createdMaterialId = newLecture.id;
       }
       subject!.updatedAt = nowIso;
 
-      const noticeText = '요청하신 자료를 추가했어요. 총량을 알게 되면 예상 강의 수를 입력할 수 있어요.';
+      const noticeText = wantsPlan
+        ? '요청하신 자료를 학습 계획과 함께 추가했어요. 학습 탭에서 확인할 수 있어요.'
+        : '요청하신 자료를 추가했어요. 총량을 알게 되면 예상 강의 수를 입력할 수 있어요.';
       appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
       target.adminReply = noticeText;
       target.repliedAt = nowIso;

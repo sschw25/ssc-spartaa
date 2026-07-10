@@ -177,6 +177,11 @@ export interface ProposedMaterial {
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
   studyTime?: 'morning' | 'afternoon' | 'night' | '';
   note?: string;                     // 희망 메모
+  // 추가하면서 학생이 원하는 학습 방식(선택). 기본(미지정)은 selfPaced(자율).
+  // deadlineWeeks/dailyAmount 는 total(총량)이 있어야 승인 시 계획 생성 — 없으면 자율로 폴백.
+  goalType?: 'selfPaced' | 'deadlineWeeks' | 'dailyAmount';
+  goalValue?: number;                // deadlineWeeks=주수(1~12), dailyAmount=하루 분량
+  targetDate?: string;               // 마감일 지정 시 목표 완료일(YYYY-MM-DD, 표시·주수 근거)
   createdMaterialId?: string;        // 승인 시 생성한 자료 id — 재승인(resolved 토글) 시 중복 생성 방지(멱등)
 }
 

@@ -80,6 +80,30 @@ export function LearningRequestPanel({
     () => Array.from(new Set((student.subjects || []).map((s) => (s.name || '').trim()).filter(Boolean))),
     [student.subjects],
   );
+  // 계획 신청 대상 자료 목록 — 진도 단일소스인 subjects[] 를 우선으로, top-level 과 합쳐 id 기준 중복 제거.
+  // (학생이 직접 추가한 자료는 subjects 에만 들어가므로 top-level 만 읽으면 계획 신청에서 누락됨)
+  const requestBooks = React.useMemo(() => {
+    const map = new Map<string, { id: string; title: string }>();
+    for (const b of (student.subjects || []).flatMap((s) => s.books || [])) if (b?.id) map.set(b.id, { id: b.id, title: b.title });
+    for (const b of (student.books || [])) if (b?.id && !map.has(b.id)) map.set(b.id, { id: b.id, title: b.title });
+    return Array.from(map.values());
+  }, [student.subjects, student.books]);
+  const requestLectures = React.useMemo(() => {
+    const map = new Map<string, { id: string; name: string }>();
+    for (const l of (student.subjects || []).flatMap((s) => s.lectures || [])) if (l?.id) map.set(l.id, { id: l.id, name: l.name });
+    for (const l of (student.lectures || [])) if (l?.id && !map.has(l.id)) map.set(l.id, { id: l.id, name: l.name });
+    return Array.from(map.values());
+  }, [student.subjects, student.lectures]);
+  // id → 자료 상세(진도·목표) 조회: onChange 프리필용. subjects 우선, 없으면 top-level.
+  const findMaterialById = React.useCallback((id: string) => {
+    const book = (student.subjects || []).flatMap((s) => s.books || []).find((b) => b.id === id)
+      || (student.books || []).find((b) => b.id === id);
+    if (book) return { kind: 'book' as const, mat: book };
+    const lecture = (student.subjects || []).flatMap((s) => s.lectures || []).find((l) => l.id === id)
+      || (student.lectures || []).find((l) => l.id === id);
+    if (lecture) return { kind: 'lecture' as const, mat: lecture };
+    return null;
+  }, [student.subjects, student.books, student.lectures]);
   const [materialAddOpen, setMaterialAddOpen] = React.useState(false);
   const [maSubjectMode, setMaSubjectMode] = React.useState<'existing' | 'new'>(subjectNames.length > 0 ? 'existing' : 'new');
   const [maForm, setMaForm] = React.useState({
@@ -93,6 +117,10 @@ export function LearningRequestPanel({
     total: '',
     unit: '',
     note: '',
+    // 추가하면서 학습 방식 지정(선택). 기본 자율. 마감일/하루분량은 총량 입력 필요.
+    goalMode: 'selfPaced' as 'selfPaced' | 'deadlineWeeks' | 'dailyAmount',
+    goalTargetDate: '',
+    goalDaily: '',
   });
   const [maError, setMaError] = React.useState('');
 
@@ -108,6 +136,9 @@ export function LearningRequestPanel({
       total: '',
       unit: '',
       note: '',
+      goalMode: 'selfPaced',
+      goalTargetDate: '',
+      goalDaily: '',
     });
     setMaSubjectMode(subjectNames.length > 0 ? 'existing' : 'new');
     setMaError('');
@@ -125,6 +156,16 @@ export function LearningRequestPanel({
     const title = maForm.title.trim();
     if (!subjName) { setMaError('과목을 선택하거나 입력해 주세요.'); return; }
     if (!title) { setMaError('자료명을 입력해 주세요.'); return; }
+    const totalNum = maForm.total ? Number(maForm.total) : 0;
+    // 계획(마감일/하루분량)을 정하려면 총량이 필요 — 없으면 자율로만 추가 가능.
+    if (maForm.goalMode !== 'selfPaced' && !(totalNum > 0)) {
+      setMaError('마감일·하루 분량 계획을 정하려면 총량을 입력해 주세요. (모르면 자율로 두세요)');
+      return;
+    }
+    if (maForm.goalMode === 'deadlineWeeks' && !maForm.goalTargetDate) { setMaError('목표 완료일을 골라 주세요.'); return; }
+    if (maForm.goalMode === 'dailyAmount' && !(Number(maForm.goalDaily) > 0)) { setMaError('하루 학습량을 입력해 주세요.'); return; }
+    const deadlineWeeks = maForm.goalMode === 'deadlineWeeks' ? weeksUntil(maForm.goalTargetDate) : 0;
+    if (maForm.goalMode === 'deadlineWeeks' && deadlineWeeks === 0) { setMaError('목표 완료일은 내일 이후 날짜로 골라 주세요.'); return; }
     setMaError('');
 
     const typeLabel = maForm.materialType === 'book' ? '교재' : '인강';
@@ -135,6 +176,10 @@ export function LearningRequestPanel({
     const schedule = [daysStr, timeStr].filter(Boolean).join(' ');
     if (schedule) parts.push(schedule);
     if (maForm.currentProgress) parts.push(`현재 ${maForm.currentProgress}${unitLabel}`);
+    const planStr = maForm.goalMode === 'deadlineWeeks' ? `${maForm.goalTargetDate}까지`
+      : maForm.goalMode === 'dailyAmount' ? `하루 ${maForm.goalDaily}${unitLabel}`
+      : '';
+    if (planStr) parts.push(`계획 ${planStr}`);
     const message = `[교재/인강 추가] ${parts.join(' · ')}` + (maForm.note.trim() ? `\n메모: ${maForm.note.trim()}` : '');
 
     const isNewSubject = maSubjectMode === 'new' || !subjectNames.some((n) => n.toLowerCase() === subjName.toLowerCase());
@@ -143,12 +188,15 @@ export function LearningRequestPanel({
       isNewSubject,
       materialType: maForm.materialType,
       title,
-      total: maForm.total ? Number(maForm.total) : undefined,
+      total: totalNum > 0 ? totalNum : undefined,
       unit: maForm.materialType === 'book' && maForm.unit.trim() ? maForm.unit.trim() : undefined,
       currentProgress: maForm.currentProgress ? Number(maForm.currentProgress) : undefined,
       studyDays: maForm.studyDays.length > 0 ? maForm.studyDays : undefined,
       studyTime: maForm.studyTime || undefined,
       note: maForm.note.trim() || undefined,
+      ...(maForm.goalMode === 'deadlineWeeks' ? { goalType: 'deadlineWeeks' as const, goalValue: deadlineWeeks, targetDate: maForm.goalTargetDate }
+        : maForm.goalMode === 'dailyAmount' ? { goalType: 'dailyAmount' as const, goalValue: Number(maForm.goalDaily) }
+        : {}),
     };
 
     await sendRequest('materialAdd', message, undefined, proposedMaterial);
@@ -187,14 +235,23 @@ export function LearningRequestPanel({
 
   const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
 
+  // openAdd=true 인 항목은 구조화 '교재/인강 추가' 폼을 바로 연다(자유서술 폼으로 새지 않게).
   const QUICK_REQUESTS = [
-    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.' },
-    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.' },
-    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.' },
-    { type: 'subject', label: '과목 추가/변경', icon: BookPlus, message: '과목 추가 또는 변경을 신청합니다.' },
-    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.' },
-    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.' },
+    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.', openAdd: false },
+    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.', openAdd: false },
+    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.', openAdd: false },
+    { type: 'materialAdd', label: '교재·인강 추가', icon: BookPlus, message: '', openAdd: true },
+    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.', openAdd: false },
+    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.', openAdd: false },
   ];
+
+  // 구조화 교재/인강 추가 폼 열기 + 스크롤(퀵버튼 '교재·인강 추가' 진입점)
+  const openMaterialAdd = () => {
+    setMaterialAddOpen(true);
+    setTimeout(() => {
+      document.getElementById('material-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
 
   const handleQuickRequest = (type: string, message: string) => {
     setRequestCustomOpen(true);
@@ -355,7 +412,7 @@ export function LearningRequestPanel({
                 key={q.label}
                 type="button"
                 disabled={requestSubmitting}
-                onClick={() => handleQuickRequest(q.type, q.message)}
+                onClick={() => (q.openAdd ? openMaterialAdd() : handleQuickRequest(q.type, q.message))}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15 active:scale-[0.97] disabled:opacity-50"
               >
                 {React.createElement(q.icon, { className: 'h-4 w-4 shrink-0 text-[#0071E3]' })}
@@ -376,8 +433,9 @@ export function LearningRequestPanel({
 
           {materialAddOpen && (
             <form
+              id="material-add-form"
               onSubmit={(e) => { e.preventDefault(); if (!requestSubmitting) submitMaterialAdd(); }}
-              className="space-y-3 rounded-2xl border border-[#0071E3]/15 bg-white/70 dark:bg-[#1c1c1e]/95 p-3"
+              className="space-y-3 rounded-2xl border border-[#0071E3]/15 bg-white/70 dark:bg-[#1c1c1e]/95 p-3 scroll-mt-28"
             >
               <div className="flex items-start gap-1.5 rounded-xl border border-[#0071E3]/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 p-2.5 text-[10px] font-bold leading-normal text-[#0071E3]">
                 <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -534,6 +592,53 @@ export function LearningRequestPanel({
                 </div>
               </div>
 
+              {/* 학습 계획 (선택) — 총량을 알면 마감일/하루분량 계획을 함께 정할 수 있어요. 모르면 자율로. */}
+              <div className="space-y-1.5 rounded-xl border border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-2.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">학습 계획 <span className="font-medium text-slate-400">(선택)</span></label>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {([['selfPaced', '자율'], ['deadlineWeeks', '📅 마감일'], ['dailyAmount', '📖 하루 분량']] as const).map(([v, label]) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setMaForm((f) => ({ ...f, goalMode: v }))}
+                      className={`rounded-xl px-2 py-1.5 text-[10.5px] font-bold transition ${maForm.goalMode === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {maForm.goalMode === 'selfPaced' ? (
+                  <p className="text-[9.5px] font-semibold text-slate-400">자율: 그날 한 만큼 기록해요. 나중에 ‘학습계획’ 신청으로 계획을 정할 수도 있어요.</p>
+                ) : !(Number(maForm.total) > 0) ? (
+                  <p className="text-[9.5px] font-bold text-amber-600">계획을 정하려면 위 ‘총량’을 먼저 입력해 주세요.</p>
+                ) : maForm.goalMode === 'deadlineWeeks' ? (
+                  <div className="space-y-1">
+                    <input
+                      type="date"
+                      value={maForm.goalTargetDate}
+                      min={kstToday()}
+                      onChange={(e) => setMaForm((f) => ({ ...f, goalTargetDate: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                    />
+                    {maForm.goalTargetDate && weeksUntil(maForm.goalTargetDate) > 0 && (
+                      <p className="text-[9.5px] font-bold text-[#0071E3]">약 {weeksUntil(maForm.goalTargetDate)}주 안에 완주하는 계획으로 만들어요.</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="number"
+                      min={1}
+                      value={maForm.goalDaily}
+                      onChange={(e) => setMaForm((f) => ({ ...f, goalDaily: e.target.value }))}
+                      placeholder={maForm.materialType === 'book' ? '예: 5' : '예: 1'}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                    />
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{maForm.materialType === 'book' ? (maForm.unit.trim() || 'p') : '강'} / 일</span>
+                  </div>
+                )}
+              </div>
+
               {/* 희망 메모 */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">희망 메모 <span className="font-medium text-slate-400">(선택)</span></label>
@@ -647,10 +752,9 @@ export function LearningRequestPanel({
                       value={requestForm.materialId}
                       onChange={(e) => {
                         const selectedId = e.target.value;
-                        const book = (student?.books || []).find(b => b.id === selectedId);
-                        const lecture = (student?.lectures || []).find(l => l.id === selectedId);
-                        const isBook = !!book;
-                        const material = book || lecture;
+                        const found = findMaterialById(selectedId);
+                        const isBook = found?.kind === 'book';
+                        const material: any = found?.mat;
                         setRequestForm((f) => ({
                           ...f,
                           materialId: selectedId,
@@ -658,31 +762,31 @@ export function LearningRequestPanel({
                           goalType: material?.goalType === 'dailyAmount' ? 'dailyAmount' : 'deadlineWeeks',
                           goalValue: material?.goalType === 'dailyAmount' && material?.goalValue ? String(material.goalValue) : '',
                           targetDate: material?.targetDate || '',
-                          studyDays: (Array.isArray(material?.studyDays) ? material!.studyDays : []) as MaDay[],
+                          studyDays: (Array.isArray(material?.studyDays) ? material.studyDays : []) as MaDay[],
                           currentProgress: material
-                            ? String(isBook ? (book?.currentPage || 0) : (lecture?.completedLectures || 0))
+                            ? String(isBook ? (material.currentPage || 0) : (material.completedLectures || 0))
                             : '',
-                          speedMultiplier: !isBook && lecture?.speedMultiplier ? String(lecture.speedMultiplier) : '1.0',
+                          speedMultiplier: !isBook && material?.speedMultiplier ? String(material.speedMultiplier) : '1.0',
                           currentGoalSnapshot: material ? {
                             goalType: material.goalType,
                             goalValue: material.goalValue,
-                            speedMultiplier: !isBook ? lecture?.speedMultiplier : undefined,
+                            speedMultiplier: !isBook ? material?.speedMultiplier : undefined,
                           } : null,
                         }));
                       }}
                       className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-material-select"
                     >
                       <option value="">-- 변경할 교재/인강 선택 --</option>
-                      {(student?.books || []).length > 0 && (
+                      {requestBooks.length > 0 && (
                         <optgroup label="교재 목록">
-                          {(student?.books || []).map(b => (
+                          {requestBooks.map(b => (
                             <option key={b.id} value={b.id}>{b.title}</option>
                           ))}
                         </optgroup>
                       )}
-                      {(student?.lectures || []).length > 0 && (
+                      {requestLectures.length > 0 && (
                         <optgroup label="인강 목록">
-                          {(student?.lectures || []).map(l => (
+                          {requestLectures.map(l => (
                             <option key={l.id} value={l.id}>{l.name}</option>
                           ))}
                         </optgroup>
