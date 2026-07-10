@@ -139,6 +139,19 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
 
   useEffect(() => { load(); }, [load]);
 
+  // 방어: API 응답이 실패/지연해도 월 그리드는 반드시 뜨게 — viewYm/todayKey 를 클라이언트 KST 날짜로 폴백 초기화.
+  // (과거: API 실패 시 viewYm 이 null 로 남아 캘린더가 빈 껍데기로 보였다.)
+  useEffect(() => {
+    if (viewYm) return;
+    const kst = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
+    const [y, m] = kst.split('-').map(Number);
+    if (y && m) {
+      setViewYm({ y, m: m - 1 });
+      setTodayKey((prev) => prev || kst);
+      setSelectedDate((prev) => prev || kst);
+    }
+  }, [viewYm]);
+
   // 새로고침 없이 알림 반영: 포커스/가시성 복귀(20초 스로틀) + 화면이 보일 때 60초 폴링.
   useEffect(() => {
     let last = Date.now();
@@ -245,7 +258,8 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
   // ── 기간지정(마감) 자료 → 시작~마감 스팬 바(구글 캘린더식) ──────────────────
   // 겹치지 않게 레인(가로 줄) 배정: 시작일 순 그리디 — 각 자료를 마지막 사용 마감일이 겹치지 않는 최하단 레인에.
   const materialLanes = useMemo(() => {
-    const sorted = [...materialSummaries].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate));
+    const valid = materialSummaries.filter((m) => m.startDate && m.endDate && m.startDate <= m.endDate);
+    const sorted = [...valid].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate));
     const laneEnds: string[] = []; // 레인별 마지막 마감일
     const laneOf = new Map<string, number>();
     for (const m of sorted) {
