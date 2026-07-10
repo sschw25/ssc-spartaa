@@ -725,8 +725,8 @@ export function HomeOverviewTab({
                         if ((e.target as HTMLElement).closest('button, input, select, textarea, a, label, [data-stop]')) return;
                         openMaterialDetail(entry.materialType, entry.materialId);
                       } : undefined}
-                      className={`rounded-2xl border p-3 transition ${openMaterialDetail ? 'cursor-pointer' : ''} ${
-                      entry.isCompleted ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isPending ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                      className={`rounded-2xl border border-l-4 bg-white dark:bg-[#1c1c1e] p-3 transition ${openMaterialDetail ? 'cursor-pointer' : ''} ${
+                      entry.isCompleted ? 'border-slate-100 border-l-emerald-400 dark:border-white/10 dark:border-l-emerald-400' : isPending ? 'border-slate-100 border-l-amber-400 dark:border-white/10 dark:border-l-amber-400' : 'border-slate-100 border-l-slate-200 dark:border-white/10 dark:border-l-white/10'
                     }`}>
                       <div className="flex items-start gap-3">
                         <button
@@ -944,12 +944,12 @@ export function HomeOverviewTab({
                 return (
                   <div
                     key={goal.id}
-                    className={`rounded-2xl border p-3 transition ${
+                    className={`rounded-2xl border border-l-4 bg-white dark:bg-[#1c1c1e] p-3 transition ${
                       done || metToday
-                        ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10'
+                        ? 'border-slate-100 border-l-emerald-400 dark:border-white/10 dark:border-l-emerald-400'
                         : goal.behind
-                          ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10'
-                          : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                          ? 'border-slate-100 border-l-amber-400 dark:border-white/10 dark:border-l-amber-400'
+                          : 'border-slate-100 border-l-slate-200 dark:border-white/10 dark:border-l-white/10'
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -1067,8 +1067,8 @@ export function HomeOverviewTab({
                     const isOpen = selfPacedOpenId === item.id;
                     const reviewMin = reviewMinFor(item.materialType, item.materialId);
                     return (
-                      <div key={item.id} className={`rounded-2xl border p-3 transition ${
-                        item.loggedToday ? 'border-emerald-100 bg-emerald-50/45 dark:border-emerald-500/25 dark:bg-emerald-500/10' : isOpen ? 'border-amber-200 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e]'
+                      <div key={item.id} className={`rounded-2xl border border-l-4 bg-white dark:bg-[#1c1c1e] p-3 transition ${
+                        item.loggedToday ? 'border-slate-100 border-l-emerald-400 dark:border-white/10 dark:border-l-emerald-400' : isOpen ? 'border-slate-100 border-l-amber-400 dark:border-white/10 dark:border-l-amber-400' : 'border-slate-100 border-l-slate-200 dark:border-white/10 dark:border-l-white/10'
                       }`}>
                         <div className="flex items-start gap-3">
                           <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border ${
