@@ -10,6 +10,8 @@ import {
   ChevronUp,
   ChevronsUpDown,
   Loader2,
+  LogIn,
+  LogOut,
   RefreshCw,
   Save,
   Search,
@@ -21,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { Student, PhoneSubmission } from '@/lib/types/student';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 import { arrivalDeadlineMin, normalizeArrival } from '@/lib/attendance-time';
 
 type Arrival = string;
@@ -134,6 +137,7 @@ function AdminAttendanceContent() {
 
   const [checkingAuth, setCheckingAuth] = useState(true);
   const { openStudent } = useAdminGlobalSheet();
+  const confirm = useConfirm();
   const [students, setStudents] = useState<Student[]>([]);
   const [date, setDate] = useState(todayKST());
   const [data, setData] = useState<Data | null>(null);
@@ -424,6 +428,37 @@ function AdminAttendanceContent() {
       setReloadKey((k) => k + 1);
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, '출결 저장에 실패했습니다.'));
+    } finally {
+      setSavingId('');
+    }
+  };
+
+  // QR 대체 폴백: '열린 세션'을 만들어(등원) 닫아서(하원) 출결 현황에 즉시 반영한다.
+  // 오늘 날짜 조회 중에만 허용 — 과거 날짜에서 누르면 '오늘' 세션이 오생성되므로 차단한다.
+  const quickAttendance = async (row: Row, action: 'check-in' | 'check-out') => {
+    if (date !== todayKST()) {
+      toast.error('오늘 날짜에서만 등하원 처리할 수 있습니다.');
+      return;
+    }
+    const ok = await confirm({
+      title: `${row.name} ${action === 'check-in' ? '등원' : '하원'} 처리할까요?`,
+      description: action === 'check-in' ? 'QR 대신 지금 등원으로 기록합니다.' : '지금 시각으로 하원 처리합니다.',
+      confirmText: action === 'check-in' ? '등원 처리' : '하원 처리',
+    });
+    if (!ok) return;
+    setSavingId(row.id);
+    try {
+      const res = await fetch('/api/admin/attendance/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: row.id, action, date }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || '처리 실패');
+      toast.success(action === 'check-in' ? '등원 처리했습니다.' : '하원 처리했습니다.');
+      setReloadKey((k) => k + 1);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, '출결 처리에 실패했습니다.'));
     } finally {
       setSavingId('');
     }
@@ -983,6 +1018,26 @@ function AdminAttendanceContent() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
+                              {/* 등/하원 즉시 처리는 오늘 조회에서만 — 과거 날짜에서 누르면 오늘 세션이 오생성된다 */}
+                              {date !== todayKST() ? null : r.isAbsent ? (
+                                <button
+                                  onClick={() => quickAttendance(r, 'check-in')}
+                                  disabled={savingId === r.id}
+                                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[10px] font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                  <LogIn className="h-3 w-3" />
+                                  등원 처리
+                                </button>
+                              ) : r.isOpen ? (
+                                <button
+                                  onClick={() => quickAttendance(r, 'check-out')}
+                                  disabled={savingId === r.id}
+                                  className="inline-flex items-center gap-1 rounded-lg border border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50"
+                                >
+                                  <LogOut className="h-3 w-3" />
+                                  하원 처리
+                                </button>
+                              ) : null}
                               <button
                                 onClick={() => saveManual(r)}
                                 disabled={savingId === r.id}

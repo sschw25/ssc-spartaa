@@ -49,6 +49,9 @@ const LIFE_SUB_TABS: Array<{ id: LifeSubTab; label: string; meta: string }> = [
 
 const LEARNING_TAB_IDS = LEARNING_SUB_TABS.map((tab) => tab.id);
 const LIFE_TAB_IDS = LIFE_SUB_TABS.map((tab) => tab.id);
+// 신청(#student-requests) 컨테이너의 서브탭 — 화면에 보이는 탭 id 를 그대로 딥링크로 쓸 수 있게 한다.
+// (기존 별칭 clinic-booking·coupon-exchange·student-suggestions 는 하위호환으로 계속 유지)
+const REQUEST_SUB_TABS: ApplicationSubTab[] = ['leave', 'consultation', 'suggestion', 'coupon'];
 
 function StudentReportInner() {
   const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
@@ -225,6 +228,7 @@ function StudentReportInner() {
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,
+    saveMaterialColor,
     saveEstimatedTotal,
     formatNotificationDate,
     notificationCount,
@@ -277,6 +281,11 @@ function StudentReportInner() {
     if ((LIFE_TAB_IDS as string[]).includes(tabId)) {
       setLifeSubTab(tabId as LifeSubTab);
       setActiveTab('life');
+      return true;
+    }
+    if ((REQUEST_SUB_TABS as string[]).includes(tabId)) {
+      setRequestSubTab(tabId as ApplicationSubTab);
+      setActiveTab('student-requests');
       return true;
     }
     if (tabId === 'clinic-booking') {
@@ -737,6 +746,7 @@ function StudentReportInner() {
                 setLearningSubTab('grade-analysis');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
+              openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
             />
           </section>
         )}
@@ -972,6 +982,7 @@ function StudentReportInner() {
           studyTimeLabels={studyTimeLabels}
           adjustStartPoint={adjustStartPoint}
           saveStudySlot={saveStudySlot}
+          saveMaterialColor={saveMaterialColor}
           saveEstimatedTotal={saveEstimatedTotal}
           onClose={closeMaterialDetail}
           onOpenSubjectProgress={openSubjectProgressFromSheet}

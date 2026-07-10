@@ -18,7 +18,8 @@ import {
   getMaterialBenchmark,
 } from '@/lib/material-benchmark';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
-import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
+import { STUDY_TIME_SLOTS, isTimeSlot, parseTimeSlot, timeSlotPeriodKeys, formatSlotLabel } from '@/lib/academy-timetable';
+import { getMaterialColor } from '@/lib/material-color';
 import { toast } from 'sonner';
 import { Plus, Minus, Trash2, Calendar, User, Phone, BookOpen, Tv, MessageSquare, Award, Copy, Link, Printer, Loader2, Pencil, Save, ArrowLeft, LayoutDashboard, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDetailSheet } from '@/components/admin/detail-tabs/detail-sheet-context';
@@ -89,29 +90,105 @@ function MaterialStudyTimePicker({
   onChange: (subId: string, materialId: string, type: 'book' | 'lecture', studyTime: 'morning' | 'afternoon' | 'night' | '') => void;
 }) {
   const current = STUDY_TIME_SLOTS.find((slot) => slot.key === studyTime);
+  const isTime = isTimeSlot(studyTime);
+  const parsed = parseTimeSlot(studyTime);
+  const fromMin = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  const [mode, setMode] = useState<'preset' | 'time'>(isTime ? 'time' : 'preset');
+  const [startT, setStartT] = useState(parsed ? fromMin(parsed.startMin) : '13:50');
+  const [endT, setEndT] = useState(parsed ? fromMin(parsed.endMin) : '15:00');
+
+  // 시간표에 t: 값을 쓰려면 onChange 의 좁은 유니온 타입을 우회(캐스트) — 저장 경로(updateMaterialStudyTime)는 문자열을 그대로 저장한다.
+  const commit = (value: string) =>
+    onChange(subId, materialId, type, value as 'morning' | 'afternoon' | 'night' | '');
+
+  const timeValue = `t:${startT}-${endT}`;
+  const timeValid = !!startT && !!endT && startT < endT;
+  const periodKeys = timeValid ? timeSlotPeriodKeys(timeValue) : [];
+  const periodHint = periodKeys.length
+    ? (periodKeys.length === 1
+        ? formatSlotLabel(periodKeys[0])
+        : `${formatSlotLabel(periodKeys[0])}~${formatSlotLabel(periodKeys[periodKeys.length - 1])}`)
+    : '';
+
+  const assigned = !!current || isTime;
   return (
     <div className="space-y-1">
-      <Label className="text-[9px] text-slate-500 dark:text-slate-400">
-        이 자료 학습 시간 <span className="font-semibold text-[#0071E3]">{current ? '개별 지정' : '미지정(시간표 제외)'}</span>
-      </Label>
-      <Select
-        value={studyTime || 'none'}
-        onValueChange={(value) => onChange(subId, materialId, type, value === 'none' ? '' : value as 'morning' | 'afternoon' | 'night')}
-      >
-        <SelectTrigger className="h-8 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10">
-          <SelectValue placeholder="시간대 선택" />
-        </SelectTrigger>
-        <SelectContent className="bg-white dark:bg-[#1c1c1e]">
-          <SelectItem value="none" className="text-[10px]">미지정 (시간표에 표시 안 함)</SelectItem>
-          {STUDY_TIME_SLOTS.map((slot) => (
-            <SelectItem key={slot.key} value={slot.key} className="text-[10px]">
-              {slot.displayLabel} ({slot.timeRange})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      {current && (
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-[9px] text-slate-500 dark:text-slate-400">
+          이 자료 학습 시간 <span className="font-semibold text-[#0071E3]">{assigned ? '개별 지정' : '미지정(시간표 제외)'}</span>
+        </Label>
+        <button
+          type="button"
+          onClick={() => setMode((m) => (m === 'preset' ? 'time' : 'preset'))}
+          className="text-[9px] font-semibold text-[#0071E3] hover:underline"
+        >
+          {mode === 'preset' ? '시간 직접입력' : '시간대 선택'}
+        </button>
+      </div>
+      {mode === 'preset' ? (
+        <Select
+          value={isTime ? 'none' : (studyTime || 'none')}
+          onValueChange={(value) => commit(value === 'none' ? '' : value)}
+        >
+          <SelectTrigger className="h-8 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10">
+            <SelectValue placeholder="시간대 선택" />
+          </SelectTrigger>
+          <SelectContent className="bg-white dark:bg-[#1c1c1e]">
+            <SelectItem value="none" className="text-[10px]">미지정 (시간표에 표시 안 함)</SelectItem>
+            {STUDY_TIME_SLOTS.map((slot) => (
+              <SelectItem key={slot.key} value={slot.key} className="text-[10px]">
+                {slot.displayLabel} ({slot.timeRange})
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : (
+        <div className="flex items-center gap-1.5">
+          <Input
+            type="time"
+            value={startT}
+            onChange={(e) => setStartT(e.target.value)}
+            className="h-8 flex-1 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10"
+          />
+          <span className="text-[10px] text-slate-400">~</span>
+          <Input
+            type="time"
+            value={endT}
+            onChange={(e) => setEndT(e.target.value)}
+            className="h-8 flex-1 text-[10px] bg-white dark:bg-white/5 dark:text-slate-100 rounded-lg border-black/[0.08] dark:border-white/10"
+          />
+          <Button
+            type="button"
+            disabled={!timeValid || periodKeys.length === 0}
+            onClick={() => commit(timeValue)}
+            className="h-8 shrink-0 rounded-lg bg-[#0071E3] px-3 text-[10px] font-semibold text-white disabled:opacity-40"
+          >
+            적용
+          </Button>
+          {isTime && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => commit('')}
+              className="h-8 shrink-0 rounded-lg px-2.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10"
+            >
+              해제
+            </Button>
+          )}
+        </div>
+      )}
+      {mode === 'preset' && current && (
         <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">{current.periodLabel}</p>
+      )}
+      {mode === 'time' && (
+        <p className="text-[9px] font-semibold text-slate-500 dark:text-slate-400">
+          {!timeValid
+            ? '시작 시간 < 끝 시간'
+            : periodHint
+              ? `배치 교시 · ${periodHint}`
+              : '겹치는 교시 없음 (08:20~23:20 내로)'}
+        </p>
       )}
     </div>
   );
@@ -1031,7 +1108,10 @@ export function ProgressTab() {
                                     ) : (
                                       <div className="flex justify-between items-start">
                                         <div>
-                                          <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100">{book.title}</h5>
+                                          <h5 className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                                            <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(book) }} />
+                                            {book.title}
+                                          </h5>
                                           {bookBenchmarkSummary && (
                                             <p className="mt-1 text-[10px] font-semibold leading-relaxed text-[#0071E3]">
                                               {bookBenchmarkSummary}
@@ -1478,7 +1558,10 @@ export function ProgressTab() {
                                     ) : (
                                       <div className="flex justify-between items-start">
                                         <div>
-                                          <h5 className="text-xs font-bold text-slate-900 dark:text-slate-100">{lec.name}</h5>
+                                          <h5 className="flex items-center gap-1.5 text-xs font-bold text-slate-900 dark:text-slate-100">
+                                            <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(lec) }} />
+                                            {lec.name}
+                                          </h5>
                                           {lectureBenchmarkSummary && (
                                             <p className="mt-1 text-[10px] font-semibold leading-relaxed text-[#0071E3]">
                                               {lectureBenchmarkSummary}

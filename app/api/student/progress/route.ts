@@ -3,6 +3,7 @@ import { getStudentSessionId } from '@/lib/auth';
 import { getStudentById, patchStudentProgress } from '@/lib/store';
 import type { BookProgress, DetailedPlan, LectureProgress, Student } from '@/lib/types/student';
 import { isValidStudySlot } from '@/lib/academy-timetable';
+import { isValidMaterialColor } from '@/lib/material-color';
 
 type UpdatedInfo = {
   value: number;
@@ -151,6 +152,28 @@ function applyStudySlotMutation(
     ? (materials[0] as BookProgress).currentPage || 0
     : (materials[0] as LectureProgress).completedLectures || 0;
   return { ok: true, updated: { value, total } };
+}
+
+// 자료 색상(color) 설정 — 학생이 자료별 색을 지정. 진도/완료와 독립. 팔레트 key 또는 '#RRGGBB'(''=해제).
+function applyColorMutation(
+  student: Student,
+  materialType: 'book' | 'lecture',
+  materialId: string,
+  color: string,
+): MutationResult {
+  const nowIso = new Date().toISOString();
+  const materials: Array<BookProgress | LectureProgress> = materialType === 'book'
+    ? [
+        ...((student.books || []).filter((b) => b.id === materialId)),
+        ...((student.subjects || []).flatMap((s) => (s.books || []).filter((b) => b.id === materialId))),
+      ]
+    : [
+        ...((student.lectures || []).filter((l) => l.id === materialId)),
+        ...((student.subjects || []).flatMap((s) => (s.lectures || []).filter((l) => l.id === materialId))),
+      ];
+  if (materials.length === 0) return { ok: false, reason: 'material-not-found' };
+  materials.forEach((m) => { if (color) m.color = color; else delete m.color; m.updatedAt = nowIso; });
+  return { ok: true, updated: { value: 0, total: 0 } };
 }
 
 // selfPaced 자료의 학생 예상 총량 입력(셀프서비스) — total 만 세팅 + totalIsEstimate 표시. goalType 은 selfPaced 유지(계획 미생성).
@@ -443,6 +466,7 @@ export async function PATCH(req: NextRequest) {
     reviewMinutes?: unknown;
     deadlineAmount?: unknown;
     studySlot?: unknown;
+    color?: unknown;
     estimatedTotal?: unknown;
   };
   try {
@@ -468,6 +492,8 @@ export async function PATCH(req: NextRequest) {
   const deadlineAmount = hasDeadlineAmount ? Number(body.deadlineAmount) : 0;
   // 자율학습 슬롯(studySlot) 설정 — 진도/완료와 독립. 허용 값만.
   const hasStudySlot = body?.studySlot !== undefined;
+  // 자료 색상(color) 설정 — 진도/완료와 독립. 팔레트 key 또는 '#RRGGBB'('' = 해제).
+  const hasColor = body?.color !== undefined;
   // selfPaced 예상 총량(estimatedTotal) 설정 — 진도/완료와 독립. 0~99999 클램프(0=해제).
   const hasEstimatedTotal = body?.estimatedTotal !== undefined;
   const estimatedTotal = hasEstimatedTotal
@@ -528,6 +554,30 @@ export async function PATCH(req: NextRequest) {
       const saved = await patchStudentProgress(student, originalUpdatedAt);
       if (saved === 'conflict') continue;
       return NextResponse.json({ success: true, studySlot: slot });
+    }
+    return NextResponse.json({ success: false, message: '설정 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
+  }
+
+  // 자료 색상 설정 — 전용 경로. 팔레트 key 또는 '#RRGGBB', 빈 문자열은 해제.
+  if (hasColor) {
+    const raw = typeof body.color === 'string' ? body.color.trim() : '';
+    const color = raw === '' ? '' : (isValidMaterialColor(raw) ? raw : null);
+    if (color === null) {
+      return NextResponse.json({ success: false, message: '색상 값이 올바르지 않습니다.' }, { status: 400 });
+    }
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const student = await getStudentById(studentId);
+      if (!student) {
+        return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const originalUpdatedAt = student.updatedAt ?? '';
+      const result = applyColorMutation(student, materialType as 'book' | 'lecture', materialId, color);
+      if (!result.ok) {
+        return NextResponse.json({ success: false, message: '해당 학습 자료를 찾을 수 없습니다.' }, { status: 404 });
+      }
+      const saved = await patchStudentProgress(student, originalUpdatedAt);
+      if (saved === 'conflict') continue;
+      return NextResponse.json({ success: true, color });
     }
     return NextResponse.json({ success: false, message: '설정 저장 충돌, 다시 시도해주세요.' }, { status: 409 });
   }

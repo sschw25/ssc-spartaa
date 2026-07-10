@@ -44,6 +44,9 @@ import {
   uploadLeaveProofSupabase,
   signedLeaveProofUrlSupabase,
   deleteLeaveProofSupabase,
+  uploadWrongNoteImageSupabase,
+  signedWrongNoteUrlSupabase,
+  deleteWrongNoteImageSupabase,
   getMealPlansSupabase,
   saveMealPlanSupabase,
   deleteMealPlanSupabase,
@@ -747,6 +750,24 @@ export async function signedLeaveProofUrl(path: string, ttlSec?: number): Promis
 export async function deleteLeaveProof(path: string): Promise<void> {
   requireSupabase();
   return deleteLeaveProofSupabase(path);
+}
+
+// ── 오답노트 문제 사진 (비공개 Storage) ──
+export async function uploadWrongNoteImage(
+  studentId: string, materialId: string, body: ArrayBuffer, contentType: string, ext: string,
+): Promise<{ path: string }> {
+  requireSupabase();
+  return uploadWrongNoteImageSupabase(studentId, materialId, body, contentType, ext);
+}
+
+export async function signedWrongNoteUrl(path: string, ttlSec?: number): Promise<string> {
+  requireSupabase();
+  return signedWrongNoteUrlSupabase(path, ttlSec);
+}
+
+export async function deleteWrongNoteImage(path: string): Promise<void> {
+  requireSupabase();
+  return deleteWrongNoteImageSupabase(path);
 }
 
 export async function notifyCampusEvent(id: string, notifiedAt: string | null, recipientStudentIds?: string[]): Promise<CampusEvent> {

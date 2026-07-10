@@ -1,5 +1,6 @@
 import { BookProgress, DetailedPlan, LectureProgress, Student, ReviewPassSetting, MakeupCarryover } from '@/lib/types/student';
 import { getCarryoverNet, weekKeyOf } from '@/lib/makeup-carryover';
+import { timeSlotBlocks, parseTimeSlot } from '@/lib/academy-timetable';
 
 export type ProgressItemType = 'book' | 'lecture';
 
@@ -129,11 +130,18 @@ export function getLeaveFractionByDate(student: Student): Map<string, number> {
 
 // 특정 자료(과목 studyTime 기준) 그날 면제 비율 — 일일계획 슬롯-특정용.
 // 슬롯 배정 과목: 그 슬롯이 반차면 전액(1), 다른 슬롯이면 0. studyTime 없으면 비율 폴백.
+// 시:분 슬롯('t:HH:MM-HH:MM')은 겹치는 블록으로 환산해 판정(부분 겹침은 블록 비율 근사).
 export function materialLeaveFractionOnDate(exempt: LeaveExemption | undefined, subjectStudyTime?: string): number {
   if (!exempt) return 0;
   if (exempt.full) return 1;
   if (subjectStudyTime === 'morning' || subjectStudyTime === 'afternoon' || subjectStudyTime === 'night') {
     return exempt.slots.has(subjectStudyTime) ? 1 : 0;
+  }
+  const blocks = timeSlotBlocks(subjectStudyTime);
+  if (blocks.length > 0) {
+    const hit = blocks.filter((b) => exempt.slots.has(b));
+    if (hit.length === 0) return 0;
+    return hit.length === blocks.length ? 1 : hit.length / blocks.length;
   }
   return exempt.fraction;
 }
@@ -704,10 +712,13 @@ export function isStudyDay(date: Date, studyDays?: string[]) {
   return getActiveStudyDays(studyDays).includes(dayMap[date.getDay()]);
 }
 
-export function getAvailableMinutes(studyTime?: 'morning' | 'afternoon' | 'night' | '') {
+export function getAvailableMinutes(studyTime?: string) {
   if (studyTime === 'morning') return 190;
   if (studyTime === 'afternoon') return 210;
   if (studyTime === 'night') return 250;
+  // 시:분 직접지정('t:HH:MM-HH:MM') — 구간 길이를 그대로 가용시간으로 사용
+  const parsed = parseTimeSlot(studyTime);
+  if (parsed && parsed.endMin > parsed.startMin) return parsed.endMin - parsed.startMin;
   return 650; // 기본 전체 자습 시간
 }
 
@@ -723,7 +734,7 @@ export function generateDetailedPlans(
   studyDays?: string[],
   lectureSpeedMultiplier = 1.0,
   estimatedMinutesPerUnit?: number,
-  studyTime?: 'morning' | 'afternoon' | 'night' | '',
+  studyTime?: string,
   category?: string,
   // 계획 시작일(YYYY-MM-DD). 미지정=오늘(레거시). 지정 시 이 날짜를 계획 기준점(anchor)으로 잡아
   // "내일부터"/"다음 주부터" 시작을 만든다. 아래 today 변수를 anchor 로 재사용한다.

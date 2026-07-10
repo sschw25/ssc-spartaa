@@ -4,7 +4,7 @@ import { getStudentById, getOtEvents, getMockExams, getCampusEvents } from '@/li
 import { getSeoulDateKey } from '@/lib/student-activity';
 import {
   buildStudentCalendar, countCalendarActionable,
-  getDayStudyItems, summarizeDayStudy, shiftDateKey,
+  getDayStudyItems, summarizeDayStudy, shiftDateKey, buildMaterialSummaries,
   CALENDAR_PAST_DAYS, CALENDAR_FUTURE_DAYS, type DayStudySummary,
 } from '@/lib/student-calendar';
 import type { OtEvent, MockExam, CampusEvent } from '@/lib/types/student';
@@ -28,8 +28,12 @@ export async function GET() {
   try { mockExams = await getMockExams(); } catch {}
   try { campusEvents = await getCampusEvents(); } catch {}
 
-  const todayKey = getSeoulDateKey();
+  const now = new Date();
+  const todayKey = getSeoulDateKey(now);
   const items = buildStudentCalendar({ student, otEvents, mockExams, campusEvents, todayKey });
+
+  // 과목별(자료별) 진행 요약 — 기간 목표 단일 소스(deriveDeadlineGoals) 투영. 마감 마커·진행 패널용.
+  const materialSummaries = buildMaterialSummaries(student, now, todayKey);
 
   // 그날의 공부 계획·달성도 — 조회 창 각 날짜의 요약(목표 있는 날만). 순수 계산.
   const studyByDate: Record<string, DayStudySummary> = {};
@@ -39,5 +43,5 @@ export async function GET() {
     if (summary.planned > 0) studyByDate[dateKey] = summary;
   }
 
-  return NextResponse.json({ success: true, items, studyByDate, actionableCount: countCalendarActionable(items), todayKey });
+  return NextResponse.json({ success: true, items, studyByDate, materialSummaries, actionableCount: countCalendarActionable(items), todayKey });
 }

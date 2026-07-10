@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Users, User, Calendar, BarChart3, Search, LogOut, Loader2,
   AlertTriangle, BookOpen, ClipboardList, X, Play, RefreshCw, Clock,
-  CalendarClock, ChevronRight, XCircle
+  CalendarClock, ChevronRight, XCircle, NotebookPen
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
@@ -24,6 +24,7 @@ import { DailyDigestWidget } from '@/components/admin/daily-digest-widget';
 import { WorkQueueWidget } from '@/components/admin/work-queue-widget';
 import { ScheduledJobsPanel } from '@/components/admin/scheduled-jobs-panel';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
+import { getDailyQuote } from '@/lib/daily-quote';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { AnimatedNumber } from '@/components/admin/animated-number';
 import { motion } from 'framer-motion';
@@ -215,6 +216,18 @@ export default function AdminDashboardPage() {
   const campusScopedStudents = students.filter(s => effectiveFilter === 'all' || s.campus === effectiveFilter);
   const totalStudentsCount = campusScopedStudents.length;
   const selectedCampusLabel = effectiveFilter === 'all' ? '전체 캠퍼스' : getCampusLabel(effectiveFilter);
+
+  // 확인할 오답노트 — 학생이 남긴 오답 중 미확인(resolvedAt 없음) 건이 있는 학생 목록.
+  const studentsWithUnresolvedNotes = campusScopedStudents
+    .map((s) => {
+      let unresolved = 0;
+      (s.subjects || []).forEach((sub) => (sub.books || []).forEach((b) => {
+        (b.wrongNotes || []).forEach((n) => { if (!n.resolvedAt) unresolved += 1; });
+      }));
+      return { student: s, unresolved };
+    })
+    .filter((x) => x.unresolved > 0)
+    .sort((a, b) => b.unresolved - a.unresolved);
 
   // 등록 만료/임박 학생
   const RENEWAL_WARN_DAYS = 5;
@@ -896,6 +909,7 @@ export default function AdminDashboardPage() {
               {showDailyDigestSchedule ? '예약 닫기' : '예약 확인'}
             </button>
           </div>
+          <p className="-mt-1 text-[12px] font-medium italic text-slate-400 dark:text-slate-500 break-keep">오늘의 한마디 · {getDailyQuote()}</p>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
             <DailyDigestWidget campusFilter={campusFilter} onSelectStudentId={handleOpenStudentById} />
             {/* 처리 대기 — 인박스 밖(자리이동/가입/도시락/상담예약)까지 포함한 유형별 대기 딥링크 */}
@@ -1105,6 +1119,49 @@ export default function AdminDashboardPage() {
           </Card>
         </div>
         </div>{/* /섹션4 */}
+
+        {/* ── 섹션 5: 확인할 오답노트 — 학생이 남긴 미확인 오답 검토 ── */}
+        <div className="space-y-3.5">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className="text-[17px] font-semibold tracking-tight text-slate-900 dark:text-slate-100">확인할 오답노트</h2>
+            {studentsWithUnresolvedNotes.length > 0 && (
+              <span className="inline-flex items-center rounded-full bg-[#0071E3]/10 px-2.5 py-1 text-[12px] font-medium text-[#0071E3]">
+                {studentsWithUnresolvedNotes.length}명 대기
+              </span>
+            )}
+          </div>
+          <Card className="border border-black/[0.05] dark:border-white/10 rounded-2xl bg-white dark:bg-[#1c1c1e] p-4.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)]">
+            <CardContent className="px-1">
+              {studentsWithUnresolvedNotes.length === 0 ? (
+                <div className="py-6 text-center">
+                  <NotebookPen className="mx-auto h-5 w-5 text-slate-300 dark:text-slate-600" />
+                  <p className="mt-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400">확인할 오답노트가 없습니다.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {studentsWithUnresolvedNotes.map(({ student: s, unresolved }) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => handleOpenStudentById(s.id)}
+                      className="flex items-center gap-2.5 rounded-xl bg-black/[0.02] dark:bg-white/5 border border-black/[0.01] dark:border-white/10 px-3 py-2.5 text-left hover:bg-black/[0.04] dark:hover:bg-white/10 active:scale-[0.98] transition-all duration-200"
+                    >
+                      <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[#0071E3]/10 text-[#0071E3]">
+                        <NotebookPen className="h-4 w-4" />
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-slate-100">{s.name}</p>
+                        <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{getCampusLabel(s.campus)}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white/90 dark:bg-white/10 border border-black/[0.04] dark:border-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#0071E3]">미확인 {unresolved}</span>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>{/* /섹션5 */}
 
       </main>
 

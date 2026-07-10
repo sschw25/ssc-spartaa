@@ -27,7 +27,7 @@ import {
   Calendar, User,
   BookOpen, MessageSquare, Award, Printer, Loader2, Save,
   ArrowLeft, Home, ChevronDown, ChevronUp, History, Shield, AlertCircle, X,
-  CalendarDays, Plus, Trash2, Send, Ticket, BookPlus
+  CalendarDays, Plus, Trash2, Send, Ticket, BookPlus, NotebookPen
 } from 'lucide-react';
 import { GradesTab } from '@/components/admin/detail-tabs/grades-tab';
 import { InfoTab } from '@/components/admin/detail-tabs/info-tab';
@@ -36,6 +36,7 @@ import { ProgressTab } from '@/components/admin/detail-tabs/progress-tab';
 import { ConsultTab } from '@/components/admin/detail-tabs/consult-tab';
 import { PenaltyTab } from '@/components/admin/detail-tabs/penalty-tab';
 import { CouponTab } from '@/components/admin/detail-tabs/coupon-tab';
+import { WrongNoteReview } from '@/components/admin/wrong-note-review';
 import { DetailSheetProvider, type QuickPlanPreviewItem } from '@/components/admin/detail-tabs/detail-sheet-context';
 
 interface StudentDetailSheetProps {
@@ -4518,7 +4519,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           })()}
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-7 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
+            <TabsList className="grid grid-cols-8 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-xl mb-6 min-w-0 overflow-hidden">
               <TabsTrigger id="admin-tab-progress" value="progress" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">학습 관리</span>
@@ -4543,6 +4544,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 <Ticket className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">쿠폰</span>
                 <span className="sm:hidden">쿠폰</span>
+              </TabsTrigger>
+              <TabsTrigger id="admin-tab-wrongnote" value="wrongnote" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
+                <NotebookPen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">오답노트</span>
+                <span className="sm:hidden">오답</span>
               </TabsTrigger>
               <TabsTrigger id="admin-tab-info" value="info" className="admin-detail-tab text-xs font-semibold rounded-lg py-2.5 px-1">
                 <User className="w-3.5 h-3.5" />
@@ -4750,6 +4756,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 rewardRedemptions={student?.rewardRedemptions || []}
                 onCouponAdjust={handleCouponAdjust}
               />
+            </TabsContent>
+
+            {/* TAB 오답노트: 학생이 남긴 오답 문제(텍스트/사진) 검토·확인 */}
+            <TabsContent value="wrongnote" className="space-y-5 outline-none">
+              {student && <WrongNoteReview student={student} />}
             </TabsContent>
 
             {/* TAB D-Day: 학생 D-Day 관리 */}

@@ -96,14 +96,66 @@ export const isBlockSlot = (slot?: string): slot is StudyTimeKey =>
 
 export const isPeriodSlot = (slot?: string): boolean => !!slot && /^p[0-8]$/.test(slot);
 
+// ── 시:분 직접 지정 슬롯('t:HH:MM-HH:MM') ─────────────────────────────────────
+// 학생/관리자가 특정 시간 구간을 직접 지정하면, 그 구간과 겹치는 학습 교시에 스냅해 노출한다.
+// (교시-행 시간표를 그대로 유지 — 그리드 재작성 없이 '구간 → 겹치는 교시' 매핑으로만 처리.)
+const TIME_SLOT_RE = /^t:(\d{2}):(\d{2})-(\d{2}):(\d{2})$/;
+
+const toMinOfDay = (hhmm: string): number => {
+  const [h, m] = (hhmm || '').split(':').map(Number);
+  return (h || 0) * 60 + (m || 0);
+};
+
+// 형식만 판정('t:HH:MM-HH:MM'). 유효성(시작<끝·하루 범위)은 isValidStudySlot 에서.
+export const isTimeSlot = (slot?: string): boolean => !!slot && TIME_SLOT_RE.test(slot);
+
+// 't:HH:MM-HH:MM' → { startMin, endMin }(자정 기준 분). 형식이 아니면 null.
+export const parseTimeSlot = (slot?: string): { startMin: number; endMin: number } | null => {
+  const mt = (slot || '').match(TIME_SLOT_RE);
+  if (!mt) return null;
+  return {
+    startMin: Number(mt[1]) * 60 + Number(mt[2]),
+    endMin: Number(mt[3]) * 60 + Number(mt[4]),
+  };
+};
+
+// 시간 구간과 겹치는 학습 성격 교시(periodKey)들. 겹침 = ps < end && start < pe(today-schedule 와 동일 스타일).
+export const timeSlotPeriodKeys = (slot?: string): string[] => {
+  const parsed = parseTimeSlot(slot);
+  if (!parsed) return [];
+  return ACADEMY_TIMETABLE.filter(
+    (p) => !!p.periodKey && toMinOfDay(p.start) < parsed.endMin && parsed.startMin < toMinOfDay(p.end),
+  ).map((p) => p.periodKey as string);
+};
+
+// 시간 구간과 겹치는 시간대 블록(morning/afternoon/night)들 — 휴가(반차) 면제·보강 판정용.
+// 겹치는 학습 교시들의 studyTime 을 모아 중복 제거한다. 겹침 없으면 [].
+export const timeSlotBlocks = (slot?: string): StudyTimeKey[] => {
+  const parsed = parseTimeSlot(slot);
+  if (!parsed) return [];
+  const blocks = ACADEMY_TIMETABLE.filter(
+    (p) => !!p.periodKey && !!p.studyTime && toMinOfDay(p.start) < parsed.endMin && parsed.startMin < toMinOfDay(p.end),
+  ).map((p) => p.studyTime as StudyTimeKey);
+  return Array.from(new Set(blocks));
+};
+
+// 유효한 시:분 슬롯인지 — 형식 + 시작<끝 + 하루 범위(00:00~24:00).
+const isValidTimeSlot = (slot: string): boolean => {
+  const parsed = parseTimeSlot(slot);
+  if (!parsed) return false;
+  return parsed.startMin >= 0 && parsed.endMin <= 24 * 60 && parsed.startMin < parsed.endMin;
+};
+
 // 유효한 슬롯 문자열인지(API 검증·정규화용). 빈 문자열도 유효(미지정).
 export const isValidStudySlot = (slot: unknown): slot is string =>
-  slot === '' || (typeof slot === 'string' && (isBlockSlot(slot) || isPeriodSlot(slot)));
+  slot === '' ||
+  (typeof slot === 'string' && (isBlockSlot(slot) || isPeriodSlot(slot) || isValidTimeSlot(slot)));
 
-// 슬롯 표시 라벨. 미지정/미상은 '미지정'.
+// 슬롯 표시 라벨. 미지정/미상은 '미지정'. 시:분 슬롯은 '14:30~15:30'.
 export const formatSlotLabel = (slot?: string): string => {
   if (isBlockSlot(slot)) return BLOCK_SLOT_LABEL[slot];
   if (slot && PERIOD_SLOT_LABELS[slot]) return PERIOD_SLOT_LABELS[slot];
+  if (isTimeSlot(slot)) return slot!.slice(2).replace('-', '~');
   return '미지정';
 };
 
@@ -113,5 +165,6 @@ export const slotMatchesPeriod = (slot: string | undefined, period: AcademyTimet
   if (!slot) return false;
   if (isBlockSlot(slot)) return period.studyTime === slot;
   if (isPeriodSlot(slot)) return period.periodKey === slot;
+  if (isTimeSlot(slot)) return !!period.periodKey && timeSlotPeriodKeys(slot).includes(period.periodKey);
   return false;
 };

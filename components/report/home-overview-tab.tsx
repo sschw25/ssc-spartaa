@@ -10,11 +10,15 @@ import { useConfirm } from '@/components/ui/confirm-dialog';
 import { HomeHighlightsPanel } from './home-highlights-panel';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
+import { DailyPlanAverageCard } from './daily-plan-average-card';
+import { getDailyQuote } from '@/lib/daily-quote';
 import { AttendanceStatusCard } from './attendance-status-card';
 import { TabHero } from './tab-hero';
 import { StreakCard } from './streak-card';
 import { getMakeupLedger, getMakeupObligations } from '@/lib/makeup-ledger';
-import { STUDY_SLOT_OPTIONS, formatSlotLabel } from '@/lib/academy-timetable';
+import { formatSlotLabel } from '@/lib/academy-timetable';
+import { getMaterialColor } from '@/lib/material-color';
+import { StudySlotControl } from './study-slot-control';
 import { StartPointAdjustPanel, type StartPointAdjustResult } from './start-point-adjust-panel';
 
 type DailyPlanEntry = {
@@ -157,6 +161,11 @@ export function HomeOverviewTab({
   openMaterialDetail,
 }: HomeOverviewTabProps) {
   const confirm = useConfirm();
+  // 자료(교재/인강) id → 학생 지정 색(hex). 오늘 할 일 태그에 색 점으로 쓴다(태그만, 카드 전체색 X).
+  const allBooksHome = (student.subjects || []).flatMap((s) => s.books || []);
+  const allLecturesHome = (student.subjects || []).flatMap((s) => s.lectures || []);
+  const colorOf = (type: 'book' | 'lecture', id: string): string =>
+    getMaterialColor((type === 'book' ? allBooksHome : allLecturesHome).find((x) => x.id === id) || { id });
   // D-Day FAB state
   const [ddayOpen, setDdayOpen] = useState(false);
   const [ddayTitle, setDdayTitle] = useState('');
@@ -526,6 +535,10 @@ export function HomeOverviewTab({
               {checklistTip}
             </p>
 
+            <p className="mt-3 border-t border-[#0071E3]/10 pt-2.5 text-[11px] font-medium italic leading-relaxed text-slate-500 dark:text-slate-400 break-keep">
+              “{getDailyQuote()}”
+            </p>
+
             <div className="mt-4 grid grid-cols-2 gap-2">
               <StreakCard compact />
 
@@ -754,6 +767,7 @@ export function HomeOverviewTab({
                                 className="block w-full min-w-0 text-left disabled:cursor-default"
                               >
                                 <p className={`flex items-center gap-1 text-[13px] font-semibold ${entry.isCompleted ? 'text-emerald-800 dark:text-emerald-300 line-through decoration-emerald-500/40' : 'text-slate-900 dark:text-slate-100'}`}>
+                                  <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: colorOf(entry.materialType, entry.materialId) }} />
                                   <span className="truncate">{entry.subject} · {entry.title}</span>
                                   {openMaterialDetail && (
                                     <span className="ml-0.5 inline-flex shrink-0 items-center gap-0.5 text-[10px] font-medium text-slate-300 dark:text-slate-600">
@@ -797,32 +811,18 @@ export function HomeOverviewTab({
                           {!entry.isCompleted && (
                             <div data-stop className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
                               {saveStudySlot && (
-                                <>
-                                  <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                    <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
-                                    교시 배치
-                                  </label>
-                                  <select
-                                    value={entry.studySlot || ''}
-                                    disabled={slotSavingId === entry.id}
-                                    onChange={async (e) => {
-                                      const next = e.target.value;
-                                      setSlotSavingId(entry.id);
-                                      try {
-                                        const ok = await saveStudySlot(entry.materialType, entry.materialId, next);
-                                        if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
-                                        else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
-                                      } finally {
-                                        setSlotSavingId(null);
-                                      }
-                                    }}
-                                    className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
-                                  >
-                                    {STUDY_SLOT_OPTIONS.map((opt) => (
-                                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                  </select>
-                                </>
+                                <StudySlotControl
+                                  materialType={entry.materialType}
+                                  materialId={entry.materialId}
+                                  current={entry.studySlot || ''}
+                                  saving={slotSavingId === entry.id}
+                                  label="교시 배치"
+                                  onSave={async (mt, mid, slot) => {
+                                    setSlotSavingId(entry.id);
+                                    try { return await saveStudySlot(mt, mid, slot); }
+                                    finally { setSlotSavingId(null); }
+                                  }}
+                                />
                               )}
                               {/* 오늘 진도 입력 — 완료 패널 토글(왼쪽 체크 동그라미와 동일). '몇 X까지' 절대입력. */}
                               <button
@@ -969,6 +969,7 @@ export function HomeOverviewTab({
                               className="block w-full min-w-0 text-left disabled:cursor-default"
                             >
                               <p className="flex flex-wrap items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: colorOf(goal.materialType, goal.materialId) }} />
                                 <span className="truncate">{goal.subject} · {goal.title}</span>
                                 <span className="inline-flex shrink-0 items-center rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#0071E3]">주간목표</span>
                                 {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
@@ -995,30 +996,18 @@ export function HomeOverviewTab({
 
                         <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
                           {saveStudySlot && (
-                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                              <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
-                              교시
-                              <select
-                                value={goal.studySlot || ''}
-                                disabled={slotSavingId === goal.id}
-                                onChange={async (e) => {
-                                  const next = e.target.value;
-                                  setSlotSavingId(goal.id);
-                                  try {
-                                    const ok = await saveStudySlot(goal.materialType, goal.materialId, next);
-                                    if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
-                                    else toast.error('교시 배치에 실패했어요.');
-                                  } finally {
-                                    setSlotSavingId(null);
-                                  }
-                                }}
-                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
-                              >
-                                {STUDY_SLOT_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
-                            </label>
+                            <StudySlotControl
+                              materialType={goal.materialType}
+                              materialId={goal.materialId}
+                              current={goal.studySlot || ''}
+                              saving={slotSavingId === goal.id}
+                              label="교시"
+                              onSave={async (mt, mid, slot) => {
+                                setSlotSavingId(goal.id);
+                                try { return await saveStudySlot(mt, mid, slot); }
+                                finally { setSlotSavingId(null); }
+                              }}
+                            />
                           )}
                           {updateDeadlineProgress && (
                             <div className="flex items-center gap-1.5">
@@ -1102,6 +1091,7 @@ export function HomeOverviewTab({
                               className="block w-full min-w-0 text-left disabled:cursor-default"
                             >
                               <p className="flex flex-wrap items-center gap-1 text-[13px] font-semibold text-slate-900 dark:text-slate-100">
+                                <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: colorOf(item.materialType, item.materialId) }} />
                                 <span className="truncate">{item.subject} · {item.title}</span>
                                 <span className="inline-flex shrink-0 items-center rounded-full bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400">자율목표</span>
                                 {openMaterialDetail && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 dark:text-slate-600" />}
@@ -1139,32 +1129,18 @@ export function HomeOverviewTab({
                         {/* 시간표 배치(선택) + 오늘 안 함 — 자료별 학생 지정 슬롯. 미지정이면 시간표엔 안 뜨고 여기에만 노출. */}
                         <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
                           {saveStudySlot && (
-                            <>
-                              <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                                <Clock className="h-3.5 w-3.5 text-[#0071E3]" />
-                                시간표 배치
-                              </label>
-                              <select
-                                value={item.studyTime || ''}
-                                disabled={slotSavingId === item.id}
-                                onChange={async (e) => {
-                                  const next = e.target.value;
-                                  setSlotSavingId(item.id);
-                                  try {
-                                    const ok = await saveStudySlot(item.materialType, item.materialId, next);
-                                    if (ok) toast.success(next ? `시간표 ${formatSlotLabel(next)}에 배치했어요.` : '시간표에서 내렸어요.');
-                                    else toast.error('시간대 설정에 실패했어요. 다시 시도해 주세요.');
-                                  } finally {
-                                    setSlotSavingId(null);
-                                  }
-                                }}
-                                className="h-8 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-[12px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
-                              >
-                                {STUDY_SLOT_OPTIONS.map((opt) => (
-                                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                              </select>
-                            </>
+                            <StudySlotControl
+                              materialType={item.materialType}
+                              materialId={item.materialId}
+                              current={item.studyTime || ''}
+                              saving={slotSavingId === item.id}
+                              label="시간표 배치"
+                              onSave={async (mt, mid, slot) => {
+                                setSlotSavingId(item.id);
+                                try { return await saveStudySlot(mt, mid, slot); }
+                                finally { setSlotSavingId(null); }
+                              }}
+                            />
                           )}
                           {!item.loggedToday && (
                             <button
@@ -1509,6 +1485,7 @@ export function HomeOverviewTab({
             <div className="space-y-6">
               <AttendanceStatusCard />
               <LeaderboardCard studentId={student.id} />
+              <DailyPlanAverageCard />
             </div>
           </div>
 

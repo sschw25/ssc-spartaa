@@ -5,7 +5,8 @@ import { X, BookOpen, Tv, ChevronRight, CalendarDays, Clock, Target, History, Fi
 import type { Student, BookProgress, LectureProgress, SubjectProgress, DetailedPlan } from '@/lib/types/student';
 import { getMaterialStudyDays, getLeaveDates, toDateKey } from '@/lib/progress-plan';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
-import { formatSlotLabel, STUDY_SLOT_OPTIONS } from '@/lib/academy-timetable';
+import { formatSlotLabel, STUDY_SLOT_OPTIONS, isTimeSlot, parseTimeSlot, timeSlotPeriodKeys } from '@/lib/academy-timetable';
+import { MATERIAL_COLORS, getMaterialColor, hasExplicitColor } from '@/lib/material-color';
 import { toast } from 'sonner';
 import { InputHeatmap } from './input-heatmap';
 import { StartPointAdjustPanel, type StartPointAdjustInfo, type StartPointAdjustResult } from './start-point-adjust-panel';
@@ -39,6 +40,8 @@ interface MaterialDetailSheetProps {
   onClose: () => void;
   // 자료별 교시 배치(studySlot) 저장 — 있으면 시간대 칩이 편집 select 로 바뀐다.
   saveStudySlot?: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
+  // 자료 색상 저장 — 있으면 색상 피커가 뜬다. 시간표·캘린더 등에서 이 색으로 표시된다.
+  saveMaterialColor?: (materialType: 'book' | 'lecture', materialId: string, color: string) => Promise<boolean>;
   // selfPaced 자료의 예상 총 분량 저장(셀프서비스) — 있으면 진도 현황에 예상 총량 입력이 뜬다.
   saveEstimatedTotal?: (materialType: 'book' | 'lecture', materialId: string, estimatedTotal: number) => Promise<boolean>;
   // 연결 링크 — 탭 전환은 페이지의 기존 콜백 패턴(selectReportTab)을 그대로 탄다.
@@ -64,13 +67,13 @@ export function MaterialDetailSheet({
   adjustStartPoint,
   onClose,
   saveStudySlot,
+  saveMaterialColor,
   saveEstimatedTotal,
   onOpenSubjectProgress,
   onOpenTimetable,
   onOpenChangeRequest,
 }: MaterialDetailSheetProps) {
   const [adjustOpen, setAdjustOpen] = useState(false);
-  const [slotSaving, setSlotSaving] = useState(false);
 
   // ESC 로 닫기 + 열려 있는 동안 배경 스크롤 잠금.
   useEffect(() => {
@@ -373,30 +376,12 @@ export function MaterialDetailSheet({
                 ))}
               </div>
               {saveStudySlot ? (
-                <label className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                  <Clock className="h-3 w-3 text-[#0071E3]" />
-                  <span>교시</span>
-                  <select
-                    value={material.studySlot || ''}
-                    disabled={slotSaving}
-                    onChange={async (e) => {
-                      const next = e.target.value;
-                      setSlotSaving(true);
-                      try {
-                        const ok = await saveStudySlot(materialType, materialId, next);
-                        if (ok) toast.success(next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
-                        else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
-                      } finally {
-                        setSlotSaving(false);
-                      }
-                    }}
-                    className="rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
-                  >
-                    {STUDY_SLOT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
-                </label>
+                <StudySlotEditor
+                  materialType={materialType}
+                  materialId={materialId}
+                  currentSlot={material.studySlot || ''}
+                  saveStudySlot={saveStudySlot}
+                />
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 dark:bg-white/10 px-2.5 py-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
                   <Clock className="h-3 w-3" />
@@ -404,6 +389,17 @@ export function MaterialDetailSheet({
                 </span>
               )}
             </div>
+
+            {/* 자료 색상 — 학생이 고른 색이 시간표·캘린더 등 어디서나 이 색으로 표시된다 */}
+            {saveMaterialColor && (
+              <MaterialColorPicker
+                materialType={materialType}
+                materialId={materialId}
+                current={material.color || ''}
+                fallbackHex={getMaterialColor(material)}
+                saveMaterialColor={saveMaterialColor}
+              />
+            )}
           </div>
 
           {/* 4. 공부한 날 — 진도 입력 히트맵 재사용 */}
@@ -514,6 +510,201 @@ export function MaterialDetailSheet({
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// 시:분 슬롯이 겹치는 교시 안내 문구('3교시~4교시') — timeSlotPeriodKeys 를 사람이 읽는 라벨로.
+function describeTimeSlotPeriods(slot: string): string {
+  const keys = timeSlotPeriodKeys(slot);
+  if (keys.length === 0) return '';
+  const first = formatSlotLabel(keys[0]);
+  const last = formatSlotLabel(keys[keys.length - 1]);
+  return keys.length === 1 ? first : `${first}~${last}`;
+}
+
+// 자료별 교시 배치 편집 — 교시 선택(preset)과 시간 직접입력(t:HH:MM-HH:MM) 두 모드.
+// 두 모드 모두 같은 saveStudySlot 경로로 저장한다(값만 다름).
+function StudySlotEditor({
+  materialType,
+  materialId,
+  currentSlot,
+  saveStudySlot,
+}: {
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  currentSlot: string;
+  saveStudySlot: (materialType: 'book' | 'lecture', materialId: string, slot: string) => Promise<boolean>;
+}) {
+  const fromMin = (min: number) =>
+    `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+  const parsed = parseTimeSlot(currentSlot);
+  const [mode, setMode] = useState<'preset' | 'time'>(isTimeSlot(currentSlot) ? 'time' : 'preset');
+  const [startT, setStartT] = useState(parsed ? fromMin(parsed.startMin) : '13:50');
+  const [endT, setEndT] = useState(parsed ? fromMin(parsed.endMin) : '15:00');
+  const [saving, setSaving] = useState(false);
+
+  // 다른 자료로 시트가 바뀌면 입력값·모드를 동기화.
+  useEffect(() => {
+    const p = parseTimeSlot(currentSlot);
+    setMode(isTimeSlot(currentSlot) ? 'time' : 'preset');
+    if (p) { setStartT(fromMin(p.startMin)); setEndT(fromMin(p.endMin)); }
+  }, [materialId, currentSlot]);
+
+  const save = async (slot: string, okMsg: string) => {
+    setSaving(true);
+    try {
+      const ok = await saveStudySlot(materialType, materialId, slot);
+      if (ok) toast.success(okMsg);
+      else toast.error('교시 배치에 실패했어요. 다시 시도해 주세요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const timeValue = `t:${startT}-${endT}`;
+  const timeValid = !!startT && !!endT && startT < endT;
+  const periodHint = timeValid ? describeTimeSlotPeriods(timeValue) : '';
+  // 겹치는 교시가 없는 시간은 저장을 막는다 — 저장되면 자동배치로 떨어져 지정 시간과 무관한 교시에 뜬다.
+  const timeSavable = timeValid && periodHint !== '';
+
+  return (
+    <div className="inline-flex flex-col gap-1.5">
+      <div className="inline-flex flex-wrap items-center gap-1.5 rounded-2xl bg-slate-100 dark:bg-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+        <Clock className="h-3 w-3 text-[#0071E3]" />
+        <span>교시</span>
+        {mode === 'preset' ? (
+          <select
+            value={isTimeSlot(currentSlot) ? '' : currentSlot}
+            disabled={saving}
+            onChange={(e) => {
+              const next = e.target.value;
+              void save(next, next ? `${formatSlotLabel(next)}에 배치했어요.` : '교시 배치를 해제했어요.');
+            }}
+            className="rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1.5 py-0.5 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+          >
+            {STUDY_SLOT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+        ) : (
+          <>
+            <input
+              type="time"
+              value={startT}
+              disabled={saving}
+              onChange={(e) => setStartT(e.target.value)}
+              className="rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1 py-0.5 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+            />
+            <span className="text-slate-400">~</span>
+            <input
+              type="time"
+              value={endT}
+              disabled={saving}
+              onChange={(e) => setEndT(e.target.value)}
+              className="rounded-md border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-1 py-0.5 text-[11px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+            />
+            <button
+              type="button"
+              disabled={saving || !timeSavable}
+              onClick={() => void save(timeValue, `${describeTimeSlotPeriods(timeValue) || '해당 시간'}에 배치했어요.`)}
+              className="rounded-md bg-[#0071E3] px-2 py-0.5 text-[10px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-95 disabled:opacity-40"
+            >
+              적용
+            </button>
+            {isTimeSlot(currentSlot) && (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void save('', '교시 배치를 해제했어요.')}
+                className="rounded-md border border-slate-200 dark:border-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95 disabled:opacity-40"
+              >
+                해제
+              </button>
+            )}
+          </>
+        )}
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => setMode((m) => (m === 'preset' ? 'time' : 'preset'))}
+          className="rounded-md border border-[#0071E3]/25 bg-[#0071E3]/[0.05] px-1.5 py-0.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/10 active:scale-95 disabled:opacity-40 dark:bg-[#0071E3]/15"
+        >
+          {mode === 'preset' ? '시간 직접입력' : '교시 선택'}
+        </button>
+      </div>
+      {mode === 'time' && (
+        <p className="break-keep pl-1 text-[10px] font-medium text-slate-400 dark:text-slate-400">
+          {!timeValid
+            ? '시작 시간이 끝 시간보다 빨라야 해요.'
+            : periodHint
+              ? `${periodHint}에 배치돼요.`
+              : '겹치는 교시가 없어요. 학원 시간(08:20~23:20) 안으로 맞춰 주세요.'}
+        </p>
+      )}
+    </div>
+  );
+}
+
+// 자료 색상 피커 — 학생이 교재/인강별 색을 고른다. 이 색이 시간표·캘린더·홈 등 어디서나 쓰인다.
+function MaterialColorPicker({
+  materialType,
+  materialId,
+  current,
+  fallbackHex,
+  saveMaterialColor,
+}: {
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  current: string;
+  fallbackHex: string;
+  saveMaterialColor: (materialType: 'book' | 'lecture', materialId: string, color: string) => Promise<boolean>;
+}) {
+  const [saving, setSaving] = useState('');
+  const explicit = hasExplicitColor(current);
+  const save = async (colorKey: string) => {
+    setSaving(colorKey || 'reset');
+    try {
+      const ok = await saveMaterialColor(materialType, materialId, colorKey);
+      if (ok) toast.success(colorKey ? '색상을 바꿨어요.' : '기본 색으로 되돌렸어요.');
+      else toast.error('색상 저장에 실패했어요. 다시 시도해 주세요.');
+    } finally {
+      setSaving('');
+    }
+  };
+  return (
+    <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-slate-100 dark:border-white/10 pt-2.5">
+      <span className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+        <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: fallbackHex }} />
+        자료 색상
+      </span>
+      <div className="flex flex-wrap items-center gap-1.5">
+        {MATERIAL_COLORS.map((c) => {
+          const active = current === c.key;
+          return (
+            <button
+              key={c.key}
+              type="button"
+              disabled={!!saving}
+              onClick={() => save(c.key)}
+              aria-label={`${c.label} 색상`}
+              title={c.label}
+              className={`h-6 w-6 rounded-full ring-offset-1 ring-offset-white dark:ring-offset-[#1c1c1e] transition active:scale-90 disabled:opacity-50 ${active ? 'ring-2 ring-slate-900 dark:ring-white' : 'ring-1 ring-black/10 dark:ring-white/15'}`}
+              style={{ backgroundColor: c.hex }}
+            />
+          );
+        })}
+        {explicit && (
+          <button
+            type="button"
+            disabled={!!saving}
+            onClick={() => save('')}
+            className="rounded-md border border-slate-200 dark:border-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95 disabled:opacity-40"
+          >
+            기본
+          </button>
+        )}
       </div>
     </div>
   );

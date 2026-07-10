@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { parseTimeSlot } from '@/lib/academy-timetable';
 
 // 강의 복습 추천 계산기 — 배속·강의시간·복습시간을 고려해
 // 한 세션(예: 오후 210분)에 들어갈 강의 수 / 복습시간을 제시한다.
@@ -12,7 +13,7 @@ export function LectureReviewRecommender({
 }: {
   estimatedMinutesPerUnit?: number | null;
   speedMultiplier?: number | null;
-  studyTime?: 'morning' | 'afternoon' | 'night' | '';
+  studyTime?: string; // 블록('morning'…) 외 't:HH:MM-HH:MM'도 허용 — 프리셋 미매칭 시 기본 210분
 }) {
   const [open, setOpen] = React.useState(false);
   const [reviewMin, setReviewMin] = React.useState<number>(20);
@@ -21,7 +22,10 @@ export function LectureReviewRecommender({
     { key: 'afternoon', label: '오후', value: 210 },
     { key: 'night', label: '야간', value: 250 },
   ] as const;
-  const defaultSessionMin = sessionPresets.find((preset) => preset.key === studyTime)?.value ?? 210;
+  // 시:분 직접지정('t:') 자료는 그 구간 길이를 세션 기본값으로 사용.
+  const timeParsed = parseTimeSlot(studyTime);
+  const timeDur = timeParsed && timeParsed.endMin > timeParsed.startMin ? timeParsed.endMin - timeParsed.startMin : null;
+  const defaultSessionMin = sessionPresets.find((preset) => preset.key === studyTime)?.value ?? timeDur ?? 210;
   const [sessionMin, setSessionMin] = React.useState<number>(defaultSessionMin);
 
   React.useEffect(() => {

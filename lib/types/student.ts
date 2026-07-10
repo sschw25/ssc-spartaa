@@ -59,6 +59,17 @@ export interface ReviewPassSetting {
   days: number;            // 해당 회독 완료까지 필요한 소요일
 }
 
+// 오답노트 문제 기록 — 학생이 직접 입력한 오답/문제(타이핑·사진). 자료(교재) 단위로 누적.
+// subjects jsonb 에 통째 저장(마이그레이션 불필요). 사진은 비공개 버킷 경로만 저장하고 조회 시 서명 URL 발급.
+export interface WrongNote {
+  id: string;
+  text?: string;              // 타이핑한 문제/오답 내용
+  imagePath?: string;         // 비공개 스토리지 경로(서명 URL로 조회). 없으면 텍스트 전용.
+  tags?: string[];            // 오답 사유 태그 키(calculation_error 등)
+  createdAt: string;          // 작성 시각(ISO)
+  resolvedAt?: string;        // 관리자 확인 시각(ISO). 없으면 미확인.
+}
+
 export interface BookProgress {
   id: string;
   title: string;
@@ -76,7 +87,8 @@ export interface BookProgress {
   studySlot?: string;
   // 관리자 지정 자료별 학습 시간대 — 과목(studyTime) 대신 자료 단위로 시간표에 배치한다.
   // 우선순위: 학생 studySlot(자율) > 자료 studyTime(관리자) > 과목 studyTime(레거시 폴백). 마이그레이션 불필요(JSON).
-  studyTime?: 'morning' | 'afternoon' | 'night' | '';
+  // 값: 'morning'|'afternoon'|'night'=블록, ''=미지정, 'p0'~'p8'=특정 교시, 't:HH:MM-HH:MM'=시:분 직접지정(겹치는 교시에 스냅).
+  studyTime?: string;
 
   // 개편 추가: 교재별 학습 목표 및 세부 계획
   // selfPaced = 자율 입력(목표 분량·계획 없음). 학생이 그날 한 만큼 누적 입력만 한다(뒤처짐/마감 판정 제외).
@@ -87,6 +99,10 @@ export interface BookProgress {
   solvedQuestions?: number;
   incorrectTags?: Record<string, number>;
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
+  // 학생이 지정한 자료 색상(팔레트 key 또는 '#RRGGBB'). 시간표·캘린더·홈 등 어디서나 이 색으로 표시.
+  // 미설정이면 자료 id 해시로 안정적 기본색을 파생(getMaterialColor). 학생 소유·마이그레이션 불필요(JSON).
+  color?: string;
+  wrongNotes?: WrongNote[]; // 학생이 입력한 오답 문제(타이핑·사진). 관리자 대시보드 리뷰용. 마이그레이션 불필요(JSON).
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
@@ -118,7 +134,8 @@ export interface LectureProgress {
   studySlot?: string;
   // 관리자 지정 자료별 학습 시간대 — 과목(studyTime) 대신 자료 단위로 시간표에 배치한다.
   // 우선순위: 학생 studySlot(자율) > 자료 studyTime(관리자) > 과목 studyTime(레거시 폴백). 마이그레이션 불필요(JSON).
-  studyTime?: 'morning' | 'afternoon' | 'night' | '';
+  // 값: 'morning'|'afternoon'|'night'=블록, ''=미지정, 'p0'~'p8'=특정 교시, 't:HH:MM-HH:MM'=시:분 직접지정(겹치는 교시에 스냅).
+  studyTime?: string;
 
   // 개편 추가: 인강별 학습 목표 및 세부 계획
   // selfPaced = 자율 입력(목표 분량·계획 없음).
@@ -128,6 +145,9 @@ export interface LectureProgress {
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
   speedMultiplier?: number;          // 개별 인강 배속 설정 (예: 1.2, 1.5 등)
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
+  // 학생이 지정한 자료 색상(팔레트 key 또는 '#RRGGBB'). 시간표·캘린더·홈 등 어디서나 이 색으로 표시.
+  // 미설정이면 자료 id 해시로 안정적 기본색을 파생(getMaterialColor). 학생 소유·마이그레이션 불필요(JSON).
+  color?: string;
   detailedPlans?: DetailedPlan[];
   inputLog?: string[]; // 진도 입력한 날(KST YYYY-MM-DD), 중복제거·최근 120일 캡 — 히트맵용
   reviewLog?: Record<string, number>; // 날짜별 복습 시간(분). 자료 단위 단일 소스(계획/자율 공통). 마이그레이션 불필요(JSON).
@@ -175,7 +195,7 @@ export interface ProposedMaterial {
   unit?: string;                     // 교재 단위(p/강/회 등)
   currentProgress?: number;          // 현재까지 한 분량
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
-  studyTime?: 'morning' | 'afternoon' | 'night' | '';
+  studyTime?: string;                // 신청 경로는 블록('morning'|'afternoon'|'night'|'')만 허용(sanitizer가 그 외 버림). 시:분 't:'는 생성 후 자료에서 지정.
   note?: string;                     // 희망 메모
   // 추가하면서 학생이 원하는 학습 방식(선택). 기본(미지정)은 selfPaced(자율).
   // deadlineWeeks/dailyAmount 는 total(총량)이 있어야 승인 시 계획 생성 — 없으면 자율로 폴백.

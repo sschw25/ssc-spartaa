@@ -16,6 +16,15 @@ interface ReportNavItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
+// 햄버거 메뉴 그룹 — 홈은 그룹 위에 단독으로 두고, 나머지 기능은 목적별로 묶어
+// "찾고 싶은 기능"을 한눈에 스캔할 수 있게 한다. 하단 퀵바(주요 6칸)가 못 담는
+// 오답 노트·코멘팅 소견도 여기서 항상 노출된다.
+const HAMBURGER_GROUPS: Array<{ title: string; hrefs: string[] }> = [
+  { title: '학습', hrefs: ['#learning', '#focus', '#wrong-note'] },
+  { title: '생활 · 일정', hrefs: ['#life', '#calendar'] },
+  { title: '소통 · 신청', hrefs: ['#student-requests', '#student-notifications', '#coach-feedback'] },
+];
+
 interface StudentLayoutProps {
   student: Student;
   isStudentReport: boolean;
@@ -133,6 +142,33 @@ export function StudentLayout({
 
   const openNotificationTab = () => {
     selectStudentTab('student-notifications');
+  };
+
+  // 햄버거 메뉴 항목 렌더러 — 홈 단독 + 그룹 목록이 같은 모양을 공유한다.
+  const renderNavItem = (item: ReportNavItem) => {
+    const Icon = item.icon;
+    const isActive = activeTab === item.href.slice(1);
+    return (
+      <a
+        key={item.href}
+        href={item.href}
+        onClick={(e) => {
+          e.preventDefault();
+          selectStudentTab(item.href.slice(1));
+        }}
+        className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${
+          isActive ? 'border-[#0071E3]/30 bg-[#0071E3]/5 dark:bg-[#0071E3]/15' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-white/5'
+        }`}
+      >
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 dark:bg-white/10 text-[#0071E3] ring-1 ring-slate-100 dark:ring-white/10">
+          <Icon className="h-4 w-4" />
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-[11px] font-black text-slate-800 dark:text-slate-200">{item.label}</span>
+          <span className="block truncate text-[10px] font-bold text-slate-400 dark:text-slate-500">{item.meta}</span>
+        </span>
+      </a>
+    );
   };
 
   type QuickTabItem = ReportNavItem & {
@@ -283,33 +319,36 @@ export function StudentLayout({
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-1.5">
-                      {/* 미션은 이제 리포트 탭(#student-missions)으로 통합 — reportNavItems에 포함된다 */}
-                      {reportNavItems.map((item) => {
-                        const Icon = item.icon;
+                    <div className="flex flex-col gap-3">
+                      {/* 홈 — 그룹 위 단독. 나머지는 학습/생활·일정/소통·신청 그룹으로 묶어 노출 */}
+                      {(() => {
+                        const home = reportNavItems.find((item) => item.href === '#report-overview');
+                        return home ? renderNavItem(home) : null;
+                      })()}
+                      {HAMBURGER_GROUPS.map((group) => {
+                        const items = group.hrefs
+                          .map((href) => reportNavItems.find((item) => item.href === href))
+                          .filter((item): item is ReportNavItem => Boolean(item));
+                        if (items.length === 0) return null;
                         return (
-                          <a
-                            key={item.href}
-                            href={item.href}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              const id = item.href.slice(1);
-                              selectStudentTab(id);
-                            }}
-                            className={`flex min-h-12 items-center gap-2.5 rounded-2xl border px-3 py-2 text-left shadow-sm transition-colors active:bg-[#0071E3]/10 ${
-                              activeTab === item.href.slice(1) ? 'border-[#0071E3]/30 bg-[#0071E3]/5 dark:bg-[#0071E3]/15' : 'border-slate-100 dark:border-white/10 bg-white dark:bg-white/5'
-                            }`}
-                          >
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-slate-50 text-[#0071E3] ring-1 ring-slate-100">
-                              <Icon className="h-4 w-4" />
-                            </span>
-                            <span className="min-w-0">
-                              <span className="block truncate text-[11px] font-black text-slate-800 dark:text-slate-200">{item.label}</span>
-                              <span className="block truncate text-[10px] font-bold text-slate-400">{item.meta}</span>
-                            </span>
-                          </a>
+                          <div key={group.title} className="flex flex-col gap-1.5">
+                            <p className="px-1 text-[10px] font-black tracking-wide text-slate-400 dark:text-slate-500">{group.title}</p>
+                            {items.map(renderNavItem)}
+                          </div>
                         );
                       })}
+                      {/* 폴백 — 그룹에 안 잡힌 탭이 생겨도 접근성이 사라지지 않게 */}
+                      {(() => {
+                        const grouped = new Set(['#report-overview', ...HAMBURGER_GROUPS.flatMap((g) => g.hrefs)]);
+                        const rest = reportNavItems.filter((item) => !grouped.has(item.href));
+                        if (rest.length === 0) return null;
+                        return (
+                          <div className="flex flex-col gap-1.5">
+                            <p className="px-1 text-[10px] font-black tracking-wide text-slate-400 dark:text-slate-500">기타</p>
+                            {rest.map(renderNavItem)}
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <ThemeToggle className="mt-2 min-h-12 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200" />

@@ -8,8 +8,11 @@ import {
   CalendarClock,
   CalendarHeart,
   ChevronDown,
+  ClipboardCheck,
   ClipboardList,
   Home,
+  Presentation,
+  Utensils,
   LayoutGrid,
   LogOut,
   MessageSquare,
@@ -89,9 +92,20 @@ export function AdminMenuList({
       items: [
         { key: 'dashboard', icon: Home, label: '홈 대시보드', href: '/admin/dashboard' },
         { key: 'inbox', icon: Inbox, label: '통합 인박스', href: '/admin/inbox' },
-        { key: 'calendar', icon: CalendarDays, label: '캘린더', href: '/admin/calendar' },
-        { key: 'schedules', icon: AlarmClock, label: '예약 스케줄', href: '/admin/schedules' },
         { key: 'diagnostics', icon: Stethoscope, label: '계획 정합성 점검', href: '/admin/diagnostics' },
+      ],
+    },
+    {
+      // 모의고사·OT·도시락은 캘린더 날짜에서 생성·알림하는 것이 기본 동선이지만,
+      // 성적 입력·정산·인쇄용 단독 화면도 유지된다. 메뉴가 곧 전체 지도이도록 여기서 함께 노출.
+      key: 'schedule',
+      title: '캘린더 · 일정',
+      items: [
+        { key: 'calendar', icon: CalendarDays, label: '캘린더 (일정 생성·알림)', href: '/admin/calendar' },
+        { key: 'mock-exam', icon: ClipboardCheck, label: '모의고사 관리', href: '/admin/mock-exam' },
+        { key: 'ot-events', icon: Presentation, label: 'OT · 설명회 관리', href: '/admin/ot-events' },
+        { key: 'meals', icon: Utensils, label: '도시락 신청 · 정산', href: '/admin/meals' },
+        { key: 'schedules', icon: AlarmClock, label: '예약 스케줄', href: '/admin/schedules' },
       ],
     },
     {
@@ -112,7 +126,6 @@ export function AdminMenuList({
         { key: 'attendance', icon: ClipboardList, label: '출결 상세', href: '/admin/attendance' },
         { key: 'seat-board', icon: LayoutGrid, label: '좌석 현황판', href: '/admin/seat-board' },
         { key: 'kiosk', icon: ScanLine, label: '등하원 체크 ↗', action: onOpenKiosk },
-        // 모의고사·OT·도시락 관리는 학원 캘린더 안으로 통합됨 (날짜에서 생성·알림·관리). 네비에서 제외.
         { key: 'penalties', icon: Shield, label: '벌점 · 상점 관리', href: '/admin/penalties' },
         { key: 'leave-requests', icon: CalendarHeart, label: '휴식 · 반차 관리', href: '/admin/leave-requests' },
         { key: 'leave', icon: Ticket, label: '쿠폰 관리', href: '/admin/leave' },

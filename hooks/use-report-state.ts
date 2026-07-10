@@ -292,6 +292,11 @@ const STUDENT_TAB_IDS = [
   'student-suggestions',
   'clinic-booking',
   'coupon-exchange',
+  // 신청 컨테이너 서브탭 raw id — 화면에 보이는 탭 id 그대로 딥링크 가능(별칭과 병행 유지)
+  'leave',
+  'consultation',
+  'suggestion',
+  'coupon',
   'student-coupons',
   'subject-progress',
   'grade-analysis',
@@ -1149,6 +1154,44 @@ export function useReportState() {
     }
   };
 
+  // 자료 색상 지정 — 학생이 교재/인강별 색을 고른다. 시간표·캘린더·홈 등 어디서나 이 색으로 표시. 즉시 반영.
+  const saveMaterialColor = async (
+    materialType: ProgressMaterialType,
+    materialId: string,
+    color: string,
+  ): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/student/progress', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, color }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        mutationSeqRef.current += 1;
+        setStudent((prev) => {
+          if (!prev) return prev;
+          const patchList = <T extends { id: string; color?: string }>(list?: T[]) =>
+            (list || []).map((m) => (m.id === materialId ? { ...m, color: color || undefined } : m));
+          return {
+            ...prev,
+            subjects: (prev.subjects || []).map((s) => ({
+              ...s,
+              ...(materialType === 'book' ? { books: patchList(s.books) } : { lectures: patchList(s.lectures) }),
+            })),
+            ...(materialType === 'book'
+              ? { books: patchList(prev.books) }
+              : { lectures: patchList(prev.lectures) }),
+          };
+        });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   // 자율 입력(selfPaced) 자료의 예상 총 분량 입력 — 학생 셀프서비스(관리자 개입 없음). 즉시 반영.
   // total(totalPages/totalLectures) 만 바꾸고 goalType 은 selfPaced 유지(계획 생성 안 함). totalIsEstimate=true.
   const saveEstimatedTotal = async (
@@ -1284,17 +1327,18 @@ export function useReportState() {
     }
   };
 
-  const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => {
+  // 저장 promise 를 반환한다 — 오답노트 탭의 낙관적 스테퍼가 저장 완료 시점을 알아야 연속 탭을 정확히 반영한다.
+  const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined): Promise<boolean> => {
     const nextTags = { ...(currentTags || {}) };
     nextTags[tagKey] = (nextTags[tagKey] || 0) + 1;
-    saveProgressPatch('book', materialId, { incorrectTags: nextTags });
+    return saveProgressPatch('book', materialId, { incorrectTags: nextTags });
   };
 
   // 오답노트 태그 카운트를 정확한 값으로 수정(잘못 누른 것 되돌리기·직접 조정). 0 이하는 0으로.
-  const setBookIncorrectTag = (materialId: string, tagKey: string, nextCount: number, currentTags: Record<string, number> | undefined) => {
+  const setBookIncorrectTag = (materialId: string, tagKey: string, nextCount: number, currentTags: Record<string, number> | undefined): Promise<boolean> => {
     const nextTags = { ...(currentTags || {}) };
     nextTags[tagKey] = Math.max(0, Math.round(nextCount));
-    saveProgressPatch('book', materialId, { incorrectTags: nextTags });
+    return saveProgressPatch('book', materialId, { incorrectTags: nextTags });
   };
 
   const submitChecklist = async (e: React.FormEvent, isEdit = false): Promise<boolean> => {
@@ -1784,7 +1828,8 @@ export function useReportState() {
     todaySchedule.forEach((items) => {
       items.forEach((it) => {
         const label = getPeriodNumLabel(it.periodKey);
-        if (label) rec[it.id] = label;
+        // 시:분 슬롯은 여러 교시에 걸칠 수 있음 — 첫 배정 교시를 대표 라벨로(마지막 덮어쓰기 방지).
+        if (label && !rec[it.id]) rec[it.id] = label;
       });
     });
     return rec;
@@ -1795,7 +1840,11 @@ export function useReportState() {
     const rec: Record<string, number> = {};
     todaySchedule.forEach((items, periodKey) => {
       const rank = PERIOD_ORDER.indexOf(periodKey);
-      items.forEach((it) => { rec[it.id] = rank < 0 ? 99 : rank; });
+      // 여러 교시에 걸친 항목은 가장 이른 교시 기준으로 정렬한다.
+      items.forEach((it) => {
+        const next = rank < 0 ? 99 : rank;
+        if (!(it.id in rec) || next < rec[it.id]) rec[it.id] = next;
+      });
     });
     return rec;
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2544,6 +2593,7 @@ export function useReportState() {
     todaySelfPacedItems,
     saveSelfPacedToday,
     saveStudySlot,
+    saveMaterialColor,
     saveEstimatedTotal,
     adjustStartPoint,
     formatNotificationDate,

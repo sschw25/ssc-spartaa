@@ -10,6 +10,8 @@ import {
 import { isMockExamVisibleToStudent } from './mock-exam-scope';
 import { getLeaveTypeLabel } from './leave';
 import { getTodayScheduleItems, type TodayScheduleItem } from './today-schedule';
+import { deriveDeadlineGoals, type DeadlineRiskLevel } from './deadline-goals';
+import { getMaterialColor } from './material-color';
 import type { CampusEvent, MockExam, OtEvent, Student, PersonalScheduleItem } from './types/student';
 
 // ── 그날의 공부 계획 · 달성도 (수험 캘린더용) ──────────────────
@@ -43,6 +45,59 @@ export function getDayStudyItems(student: Student, dateKey: string): TodaySchedu
 export function summarizeDayStudy(items: TodayScheduleItem[]): DayStudySummary {
   const planned = items.filter((i) => !i.selfPaced && i.amount > 0);
   return { planned: planned.length, done: planned.filter((i) => i.isCompleted).length };
+}
+
+// ── 과목별(자료별) 진행 요약 (노션 캘린더식 진행도 패널·마감 마커용) ──────────────
+// deriveDeadlineGoals(기간 목표 단일 소스)를 캘린더가 쓰기 좋은 가벼운 형태로 투영한다.
+// selfPaced·기간 목표 없는 자료는 deriveDeadlineGoals 가 애초에 제외하므로 자연히 빠진다(마커 없음).
+export interface MaterialProgressSummary {
+  id: string;
+  subject: string;
+  title: string;
+  type: '강의' | '교재';
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  unit: string;
+  startDate: string;       // 계획 시작일 YYYY-MM-DD (캘린더 구간 바 시작)
+  endDate: string;         // 마감(완료 예정)일 YYYY-MM-DD (구간 바 끝)
+  daysRemaining: number;   // 오늘→마감일 남은 일수(0=오늘 마감, 음수=지남)
+  targetAmount: number;
+  actualAmount: number;
+  actualRatio: number;     // 실제 진행 비율 0~1
+  expectedRatio: number;   // 오늘까지 기대 진행 비율 0~1
+  behind: boolean;
+  riskLevel: DeadlineRiskLevel;
+  color: string;           // 자료 색(hex) — 학생 지정 또는 파생 기본색. 마커·진행바에 사용.
+}
+
+export function buildMaterialSummaries(student: Student, today: Date, todayKey: string): MaterialProgressSummary[] {
+  const { deadlineGoals } = deriveDeadlineGoals(student, today, todayKey);
+  const allBooks = (student.subjects || []).flatMap((s) => s.books || []);
+  const allLectures = (student.subjects || []).flatMap((s) => s.lectures || []);
+  return deadlineGoals.map((g) => {
+    const mat = g.type === '교재'
+      ? allBooks.find((b) => b.id === g.materialId)
+      : allLectures.find((l) => l.id === g.materialId);
+    return {
+      id: `${g.materialId}_${g.planId}`,
+      subject: g.subject,
+      title: g.title,
+      type: g.type,
+      materialType: g.materialType,
+      materialId: g.materialId,
+      unit: g.unit,
+      startDate: g.startDate,
+      endDate: g.endDate,
+      daysRemaining: daysUntil(g.endDate, todayKey) ?? 0,
+      targetAmount: g.targetAmount,
+      actualAmount: g.actualAmount,
+      actualRatio: g.actualRatio,
+      expectedRatio: g.expectedRatio,
+      behind: g.behind,
+      riskLevel: g.riskLevel,
+      color: getMaterialColor(mat || { id: g.materialId }),
+    };
+  }).sort((a, b) => a.daysRemaining - b.daysRemaining || a.subject.localeCompare(b.subject));
 }
 
 // student_state.personalSchedule 를 안전하게 읽는다(스키마 유연 컬럼).

@@ -3,19 +3,54 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   CalendarDays, CalendarClock, ClipboardCheck, CalendarHeart, Ticket, MessageCircle,
-  ChevronLeft, ChevronRight, Loader2, CheckCircle2, PenLine, ExternalLink, Megaphone, X,
-  Plus, Pencil, Trash2, BookOpen, Circle,
+  ChevronLeft, ChevronRight, ChevronDown, Loader2, CheckCircle2, PenLine, ExternalLink, Megaphone, X,
+  Plus, Pencil, Trash2, BookOpen, Circle, Flag, TrendingUp,
 } from 'lucide-react';
 import { OtEventNotice } from './ot-event-notice';
 import { MockExamNotice } from './mock-exam-notice';
 import { CampusEventNotice } from './campus-event-notice';
-import type { StudentCalendarItem, CalendarItemKind, CalendarResponseState } from '@/lib/student-calendar';
+import type {
+  StudentCalendarItem, CalendarItemKind, CalendarResponseState, MaterialProgressSummary,
+} from '@/lib/student-calendar';
+import { readableTextOn } from '@/lib/material-color';
+
+type RiskLevel = MaterialProgressSummary['riskLevel'];
+
+// 마감 위험도 → 마커/진행바/칩 색 (색=의미: danger 위험 red / warn 주의 amber / ok 순조 emerald)
+function riskBar(r: RiskLevel): string {
+  if (r === 'danger') return 'bg-red-500';
+  if (r === 'warn') return 'bg-amber-500';
+  return 'bg-emerald-500';
+}
+function riskSoftChip(r: RiskLevel): string {
+  if (r === 'danger') return 'bg-red-50 text-red-600 dark:bg-red-500/15 dark:text-red-300';
+  if (r === 'warn') return 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300';
+  return 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300';
+}
+function riskLabel(r: RiskLevel): string {
+  if (r === 'danger') return '뒤처졌어요';
+  if (r === 'warn') return '조금 뒤처져요';
+  return '순조로워요';
+}
+// 남은 일수 → 라벨 (친근 ~요체)
+function ddayLabel(days: number): string {
+  if (days === 0) return '오늘 마감';
+  if (days < 0) return '마감 지남';
+  return `D-${days}`;
+}
+function formatMd(dateKey: string): string {
+  const [, m, d] = dateKey.split('-').map(Number);
+  if (!m || !d) return dateKey;
+  return `${m}/${d}`;
+}
 
 interface StudentCalendarTabProps {
   // 모의고사 성적입력 사후과제 → 학습(성적) 탭으로 인페이지 이동
   onNavigateToGrades?: () => void;
   // 응답/사후과제 반영 후 상위(홈 배지 등) 갱신용 (선택)
   onActionableChange?: (count: number) => void;
+  // 자료 기간 바·진행 행 클릭 → 자료 상세 시트 열기(학생 뷰 전용).
+  openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
 }
 
 const KIND_META: Record<CalendarItemKind, { label: string; icon: React.ComponentType<{ className?: string }>; dot: string; chip: string }> = {
@@ -58,9 +93,11 @@ function formatDateLabel(dateKey: string) {
   return `${m}월 ${d}일 (${wd})`;
 }
 
-export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: StudentCalendarTabProps) {
+export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, openMaterialDetail }: StudentCalendarTabProps) {
   const [items, setItems] = useState<StudentCalendarItem[]>([]);
   const [studyByDate, setStudyByDate] = useState<Record<string, { planned: number; done: number }>>({});
+  const [materialSummaries, setMaterialSummaries] = useState<MaterialProgressSummary[]>([]);
+  const [progressOpen, setProgressOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [todayKey, setTodayKey] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
@@ -81,6 +118,7 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
       if (json.success) {
         setItems(json.items || []);
         setStudyByDate(json.studyByDate || {});
+        setMaterialSummaries(json.materialSummaries || []);
         onActionableChange?.(json.actionableCount || 0);
         if (json.todayKey) {
           setTodayKey((prev) => prev || json.todayKey);
@@ -185,6 +223,13 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
     return map;
   }, [items]);
 
+  // 진행 패널/마커에서 특정 날짜로 이동(달 전환 + 선택).
+  const goToDate = useCallback((dateKey: string) => {
+    const [y, m] = dateKey.split('-').map(Number);
+    if (y && m) setViewYm({ y, m: m - 1 });
+    setSelectedDate(dateKey);
+  }, []);
+
   const monthCells = useMemo(() => {
     if (!viewYm) return [];
     const { y, m } = viewYm;
@@ -196,6 +241,28 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   }, [viewYm]);
+
+  // ── 기간지정(마감) 자료 → 시작~마감 스팬 바(구글 캘린더식) ──────────────────
+  // 겹치지 않게 레인(가로 줄) 배정: 시작일 순 그리디 — 각 자료를 마지막 사용 마감일이 겹치지 않는 최하단 레인에.
+  const materialLanes = useMemo(() => {
+    const sorted = [...materialSummaries].sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate));
+    const laneEnds: string[] = []; // 레인별 마지막 마감일
+    const laneOf = new Map<string, number>();
+    for (const m of sorted) {
+      let lane = laneEnds.findIndex((end) => end < m.startDate);
+      if (lane === -1) { lane = laneEnds.length; laneEnds.push(m.endDate); }
+      else laneEnds[lane] = m.endDate;
+      laneOf.set(m.id, lane);
+    }
+    return { laneOf, laneCount: laneEnds.length };
+  }, [materialSummaries]);
+
+  // 월 셀을 주(7칸) 단위로 나눈다 — 주별로 스팬 바를 그린다.
+  const weeks = useMemo(() => {
+    const out: Array<Array<{ dateKey: string; day: number } | null>> = [];
+    for (let i = 0; i < monthCells.length; i += 7) out.push(monthCells.slice(i, i + 7));
+    return out;
+  }, [monthCells]);
 
   const monthActionable = useMemo(() => {
     if (!viewYm) return 0;
@@ -248,48 +315,103 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 text-center">
-          {WEEKDAY_LABELS.map((w, i) => (
-            <div key={w} className={`pb-1 text-[11px] font-bold ${i === 0 ? 'text-rose-400' : i === 6 ? 'text-sky-400' : 'text-slate-400'}`}>{w}</div>
-          ))}
-          {monthCells.map((cell, idx) => {
-            if (!cell) return <div key={`b_${idx}`} />;
-            const dayItems = itemsByDate.get(cell.dateKey) || [];
-            const isToday = cell.dateKey === todayKey;
-            const isSelected = cell.dateKey === selectedDate;
-            const kinds = Array.from(new Set(dayItems.map((i) => i.kind)));
-            const hasAction = dayItems.some((i) => i.responseState === 'needs-response' || i.responseState === 'post-task');
-            const study = studyByDate[cell.dateKey];
-            const studyPct = study && study.planned > 0 ? Math.round((100 * study.done) / study.planned) : 0;
+        <div className="text-center">
+          {/* 요일 헤더 */}
+          <div className="grid grid-cols-7 gap-1">
+            {WEEKDAY_LABELS.map((w, i) => (
+              <div key={w} className={`pb-1 text-[11px] font-bold ${i === 0 ? 'text-rose-400' : i === 6 ? 'text-sky-400' : 'text-slate-400'}`}>{w}</div>
+            ))}
+          </div>
+          {/* 주 단위: 날짜 칸 + 자료 기간 스팬 바(구글 캘린더식 레인) */}
+          {weeks.map((week, wi) => {
+            const real = week.filter(Boolean) as Array<{ dateKey: string; day: number }>;
+            const wStart = real[0]?.dateKey, wEnd = real[real.length - 1]?.dateKey;
+            // 이 주에 걸치는 자료별 세그먼트(레인·시작칸·칸수)
+            const segs: Array<{ lane: number; startCol: number; span: number; m: MaterialProgressSummary }> = [];
+            if (wStart && wEnd) {
+              for (const m of materialSummaries) {
+                if (m.endDate < wStart || m.startDate > wEnd) continue;
+                let startCol = -1, endCol = -1;
+                week.forEach((c, ci) => { if (c && m.startDate <= c.dateKey && c.dateKey <= m.endDate) { if (startCol === -1) startCol = ci; endCol = ci; } });
+                if (startCol === -1) continue;
+                segs.push({ lane: materialLanes.laneOf.get(m.id) ?? 0, startCol, span: endCol - startCol + 1, m });
+              }
+            }
+            const laneCount = segs.length ? Math.max(...segs.map((s) => s.lane)) + 1 : 0;
             return (
-              <button
-                key={cell.dateKey}
-                type="button"
-                onClick={() => setSelectedDate(cell.dateKey)}
-                className={`relative flex aspect-square flex-col items-center justify-start rounded-xl border py-1.5 transition ${
-                  isSelected
-                    ? 'border-[#0071E3] bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15'
-                    : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
-                }`}
-              >
-                <span className={`grid h-6 w-6 place-items-center rounded-full text-[12px] font-bold ${
-                  isToday ? 'bg-[#0071E3] text-white' : 'text-slate-700 dark:text-slate-200'
-                }`}>{cell.day}</span>
-                {kinds.length > 0 && (
-                  <span className="mt-1 flex flex-wrap items-center justify-center gap-0.5">
-                    {kinds.slice(0, 4).map((k) => (
-                      <span key={k} className={`h-1.5 w-1.5 rounded-full ${KIND_META[k].dot}`} />
-                    ))}
-                  </span>
-                )}
-                {/* 공부 계획 달성 미니바 — 계획 있는 날만. 채움=달성분, 트랙=미달(미래는 0%). */}
-                {study && (
-                  <span className="mt-auto mb-0.5 block h-1 w-7 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10" title={`공부 계획 ${study.done}/${study.planned}`}>
-                    <span className={`block h-full rounded-full ${achievementColor(studyPct)}`} style={{ width: `${studyPct}%` }} />
-                  </span>
-                )}
-                {hasAction && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500" />}
-              </button>
+              <div key={`w_${wi}`} className="mt-1">
+                {/* 날짜 칸 */}
+                <div className="grid grid-cols-7 gap-1">
+                  {week.map((cell, ci) => {
+                    if (!cell) return <div key={`b_${wi}_${ci}`} />;
+                    const dayItems = itemsByDate.get(cell.dateKey) || [];
+                    const isToday = cell.dateKey === todayKey;
+                    const isSelected = cell.dateKey === selectedDate;
+                    const kinds = Array.from(new Set(dayItems.map((i) => i.kind)));
+                    const hasAction = dayItems.some((i) => i.responseState === 'needs-response' || i.responseState === 'post-task');
+                    const study = studyByDate[cell.dateKey];
+                    const studyPct = study && study.planned > 0 ? Math.round((100 * study.done) / study.planned) : 0;
+                    return (
+                      <button
+                        key={cell.dateKey}
+                        type="button"
+                        onClick={() => setSelectedDate(cell.dateKey)}
+                        className={`relative flex min-h-[2.75rem] flex-col items-center justify-start rounded-xl border py-1 transition ${
+                          isSelected
+                            ? 'border-[#0071E3] bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15'
+                            : 'border-transparent hover:bg-slate-50 dark:hover:bg-white/5'
+                        }`}
+                      >
+                        <span className={`grid h-6 w-6 place-items-center rounded-full text-[12px] font-bold ${
+                          isToday ? 'bg-[#0071E3] text-white' : 'text-slate-700 dark:text-slate-200'
+                        }`}>{cell.day}</span>
+                        {kinds.length > 0 && (
+                          <span className="mt-0.5 flex flex-wrap items-center justify-center gap-0.5">
+                            {kinds.slice(0, 4).map((k) => (
+                              <span key={k} className={`h-1.5 w-1.5 rounded-full ${KIND_META[k].dot}`} />
+                            ))}
+                          </span>
+                        )}
+                        {study && (
+                          <span className="mt-auto mb-0.5 block h-1 w-7 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10" title={`공부 계획 ${study.done}/${study.planned}`}>
+                            <span className={`block h-full rounded-full ${achievementColor(studyPct)}`} style={{ width: `${studyPct}%` }} />
+                          </span>
+                        )}
+                        {hasAction && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-amber-500" />}
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* 자료 기간 바 — 자료 색으로 시작~마감까지 이어짐. 겹치면 레인으로 쌓임. */}
+                {Array.from({ length: laneCount }).map((_, lane) => (
+                  <div key={`l_${wi}_${lane}`} className="mt-[3px] grid grid-cols-7 gap-x-1">
+                    {segs.filter((s) => s.lane === lane).map((s, si) => {
+                      const isStart = s.m.startDate >= (wStart || '') && week[s.startCol]?.dateKey === s.m.startDate;
+                      const isEnd = s.m.endDate <= (wEnd || '') && week[s.startCol + s.span - 1]?.dateKey === s.m.endDate;
+                      return (
+                        <button
+                          key={`${s.m.id}_${si}`}
+                          type="button"
+                          onClick={() => (openMaterialDetail ? openMaterialDetail(s.m.materialType, s.m.materialId) : goToDate(s.m.startDate))}
+                          title={`${s.m.subject} · ${s.m.title} · ${formatMd(s.m.startDate)}~${formatMd(s.m.endDate)} 마감`}
+                          style={{
+                            gridColumn: `${s.startCol + 1} / span ${s.span}`,
+                            backgroundColor: s.m.color,
+                            color: readableTextOn(s.m.color),
+                            borderTopLeftRadius: isStart ? 5 : 2,
+                            borderBottomLeftRadius: isStart ? 5 : 2,
+                            borderTopRightRadius: isEnd ? 5 : 2,
+                            borderBottomRightRadius: isEnd ? 5 : 2,
+                          }}
+                          className="flex h-[15px] items-center overflow-hidden whitespace-nowrap px-1 text-left text-[8.5px] font-bold leading-none transition active:scale-[0.98]"
+                        >
+                          <span className="truncate">{isStart ? s.m.title : `${s.m.title} ›`}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             );
           })}
         </div>
@@ -301,8 +423,37 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
               <span className={`h-1.5 w-1.5 rounded-full ${KIND_META[k].dot}`} />{KIND_META[k].label}
             </span>
           ))}
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+            <span className="inline-block h-2.5 w-4 rounded-[3px] bg-gradient-to-r from-rose-400 to-sky-400" /> 자료 기간 <span className="font-medium text-slate-400 dark:text-slate-500">(색=자료, 시작~마감)</span>
+          </span>
         </div>
       </div>
+
+      {/* 과목별 진행 — 노션 캘린더식. 자료별 진행바·마감일·남은일·상태칩. */}
+      {materialSummaries.length > 0 && (
+        <div className="rounded-2xl border border-black/5 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-[#1c1c1e]">
+          <button
+            type="button"
+            onClick={() => setProgressOpen((v) => !v)}
+            className="flex w-full items-center justify-between gap-2"
+          >
+            <h2 className="flex items-center gap-1.5 text-sm font-black text-slate-900 dark:text-slate-100">
+              <TrendingUp className="h-4 w-4 text-[#0071E3]" /> 과목별 진행
+            </h2>
+            <span className="flex items-center gap-2">
+              <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">자료 {materialSummaries.length}개</span>
+              <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${progressOpen ? 'rotate-180' : ''}`} />
+            </span>
+          </button>
+          {progressOpen && (
+            <div className="mt-3 flex flex-col gap-2">
+              {materialSummaries.map((m) => (
+                <MaterialProgressRow key={m.id} m={m} onOpen={() => (openMaterialDetail ? openMaterialDetail(m.materialType, m.materialId) : goToDate(m.endDate))} canOpen={!!openMaterialDetail} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* 선택 날짜 상세 */}
       <div className="space-y-2.5">
@@ -432,6 +583,46 @@ function StateBadge({ state }: { state: CalendarResponseState }) {
   if (state === 'accepted') return <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300">참석</span>;
   if (state === 'declined') return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-500 dark:bg-white/10 dark:text-slate-400">불참</span>;
   return null;
+}
+
+// 과목별 진행 한 줄 — 진행바(actualRatio)·마감일·남은일·상태칩. 클릭 시 마감일로 이동.
+function MaterialProgressRow({ m, onOpen, canOpen }: { m: MaterialProgressSummary; onOpen: () => void; canOpen: boolean }) {
+  const pct = Math.round(m.actualRatio * 100);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full rounded-xl border border-black/5 bg-slate-50 p-2.5 text-left transition active:scale-[0.99] hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-1.5">
+          {/* 자료 색상은 태그에만 — 카드 전체 색칠은 지양 */}
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${m.color}22`, color: m.color }}>
+            <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: m.color }} />
+            {m.subject}
+          </span>
+          <span className="truncate text-[12px] font-bold text-slate-800 dark:text-slate-100">{m.title}</span>
+        </span>
+        <span className="flex shrink-0 items-center gap-1">
+          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${riskSoftChip(m.riskLevel)}`}>{riskLabel(m.riskLevel)}</span>
+          {canOpen && <ChevronRight className="h-3.5 w-3.5 text-slate-300 dark:text-slate-600" />}
+        </span>
+      </div>
+      <div className="mt-1.5 flex items-center gap-2">
+        <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+          <span className={`block h-full rounded-full ${riskBar(m.riskLevel)}`} style={{ width: `${Math.min(100, pct)}%` }} />
+        </span>
+        <span className="shrink-0 text-[10px] font-black tabular-nums text-slate-500 dark:text-slate-300">{pct}%</span>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+        <span className="inline-flex items-center gap-0.5"><Flag className="h-2.5 w-2.5" /> {formatMd(m.endDate)} 마감</span>
+        <span>·</span>
+        <span>{ddayLabel(m.daysRemaining)}</span>
+        <span>·</span>
+        <span className="tabular-nums">{m.actualAmount}/{m.targetAmount}{m.unit}</span>
+      </div>
+    </button>
+  );
 }
 
 function CalendarDetailRow({

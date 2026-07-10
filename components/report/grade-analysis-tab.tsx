@@ -424,7 +424,7 @@ export function GradeAnalysisTab({
             {totalIncorrect === 0 ? (
               <div className="py-8 px-4 text-center bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center gap-1.5">
                 <p className="text-xs font-bold text-slate-400">아직 오답 원인 분석 데이터가 부족합니다.</p>
-                <p className="text-[10px] text-slate-400/80 font-semibold">학습 진도 영역의 교재 목록에서 푼 문항 수 아래에 있는 '오답 사유 추가' 단추들을 눌러서 실수의 원인을 등록해보세요!</p>
+                <p className="text-[10px] text-slate-400/80 font-semibold">'오답 노트' 탭에서 교재별로 틀린 이유(연산·시간·오독·개념)를 눌러 두면 여기 취약성 진단에 쌓여요.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">

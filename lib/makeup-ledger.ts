@@ -6,6 +6,7 @@
 //   done 은 주 단위(makeupWeekKey)로 스코프 — 지난 주 완료분이 이번 주 owed 를 상쇄하지 않는다.
 import type { BookProgress, LectureProgress, LeaveRequest, MakeupNotice, Student, SubjectProgress } from '@/lib/types/student';
 import { getActiveStudyDays, getMaterialStudyDays } from '@/lib/progress-plan';
+import { timeSlotBlocks } from '@/lib/academy-timetable';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { weekKeyOf, addDaysToDateKey } from '@/lib/makeup-carryover';
 
@@ -219,8 +220,14 @@ export function notifyMakeupLeave(student: Student, leave: LeaveRequest): Makeup
   for (const subject of student.subjects || []) {
     for (const { m, type } of subjectMaterials(subject)) {
       // 슬롯은 자료별 studyTime(관리자 지정) 우선, 없으면 과목 studyTime.
+      // 시:분 슬롯('t:')은 겹치는 블록으로 환산해 판정 — 어느 한 블록이라도 면제 대상이면 포함.
       const studyTime = m.studyTime || subject.studyTime;
-      if (!studyTime || !exemptedSlots.includes(studyTime as 'morning' | 'afternoon' | 'night')) continue;
+      if (!studyTime) continue;
+      const materialBlocks: Array<'morning' | 'afternoon' | 'night'> =
+        studyTime === 'morning' || studyTime === 'afternoon' || studyTime === 'night'
+          ? [studyTime]
+          : timeSlotBlocks(studyTime);
+      if (!materialBlocks.some((b) => exemptedSlots.includes(b))) continue;
       const days = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, m.studyDays));
       if (!days.includes(leaveDayKey)) continue;
       const plan = (m.detailedPlans || []).find(

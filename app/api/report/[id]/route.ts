@@ -22,6 +22,15 @@ interface ConsultationHistoryEntry {
   digest: { kind: string; label: string; detail?: string }[];
 }
 
+// 학생 전용 필드를 교재 객체에서 제거(학부모 audience) — 오답노트 원문(텍스트·태그·사진 경로)은
+// 학생 본인/관리자 전용이다. 루트 books 와 subjects.books 가 같은 객체를 참조하므로 복사본으로 반환.
+function stripWrongNotes<T extends object>(m: T): T {
+  if (!m || typeof m !== 'object' || !('wrongNotes' in m)) return m;
+  const rest = { ...(m as Record<string, unknown>) };
+  delete rest.wrongNotes;
+  return rest as T;
+}
+
 function buildMaskedStudent(
   student: Student,
   audience: 'parent' | 'student',
@@ -30,6 +39,7 @@ function buildMaskedStudent(
   consultationCancellations: ConsultationBooking[] = [],
   seatMoveRequests: SeatMoveRequest[] = [],
 ) {
+  const isStudent = audience === 'student';
   return {
     id: student.id,
     name: student.name,
@@ -46,7 +56,7 @@ function buildMaskedStudent(
     // 등록 시각 — subject-progress 탭이 진도 기대치의 'enrolledStart'(등록 전 학습일 제외) 보정에 쓴다. 누락 시 보정이 통째로 빠져 '느림/정체' 오판.
     createdAt: student.createdAt,
     updatedAt: student.updatedAt,
-    books: student.books,
+    books: isStudent ? student.books : (student.books || []).map(stripWrongNotes),
     lectures: student.lectures,
     consultationLogs: (student.consultationLogs || []).filter((l) => l.type !== 'request' && l.type !== 'suggestion').slice(0, 3),
     changeRequests: (student.consultationLogs || [])
@@ -62,7 +72,9 @@ function buildMaskedStudent(
     awaySchedules: student.awaySchedules || [],
     leaveCoupons: student.leaveCoupons ?? 0,
     grades: student.grades,
-    subjects: student.subjects || [],
+    subjects: isStudent
+      ? (student.subjects || [])
+      : (student.subjects || []).map((s) => ({ ...s, books: (s.books || []).map(stripWrongNotes) })),
     ...(audience === 'student'
       ? {
           penalties: student.penalties || [],

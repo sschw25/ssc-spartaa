@@ -12,7 +12,9 @@ import { kstToday } from '@/lib/leave';
 // 자료/계획 id 매칭으로 fresh(DB 최신) 값을 무조건 우선한다. (plan.isCompleted 는 관리자도
 // 토글하는 계약 필드라 병합 대상에서 제외 — 클라이언트 값 유지.)
 // makeupDone·makeupWeekKey 는 학생이 주말 보강 완료 입력으로 쓰는 필드 — 관리자 미편집이라 fresh 우선(회귀 방지).
-const STUDENT_OWNED_MATERIAL_FIELDS = ['studySlot', 'inputLog', 'reviewLog', 'solvedQuestions', 'incorrectTags', 'adjustLog', 'makeupDone', 'makeupWeekKey'] as const;
+// wrongNotes 는 학생이 직접 작성한 오답 콘텐츠(사진/텍스트) — 관리자 전체저장이 덮어쓰지 않도록 fresh(DB) 우선.
+//   (관리자 확인 처리 resolvedAt 도 전용 wrong-note 라우트로만 기록되어 이 병합으로 보존된다.)
+const STUDENT_OWNED_MATERIAL_FIELDS = ['studySlot', 'color', 'inputLog', 'reviewLog', 'solvedQuestions', 'incorrectTags', 'wrongNotes', 'adjustLog', 'makeupDone', 'makeupWeekKey'] as const;
 const STUDENT_OWNED_PLAN_FIELDS = ['dailyCompletions', 'actualAmount'] as const;
 
 function preserveStudentOwnedProgress(

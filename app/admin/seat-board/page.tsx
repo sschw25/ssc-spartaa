@@ -562,11 +562,13 @@ interface SeatCardProps {
   isUnauthorizedCheckout: boolean;
   todayStr: string;
   onTogglePeriod?: (periodIdx: number) => void;
+  onCheckIn?: () => void;
+  onCheckOut?: () => void;
   onClick?: () => void;
   onNameClick?: () => void;
 }
 
-function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, isUnauthorizedCheckout, todayStr, onTogglePeriod, onClick, onNameClick, phoneNoSubmit, onTogglePhone }: SeatCardProps) {
+function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftToday, isUnauthorizedCheckout, todayStr, onTogglePeriod, onCheckIn, onCheckOut, onClick, onNameClick, phoneNoSubmit, onTogglePhone }: SeatCardProps) {
   if (!student) {
     return (
       <div data-seat-card="empty" data-seat-num={seatNum} className="w-[80px] h-[100px] rounded-lg border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/40 dark:bg-white/5 p-1.5 flex flex-col shrink-0">
@@ -689,6 +691,24 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
           {isLeftToday && !isOnLeave && (
             <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isUnauthorizedCheckout ? 'bg-red-500' : 'bg-[#0071E3]'}`} />
           )}
+          {onCheckIn && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCheckIn(); }}
+              title="등원 처리 (QR 대체)"
+              className="ml-auto shrink-0 rounded-[3px] border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-[1px] text-[7px] font-black leading-none text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-90 transition"
+            >
+              등원
+            </button>
+          )}
+          {onCheckOut && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onCheckOut(); }}
+              title="하원 처리"
+              className="ml-auto shrink-0 rounded-[3px] border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-1 py-[1px] text-[7px] font-black leading-none text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 active:scale-90 transition"
+            >
+              하원
+            </button>
+          )}
         </div>
       </div>
 
@@ -778,11 +798,13 @@ interface RowProps {
   phoneNoSubmitMap?: Map<string, Set<'D' | 'E' | 'N'>>;
   onTogglePeriod: (key: string) => void;
   onTogglePhone: (studentId: string, block: 'D' | 'E' | 'N') => void;
+  onCheckIn: (student: Student) => void;
+  onCheckOut: (student: Student) => void;
   onCardClick: (student: Student) => void;
   onNameClick: (student: Student) => void;
 }
 
-function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, phoneNoSubmitMap, onTogglePeriod, onTogglePhone, onCardClick, onNameClick }: RowProps) {
+function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMin, periodOverrides, phoneNoSubmitMap, onTogglePeriod, onTogglePhone, onCheckIn, onCheckOut, onCardClick, onNameClick }: RowProps) {
   const safePhoneNoSubmitMap = phoneNoSubmitMap ?? EMPTY_PHONE_NO_SUBMIT_MAP;
   return (
     <div className="flex gap-[6px]">
@@ -858,6 +880,8 @@ function SeatRow({ seats, seatMap, sessionMap, openIds, today, nowDateStr, nowMi
                 ? (idx) => onTogglePeriod(`${student.id}:${idx}`)
                 : undefined
             }
+            onCheckIn={student && !isOnLeave && !isCheckedIn && !isLeftToday ? () => onCheckIn(student) : undefined}
+            onCheckOut={student && isCheckedIn ? () => onCheckOut(student) : undefined}
             onClick={student ? () => onCardClick(student) : undefined}
             onNameClick={student ? () => onNameClick(student) : undefined}
             phoneNoSubmit={student ? safePhoneNoSubmitMap.get(student.id) : undefined}
@@ -1253,6 +1277,50 @@ export default function SeatBoardPage() {
     return { total: campusStudents.length, present, onLeave };
   }, [campusStudents, openIds, today]);
 
+  // QR 대체 폴백: 관리자가 출결판에서 직접 등원/하원 처리한다.
+  // QR과 동일하게 '열린 세션'을 만들어(등원) 닫는(하원) 경로를 재사용하므로 등원중 통계에 즉시 반영된다.
+  async function handleCheckIn(student: Student) {
+    if (!ensureEditableToday()) return;
+    if (isDemoMode) { toast.info('샘플 모드에서는 등원 처리가 저장되지 않습니다.'); return; }
+    const ok = await confirm({ title: `${student.name} 등원 처리할까요?`, description: 'QR 대신 지금 등원으로 기록합니다.', confirmText: '등원 처리' });
+    if (!ok) return;
+    try {
+      const res = await fetch('/api/admin/attendance/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ studentId: student.id, action: 'check-in' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || '등원 처리 실패');
+      toast.success(`${student.name} 등원 처리했습니다.`);
+      await loadData({ silent: true });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '등원 처리에 실패했습니다.');
+    }
+  }
+
+  async function handleCheckOut(student: Student) {
+    if (!ensureEditableToday()) return;
+    if (isDemoMode) { toast.info('샘플 모드에서는 하원 처리가 저장되지 않습니다.'); return; }
+    const ok = await confirm({ title: `${student.name} 하원 처리할까요?`, confirmText: '하원 처리' });
+    if (!ok) return;
+    try {
+      const res = await fetch('/api/admin/attendance/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ studentId: student.id, action: 'check-out' }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || '하원 처리 실패');
+      toast.success(`${student.name} 하원 처리했습니다.`);
+      await loadData({ silent: true });
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '하원 처리에 실패했습니다.');
+    }
+  }
+
   // 교시별 출석 확인 시, 자리에 없는(=수동 X 표시) 학생을 모아 학생 페이지 알림을 발송한다.
   // 승인된 휴가/반차, 정기 외출로 빠지는 학생은 자동 제외한다.
   async function notifyAbsentForPeriod(periodIdx: number) {
@@ -1317,6 +1385,8 @@ export default function SeatBoardPage() {
     periodOverrides, phoneNoSubmitMap,
     onTogglePeriod: handleTogglePeriod,
     onTogglePhone: handleTogglePhone,
+    onCheckIn: handleCheckIn,
+    onCheckOut: handleCheckOut,
     onCardClick: openStudentInfo,
     onNameClick: openStudentInfo,
   };

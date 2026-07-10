@@ -10,6 +10,7 @@ import {
   getMaterialDailyPace,
 } from '@/lib/material-benchmark';
 import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getDeferLeaveExemptions, getMaterialStudyDays } from '@/lib/progress-plan';
+import { getMaterialColor } from '@/lib/material-color';
 import { getMakeupLedger } from '@/lib/makeup-ledger';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
 import { LearningRequestPanel } from '@/components/report/learning-request-panel';
@@ -614,7 +615,10 @@ export function SubjectProgressTab({
                         <div key={b.id} id={`material-card-${b.id}`} className="scroll-mt-24 p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
                           <div className="flex justify-between items-start flex-wrap gap-2">
                             <div>
-                              <h5 className="text-xs font-black text-slate-700 dark:text-slate-300">{b.title}</h5>
+                              <h5 className="flex items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-300">
+                                <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(b) }} />
+                                {b.title}
+                              </h5>
                               {openMaterialDetail && (
                                 <button
                                   type="button"
@@ -891,7 +895,10 @@ export function SubjectProgressTab({
                         <div key={l.id} id={`material-card-${l.id}`} className="scroll-mt-24 p-5 rounded-2xl border border-slate-100 dark:border-white/10 bg-gradient-to-b from-slate-50/50 to-white dark:from-white/5 dark:to-[#1c1c1e] space-y-4 shadow-sm">
                           <div className="flex justify-between items-start flex-wrap gap-2">
                             <div>
-                              <h5 className="text-xs font-black text-slate-700 dark:text-slate-300">{l.name}</h5>
+                              <h5 className="flex items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-300">
+                                <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(l) }} />
+                                {l.name}
+                              </h5>
                               {openMaterialDetail && (
                                 <button
                                   type="button"

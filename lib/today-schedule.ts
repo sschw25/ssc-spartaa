@@ -2,7 +2,7 @@
 // 학생이 슬롯을 안 정한 자료도 빈 학습 교시에 자동 배정해 "시간표가 짜인 것처럼" 보이게 한다.
 // 타임테이블(실시간 하루 계획표)과 홈 '오늘 할 일'이 이 단일 소스를 공유한다.
 import type { Student, LeaveRequest, BookProgress, LectureProgress, SubjectProgress } from '@/lib/types/student';
-import { ACADEMY_TIMETABLE, isBlockSlot, isPeriodSlot, type StudyTimeKey } from '@/lib/academy-timetable';
+import { ACADEMY_TIMETABLE, isBlockSlot, isPeriodSlot, isTimeSlot, parseTimeSlot, timeSlotPeriodKeys, type StudyTimeKey } from '@/lib/academy-timetable';
 import { getMaterialStudyDays } from '@/lib/progress-plan';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
 import { getAwayRangesForDay, type WeekdayKey } from '@/lib/away-impact';
@@ -187,6 +187,13 @@ export function assignItemsToPeriods(
       else unpinned.push(item); // 핀한 교시가 막힘 → 자동 재배치
       continue;
     }
+    // 시:분 직접 지정 → 겹치는 학습 교시 전부에 노출(막힌 교시는 제외). 겹치는 열린 교시가 없으면 자동 재배치.
+    if (isTimeSlot(slot)) {
+      const openKeys = timeSlotPeriodKeys(slot).filter((k) => !blocked.has(k));
+      if (openKeys.length > 0) for (const k of openKeys) place(k, item, false);
+      else unpinned.push(item);
+      continue;
+    }
     if (isBlockSlot(slot)) { deferred.push(item); continue; }
     unpinned.push(item);
   }
@@ -203,4 +210,95 @@ export function assignItemsToPeriods(
   }
 
   return byPeriod;
+}
+
+// ── 비례 하루 그리드(day-view) 블록 ──────────────────────────────────────────
+// 실시간 하루 계획표를 '교시 카드'가 아니라 '실제 시각 위치의 컬러 박스'로 그리기 위한 소스.
+// 자료마다 슬롯을 하나의 시간 구간([startMin,endMin])으로 해석한다(자료당 1블록, 중복 없음).
+export interface DayGridBlock {
+  materialId: string;
+  materialType: 'book' | 'lecture';
+  subjectName: string;
+  title: string;
+  startMin: number;                 // 자정 기준 분(그리드 배치용)
+  endMin: number;
+  amount: number;
+  range: string;
+  unit: string;
+  selfPaced?: boolean;
+  current?: number;
+  speed?: number;
+  isCompleted?: boolean;
+  actualAmount?: number;
+  weekly?: boolean;
+  blocked: boolean;                 // 겹치는 학습 교시가 전부 휴가/외출 → 흐리게 표시
+}
+
+export interface DayGridResult {
+  dayStartMin: number;              // 하루 창 시작(=첫 교시 start)
+  dayEndMin: number;                // 하루 창 끝(=마지막 교시 end)
+  blocks: DayGridBlock[];           // 시간 배치됨(start 오름차순, 막힌 블록 포함)
+  unpinned: DayGridBlock[];         // 슬롯 미지정/미해석 → 시각 미배치(그리드 밖 칩으로)
+}
+
+// 자료 슬롯 문자열 → 하나의 시간 구간. 미지정/미해석이면 null.
+// t:HH:MM-HH:MM → 그 구간 / pN → 그 교시 / 블록(morning..) → 그 블록 학습교시의 [최소start,최대end].
+function resolveSlotRange(slot: string): { startMin: number; endMin: number } | null {
+  if (!slot) return null;
+  if (isTimeSlot(slot)) return parseTimeSlot(slot);
+  if (isPeriodSlot(slot)) {
+    const p = ACADEMY_TIMETABLE.find((x) => x.periodKey === slot);
+    return p ? { startMin: toMin(p.start), endMin: toMin(p.end) } : null;
+  }
+  if (isBlockSlot(slot)) {
+    const ps = STUDY_PERIODS.filter((p) => p.studyTime === slot);
+    if (ps.length === 0) return null;
+    return {
+      startMin: Math.min(...ps.map((p) => toMin(p.start))),
+      endMin: Math.max(...ps.map((p) => toMin(p.end))),
+    };
+  }
+  return null;
+}
+
+export function getDayGridBlocks(student: Student, todayKey: string, todayDayKey: string): DayGridResult {
+  const items = getTodayScheduleItems(student, todayKey, todayDayKey);
+  const blockedKeys = getBlockedPeriodKeys(student, todayKey, todayDayKey);
+  const dayStartMin = toMin(ACADEMY_TIMETABLE[0].start);
+  const dayEndMin = toMin(ACADEMY_TIMETABLE[ACADEMY_TIMETABLE.length - 1].end);
+
+  const blocks: DayGridBlock[] = [];
+  const unpinned: DayGridBlock[] = [];
+
+  for (const it of items) {
+    const base: Omit<DayGridBlock, 'startMin' | 'endMin' | 'blocked'> = {
+      materialId: it.materialId,
+      materialType: it.materialType,
+      subjectName: it.subjectName,
+      title: it.title,
+      amount: it.amount,
+      range: it.range,
+      unit: it.unit,
+      selfPaced: it.selfPaced,
+      current: it.current,
+      speed: it.speed,
+      isCompleted: it.isCompleted,
+      actualAmount: it.actualAmount,
+      weekly: it.weekly,
+    };
+    const range = resolveSlotRange(it.pinnedSlot || '');
+    if (!range) {
+      unpinned.push({ ...base, startMin: 0, endMin: 0, blocked: false });
+      continue;
+    }
+    // 겹치는 학습 교시가 전부 막혔으면 blocked(그날 휴가/외출 구간).
+    const overlapStudy = STUDY_PERIODS.filter(
+      (p) => toMin(p.start) < range.endMin && range.startMin < toMin(p.end),
+    );
+    const blocked = overlapStudy.length > 0 && overlapStudy.every((p) => blockedKeys.has(p.periodKey));
+    blocks.push({ ...base, startMin: range.startMin, endMin: range.endMin, blocked });
+  }
+
+  blocks.sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+  return { dayStartMin, dayEndMin, blocks, unpinned };
 }

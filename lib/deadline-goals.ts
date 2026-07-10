@@ -23,6 +23,7 @@ export interface DeadlineGoal {
   unit: string;
   rangeText: string;
   dateKey: string;
+  startDate: string;
   endDate: string;
   expectedAmount: number;
   expectedRatio: number;   // 오늘까지 기대 진행 비율 (0~1)
@@ -137,6 +138,7 @@ export function deriveDeadlineGoals(student: Student, today: Date, todayKey: str
           unit,
           rangeText: plan.rangeText,
           dateKey: todayKey,
+          startDate: plan.startDate,
           endDate: plan.endDate,
           expectedAmount: pace.expectedAmount,
           expectedRatio: pace.expectedRatio,

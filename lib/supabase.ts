@@ -955,6 +955,63 @@ export async function deleteLeaveProofSupabase(path: string): Promise<void> {
   }
 }
 
+// ── 오답노트 문제 사진 (Supabase Storage · 비공개) ────────────────
+// 학생이 오답노트에 첨부한 문제 사진은 학습 콘텐츠라 비공개 버킷에 두고, 학생 본인·관리자 모두
+// 짧은 수명의 서명 URL로만 열람한다. 증빙과 달리 자동 삭제는 없고, 노트/사진 삭제 시에만 제거한다.
+const WRONG_NOTES_BUCKET = 'wrong-notes';
+
+async function ensureWrongNotesBucket(): Promise<void> {
+  const client = getClient();
+  const { data } = await client.storage.getBucket(WRONG_NOTES_BUCKET);
+  if (data) {
+    // 학습 콘텐츠 버킷 — 과거에 public 으로 선생성됐더라도 비공개로 멱등 강제.
+    if (data.public) {
+      try { await client.storage.updateBucket(WRONG_NOTES_BUCKET, { public: false }); } catch { /* 권한 등 실패는 무시 */ }
+    }
+    return;
+  }
+  const { error } = await client.storage.createBucket(WRONG_NOTES_BUCKET, {
+    public: false, // 비공개 — 서명 URL로만 접근
+    fileSizeLimit: 6 * 1024 * 1024,
+    allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp'],
+  });
+  if (error) {
+    // 동시 최초 업로드 경쟁으로 이미 만들어졌을 수 있음 — 재확인 후에도 없으면 실패로 처리.
+    const { data: recheck } = await client.storage.getBucket(WRONG_NOTES_BUCKET);
+    if (!recheck) throw error;
+  }
+}
+
+// 오답 문제 사진 업로드 → 경로(key)만 반환(공개 URL 없음). 학생별/자료별 경로.
+export async function uploadWrongNoteImageSupabase(
+  studentId: string, materialId: string, body: ArrayBuffer, contentType: string, ext: string,
+): Promise<{ path: string }> {
+  await ensureWrongNotesBucket();
+  const safeStudent = studentId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'unknown';
+  const safeMaterial = materialId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64) || 'material';
+  const rand = Math.random().toString(36).slice(2, 8);
+  const path = `${safeStudent}/${safeMaterial}-${Date.now()}-${rand}.${ext}`;
+  const { error } = await getClient().storage.from(WRONG_NOTES_BUCKET).upload(path, body, { contentType, upsert: false });
+  if (error) throw error;
+  return { path };
+}
+
+// 학생 본인·관리자 열람용 짧은 수명 서명 URL
+export async function signedWrongNoteUrlSupabase(path: string, ttlSec = 300): Promise<string> {
+  const { data, error } = await getClient().storage.from(WRONG_NOTES_BUCKET).createSignedUrl(path, ttlSec);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function deleteWrongNoteImageSupabase(path: string): Promise<void> {
+  if (!path) return;
+  try {
+    await getClient().storage.from(WRONG_NOTES_BUCKET).remove([path]);
+  } catch {
+    /* 이미 없으면 무시 */
+  }
+}
+
 // ── 도시락 신청 라운드 마스터 (meal_plans 테이블) ─────────────
 function rowToMealPlan(r: any): MealPlan {
   return {

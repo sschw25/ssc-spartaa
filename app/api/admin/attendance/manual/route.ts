@@ -27,11 +27,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: '해당 학생에 접근할 권한이 없습니다.' }, { status: 403 });
     }
 
-    if (clear || !checkIn) {
+    // 명시적 '결석/취소'만 삭제한다. 등원 시간을 비운 채 저장했다고 해서 그날 기록을 지우지 않는다.
+    if (clear) {
       await deleteSessionsByStudentDate(studentId, date);
       return NextResponse.json({ success: true, cleared: true });
     }
+    if (!checkIn) {
+      return NextResponse.json({ success: false, message: '등원 시간을 입력하거나 결석 버튼을 사용하세요.' }, { status: 400 });
+    }
 
+    // 등원 시간만 있고 하원 시간이 없으면 '열린 세션'(등원중)으로 저장된다. (setManualAttendance)
     if (!HM.test(checkIn) || (checkOut && !HM.test(checkOut))) {
       return NextResponse.json({ success: false, message: '시간 형식(HH:MM)이 올바르지 않습니다.' }, { status: 400 });
     }
