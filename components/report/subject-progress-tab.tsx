@@ -24,6 +24,8 @@ type RequestForm = {
   materialType: 'book' | 'lecture';
   goalType: GoalType;
   goalValue: string;
+  targetDate: string;
+  studyDays: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
   currentProgress: string;
   proposedWeekNumber: string;
   proposedRangeText: string;

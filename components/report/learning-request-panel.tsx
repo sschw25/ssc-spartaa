@@ -19,12 +19,28 @@ type RequestForm = {
   materialType: 'book' | 'lecture';
   goalType: GoalType;
   goalValue: string;
+  targetDate: string;
+  studyDays: MaDay[];
   currentProgress: string;
   proposedWeekNumber: string;
   proposedRangeText: string;
   speedMultiplier: string;
   currentGoalSnapshot: { goalType?: GoalType; goalValue?: number; speedMultiplier?: number } | null;
 };
+
+// KST 오늘(YYYY-MM-DD)
+function kstToday(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+}
+// 목표 완료일 → 주수(1~12). 오늘~목표일 사이 일수를 7로 나눠 올림, 1~12 클램프.
+function weeksUntil(dateStr: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return 0;
+  const today = new Date(kstToday() + 'T00:00:00');
+  const target = new Date(dateStr + 'T00:00:00');
+  const days = Math.round((target.getTime() - today.getTime()) / 86400000);
+  if (days <= 0) return 0;
+  return Math.max(1, Math.min(12, Math.ceil(days / 7)));
+}
 
 interface LearningRequestPanelProps {
   student: Student;
@@ -188,6 +204,8 @@ export function LearningRequestPanel({
       message: message,
       materialId: '',
       goalValue: '',
+      targetDate: '',
+      studyDays: [],
       currentProgress: '',
       proposedWeekNumber: '',
       proposedRangeText: '',
@@ -559,14 +577,39 @@ export function LearningRequestPanel({
                   setValidationError('신청 내용을 입력해 주세요.');
                   return;
                 }
+                const isPlanEdit = (requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && !!requestForm.materialId;
+                // 마감일 지정 모드: 날짜 → 주수. 날짜가 오늘 이전/미입력이면 막는다.
+                const deadlineWeeks = requestForm.goalType === 'deadlineWeeks' && requestForm.targetDate
+                  ? weeksUntil(requestForm.targetDate)
+                  : 0;
+                if (isPlanEdit && requestForm.goalType === 'deadlineWeeks' && requestForm.targetDate && deadlineWeeks === 0) {
+                  setValidationError('목표 완료일은 내일 이후 날짜로 골라 주세요.');
+                  return;
+                }
+                // 학습계획 변경(plan)은 구체적인 목표가 있어야 신청 — 빈 값(0) 신청으로 관리자에게 의미 없는 제안이 가는 것 방지.
+                if (isPlanEdit && requestForm.requestType === 'plan') {
+                  if (requestForm.goalType === 'deadlineWeeks' && !requestForm.targetDate) {
+                    setValidationError('목표 완료일을 골라 주세요.');
+                    return;
+                  }
+                  if (requestForm.goalType === 'dailyAmount' && !(Number(requestForm.goalValue) > 0)) {
+                    setValidationError('하루 학습량을 입력해 주세요.');
+                    return;
+                  }
+                }
                 setValidationError('');
                 let proposedGoal: ProposedGoal | undefined = undefined;
-                if ((requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && requestForm.materialId) {
+                if (isPlanEdit) {
+                  const goalValue = requestForm.goalType === 'deadlineWeeks'
+                    ? deadlineWeeks
+                    : (requestForm.goalValue ? Number(requestForm.goalValue) : 0);
                   proposedGoal = {
                     materialId: requestForm.materialId,
                     materialType: requestForm.materialType,
                     goalType: requestForm.goalType,
-                    goalValue: requestForm.goalValue ? Number(requestForm.goalValue) : 0,
+                    goalValue,
+                    targetDate: requestForm.goalType === 'deadlineWeeks' && requestForm.targetDate ? requestForm.targetDate : undefined,
+                    studyDays: requestForm.studyDays.length > 0 ? requestForm.studyDays : undefined,
                     currentProgress: requestForm.requestType === 'progress' && requestForm.currentProgress ? Number(requestForm.currentProgress) : undefined,
                     proposedWeekNumber: requestForm.proposedWeekNumber ? Number(requestForm.proposedWeekNumber) : undefined,
                     proposedRangeText: requestForm.proposedRangeText || undefined,
@@ -613,7 +656,9 @@ export function LearningRequestPanel({
                           materialId: selectedId,
                           materialType: isBook ? 'book' : 'lecture',
                           goalType: material?.goalType === 'dailyAmount' ? 'dailyAmount' : 'deadlineWeeks',
-                          goalValue: material?.goalValue ? String(material.goalValue) : '',
+                          goalValue: material?.goalType === 'dailyAmount' && material?.goalValue ? String(material.goalValue) : '',
+                          targetDate: material?.targetDate || '',
+                          studyDays: (Array.isArray(material?.studyDays) ? material!.studyDays : []) as MaDay[],
                           currentProgress: material
                             ? String(isBook ? (book?.currentPage || 0) : (lecture?.completedLectures || 0))
                             : '',
@@ -657,33 +702,90 @@ export function LearningRequestPanel({
                           <span className="text-slate-400">→ 아래에서 변경할 값을 입력하세요</span>
                         </div>
                       ) : null}
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">목표 설정 방식</label>
-                          <select
-                            value={requestForm.goalType}
-                            onChange={(e) => setRequestForm((f) => ({ ...f, goalType: e.target.value as GoalType }))}
-                            className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-goal-type-select"
-                          >
-                            <option value="deadlineWeeks">기간 목표(주 선택)</option>
-                            <option value="dailyAmount">일일 학습량</option>
-                          </select>
+                      {/* 목표 방식: 마감일 지정(날짜) / 하루 정해진 분량 — 학생이 원하는 방식으로 계획을 지정 */}
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">어떻게 끝낼까요?</label>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {([['deadlineWeeks', '📅 마감일까지'], ['dailyAmount', '📖 하루 정해진 분량']] as const).map(([v, label]) => (
+                            <button
+                              key={v}
+                              type="button"
+                              onClick={() => setRequestForm((f) => ({ ...f, goalType: v }))}
+                              className={`rounded-xl px-2.5 py-2 text-[11px] font-bold transition ${requestForm.goalType === v ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                            >
+                              {label}
+                            </button>
+                          ))}
                         </div>
+                      </div>
+
+                      {requestForm.goalType === 'deadlineWeeks' ? (
                         <div className="space-y-1">
-                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">목표 수치</label>
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">언제까지 끝낼까요? (목표 완료일)</label>
+                          <input
+                            type="date"
+                            value={requestForm.targetDate}
+                            min={kstToday()}
+                            onChange={(e) => setRequestForm((f) => ({ ...f, targetDate: e.target.value }))}
+                            className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-target-date-input"
+                          />
+                          {requestForm.targetDate && (
+                            weeksUntil(requestForm.targetDate) > 0 ? (
+                              <p className="text-[10px] font-bold text-[#0071E3]">약 {weeksUntil(requestForm.targetDate)}주 안에 완주하는 계획으로 신청돼요{weeksUntil(requestForm.targetDate) === 12 && requestForm.targetDate ? ' (최대 12주)' : ''}.</p>
+                            ) : (
+                              <p className="text-[10px] font-bold text-red-500">내일 이후 날짜를 골라 주세요.</p>
+                            )
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">하루에 얼마씩 할까요?</label>
                           <div className="flex items-center gap-1">
                             <input
                               type="number"
+                              min={1}
                               value={requestForm.goalValue}
                               onChange={(e) => setRequestForm((f) => ({ ...f, goalValue: e.target.value }))}
-                              placeholder="예: 8"
+                              placeholder={requestForm.materialType === 'book' ? '예: 5' : '예: 1'}
                               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-goal-value-input"
                             />
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                              {requestForm.goalType === 'weeks' || requestForm.goalType === 'deadlineWeeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}
+                              {requestForm.materialType === 'book' ? 'p' : '강'} / 일
                             </span>
                           </div>
                         </div>
+                      )}
+
+                      {/* 학습 요일 — 예: 주말 제외. 미선택 시 현재 설정 유지 */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">학습 요일 <span className="font-medium text-slate-400">(선택)</span></label>
+                          <button
+                            type="button"
+                            onClick={() => setRequestForm((f) => ({ ...f, studyDays: ['mon', 'tue', 'wed', 'thu', 'fri'] }))}
+                            className="rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[9.5px] font-bold text-slate-500 dark:text-slate-400 transition hover:border-[#0071E3]/40 hover:text-[#0071E3]"
+                          >
+                            주말 제외(월~금)
+                          </button>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {MA_DAY_ORDER.map((day) => (
+                            <button
+                              key={day}
+                              type="button"
+                              onClick={() => setRequestForm((f) => ({
+                                ...f,
+                                studyDays: f.studyDays.includes(day) ? f.studyDays.filter((d) => d !== day) : [...f.studyDays, day],
+                              }))}
+                              className={`grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold transition ${requestForm.studyDays.includes(day) ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                            >
+                              {MA_DAY_LABELS[day]}
+                            </button>
+                          ))}
+                        </div>
+                        {requestForm.studyDays.length === 0 && (
+                          <p className="text-[9.5px] font-semibold text-slate-400">미선택 시 현재 요일 설정을 그대로 둬요.</p>
+                        )}
                       </div>
 
                       {requestForm.materialType === 'lecture' && (

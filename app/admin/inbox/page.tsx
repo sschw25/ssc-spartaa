@@ -190,8 +190,12 @@ export default function AdminInboxPage() {
     if (goalType === 'weeks') return '기간 지정';
     if (goalType === 'weeklyAmount') return '주당 분량';
     if (goalType === 'dailyAmount') return '일일 분량';
+    if (goalType === 'deadlineWeeks') return '마감일까지';
+    if (goalType === 'selfPaced') return '자율 진행';
     return goalType;
   };
+
+  const DAY_LABEL_KO: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
 
   // 모든 신청건 통합 변환 가공
   const inboxItems = React.useMemo(() => {
@@ -1199,7 +1203,19 @@ export default function AdminInboxPage() {
                   const cg = pg.currentGoal;
                   const materialTitle = getMaterialTitle(selectedItem.studentId, pg);
                   const isBook = pg.materialType === 'book';
-                  const unitFor = (gt?: string) => gt === 'weeks' ? '주' : gt === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주') : (isBook ? 'p/일' : '강/일');
+                  const unitFor = (gt?: string) =>
+                    gt === 'weeks' || gt === 'deadlineWeeks' ? '주'
+                    : gt === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주')
+                    : gt === 'selfPaced' ? ''
+                    : (isBook ? 'p/일' : '강/일');
+                  // 변경 후 값 문구: 마감일 모드는 날짜를, 자율은 '자율'을, 그 외는 값+단위를 보여준다.
+                  // 값이 비어(0) 있고 날짜도 없으면 목표 문구는 생략(요일만 변경 등).
+                  const hasGoal = pg.goalType === 'selfPaced' || !!pg.targetDate || Number(pg.goalValue) > 0;
+                  const afterText = pg.goalType === 'deadlineWeeks' && pg.targetDate
+                    ? `${pg.targetDate}까지 (약 ${pg.goalValue}주)`
+                    : pg.goalType === 'selfPaced'
+                    ? '자율 진행'
+                    : `${getGoalTypeLabel(pg.goalType)}: ${pg.goalValue}${unitFor(pg.goalType)}`;
                   return (
                     <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-3">
                       <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
@@ -1236,9 +1252,13 @@ export default function AdminInboxPage() {
                           </div>
                           <div className="rounded-xl border border-[#0071E3]/30 dark:border-[#0071E3]/40 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-2.5 space-y-1.5">
                             <p className="font-black text-[#0071E3]/70 uppercase tracking-wider text-[9px]">변경 후 (신청)</p>
-                            <span className="inline-block bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
-                              {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{unitFor(pg.goalType)}
-                            </span>
+                            {hasGoal ? (
+                              <span className="inline-block bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
+                                {afterText}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 dark:text-slate-500 font-semibold">요일만 변경</span>
+                            )}
                             {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
                               <span className="inline-block ml-1 bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
                                 {pg.speedMultiplier}×
@@ -1248,9 +1268,11 @@ export default function AdminInboxPage() {
                         </div>
                       ) : (
                         <div className="flex flex-wrap gap-2">
-                          <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                            {getGoalTypeLabel(pg.goalType)}: {pg.goalValue}{unitFor(pg.goalType)}
-                          </span>
+                          {hasGoal && (
+                            <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                              {afterText}
+                            </span>
+                          )}
                           {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
                             <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                               배속 {pg.speedMultiplier}×
@@ -1268,6 +1290,12 @@ export default function AdminInboxPage() {
                       {pg.proposedWeekNumber && pg.proposedRangeText && (
                         <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                           {pg.proposedWeekNumber}주차: {pg.proposedRangeText}
+                        </span>
+                      )}
+
+                      {pg.studyDays && pg.studyDays.length > 0 && (
+                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-[#0071E3]">
+                          학습 요일: {pg.studyDays.map((d) => DAY_LABEL_KO[d] || d).join('·')}
                         </span>
                       )}
 

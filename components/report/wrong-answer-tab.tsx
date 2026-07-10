@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Target } from 'lucide-react';
+import { Target, Plus, Minus } from 'lucide-react';
 import { Student } from '@/lib/types/student';
 import { TabHero } from './tab-hero';
 
@@ -25,10 +25,12 @@ interface WrongAnswerTabProps {
   student: Student;
   isStudentReport: boolean;
   incrementBookIncorrectTag: (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined) => void;
+  // 잘못 누른 카운트 되돌리기·직접 수정용. 정확한 값으로 저장한다.
+  setBookIncorrectTag: (materialId: string, tagKey: string, nextCount: number, currentTags: Record<string, number> | undefined) => void;
   activeTab: string;
 }
 
-export function WrongAnswerTab({ student, isStudentReport, incrementBookIncorrectTag, activeTab }: WrongAnswerTabProps) {
+export function WrongAnswerTab({ student, isStudentReport, incrementBookIncorrectTag, setBookIncorrectTag, activeTab }: WrongAnswerTabProps) {
   // 학생 본인 화면 전용 도구(태그 입력). 학부모 리포트에는 노출하지 않는다.
   if (!isStudentReport) return null;
 
@@ -67,33 +69,42 @@ export function WrongAnswerTab({ student, isStudentReport, incrementBookIncorrec
                   </span>
                 </div>
 
-                {/* 오답 사유 추가 버튼 */}
-                <div className="flex flex-wrap gap-1.5">
-                  {TAGS.map((t) => (
-                    <button
-                      key={t.key}
-                      type="button"
-                      onClick={() => incrementBookIncorrectTag(book.id, t.key, book.incorrectTags)}
-                      className="inline-flex items-center gap-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2.5 py-1 text-[11px] font-black text-slate-600 dark:text-slate-300 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] active:scale-95"
-                    >
-                      {t.label} +1
-                    </button>
-                  ))}
+                {/* 오답 사유 스테퍼 — 눌러서 올리고, 잘못 눌렀으면 −로 되돌린다 */}
+                <div className="grid grid-cols-2 gap-2">
+                  {TAGS.map((t) => {
+                    const n = Number(tags[t.key]) || 0;
+                    return (
+                      <div key={t.key} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5">
+                        <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-black leading-none ${n > 0 ? COUNT_CLS[t.key] : 'text-slate-500 dark:text-slate-400'}`}>{t.label}</span>
+                        <span className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={n <= 0}
+                            onClick={() => setBookIncorrectTag(book.id, t.key, n - 1, book.incorrectTags)}
+                            className="grid h-6 w-6 place-items-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 transition hover:border-red-300 hover:text-red-500 active:scale-90 disabled:opacity-30 disabled:hover:border-slate-200 disabled:hover:text-slate-500"
+                            aria-label={`${t.label} 1 줄이기`}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </button>
+                          <span className="w-5 text-center text-xs font-black tabular-nums text-slate-800 dark:text-slate-100">{n}</span>
+                          <button
+                            type="button"
+                            onClick={() => incrementBookIncorrectTag(book.id, t.key, book.incorrectTags)}
+                            className="grid h-6 w-6 place-items-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 transition hover:border-[#0071E3]/40 hover:text-[#0071E3] active:scale-90"
+                            aria-label={`${t.label} 1 늘리기`}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </button>
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
-                {/* 누적 카운트 */}
                 {total > 0 && (
-                  <div className="flex flex-wrap gap-1.5 border-t border-slate-100 dark:border-white/10 pt-3 text-[11px] font-black">
-                    {TAGS.map((t) => {
-                      const n = Number(tags[t.key]) || 0;
-                      if (n <= 0) return null;
-                      return (
-                        <span key={t.key} className={`rounded-md px-2 py-0.5 leading-none ${COUNT_CLS[t.key]}`}>
-                          {t.label} {n}
-                        </span>
-                      );
-                    })}
-                  </div>
+                  <p className="border-t border-slate-100 dark:border-white/10 pt-2.5 text-[10px] font-semibold text-slate-400">
+                    잘못 눌렀다면 <span className="font-black text-slate-500 dark:text-slate-400">−</span> 로 되돌릴 수 있어요.
+                  </p>
                 )}
               </div>
             );

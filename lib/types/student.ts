@@ -149,7 +149,8 @@ export interface ProposedGoal {
   materialType: 'book' | 'lecture';
   goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
   goalValue: number;
-  targetDate?: string;
+  targetDate?: string;                                    // 학생이 고른 목표 완료일(마감일 지정 모드). 표시·주수 산출 근거.
+  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; // 학생이 고른 학습 요일(예: 주말 제외). 승인 시 자료 studyDays 로 반영.
   currentProgress?: number;
   proposedWeekNumber?: number;
   proposedRangeText?: string;

@@ -32,6 +32,13 @@ export function normalizeProposedGoal(raw: unknown): ProposedGoal | undefined {
   if (typeof g.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.targetDate)) {
     normalized.targetDate = g.targetDate;
   }
+  if (Array.isArray(g.studyDays)) {
+    const days = g.studyDays.filter(
+      (d): d is (typeof STUDY_DAY_KEYS)[number] =>
+        typeof d === 'string' && (STUDY_DAY_KEYS as readonly string[]).includes(d),
+    );
+    if (days.length > 0) normalized.studyDays = Array.from(new Set(days));
+  }
   const currentProgressNum = Number(g.currentProgress);
   if (Number.isFinite(currentProgressNum) && currentProgressNum >= 0) {
     normalized.currentProgress = Math.min(999999, Math.round(currentProgressNum));

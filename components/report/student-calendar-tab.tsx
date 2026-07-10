@@ -67,8 +67,9 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
   const [viewYm, setViewYm] = useState<{ y: number; m: number } | null>(null); // m: 0-index
   // 선택일의 공부 계획 상세
   const [dayPlan, setDayPlan] = useState<{ summary: { planned: number; done: number }; items: DayPlanItem[] } | null>(null);
-  // 내 일정(개인 스케줄) 작성/삭제
+  // 내 일정(개인 스케줄) 작성/수정/삭제
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null); // null=신규 작성, 값=수정 대상 sourceId
   const [newTitle, setNewTitle] = useState('');
   const [newMemo, setNewMemo] = useState('');
   const [entryBusy, setEntryBusy] = useState(false);
@@ -133,24 +134,38 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
     return () => { cancelled = true; };
   }, [selectedDate]);
 
-  const addEntry = useCallback(async () => {
+  const resetForm = useCallback(() => {
+    setAdding(false); setEditingId(null); setNewTitle(''); setNewMemo('');
+  }, []);
+
+  // 신규 작성(POST) · 수정(PATCH) 겸용 저장
+  const saveEntry = useCallback(async () => {
     const title = newTitle.trim();
     if (!title || !selectedDate || entryBusy) return;
     setEntryBusy(true);
     try {
-      const res = await fetch('/api/student/calendar-entry', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
-        body: JSON.stringify({ date: selectedDate, title, memo: newMemo.trim() || undefined }),
-      });
+      const res = editingId
+        ? await fetch('/api/student/calendar-entry', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+            body: JSON.stringify({ id: editingId, title, memo: newMemo.trim() || undefined }),
+          })
+        : await fetch('/api/student/calendar-entry', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+            body: JSON.stringify({ date: selectedDate, title, memo: newMemo.trim() || undefined }),
+          });
       const json = await res.json();
       if (res.ok && json.success) {
-        setNewTitle(''); setNewMemo(''); setAdding(false);
+        resetForm();
         await load();
       }
     } catch { /* noop */ } finally {
       setEntryBusy(false);
     }
-  }, [newTitle, newMemo, selectedDate, entryBusy, load]);
+  }, [newTitle, newMemo, selectedDate, entryBusy, editingId, load, resetForm]);
+
+  const startEdit = useCallback((sourceId: string, title: string, memo: string) => {
+    setEditingId(sourceId); setNewTitle(title); setNewMemo(memo); setAdding(true);
+  }, []);
 
   const deleteEntry = useCallback(async (sourceId: string) => {
     try {
@@ -296,7 +311,7 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
           {selectedDate && !adding && (
             <button
               type="button"
-              onClick={() => setAdding(true)}
+              onClick={() => { setEditingId(null); setNewTitle(''); setNewMemo(''); setAdding(true); }}
               className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-900 px-3 py-1.5 text-[11px] font-black text-white active:scale-95 dark:bg-white dark:text-slate-900"
             >
               <Plus className="h-3.5 w-3.5" /> 내 일정 추가
@@ -351,9 +366,10 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
           </div>
         )}
 
-        {/* 내 일정 작성 폼 */}
+        {/* 내 일정 작성/수정 폼 */}
         {adding && (
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/5">
+            <p className="mb-2 text-[11px] font-black text-slate-500 dark:text-slate-400">{editingId ? '내 일정 수정' : '내 일정 추가'}</p>
             <input
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
@@ -372,14 +388,14 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
             <div className="mt-2 flex justify-end gap-1.5">
               <button
                 type="button"
-                onClick={() => { setAdding(false); setNewTitle(''); setNewMemo(''); }}
+                onClick={resetForm}
                 className="rounded-xl px-3 py-1.5 text-[11px] font-bold text-slate-500 hover:bg-black/5 dark:hover:bg-white/10"
               >
                 취소
               </button>
               <button
                 type="button"
-                onClick={addEntry}
+                onClick={saveEntry}
                 disabled={!newTitle.trim() || entryBusy}
                 className="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3.5 py-1.5 text-[11px] font-black text-white disabled:opacity-50 active:scale-95 dark:bg-white dark:text-slate-900"
               >
@@ -395,7 +411,14 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange }: S
           </div>
         ) : (
           selectedItems.map((item) => (
-            <CalendarDetailRow key={item.id} item={item} onResponded={load} onNavigateToGrades={onNavigateToGrades} onDeletePersonal={deleteEntry} />
+            <CalendarDetailRow
+              key={item.id}
+              item={item}
+              onResponded={load}
+              onNavigateToGrades={onNavigateToGrades}
+              onDeletePersonal={deleteEntry}
+              onEditPersonal={(id, title, memo) => startEdit(id, title, memo)}
+            />
           ))
         )}
       </div>
@@ -412,12 +435,13 @@ function StateBadge({ state }: { state: CalendarResponseState }) {
 }
 
 function CalendarDetailRow({
-  item, onResponded, onNavigateToGrades, onDeletePersonal,
+  item, onResponded, onNavigateToGrades, onDeletePersonal, onEditPersonal,
 }: {
   item: StudentCalendarItem;
   onResponded: () => void;
   onNavigateToGrades?: () => void;
   onDeletePersonal?: (sourceId: string) => void;
+  onEditPersonal?: (sourceId: string, title: string, memo: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
 
@@ -487,15 +511,29 @@ function CalendarDetailRow({
           <span className="break-keep text-xs font-black text-slate-900 dark:text-slate-100">{item.title}</span>
           <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${meta.chip}`}>{meta.label}</span>
           <StateBadge state={item.responseState} />
-          {item.kind === 'personal' && onDeletePersonal && (
-            <button
-              type="button"
-              onClick={() => onDeletePersonal(item.sourceId)}
-              className="ml-auto shrink-0 text-slate-300 transition-colors hover:text-red-500 dark:text-slate-600"
-              aria-label="내 일정 삭제"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
+          {item.kind === 'personal' && (onEditPersonal || onDeletePersonal) && (
+            <span className="ml-auto flex shrink-0 items-center gap-2">
+              {onEditPersonal && (
+                <button
+                  type="button"
+                  onClick={() => onEditPersonal(item.sourceId, item.title, item.detail || '')}
+                  className="text-slate-300 transition-colors hover:text-[#0071E3] dark:text-slate-600"
+                  aria-label="내 일정 수정"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              )}
+              {onDeletePersonal && (
+                <button
+                  type="button"
+                  onClick={() => onDeletePersonal(item.sourceId)}
+                  className="text-slate-300 transition-colors hover:text-red-500 dark:text-slate-600"
+                  aria-label="내 일정 삭제"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </span>
           )}
         </div>
         {(item.startTime || item.endDate) && (

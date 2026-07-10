@@ -348,8 +348,10 @@ export function useReportState() {
     message: '',
     materialId: '',
     materialType: 'book' as 'book' | 'lecture',
-    goalType: 'deadlineWeeks' as 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks',
+    goalType: 'deadlineWeeks' as 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced',
     goalValue: '',
+    targetDate: '',
+    studyDays: [] as Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>,
     currentProgress: '',
     proposedWeekNumber: '',
     proposedRangeText: '',
@@ -1288,6 +1290,13 @@ export function useReportState() {
     saveProgressPatch('book', materialId, { incorrectTags: nextTags });
   };
 
+  // 오답노트 태그 카운트를 정확한 값으로 수정(잘못 누른 것 되돌리기·직접 조정). 0 이하는 0으로.
+  const setBookIncorrectTag = (materialId: string, tagKey: string, nextCount: number, currentTags: Record<string, number> | undefined) => {
+    const nextTags = { ...(currentTags || {}) };
+    nextTags[tagKey] = Math.max(0, Math.round(nextCount));
+    saveProgressPatch('book', materialId, { incorrectTags: nextTags });
+  };
+
   const submitChecklist = async (e: React.FormEvent, isEdit = false): Promise<boolean> => {
     e.preventDefault();
     setChecklistSubmitting(true);
@@ -1350,6 +1359,8 @@ export function useReportState() {
           materialType: 'book',
           goalType: 'deadlineWeeks',
           goalValue: '',
+          targetDate: '',
+          studyDays: [],
           currentProgress: '',
           proposedWeekNumber: '',
           proposedRangeText: '',
@@ -2561,6 +2572,7 @@ export function useReportState() {
     deadlineGoals: deadlineDerivation.deadlineGoals,
     deadlineSummary: deadlineDerivation.deadlineSummary,
     incrementBookIncorrectTag,
+    setBookIncorrectTag,
     saveMakeupDone,
     submitChecklist,
     studyTimeLabels: STUDY_TIME_LABELS,

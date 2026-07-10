@@ -100,7 +100,12 @@ export async function PATCH(
         currentProgress,
         proposedWeekNumber,
         proposedRangeText,
+        studyDays: proposedStudyDays,
       } = target.proposedGoal;
+      // 학생이 고른 학습 요일(예: 주말 제외) — 자료 단위 단일 소스(studyDays)로 반영해 계획 생성에 투입.
+      const nextStudyDays = Array.isArray(proposedStudyDays) && proposedStudyDays.length > 0
+        ? proposedStudyDays
+        : null;
       const hasCurrentProgress = currentProgress !== undefined && Number.isFinite(Number(currentProgress));
       const inputDate = kstDateKey();
 
@@ -112,6 +117,7 @@ export async function PATCH(
       const updateBook = (book: any) => {
         if (book.id !== materialId) return book;
         const updated = { ...book };
+        if (nextStudyDays) { updated.studyDays = nextStudyDays; updated.updatedAt = nowIso; }
         const clampedProgress = hasCurrentProgress ? clampProgress(currentProgress, updated.totalPages) : null;
         if (clampedProgress !== null) {
           const prevCurrent = Number(updated.currentPage || 0);
@@ -132,7 +138,7 @@ export async function PATCH(
           updated.updatedAt = nowIso;
         }
 
-        if ((hasCurrentProgress || goalValue > 0) && nextGoalValue > 0) {
+        if ((hasCurrentProgress || goalValue > 0 || nextStudyDays) && nextGoalValue > 0) {
           const { plans, calculatedTargetDate } = generateDetailedPlans(
             materialId,
             updated.totalPages,
@@ -163,6 +169,7 @@ export async function PATCH(
         const proposedSpeed = Number(target.proposedGoal?.speedMultiplier);
         const hasProposedSpeed = Number.isFinite(proposedSpeed) && proposedSpeed > 0;
         const updated = { ...lecture };
+        if (nextStudyDays) { updated.studyDays = nextStudyDays; updated.updatedAt = nowIso; }
         const clampedProgress = hasCurrentProgress ? clampProgress(currentProgress, updated.totalLectures) : null;
         if (clampedProgress !== null) {
           const prevCurrent = Number(updated.completedLectures || 0);
@@ -188,7 +195,7 @@ export async function PATCH(
           updated.updatedAt = nowIso;
         }
 
-        if ((hasCurrentProgress || goalValue > 0 || hasProposedSpeed) && nextGoalValue > 0) {
+        if ((hasCurrentProgress || goalValue > 0 || hasProposedSpeed || nextStudyDays) && nextGoalValue > 0) {
           const { plans, calculatedTargetDate } = generateDetailedPlans(
             materialId,
             updated.totalLectures,

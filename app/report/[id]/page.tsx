@@ -248,6 +248,7 @@ function StudentReportInner() {
     updateDeadlineProgress,
     deadlineGoals,
     incrementBookIncorrectTag,
+    setBookIncorrectTag,
     saveMakeupDone,
     adjustStartPoint,
     submitChecklist,
@@ -871,6 +872,7 @@ function StudentReportInner() {
           student={student}
           isStudentReport={isStudentReport}
           incrementBookIncorrectTag={incrementBookIncorrectTag}
+          setBookIncorrectTag={setBookIncorrectTag}
           activeTab={activeTab}
         />
 
