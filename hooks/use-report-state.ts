@@ -293,6 +293,7 @@ const STUDENT_TAB_IDS = [
   'clinic-booking',
   'coupon-exchange',
   // 신청 컨테이너 서브탭 raw id — 화면에 보이는 탭 id 그대로 딥링크 가능(별칭과 병행 유지)
+  'learning-request',
   'leave',
   'consultation',
   'suggestion',

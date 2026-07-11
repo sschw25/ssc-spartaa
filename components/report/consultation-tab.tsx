@@ -6,7 +6,7 @@ import { usePrompt } from '@/components/ui/confirm-dialog';
 import { SeatMoveCard } from '@/components/report/seat-move-card';
 import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
-import { Armchair, Calendar, CalendarClock, ClipboardList, MessageSquare, Thermometer, Ticket, Trash2, Utensils, Zap } from 'lucide-react';
+import { Armchair, Calendar, CalendarClock, ClipboardList, GraduationCap, MessageSquare, Thermometer, Ticket, Trash2, Utensils, Zap } from 'lucide-react';
 import { LeaveType, MealOrder, Student } from '@/lib/types/student';
 import { LEAVE_TYPE_ICON } from '@/components/leave-type-icon';
 import {
@@ -30,7 +30,7 @@ import {
 import { LeaveProofAttach } from '@/components/report/leave-proof-attach';
 
 type LeaveSlotValue = 'morning' | 'afternoon' | 'night' | 'fullday';
-export type ApplicationSubTab = 'leave' | 'seat' | 'coupon' | 'suggestion' | 'consultation' | 'meal';
+export type ApplicationSubTab = 'learning-request' | 'leave' | 'seat' | 'coupon' | 'suggestion' | 'consultation' | 'meal';
 
 interface ConsultationTabProps {
   student: Student;
@@ -69,6 +69,9 @@ interface ConsultationTabProps {
   mealPlans?: MealPlanWithOrder[];
   onMealSaved?: (planId: string, order: MealOrder) => void;
   pendingMealCount?: number;
+  // 학습 관련 요청(LearningRequestPanel) — 과목별 진도 탭에서 이 탭의 '학습신청' 서브탭으로 이동됨.
+  // 패널 내부는 그대로 두고, page 에서 완성한 노드를 받아 서브탭에 그대로 렌더한다.
+  learningRequestNode?: React.ReactNode;
 }
 
 export function ConsultationTab({
@@ -102,6 +105,7 @@ export function ConsultationTab({
   mealPlans = [],
   onMealSaved,
   pendingMealCount = 0,
+  learningRequestNode,
 }: ConsultationTabProps) {
   const prompt = usePrompt();
   if (!isStudentReport) return null;
@@ -158,6 +162,7 @@ export function ConsultationTab({
   const pendingSuggestionCount = (student.suggestionRequests || []).filter(
     (r) => r.status !== 'resolved',
   ).length;
+  const pendingLearningCount = (student.changeRequests || []).filter((r) => r.status === 'pending').length;
 
   const applicationTabs: Array<{
     id: ApplicationSubTab;
@@ -167,6 +172,7 @@ export function ConsultationTab({
     badge?: number;
     badgeLabel?: string;
   }> = [
+    { id: 'learning-request', label: '학습신청', meta: '진도·계획 요청', icon: GraduationCap, badge: pendingLearningCount, badgeLabel: '대기' },
     { id: 'leave', label: '휴식/반차', meta: `반차 ${homeHalfLeft}회`, icon: Calendar, badge: pendingLeaveCount, badgeLabel: '대기' },
     { id: 'consultation', label: '상담신청', meta: consultationAvailable ? '상담 예약' : '상담 요청', icon: CalendarClock, badge: pendingConsultationCount, badgeLabel: '예정' },
     { id: 'meal', label: '도시락', meta: '주간 신청', icon: Utensils, badge: pendingMealCount, badgeLabel: '미신청' },
@@ -188,7 +194,7 @@ export function ConsultationTab({
               신청
             </h3>
             <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500 dark:text-slate-400">
-              휴식/반차, 상담, 도시락, 자리이동, 쿠폰교환, 건의사항을 한곳에서 처리해요.
+              학습신청, 휴식/반차, 상담, 도시락, 자리이동, 쿠폰교환, 건의사항을 한곳에서 처리해요.
             </p>
           </div>
         </div>
@@ -238,6 +244,9 @@ export function ConsultationTab({
           <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">현재 캠퍼스는 시간 예약형 상담을 운영하지 않습니다.</p>
         </div>
       )}
+
+      {/* 학습 관련 요청 + 진도 재조정 — 과목별 진도 탭에서 이 서브탭으로 이동됨(패널 내부는 그대로) */}
+      {requestSubTab === 'learning-request' && learningRequestNode}
 
       {/* 휴가/반차/휴식권/병가 신청 (관리자에게) */}
       {requestSubTab === 'leave' && (() => {

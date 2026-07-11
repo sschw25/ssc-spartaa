@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BookOpen, Tv, FileText, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
-import { Student, DetailedPlan, ProposedGoal } from '@/lib/types/student';
+import { Student, DetailedPlan } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
   formatPaceComparison,
@@ -13,26 +13,7 @@ import { getExpectedFromPlans, getLeaveDates, getLeaveExemptions, getDeferLeaveE
 import { getMaterialColor } from '@/lib/material-color';
 import { getMakeupLedger } from '@/lib/makeup-ledger';
 import { BenchmarkSection } from '@/components/learning/benchmark-section';
-import { LearningRequestPanel } from '@/components/report/learning-request-panel';
 import { InputHeatmap } from '@/components/report/input-heatmap';
-
-type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
-
-type RequestForm = {
-  requestType: string;
-  message: string;
-  materialId: string;
-  materialType: 'book' | 'lecture';
-  goalType: GoalType;
-  goalValue: string;
-  targetDate: string;
-  studyDays: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
-  currentProgress: string;
-  proposedWeekNumber: string;
-  proposedRangeText: string;
-  speedMultiplier: string;
-  currentGoalSnapshot: { goalType?: GoalType; goalValue?: number; speedMultiplier?: number } | null;
-};
 
 // 진도 입력 히트맵은 자료 상세 시트와 공유하는 공용 컴포넌트로 추출됨 — components/report/input-heatmap.tsx
 
@@ -131,19 +112,9 @@ interface SubjectProgressTabProps {
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string) => Promise<boolean>;
   materialBenchmarks: MaterialBenchmarkMap;
   activeTab: string;
-  // 학습 관련 요청/진도 재조정 패널(execution-plan 탭에서 이동) 관련 props.
-  requestForm: RequestForm;
-  setRequestForm: React.Dispatch<React.SetStateAction<RequestForm>>;
-  requestSubmitting: boolean;
-  requestCustomOpen: boolean;
-  setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal) => Promise<void>;
-  cancelRequest: (id: string) => Promise<void>;
-  showRequestHistory: boolean;
-  setShowRequestHistory: (show: boolean) => void;
-  requestError: string;
-  realignStudentPlans?: (mode: 'keepTargetDate' | 'keepPace') => Promise<void>;
-  realigningPlans?: boolean;
+  // 학습 관련 요청/진도 재조정 패널은 '신청' 탭의 '학습신청' 서브탭으로 이동됨.
+  // 여기서는 '변경 신청' 버튼이 그 서브탭으로 이동하도록 콜백만 받는다(미전달 시 상단 스크롤 폴백).
+  onOpenLearningRequest?: () => void;
   // 자료 카드 '자세히 보기' → 자료 상세 시트(학생 뷰 전용, 미전달 시 비활성).
   openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
 }
@@ -156,18 +127,7 @@ export function SubjectProgressTab({
   updatePlanCompletion,
   materialBenchmarks,
   activeTab,
-  requestForm,
-  setRequestForm,
-  requestSubmitting,
-  requestCustomOpen,
-  setRequestCustomOpen,
-  sendRequest,
-  cancelRequest,
-  showRequestHistory,
-  setShowRequestHistory,
-  requestError,
-  realignStudentPlans,
-  realigningPlans,
+  onOpenLearningRequest,
   openMaterialDetail,
 }: SubjectProgressTabProps) {
   const [pendingPlanKey, setPendingPlanKey] = React.useState<string | null>(null);
@@ -186,12 +146,11 @@ export function SubjectProgressTab({
     return map;
   }, [student]);
 
-  // 요청 폼은 이제 이 탭 안(LearningRequestPanel)에 있으므로, 탭 이동 대신 같은 탭 내 폼으로 스크롤한다.
+  // 요청 폼은 '신청' 탭의 '학습신청' 서브탭으로 이동됨 — '변경 신청' 버튼은 그 서브탭으로 이동한다.
   const goToChangeRequest = React.useCallback(() => {
-    const el = document.getElementById('student-request-panel');
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (onOpenLearningRequest) onOpenLearningRequest();
     else window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, []);
+  }, [onOpenLearningRequest]);
 
   // 자료별 남은 보강 배지(원장 remaining). book/lecture 공용. remaining 0 이면 표시 안 함.
   const renderMakeupBadge = (materialId: string) => {
@@ -471,24 +430,6 @@ export function SubjectProgressTab({
           </div>
         );
       })()}
-
-      {/* 학습 관련 요청 + 진도 재조정 (execution-plan 탭에서 이동) — 학생 본인만 노출 */}
-      <LearningRequestPanel
-        student={student}
-        isStudentReport={isStudentReport}
-        requestForm={requestForm}
-        setRequestForm={setRequestForm}
-        requestSubmitting={requestSubmitting}
-        requestCustomOpen={requestCustomOpen}
-        setRequestCustomOpen={setRequestCustomOpen}
-        sendRequest={sendRequest}
-        cancelRequest={cancelRequest}
-        showRequestHistory={showRequestHistory}
-        setShowRequestHistory={setShowRequestHistory}
-        requestError={requestError}
-        realignStudentPlans={realignStudentPlans}
-        realigningPlans={realigningPlans}
-      />
 
       {!student.subjects || student.subjects.length === 0 ? (
         (student.books.length === 0 && student.lectures.length === 0 ? (

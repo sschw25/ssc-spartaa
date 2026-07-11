@@ -10,6 +10,7 @@ import { PomodoroTimer } from '@/components/report/pomodoro-timer-modal';
 import { TimetableTab } from '@/components/report/timetable-tab';
 import { ExecutionPlanTab } from '@/components/report/execution-plan-tab';
 import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
+import { LearningRequestPanel } from '@/components/report/learning-request-panel';
 import { MakeupTab } from '@/components/report/makeup-tab';
 import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
@@ -51,7 +52,7 @@ const LEARNING_TAB_IDS = LEARNING_SUB_TABS.map((tab) => tab.id);
 const LIFE_TAB_IDS = LIFE_SUB_TABS.map((tab) => tab.id);
 // 신청(#student-requests) 컨테이너의 서브탭 — 화면에 보이는 탭 id 를 그대로 딥링크로 쓸 수 있게 한다.
 // (기존 별칭 clinic-booking·coupon-exchange·student-suggestions 는 하위호환으로 계속 유지)
-const REQUEST_SUB_TABS: ApplicationSubTab[] = ['leave', 'consultation', 'suggestion', 'coupon'];
+const REQUEST_SUB_TABS: ApplicationSubTab[] = ['learning-request', 'leave', 'consultation', 'suggestion', 'coupon'];
 
 function StudentReportInner() {
   const [pendingMockExams, setPendingMockExams] = useState<MockExam[]>([]);
@@ -695,11 +696,10 @@ function StudentReportInner() {
               <button
                 type="button"
                 onClick={() => {
-                  setLearningSubTab('subject-progress');
-                  // 서브탭 전환 후 요청 폼(과목별 진도 탭 내)으로 스크롤.
-                  setTimeout(() => {
-                    document.getElementById('student-request-panel')?.scrollIntoView({ behavior: 'smooth' });
-                  }, 50);
+                  // 학습 관련 요청 패널은 '신청' 탭의 '학습신청' 서브탭으로 이동됨 — 그리로 보낸다.
+                  setRequestSubTab('learning-request');
+                  setActiveTab('student-requests');
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
                 className="rounded-2xl border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-4 py-2 text-xs font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/[0.04] dark:hover:bg-[#0071E3]/15 active:scale-[0.98]"
               >
@@ -854,18 +854,11 @@ function StudentReportInner() {
           updatePlanCompletion={updatePlanCompletion}
           materialBenchmarks={materialBenchmarks}
           activeTab={learningActiveTab}
-          requestForm={requestForm}
-          setRequestForm={setRequestForm}
-          requestSubmitting={requestSubmitting}
-          requestCustomOpen={requestCustomOpen}
-          setRequestCustomOpen={setRequestCustomOpen}
-          sendRequest={sendRequest}
-          cancelRequest={cancelRequest}
-          showRequestHistory={showRequestHistory}
-          setShowRequestHistory={setShowRequestHistory}
-          requestError={requestError}
-          realignStudentPlans={realignStudentPlans}
-          realigningPlans={realigningPlans}
+          onOpenLearningRequest={() => {
+            setRequestSubTab('learning-request');
+            setActiveTab('student-requests');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
           openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
         />
 
@@ -937,6 +930,24 @@ function StudentReportInner() {
           mealPlans={mealPlans}
           onMealSaved={handleMealSaved}
           pendingMealCount={pendingMealCount}
+          learningRequestNode={
+            <LearningRequestPanel
+              student={student}
+              isStudentReport={isStudentReport}
+              requestForm={requestForm}
+              setRequestForm={setRequestForm}
+              requestSubmitting={requestSubmitting}
+              requestCustomOpen={requestCustomOpen}
+              setRequestCustomOpen={setRequestCustomOpen}
+              sendRequest={sendRequest}
+              cancelRequest={cancelRequest}
+              showRequestHistory={showRequestHistory}
+              setShowRequestHistory={setShowRequestHistory}
+              requestError={requestError}
+              realignStudentPlans={realignStudentPlans}
+              realigningPlans={realigningPlans}
+            />
+          }
         />
 
         {/* 6-1. 클리닉 상담 예약 탭 (상담 운영 센터 학생 전용) */}
