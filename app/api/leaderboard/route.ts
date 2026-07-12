@@ -49,9 +49,16 @@ export async function GET(request: Request) {
       dayAttLive[s.student_id] = (dayAttLive[s.student_id] || 0) + Math.max(0, Math.floor((nowMs - inMs) / 60000));
     }
 
+    // 주간 재석에도 오늘의 재석중 경과분을 산입 — 오늘 순공 > 주간 순공 모순 방지.
+    const weekAttLive: Record<string, number> = { ...weekAtt };
+    for (const id of Object.keys(dayAttLive)) {
+      const liveExtra = (dayAttLive[id] || 0) - (dayAtt[id] || 0);
+      if (liveExtra > 0) weekAttLive[id] = (weekAttLive[id] || 0) + liveExtra;
+    }
+
     // 순위는 '집중(순공 타이머)' 기준 — 재석(출결) 상한으로 클램프. 재석은 참고로 병기.
     const dayFocus = focusMinutesByStudent(students, todayStr, todayStr, dayAttLive);
-    const weekFocus = focusMinutesByStudent(students, weekStart, todayStr, weekAtt);
+    const weekFocus = focusMinutesByStudent(students, weekStart, todayStr, weekAttLive);
 
     // 오늘 원생 평균 순공(집중 기록이 있는 학생 기준) — '평균보다 앞/뒤' 멘트용
     const dayValues = Object.values(dayFocus);
@@ -65,8 +72,8 @@ export async function GET(request: Request) {
       today: todayStr,
       week: buildMyStanding(weekFocus, roster, meId),
       day: buildMyStanding(dayFocus, roster, meId),
-      // 재석(출결) 시간 — 랭킹과 별개로 화면에 병기. 오늘은 재석중 경과분 포함(실시간).
-      attendance: { week: weekAtt[meId] || 0, day: dayAttLive[meId] || 0 },
+      // 재석(출결) 시간 — 랭킹과 별개로 화면에 병기. 재석중 경과분 포함(실시간).
+      attendance: { week: weekAttLive[meId] || 0, day: dayAttLive[meId] || 0 },
       peerAvgDay,
       peerCountDay,
       liveCount: openSessions.length,

@@ -421,7 +421,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   // 신규 과목 관련 상태
   const [subjectsState, setSubjectsState] = useState<SubjectProgress[]>([]);
   const [newSubjectName, setNewSubjectName] = useState('');
-  const [editingGoals, setEditingGoals] = useState<Record<string, string>>({});
 
   // 교재/인강 추가용 임시 상태 (과목별로 관리하기 위해 Record 객체 활용)
   const [newBookTitle, setNewBookTitle] = useState<Record<string, string>>({});
@@ -615,13 +614,11 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         setCustomCategories(['기본', '문제풀이', '요약강의']);
       }
 
-      // 각 과목의 학습 목표 및 교재/강의 목표일 초기 세팅
-      const goals: Record<string, string> = {};
+      // 각 교재/강의 목표일 초기 세팅
       const dates: Record<string, string> = {};
       const planRanges: Record<string, string> = {};
 
       (student.subjects || []).forEach(sub => {
-        goals[sub.id] = sub.learningGoal || '';
         sub.books.forEach(b => {
           if (b.targetDate) dates[b.id] = b.targetDate;
           (b.detailedPlans || []).forEach(p => {
@@ -635,7 +632,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
           });
         });
       });
-      setEditingGoals(goals);
       setMaterialTargetDates(dates);
       setWeeklyPlanRanges(planRanges);
       setProgressDrafts({});
@@ -1387,7 +1383,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     const updatedSubjects = [...subjectsState, newSub];
     setSubjectsState(updatedSubjects);
     setNewSubjectName('');
-    setEditingGoals(prev => ({ ...prev, [newSub.id]: '' }));
     setCollapsedSubjects(prev => ({ ...prev, [newSub.id]: false }));
     setIsAutoSaving(true);
     toast.success(`'${newSub.name}' 과목이 추가되었습니다. (자동 저장됨)`);
@@ -1521,17 +1516,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     toast.success(`'${subName}' 과목이 삭제되었습니다. (자동 저장됨)`);
   };
 
-  // 4. 과목 학습 목표 저장
-  const handleSaveLearningGoal = (subId: string) => {
-    const goalText = editingGoals[subId] || '';
-    const updatedSubjects = subjectsState.map(s =>
-      s.id === subId ? { ...s, learningGoal: goalText, updatedAt: new Date().toISOString() } : s
-    );
-
-    setSubjectsState(updatedSubjects);
-    setIsAutoSaving(true);
-    toast.success('학습 목표가 업데이트되었습니다. (자동 저장됨)');
-  };
+  // 과목 학습 목표 편집은 자료 단위(goalDescription)로 이관돼 제거됨 (2026-07).
 
   // 5. 공유 DB 검색 헬퍼
   const searchMaterials = async (query: string, type: 'book' | 'lecture', subject: string) => {
@@ -4577,7 +4562,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 customUnitInput,
                 debouncedQuickPlanText,
                 dropdownRef,
-                editingGoals,
                 editingMaterialEstimatedMinutes,
                 editingMaterialSpeedMultiplier,
                 editingMaterialId,
@@ -4649,7 +4633,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 setCslManager,
                 setCslNextDate,
                 setCustomUnitInput,
-                setEditingGoals,
                 setEditingMaterialEstimatedMinutes,
                 setEditingMaterialSpeedMultiplier,
                 setEditingMaterialId,

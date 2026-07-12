@@ -522,11 +522,8 @@ export function SubjectProgressTab({
                 <span className="text-xs font-black text-slate-800 dark:text-slate-200 px-3.5 py-2 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl inline-block self-start shadow-sm tracking-wider">
                   {sub.name} 과목 학습 스케줄러
                 </span>
-                {isStudentReport && sub.learningGoal && (
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-white/5 border border-slate-100/60 dark:border-white/10 px-3.5 py-1.5 rounded-xl shadow-[inset_0_1px_2px_rgba(0,0,0,0.01)]">
-                    과목 목표: {sub.learningGoal}
-                  </span>
-                )}
+                {/* 과목 단위 학습목표는 자료 단위로 이관(2026-07) — 편집 경로가 없는 낡은 텍스트가
+                    영구 노출되지 않게 표시를 내렸다. 데이터(sub.learningGoal)는 보존. */}
               </div>
 
               {sub.books.length > 0 && (

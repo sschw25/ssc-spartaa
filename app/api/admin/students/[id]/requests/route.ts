@@ -7,7 +7,10 @@ import { weekKeyOf } from '@/lib/makeup-carryover';
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
-const kstDateKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+const kstDateKey = (at?: string) => {
+  const d = at ? new Date(at) : new Date();
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(Number.isNaN(d.getTime()) ? new Date() : d);
+};
 
 const clampProgress = (value: unknown, total: unknown) => {
   const progress = Number(value);
@@ -331,9 +334,12 @@ export async function PATCH(
     // 진도(currentPage/completedLectures)는 건드리지 않는다 → 재승인(resolved 토글) 시에도 멱등.
     if (status === 'resolved' && target.proposedMakeup) {
       const { materialId, materialType, done } = target.proposedMakeup;
-      const weekKey = weekKeyOf(kstDateKey());
+      // 신청 시점(createdAt) 기준 주차로 귀속 — 주말 신청을 다음 주에 승인해도 지난 주 보강이 정정되게.
+      const weekKey = weekKeyOf(kstDateKey(target.createdAt));
       const applyMakeup = (material: any) => {
         if (material.id !== materialId) return material;
+        // 자료에 더 새로운 주차의 보강 기록이 이미 있으면 낡은 정정으로 덮어쓰지 않는다.
+        if (typeof material.makeupWeekKey === 'string' && material.makeupWeekKey > weekKey) return material;
         const total = materialType === 'book' ? Number(material.totalPages) : Number(material.totalLectures);
         const cap = Number.isFinite(total) && total > 0 ? total : 9999;
         const nextDone = Math.max(0, Math.min(Math.round(Number(done) || 0), cap));

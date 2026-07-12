@@ -172,13 +172,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, message: '해당 캠퍼스 일정을 변경할 권한이 없습니다.' }, { status: 403 });
     }
     const cancel = body?.action === 'cancel';
-    // 취소 시 명시 수신자 초기화(폴백 복귀). 발송 시 studentIds 가 배열이면 그 학생에게만, 아니면 미변경(폴백 유지).
+    // 취소 시 명시 수신자 초기화(폴백 복귀). 발송 시 studentIds 가 배열이면 기존 수신자와 **합집합** —
+    // 리마인더를 '미응답만'으로 재발송해도 이미 응답한 학생이 노출 대상에서 빠지지 않게 한다.
+    // (대상을 좁히려면 발송 취소로 초기화 후 다시 발송)
     let recipientStudentIds: string[] | undefined;
     if (cancel) {
       recipientStudentIds = [];
     } else if (Array.isArray(body?.studentIds)) {
+      const picked = (body.studentIds as unknown[]).filter((s): s is string => typeof s === 'string');
       recipientStudentIds = Array.from(
-        new Set((body.studentIds as unknown[]).filter((s): s is string => typeof s === 'string')),
+        new Set([...(existing.recipientStudentIds || []), ...picked]),
       ).slice(0, 2000);
     }
     const event = await notifyCampusEvent(eventId, cancel ? null : new Date().toISOString(), recipientStudentIds);

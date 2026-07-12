@@ -33,7 +33,6 @@ export interface DetailSheetCtx {
   // 업데이터 함수(prev => ...)로 호출되는 setter — prev 의 암시적 any 방지 (구체 타입 필요)
   setCategoryFilter: Dispatch<SetStateAction<Record<string, string>>>;
   setCollapsedSubjects: Dispatch<SetStateAction<Record<string, boolean>>>;
-  setEditingGoals: Dispatch<SetStateAction<Record<string, string>>>;
   setMaterialTargetDates: Dispatch<SetStateAction<Record<string, string>>>;
   setSortOrder: Dispatch<SetStateAction<Record<string, string>>>;
   setWeeklyPlanRanges: Dispatch<SetStateAction<Record<string, string>>>;

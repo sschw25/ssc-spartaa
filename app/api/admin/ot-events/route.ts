@@ -95,13 +95,13 @@ export async function PATCH(request: Request) {
     const cancel = body?.action === 'cancel';
     // 발송 시 체크된 명시 수신자 목록(studentIds). 정의되면 이 학생에게만 노출(미정의면 targetExamTypes 폴백).
     // 취소 시엔 []로 초기화 — notifiedAt=null 후 D-3 자동노출이 이전 수신자에 갇히지 않고 폴백으로 복귀.
+    // 발송은 기존 수신자와 합집합 — '미응답만' 리마인더 재발송이 기응답 학생의 노출을 끊지 않게 한다.
     let recipientStudentIds: string[] | undefined;
     if (cancel) {
       recipientStudentIds = [];
     } else if (Array.isArray(body?.studentIds)) {
-      recipientStudentIds = [...new Set(
-        (body.studentIds as unknown[]).filter((v): v is string => typeof v === 'string' && v.length > 0),
-      )].slice(0, 2000);
+      const picked = (body.studentIds as unknown[]).filter((v): v is string => typeof v === 'string' && v.length > 0);
+      recipientStudentIds = [...new Set([...(existing.recipientStudentIds || []), ...picked])].slice(0, 2000);
     }
     const event = await notifyOtEvent(eventId, cancel ? null : new Date().toISOString(), recipientStudentIds);
     return NextResponse.json({ success: true, event });

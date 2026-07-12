@@ -158,7 +158,7 @@ export default function AdminCalendarPage() {
 
   const handleNoticeFile = async (file: File | undefined) => {
     if (!file) return;
-    if (!/^image\//.test(file.type)) { toast.error('이미지 파일만 올릴 수 있어요.'); return; }
+    if (!/^image\//.test(file.type)) { toast.error('이미지 파일만 올릴 수 있습니다.'); return; }
     try {
       const blob = await compressImageToJpeg(file);
       setNoticeForm((f) => {
@@ -166,7 +166,7 @@ export default function AdminCalendarPage() {
         return { ...f, blob, previewUrl: URL.createObjectURL(blob), fileName: file.name };
       });
     } catch {
-      toast.error('이미지 처리에 실패했어요. 다른 사진으로 시도해 주세요.');
+      toast.error('이미지 처리에 실패했습니다. 다른 사진으로 시도하세요.');
     }
   };
 
@@ -182,7 +182,7 @@ export default function AdminCalendarPage() {
       fd.append('campus', noticeForm.campus);
       const upRes = await fetch('/api/admin/announcement-image', { method: 'POST', body: fd, credentials: 'same-origin' });
       const upJson = await upRes.json();
-      if (!upRes.ok || !upJson.success) { toast.error(upJson.message || '이미지 업로드에 실패했어요.'); return; }
+      if (!upRes.ok || !upJson.success) { toast.error(upJson.message || '이미지 업로드에 실패했습니다.'); return; }
 
       // 2) 공지 일정(category=notice) 등록
       const res = await fetch('/api/admin/campus-events', {
@@ -204,10 +204,10 @@ export default function AdminCalendarPage() {
         setNoticeModalOpen(false);
         toast.success('공지가 등록됐습니다.');
       } else {
-        toast.error(json.message || '등록에 실패했어요.');
+        toast.error(json.message || '등록에 실패했습니다.');
       }
     } catch {
-      toast.error('등록 중 오류가 발생했어요.');
+      toast.error('등록 중 오류가 발생했습니다.');
     } finally {
       setNoticeBusy(false);
     }
@@ -1408,7 +1408,7 @@ export default function AdminCalendarPage() {
                   })}
                 </div>
               </div>
-              <p className="text-[11px] font-semibold text-slate-400">등록 후 날짜 패널에서 대상을 골라 알림을 보낼 수 있어요. 성적 입력은 모의고사 관리에서.</p>
+              <p className="text-[11px] font-semibold text-slate-400">등록 후 날짜 패널에서 대상을 골라 알림을 보낼 수 있습니다. 성적 입력은 모의고사 관리에서.</p>
             </>)}
 
             {/* OT 필드셋 */}
@@ -1436,7 +1436,7 @@ export default function AdminCalendarPage() {
                 <textarea value={otForm.message} onChange={(e) => setOtForm((f) => ({ ...f, message: e.target.value }))} rows={2} placeholder="학생에게 보여줄 안내"
                   className="w-full rounded-xl border border-black/[0.08] dark:border-white/10 text-sm bg-white dark:bg-[#1c1c1e] px-3 py-2 focus:outline-none focus:border-[#0071E3] resize-none" />
               </div>
-              <p className="text-[11px] font-semibold text-slate-400">날짜 3일 전부터 학생에게 자동 노출되며, 대상을 골라 즉시 알림도 보낼 수 있어요.</p>
+              <p className="text-[11px] font-semibold text-slate-400">날짜 3일 전부터 학생에게 자동 노출되며, 대상을 골라 즉시 알림도 보낼 수 있습니다.</p>
             </>)}
 
             {/* 도시락 필드셋 */}
@@ -1502,7 +1502,7 @@ export default function AdminCalendarPage() {
                   </div>
                 )}
               </div>
-              <p className="text-[11px] font-semibold text-slate-400">주·센터당 한 라운드만 만들 수 있어요. 인쇄·정산은 도시락 관리에서.</p>
+              <p className="text-[11px] font-semibold text-slate-400">주·센터당 한 라운드만 만들 수 있습니다. 인쇄·정산은 도시락 관리에서.</p>
             </>)}
 
             <Button
@@ -1607,7 +1607,7 @@ export default function AdminCalendarPage() {
           </DialogHeader>
           <div className="space-y-4 pt-1">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              사진은 업로드 전 자동 압축돼요(용량 걱정 없음). 학생 캘린더 해당 날짜에 표시되고, 눌러서 크게 볼 수 있어요.
+              사진은 업로드 전 자동 압축됩니다(용량 걱정 없음). 학생 캘린더 해당 날짜에 표시되고, 눌러서 크게 볼 수 있습니다.
             </p>
 
             {/* 이미지 선택/미리보기 */}
@@ -1624,7 +1624,7 @@ export default function AdminCalendarPage() {
               )}
             </label>
             {noticeForm.previewUrl && (
-              <p className="text-center text-[11px] font-bold text-[#0071E3]">사진을 다시 누르면 교체할 수 있어요</p>
+              <p className="text-center text-[11px] font-bold text-[#0071E3]">사진을 다시 누르면 교체할 수 있습니다</p>
             )}
 
             <div className="grid grid-cols-2 gap-2">

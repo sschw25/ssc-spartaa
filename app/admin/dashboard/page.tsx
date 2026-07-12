@@ -475,10 +475,8 @@ export default function AdminDashboardPage() {
 
       const goals: Array<{ studentName: string; text: string }> = [];
       filteredStudentsForSubject.forEach((s) => {
+        // 과목 단위 learningGoal 은 자료 단위(goalDescription)로 이관 — 편집 경로 없는 낡은 텍스트는 집계에서 제외.
         const sub = s.subjects?.find((sub) => sub.name === name);
-        if (sub?.learningGoal) {
-          goals.push({ studentName: s.name, text: sub.learningGoal });
-        }
         const books = sub ? sub.books : (name === '기본' ? s.books : []);
         books.forEach((b) => {
           if (b.goalDescription) {

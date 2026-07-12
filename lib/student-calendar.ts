@@ -12,7 +12,7 @@ import { getLeaveTypeLabel } from './leave';
 import { getTodayScheduleItems, type TodayScheduleItem } from './today-schedule';
 import { deriveDeadlineGoals, type DeadlineRiskLevel } from './deadline-goals';
 import { getMaterialColor } from './material-color';
-import { getExpectedFromPlans, getActiveStudyDays, getMaterialStudyDays } from './progress-plan';
+import { getExpectedFromPlans, getActiveStudyDays, getMaterialStudyDays, getLeaveExemptions, getDeferLeaveExemptions } from './progress-plan';
 import { getMakeupObligations } from './makeup-ledger';
 import { weekKeyOf, addDaysToDateKey } from './makeup-carryover';
 import type { CampusEvent, MockExam, OtEvent, Student, PersonalScheduleItem, BookProgress, LectureProgress } from './types/student';
@@ -106,6 +106,9 @@ export function buildMaterialSummaries(student: Student, today: Date, todayKey: 
   // 계획(detailedPlans)이 있으면 시작~완료까지 자료 색 구간 바를 그린다(구글 캘린더식). 대부분 학생이 여기 해당.
   const covered = new Set(out.map((s) => s.materialId));
   const clampRatio = (v: number) => Math.max(0, Math.min(1, v));
+  // 휴가 면제/마감 연장 입력 — 리포트(buildItem)와 같은 인자로 기대치를 계산해 behind/risk 판정이 어긋나지 않게.
+  const leaveExemptions = getLeaveExemptions(student);
+  const deferExemptions = getDeferLeaveExemptions(student);
   for (const subject of student.subjects || []) {
     const handle = (m: BookProgress | LectureProgress, type: 'book' | 'lecture') => {
       if (covered.has(m.id)) return;                       // 이미 deadline 요약에 포함
@@ -122,7 +125,11 @@ export function buildMaterialSummaries(student: Student, today: Date, todayKey: 
       const startDate = starts[0] || todayKey;
       if (startDate > endDate) return;
       const actualRatio = clampRatio(current / total);
-      const expectedAmt = getExpectedFromPlans(dailyPlans, today, studyDays);
+      const effectiveStudyTime = m.studyTime || subject.studyTime;
+      const expectedAmt = getExpectedFromPlans(
+        dailyPlans, today, studyDays, student.createdAt, false,
+        undefined, leaveExemptions, effectiveStudyTime, deferExemptions,
+      );
       const expectedRatio = expectedAmt != null ? clampRatio(expectedAmt / total) : actualRatio;
       const behind = actualRatio < expectedRatio - 0.001;
       const riskLevel: DeadlineRiskLevel = actualRatio < expectedRatio - 0.15 ? 'danger' : behind ? 'warn' : 'ok';

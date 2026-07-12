@@ -89,6 +89,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   const [todaySec, setTodaySec] = useState(initialServerSec);
   const [running, setRunning] = useState(false);
   const [isFs, setIsFs] = useState(false);
+  // Fullscreen API 불가/거부 시(예: 아이폰 사파리는 요소 전체화면 미지원) CSS 오버레이로 대체하는 몰입 모드.
+  const [pseudoFs, setPseudoFs] = useState(false);
   const [visible, setVisible] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [rank, setRank] = useState<RankInfo | null>(null);
@@ -129,6 +131,24 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   useEffect(() => {
     window.localStorage.setItem(focusKey, JSON.stringify({ sec: todaySec, dateKey: todayKey }));
   }, [todaySec, focusKey, todayKey]);
+
+  // 자정(KST) 넘김 감지 — 어제 누적이 새 날짜로 이월돼 순공이 부풀지 않게 상태를 리셋한다.
+  const dayKeyRef = useRef(todayKey);
+  useEffect(() => {
+    const checkRollover = () => {
+      const nowKey = seoulDateKey();
+      if (nowKey === dayKeyRef.current) return;
+      dayKeyRef.current = nowKey;
+      todaySecRef.current = 0;
+      lastFlushRef.current = 0;
+      setTodaySec(0);
+      setSessionSec(0);
+      try { window.localStorage.removeItem(focusKey); } catch { /* noop */ }
+    };
+    const iv = setInterval(checkRollover, 30_000);
+    document.addEventListener('visibilitychange', checkRollover);
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', checkRollover); };
+  }, [focusKey]);
 
   // 모드·목표 복원/저장
   useEffect(() => {
@@ -264,12 +284,22 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   const toggleFullscreen = useCallback(async () => {
     const el = document.getElementById('focus-immersive');
     if (!el) return;
+    if (isFs || pseudoFs) {
+      setPseudoFs(false);
+      try {
+        if (document.exitFullscreen && document.fullscreenElement) await document.exitFullscreen();
+        else if ((document as any).webkitExitFullscreen && (document as any).webkitFullscreenElement) await (document as any).webkitExitFullscreen();
+      } catch { /* 무시 */ }
+      return;
+    }
     try {
-      if (!isFs) { if (el.requestFullscreen) await el.requestFullscreen(); else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen(); }
-      else if (document.exitFullscreen) await document.exitFullscreen();
-      else if ((document as any).webkitExitFullscreen) await (document as any).webkitExitFullscreen();
-    } catch { /* 무시 */ }
-  }, [isFs]);
+      if (el.requestFullscreen) await el.requestFullscreen();
+      else if ((el as any).webkitRequestFullscreen) await (el as any).webkitRequestFullscreen();
+      else setPseudoFs(true); // API 자체가 없는 브라우저 → CSS 오버레이 폴백
+    } catch {
+      setPseudoFs(true); // 거부/실패 → 버튼이 조용히 죽지 않게 폴백
+    }
+  }, [isFs, pseudoFs]);
 
   const start = () => { setRunning(true); acquireWake(); };
   const pause = () => { setRunning(false); releaseWake(); flush(); };
@@ -431,7 +461,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
       {mounted && createPortal(
         <div id="focus-immersive"
           style={{ backgroundColor: '#0b0b0c', backgroundImage: 'radial-gradient(60rem 60rem at 50% -10%, rgba(10,132,255,0.2), transparent 60%), radial-gradient(50rem 50rem at 85% 110%, rgba(10,132,255,0.1), transparent 60%)' }}
-          className={`fixed inset-0 z-50 flex-col items-center justify-center text-white transition-all duration-300 ${isFs ? 'flex opacity-100 pointer-events-auto' : 'hidden opacity-0 pointer-events-none'}`}>
+          className={`fixed inset-0 z-50 flex-col items-center justify-center text-white transition-all duration-300 ${isFs || pseudoFs ? 'flex opacity-100 pointer-events-auto' : 'hidden opacity-0 pointer-events-none'}`}>
           {/* 상단 바 */}
           <div className="pointer-events-auto absolute left-6 right-6 top-6 flex items-center justify-between">
             <span className="glass-clear inline-flex items-center gap-2 rounded-full px-3.5 py-1.5">
