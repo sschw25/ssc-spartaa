@@ -50,7 +50,7 @@ interface LearningRequestPanelProps {
   requestSubmitting: boolean;
   requestCustomOpen: boolean;
   setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }) => Promise<void>;
+  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }) => Promise<boolean>;
   cancelRequest: (id: string) => Promise<void>;
   showRequestHistory: boolean;
   setShowRequestHistory: (show: boolean) => void;
@@ -199,7 +199,8 @@ export function LearningRequestPanel({
         : {}),
     };
 
-    await sendRequest('materialAdd', message, undefined, proposedMaterial);
+    const ok = await sendRequest('materialAdd', message, undefined, proposedMaterial);
+    if (!ok) return; // 실패 시 입력 보존 — 폼을 지우거나 닫지 않는다
     resetMaForm();
     setMaterialAddOpen(false);
   };
@@ -215,9 +216,11 @@ export function LearningRequestPanel({
       : '학습 페이스 유지 (완료 목표일을 뒤로 조정)';
     const message = `[복귀/진도 재조정 요청] 오랜만에 복귀했거나 진도가 많이 밀려 학습계획 재설정이 필요합니다.\n희망 방식: ${modeLabel}\n코멘터님이 검토 후 반영하거나 상담을 안내해 주세요.`;
     try {
-      await sendRequest('plan', message);
-      setRealignRequested(true);
-      setShowRealignBox(false);
+      const ok = await sendRequest('plan', message);
+      if (ok) {
+        setRealignRequested(true);
+        setShowRealignBox(false);
+      }
     } finally {
       setRealignRequesting(null);
     }

@@ -10,13 +10,17 @@ export async function GET() {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  const [student, allExams] = await Promise.all([
-    getStudentById(studentId),
-    getMockExams(),
-  ]);
-
+  const student = await getStudentById(studentId);
   if (!student) {
     return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+  }
+
+  // 조회 실패는 빈 목록으로 graceful 처리 — 학생 화면 폴링이 깨지지 않게 (ot-events 와 동일 규칙).
+  let allExams: Awaited<ReturnType<typeof getMockExams>> = [];
+  try {
+    allExams = await getMockExams();
+  } catch {
+    return NextResponse.json({ success: true, exams: [] });
   }
 
   const myResponses = new Map(

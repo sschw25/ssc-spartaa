@@ -979,7 +979,7 @@ function AdminAttendanceContent() {
                                   onClick={() => quickAttendance(r, 'check-out')}
                                   disabled={savingId === r.id}
                                   title="지금 시각으로 하원 처리"
-                                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-2 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50"
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-2 py-1.5 text-[10px] font-black text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50"
                                 >
                                   <LogOut className="h-3 w-3" />
                                   지금

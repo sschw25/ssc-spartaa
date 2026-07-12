@@ -1380,17 +1380,18 @@ export function useReportState() {
     }
   };
 
+  // 성공 여부를 반환한다 — 호출부는 성공(true)일 때만 폼 리셋/닫기를 해야 입력 유실이 없다.
   const sendRequest = async (
     requestType: string,
     rawMessage: string,
     proposedGoal?: ProposedGoal,
     proposedMaterial?: ProposedMaterial,
     proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number },
-  ) => {
+  ): Promise<boolean> => {
     const message = (rawMessage || '').trim();
     if (!message) {
       setRequestError('신청 내용을 입력해 주세요.');
-      return;
+      return false;
     }
     setRequestError('');
     setRequestSubmitting(true);
@@ -1420,12 +1421,16 @@ export function useReportState() {
         });
         setRequestCustomOpen(false);
         toast.success('신청이 접수되었어요.', { description: '코멘터 확인 후 알림으로 결과를 알려드릴게요.' });
+        return true;
       } else {
         setRequestError(json.message || '신청에 실패했습니다.');
         toast.error(json.message || '신청에 실패했어요.');
+        return false;
       }
     } catch {
       setRequestError('네트워크 오류가 발생했습니다.');
+      toast.error('네트워크 오류가 발생했어요. 잠시 후 다시 시도해 주세요.');
+      return false;
     } finally {
       setRequestSubmitting(false);
     }

@@ -695,7 +695,7 @@ function SeatCard({ seatNum, student, periods, isOnLeave, isCheckedIn, isLeftTod
             <button
               onClick={(e) => { e.stopPropagation(); onCheckIn(); }}
               title="등원 처리 (QR 대체)"
-              className="ml-auto shrink-0 rounded-[3px] border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-[1px] text-[7px] font-black leading-none text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-90 transition"
+              className="ml-auto shrink-0 rounded-[3px] border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/10 px-1 py-[1px] text-[7px] font-black leading-none text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-90 transition"
             >
               등원
             </button>

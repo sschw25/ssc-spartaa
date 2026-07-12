@@ -71,14 +71,20 @@ function isDeferLeave(leave: LeaveRequest): boolean {
   return t === 'morning' || t === 'afternoon' || t === 'night' || t === 'fullday';
 }
 
-// 특정 날짜에 이 과목 슬롯을 면제하는 정해진 휴가가 있는가(그 날 계획분을 미달분에서 제외).
+// 특정 날짜에 이 자료의 시간대를 면제하는 정해진 휴가가 있는가(그 날 계획분을 미달분에서 제외).
+// 시:분 슬롯('t:')은 겹치는 블록으로 환산해 판정 — notifyMakeupLeave 와 동일 규칙.
 function isDeferLeaveOnDay(student: Student, dateKey: string, studyTime?: string): boolean {
+  const materialBlocks: Array<'morning' | 'afternoon' | 'night'> | null = !studyTime
+    ? null
+    : studyTime === 'morning' || studyTime === 'afternoon' || studyTime === 'night'
+      ? [studyTime]
+      : timeSlotBlocks(studyTime);
   for (const req of student.leaveRequests || []) {
     if (req.status !== 'approved' || req.date !== dateKey) continue;
     if (!isDeferLeave(req)) continue;
     const slot = resolveLeaveSlot(req);
     if (slot === 'fullday') return true;
-    if (studyTime && slot === studyTime) return true;
+    if (materialBlocks && materialBlocks.includes(slot)) return true;
   }
   return false;
 }
@@ -113,7 +119,7 @@ function weeklyMaterialShortfall(
       (p) => !p.periodType && p.startDate <= dayKey && dayKey <= p.endDate,
     );
     if (!plan) continue;                                // 일일 계획 없음(기간목표·자율·미설정) → 미달 판정 제외
-    if (isDeferLeaveOnDay(student, dayKey, subject.studyTime)) continue; // 정해진 휴가 면제
+    if (isDeferLeaveOnDay(student, dayKey, material.studyTime || subject.studyTime)) continue; // 정해진 휴가 면제(자료별 시간 우선)
     const daily = Math.max(1, Math.round(plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6)));
     planned += daily;
     const comp = getPlanDailyCompletion(plan, dayKey);

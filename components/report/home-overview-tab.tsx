@@ -111,7 +111,7 @@ interface HomeOverviewTabProps {
   // 자료 상세 시트 열기 — 오늘 계획·자율 목표·주말 보강·기간목표 항목 탭 시(학생 뷰 전용, 미전달 시 비활성).
   openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
   // 학생 변경 신청 전송 — 주말 보강 '수정 요청'(makeup)에 사용(학생 뷰 전용, 미전달 시 버튼 숨김).
-  sendRequest?: (type: string, message: string, proposedGoal?: undefined, proposedMaterial?: undefined, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }) => Promise<void>;
+  sendRequest?: (type: string, message: string, proposedGoal?: undefined, proposedMaterial?: undefined, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }) => Promise<boolean>;
 }
 
 export function HomeOverviewTab({
@@ -1440,14 +1440,16 @@ export function HomeOverviewTab({
                                     try {
                                       const reason = makeupEditReason.trim();
                                       const msg = `[보강 수정] ${it.subjectName} · ${it.materialTitle} · 제안 ${makeupEditAmount}${it.unit} · 사유: ${reason}`;
-                                      await sendRequest('makeup', msg, undefined, undefined, {
+                                      // 성공 토스트는 sendRequest 안에서 뜬다 — 실패 시 입력 보존을 위해 폼을 닫지 않는다.
+                                      const ok = await sendRequest('makeup', msg, undefined, undefined, {
                                         materialId: it.materialId,
                                         materialType: it.materialType,
                                         done: makeupEditAmount,
                                       });
-                                      setMakeupEditId(null);
-                                      setMakeupEditReason('');
-                                      toast.success('보강 수정 요청을 보냈어요.', { description: '코멘터 확인 후 반영해 드릴게요.' });
+                                      if (ok) {
+                                        setMakeupEditId(null);
+                                        setMakeupEditReason('');
+                                      }
                                     } finally {
                                       setMakeupEditSending(false);
                                     }
