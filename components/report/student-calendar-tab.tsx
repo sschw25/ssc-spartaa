@@ -60,6 +60,7 @@ const KIND_META: Record<CalendarItemKind, { label: string; icon: React.Component
   event: { label: '행사·일정', icon: CalendarHeart, dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' },
   leave: { label: '반차·휴식', icon: Ticket, dot: 'bg-rose-400', chip: 'bg-rose-50 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300' },
   consultation: { label: '상담', icon: MessageCircle, dot: 'bg-orange-500', chip: 'bg-orange-50 text-orange-700 dark:bg-orange-500/15 dark:text-orange-300' },
+  makeup: { label: '보강', icon: BookOpen, dot: 'bg-teal-500', chip: 'bg-teal-50 text-teal-700 dark:bg-teal-500/15 dark:text-teal-300' },
   personal: { label: '내 일정', icon: Pencil, dot: 'bg-slate-800 dark:bg-slate-200', chip: 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200' },
 };
 

@@ -13,6 +13,8 @@ import { getTodayScheduleItems, type TodayScheduleItem } from './today-schedule'
 import { deriveDeadlineGoals, type DeadlineRiskLevel } from './deadline-goals';
 import { getMaterialColor } from './material-color';
 import { getExpectedFromPlans, getActiveStudyDays, getMaterialStudyDays } from './progress-plan';
+import { getMakeupObligations } from './makeup-ledger';
+import { weekKeyOf, addDaysToDateKey } from './makeup-carryover';
 import type { CampusEvent, MockExam, OtEvent, Student, PersonalScheduleItem, BookProgress, LectureProgress } from './types/student';
 
 // ── 그날의 공부 계획 · 달성도 (수험 캘린더용) ──────────────────
@@ -165,7 +167,7 @@ export function getPersonalSchedule(student: Student): PersonalScheduleItem[] {
 export const CALENDAR_PAST_DAYS = 45;
 export const CALENDAR_FUTURE_DAYS = 120;
 
-export type CalendarItemKind = 'ot' | 'mock' | 'event' | 'notice' | 'leave' | 'consultation' | 'personal';
+export type CalendarItemKind = 'ot' | 'mock' | 'event' | 'notice' | 'leave' | 'consultation' | 'personal' | 'makeup';
 
 // 응답 상태 — UI 색/뱃지 결정의 단일 소스
 export type CalendarResponseState =
@@ -380,8 +382,28 @@ export function buildStudentCalendar(input: BuildStudentCalendarInput): StudentC
     });
   }
 
+  // 7) 주말 보강 — 이번 주 미달 보강(remaining>0)을 이번 주 토·일 셀에 표시. 보강 탭과 동일 단일 소스.
+  try {
+    const obligations = getMakeupObligations(student, todayKey).filter((o) => o.remaining > 0);
+    if (obligations.length > 0) {
+      const weekKey = weekKeyOf(todayKey);
+      const totalRemaining = obligations.reduce((sum, o) => sum + o.remaining, 0);
+      const titles = obligations.map((o) => `${o.subjectName} ${o.materialTitle}`).slice(0, 3).join(', ');
+      for (const d of [addDaysToDateKey(weekKey, 5), addDaysToDateKey(weekKey, 6)]) {
+        const dday = daysUntil(d, todayKey);
+        if (dday === null || !within(dday)) continue;
+        items.push({
+          id: `makeup_${d}`, kind: 'makeup', sourceId: `makeup_${weekKey}`,
+          title: '주말 보강', date: d, dday,
+          responseState: 'info',
+          detail: `${obligations.length}개 자료 · 남은 ${totalRemaining}개 (${titles})`,
+        });
+      }
+    }
+  } catch { /* 보강 계산 실패해도 캘린더는 그대로 */ }
+
   // 날짜 오름차순 → 같은 날은 종류 순으로 안정화
-  const kindOrder: Record<CalendarItemKind, number> = { notice: 0, ot: 1, mock: 2, event: 3, consultation: 4, leave: 5, personal: 6 };
+  const kindOrder: Record<CalendarItemKind, number> = { notice: 0, ot: 1, mock: 2, event: 3, consultation: 4, leave: 5, makeup: 6, personal: 7 };
   items.sort((a, b) => a.date.localeCompare(b.date) || kindOrder[a.kind] - kindOrder[b.kind]);
   return items;
 }
