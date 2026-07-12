@@ -168,6 +168,18 @@ export default function AdminInboxPage() {
     return map[campus] || campus;
   };
 
+  // 학생 id → 원생 상세 시트 열기(공용). 인박스 목록의 학생명·상세의 버튼 어디서든 재사용.
+  const openStudentById = (studentId: string) => {
+    const student = students.find((s) => s.id === studentId);
+    if (student) {
+      openStudent(student, {
+        onUpdate: (updated) => setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s))),
+        onDelete: (id) => setStudents((prev) => prev.filter((s) => s.id !== id)),
+        allStudents: students,
+      });
+    }
+  };
+
   // proposedGoal에서 자료 제목 조회
   const getMaterialTitle = (studentId: string, proposedGoal: ProposedGoal): string => {
     const student = students.find(s => s.id === studentId);
@@ -1039,7 +1051,14 @@ export default function AdminInboxPage() {
                             className="h-4 w-4 rounded border-slate-300 dark:border-white/20 accent-[#0071E3] cursor-pointer shrink-0"
                           />
                         )}
-                        <span className="font-black text-sm text-slate-800 dark:text-slate-200">{item.studentName}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); openStudentById(item.studentId); }}
+                          title={`${item.studentName} 원생 상세 열기`}
+                          className="font-black text-sm text-slate-800 dark:text-slate-200 hover:text-[#0071E3] hover:underline underline-offset-2 transition-colors"
+                        >
+                          {item.studentName}
+                        </button>
                         <Badge className="rounded-md border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[9px] font-bold text-slate-500 dark:text-slate-400">
                           {getCampusLabel(item.campus)}
                         </Badge>
@@ -1147,16 +1166,7 @@ export default function AdminInboxPage() {
                 <>
                 <button
                   type="button"
-                  onClick={() => {
-                    const student = students.find(s => s.id === selectedItem.studentId);
-                    if (student) {
-                      openStudent(student, {
-                        onUpdate: updated => setStudents(prev => prev.map(s => s.id === updated.id ? updated : s)),
-                        onDelete: id => setStudents(prev => prev.filter(s => s.id !== id)),
-                        allStudents: students,
-                      });
-                    }
-                  }}
+                  onClick={() => openStudentById(selectedItem.studentId)}
                   className="w-full flex items-center justify-center gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 hover:bg-[#F5F5F7] dark:hover:bg-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 py-2.5 transition-all active:scale-[0.98]"
                 >
                   <User className="w-3.5 h-3.5 text-[#0071E3]" />
