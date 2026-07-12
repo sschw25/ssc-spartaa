@@ -193,7 +193,10 @@ export function TimetableTab({
           {/* 비례 하루 그리드: 자료를 실제 시각 위치의 컬러 박스로. 교시 경계는 실금. */}
           <div className="relative w-full overflow-x-hidden">
             <div className="relative w-full" style={{ height: gridHeight }}>
-              {/* 교시 경계 실금 + 좌측 시간/교시 라벨 */}
+              {/* 시간 거터와 내용 영역을 가르는 세로 축선(구글 캘린더식) */}
+              <div className="absolute top-0 bottom-0 border-l border-slate-200 dark:border-white/15" style={{ left: GUTTER }} />
+
+              {/* 교시 경계 실금(거터 우측만) + 좌측 시간/교시 라벨(거터는 가로줄 없이 깔끔하게) */}
               {ACADEMY_TIMETABLE.map((period, pIdx) => {
                 const isStudy = isStudyPeriodType(period.type);
                 const top = yOf(toMinutes(period.start));
@@ -201,8 +204,8 @@ export function TimetableTab({
                 return (
                   <React.Fragment key={pIdx}>
                     <div
-                      className={`absolute left-0 right-0 border-t ${isStudy ? 'border-slate-200 dark:border-white/15' : 'border-slate-100 dark:border-white/[0.06]'}`}
-                      style={{ top }}
+                      className={`absolute right-0 border-t ${isStudy ? 'border-slate-200 dark:border-white/15' : 'border-slate-100 dark:border-white/[0.06]'}`}
+                      style={{ top, left: GUTTER }}
                     />
                     <div className="absolute left-0 w-[48px] pr-1.5 text-right" style={{ top: top - 5 }}>
                       <span className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 tabular-nums leading-none">{period.start}</span>
@@ -213,8 +216,8 @@ export function TimetableTab({
                   </React.Fragment>
                 );
               })}
-              {/* 마지막 종료 실금 + 라벨 */}
-              <div className="absolute left-0 right-0 border-t border-slate-200 dark:border-white/15" style={{ top: gridHeight }} />
+              {/* 마지막 종료 실금(거터 우측만) + 라벨 */}
+              <div className="absolute right-0 border-t border-slate-200 dark:border-white/15" style={{ top: gridHeight, left: GUTTER }} />
               <div className="absolute left-0 w-[48px] pr-1.5 text-right" style={{ top: gridHeight - 5 }}>
                 <span className="block text-[9px] font-bold text-slate-400 dark:text-slate-500 tabular-nums leading-none">
                   {ACADEMY_TIMETABLE[ACADEMY_TIMETABLE.length - 1].end}
@@ -223,6 +226,26 @@ export function TimetableTab({
 
               {/* 블록 영역(좌측 거터 이후) */}
               <div className="absolute top-0 bottom-0" style={{ left: GUTTER, right: 0 }}>
+                {/* 쉬는 시간·식사 시간 — 옅은 파란 휴식 밴드(자료 블록 뒤). 짧은 밴드는 라벨 생략 */}
+                {ACADEMY_TIMETABLE.map((period, pIdx) => {
+                  if (period.type !== 'break' && period.type !== 'meal') return null;
+                  const top = yOf(toMinutes(period.start));
+                  const height = (toMinutes(period.end) - toMinutes(period.start)) * PPM;
+                  return (
+                    <div
+                      key={`rest_${pIdx}`}
+                      className="absolute left-0 right-0 rounded-lg bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/10 flex items-center justify-center overflow-hidden"
+                      style={{ top, height }}
+                    >
+                      {height >= 20 && (
+                        <span className="text-[9px] font-bold text-[#0071E3]/70 dark:text-[#0071E3]/80 break-keep">
+                          {period.label}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+
                 {/* 휴가/외출 밴드 — 막힌 학습 교시 구간에 옅은 앰버 밴드 */}
                 {ACADEMY_TIMETABLE.map((period, pIdx) => {
                   if (!isStudyPeriodType(period.type)) return null;

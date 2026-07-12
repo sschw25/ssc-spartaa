@@ -117,6 +117,10 @@ function ConsultationContent() {
   const [progressDrafts, setProgressDrafts] = useState<Record<string, number>>({});
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // 이름 검색 자동완성(엔터=단일 일치 즉시 열기)
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const suggestionBlurTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // 디바운스 자동저장 타이머 & 최신 상태 Ref 관리
   const debounceTimersRef = useRef<Record<string, NodeJS.Timeout>>({});
   const studentsRef = useRef<Student[]>([]);
@@ -567,6 +571,54 @@ function ConsultationContent() {
     return matchesSearch && matchesQuickFilter;
   });
 
+  // 이름 검색 자동완성: 공백 제거·소문자 정규화. 이름 우선, 부족하면 교재/강의명 보조.
+  const normalizeSearch = (value: string) => value.toLowerCase().replace(/\s+/g, '');
+  const searchQueryNorm = normalizeSearch(searchTerm.trim());
+  const searchSuggestions = (() => {
+    if (searchQueryNorm.length < 1) return [] as Student[];
+    const nameMatches = campusScopedStudents.filter((s) =>
+      normalizeSearch(s.name || '').includes(searchQueryNorm)
+    );
+    const nameMatchedIds = new Set(nameMatches.map((s) => s.id));
+    const materialMatches = campusScopedStudents.filter((s) => {
+      if (nameMatchedIds.has(s.id)) return false;
+      const titles = (s.subjects || []).flatMap((subject) => [
+        ...(subject.books || []).map((b) => b.title || ''),
+        ...(subject.lectures || []).map((l) => l.name || ''),
+      ]);
+      return titles.some((t) => normalizeSearch(t).includes(searchQueryNorm));
+    });
+    return [...nameMatches, ...materialMatches].slice(0, 8);
+  })();
+
+  const handleSelectSuggestion = (student: Student) => {
+    if (suggestionBlurTimerRef.current) clearTimeout(suggestionBlurTimerRef.current);
+    setShowSuggestions(false);
+    handleOpenStudentDetail(student.id);
+  };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      return;
+    }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (searchQueryNorm.length < 1) return;
+    // 이름 정확 일치 우선(동명이인 방어), 없으면 부분 일치 목록으로 판단.
+    const exactName = searchSuggestions.filter(
+      (s) => normalizeSearch(s.name || '') === searchQueryNorm
+    );
+    const candidates = exactName.length === 1 ? exactName : searchSuggestions;
+    if (candidates.length === 1) {
+      handleSelectSuggestion(candidates[0]);
+    } else if (candidates.length === 0) {
+      toast('일치하는 학생이 없습니다.');
+    } else {
+      setShowSuggestions(true);
+    }
+  };
+
   // 정렬된 학생 목록
   const sortedStudents = [...filteredStudents].sort((a, b) => {
     let valA = '';
@@ -997,9 +1049,41 @@ function ConsultationContent() {
                 ref={searchInputRef}
                 placeholder="수강생 이름 또는 교재명을 입력해 주세요."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => setShowSuggestions(true)}
+                onKeyDown={handleSearchKeyDown}
+                onBlur={() => {
+                  suggestionBlurTimerRef.current = setTimeout(() => setShowSuggestions(false), 150);
+                }}
                 className="pl-10 rounded-2xl border-transparent text-[13px] h-11 bg-black/[0.04] dark:bg-white/5"
               />
+              {showSuggestions && searchSuggestions.length > 0 && (
+                <div className="absolute z-30 left-0 right-0 top-full mt-2 rounded-2xl border border-black/[0.06] dark:border-white/10 bg-white dark:bg-[#1c1c1e] shadow-[0_8px_30px_rgba(0,0,0,0.12)] overflow-hidden">
+                  {searchSuggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => handleSelectSuggestion(s)}
+                      className="w-full flex items-center justify-between gap-3 px-3.5 py-2.5 text-left hover:bg-black/[0.03] dark:hover:bg-white/5 transition-colors"
+                    >
+                      <span className="flex items-center gap-2 min-w-0">
+                        <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                        <span className="text-[13px] font-bold text-slate-800 dark:text-slate-100 truncate">{s.name}</span>
+                        {s.manager && (
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{s.manager}</span>
+                        )}
+                      </span>
+                      <Badge variant="outline" className={`shrink-0 text-[10px] px-1.5 py-0 h-5 ${getCampusBadgeColor(s.campus || '')}`}>
+                        {getCampusLabel(s.campus || '')}
+                      </Badge>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <Button

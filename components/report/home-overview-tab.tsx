@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { toast } from 'sonner';
-import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, Smartphone, Archive, PowerOff, ChevronRight, type LucideIcon } from 'lucide-react';
+import { Sparkles, CheckCircle2, Clock, Award, MessageSquare, CalendarDays, Plus, Trash2, X, Target, Smartphone, Archive, PowerOff, ChevronRight, Quote, type LucideIcon } from 'lucide-react';
 import { Student, DDayEvent } from '@/lib/types/student';
 import type { BookProgress, ConsultationBooking, LectureProgress } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
@@ -535,9 +535,14 @@ export function HomeOverviewTab({
               {checklistTip}
             </p>
 
-            <p className="mt-3 border-t border-[#0071E3]/10 pt-2.5 text-[11px] font-medium italic leading-relaxed text-slate-500 dark:text-slate-400 break-keep">
-              “{getDailyQuote()}”
-            </p>
+            {/* 오늘의 한마디 — 라운지 글귀 감성. 장식 인용부호 + 라벨. */}
+            <div className="relative mt-3 overflow-hidden rounded-2xl border border-[#0071E3]/12 bg-gradient-to-br from-[#0071E3]/[0.05] to-transparent px-4 py-3 dark:border-white/10 dark:from-[#0071E3]/12">
+              <Quote className="pointer-events-none absolute -right-1.5 -top-1.5 h-11 w-11 rotate-6 fill-[#0071E3]/[0.06] text-[#0071E3]/[0.06] dark:fill-[#0071E3]/15 dark:text-[#0071E3]/15" />
+              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#0071E3]/70">오늘의 한마디</p>
+              <p className="mt-1 break-keep text-[13px] font-bold leading-relaxed text-slate-700 dark:text-slate-100">
+                {getDailyQuote()}
+              </p>
+            </div>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
               <StreakCard compact />
@@ -1265,15 +1270,22 @@ export function HomeOverviewTab({
               {/* 주말 보강 박스 — 오늘이 토/일이고 남은 보강이 있으면 '오늘 할 일'에 노출(입력 가능). */}
               {isWeekendToday && makeupLedger.length > 0 && (
                 <div className="mt-1 space-y-2.5 rounded-2xl border border-amber-200 dark:border-amber-500/25 bg-amber-50/70 dark:bg-amber-500/10 p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
+                  {/* 헤더 클릭 → 보강 탭으로 이동(자세한 관리·이력). */}
+                  <button
+                    type="button"
+                    onClick={openMakeup}
+                    disabled={!openMakeup}
+                    className="flex w-full items-center justify-between gap-2 text-left transition active:scale-[0.99] disabled:cursor-default"
+                  >
+                    <span className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300">
                       <CalendarDays className="h-3.5 w-3.5" />
                       이번 주말 보강
-                    </p>
+                      {openMakeup && <ChevronRight className="h-3.5 w-3.5 text-amber-400 dark:text-amber-500" />}
+                    </span>
                     <span className="rounded-full bg-white dark:bg-[#1c1c1e] px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-300">
                       오늘 할 일에 포함
                     </span>
-                  </div>
+                  </button>
                   <p className="text-[11px] font-medium text-amber-800/80 dark:text-amber-300/80">
                     휴가로 빠진 만큼 보강할 분량이에요. 보강한 만큼 입력하면 진도도 함께 채워져요.
                   </p>

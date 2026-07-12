@@ -12,7 +12,8 @@ import { getLeaveTypeLabel } from './leave';
 import { getTodayScheduleItems, type TodayScheduleItem } from './today-schedule';
 import { deriveDeadlineGoals, type DeadlineRiskLevel } from './deadline-goals';
 import { getMaterialColor } from './material-color';
-import type { CampusEvent, MockExam, OtEvent, Student, PersonalScheduleItem } from './types/student';
+import { getExpectedFromPlans, getActiveStudyDays, getMaterialStudyDays } from './progress-plan';
+import type { CampusEvent, MockExam, OtEvent, Student, PersonalScheduleItem, BookProgress, LectureProgress } from './types/student';
 
 // ── 그날의 공부 계획 · 달성도 (수험 캘린더용) ──────────────────
 const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
@@ -74,7 +75,7 @@ export function buildMaterialSummaries(student: Student, today: Date, todayKey: 
   const { deadlineGoals } = deriveDeadlineGoals(student, today, todayKey);
   const allBooks = (student.subjects || []).flatMap((s) => s.books || []);
   const allLectures = (student.subjects || []).flatMap((s) => s.lectures || []);
-  return deadlineGoals.map((g) => {
+  const out: MaterialProgressSummary[] = deadlineGoals.map((g) => {
     const mat = g.type === '교재'
       ? allBooks.find((b) => b.id === g.materialId)
       : allLectures.find((l) => l.id === g.materialId);
@@ -82,7 +83,7 @@ export function buildMaterialSummaries(student: Student, today: Date, todayKey: 
       id: `${g.materialId}_${g.planId}`,
       subject: g.subject,
       title: g.title,
-      type: g.type,
+      type: g.type as '강의' | '교재',
       materialType: g.materialType,
       materialId: g.materialId,
       unit: g.unit,
@@ -97,7 +98,58 @@ export function buildMaterialSummaries(student: Student, today: Date, todayKey: 
       riskLevel: g.riskLevel,
       color: getMaterialColor(mat || { id: g.materialId }),
     };
-  }).sort((a, b) => a.daysRemaining - b.daysRemaining || a.subject.localeCompare(b.subject));
+  });
+
+  // 기간지정(deadline)이 아닌 '일일 계획' 자료도 캘린더 바로 노출 — 완료 예정일(targetDate)이 있고
+  // 계획(detailedPlans)이 있으면 시작~완료까지 자료 색 구간 바를 그린다(구글 캘린더식). 대부분 학생이 여기 해당.
+  const covered = new Set(out.map((s) => s.materialId));
+  const clampRatio = (v: number) => Math.max(0, Math.min(1, v));
+  for (const subject of student.subjects || []) {
+    const handle = (m: BookProgress | LectureProgress, type: 'book' | 'lecture') => {
+      if (covered.has(m.id)) return;                       // 이미 deadline 요약에 포함
+      const total = type === 'book' ? (m as BookProgress).totalPages || 0 : (m as LectureProgress).totalLectures || 0;
+      const current = type === 'book' ? (m as BookProgress).currentPage || 0 : (m as LectureProgress).completedLectures || 0;
+      const plans = m.detailedPlans || [];
+      const dailyPlans = plans.filter((p) => p.periodType !== 'deadline');
+      // 완료 예정일: 자료 targetDate(휴가 보정) 우선, 없으면 마지막 계획 종료일.
+      const studyDays = getActiveStudyDays(getMaterialStudyDays(subject.studyDays, m.studyDays));
+      const endDate = m.targetDate || (dailyPlans.length ? dailyPlans[dailyPlans.length - 1].endDate : '');
+      if (!endDate || total <= 0) return;
+      // 시작일: 첫 계획 시작일, 없으면 오늘.
+      const starts = dailyPlans.map((p) => p.startDate).filter(Boolean).sort();
+      const startDate = starts[0] || todayKey;
+      if (startDate > endDate) return;
+      const actualRatio = clampRatio(current / total);
+      const expectedAmt = getExpectedFromPlans(dailyPlans, today, studyDays);
+      const expectedRatio = expectedAmt != null ? clampRatio(expectedAmt / total) : actualRatio;
+      const behind = actualRatio < expectedRatio - 0.001;
+      const riskLevel: DeadlineRiskLevel = actualRatio < expectedRatio - 0.15 ? 'danger' : behind ? 'warn' : 'ok';
+      out.push({
+        id: `${m.id}_daily`,
+        subject: subject.name,
+        title: type === 'book' ? (m as BookProgress).title : (m as LectureProgress).name,
+        type: type === 'book' ? '교재' : '강의',
+        materialType: type,
+        materialId: m.id,
+        unit: type === 'book' ? ((m as BookProgress).unit || 'p') : '강',
+        startDate,
+        endDate,
+        daysRemaining: daysUntil(endDate, todayKey) ?? 0,
+        targetAmount: total,
+        actualAmount: current,
+        actualRatio,
+        expectedRatio,
+        behind,
+        riskLevel,
+        color: getMaterialColor(m),
+      });
+      covered.add(m.id);
+    };
+    (subject.books || []).forEach((b) => handle(b, 'book'));
+    (subject.lectures || []).forEach((l) => handle(l, 'lecture'));
+  }
+
+  return out.sort((a, b) => a.daysRemaining - b.daysRemaining || a.subject.localeCompare(b.subject));
 }
 
 // student_state.personalSchedule 를 안전하게 읽는다(스키마 유연 컬럼).
