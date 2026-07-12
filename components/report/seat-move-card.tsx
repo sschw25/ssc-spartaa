@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Armchair, Loader2, X } from 'lucide-react';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { AnimatedOverlay } from '@/components/ui/animated-overlay';
 import { CAMPUS_LAYOUTS, isCampusKey, type CampusKey } from '@/lib/seat-layouts';
 
 interface SeatMoveClientRequest {
@@ -74,7 +75,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
 
   const request = data?.myRequest ?? null;
 
-  async function pickSeat(seat: number) {
+  async function pickSeat(seat: number, closeModal: () => void) {
     if (!data || submitting) return;
     const ok = await confirm({
       title: `${seat}번 자리로 이동을 신청할까요?`,
@@ -92,7 +93,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) throw new Error(json.message || '신청에 실패했습니다.');
       toast.success(`${seat}번 자리로 이동을 신청했어요. 승인을 기다려 주세요.`);
-      setPickerOpen(false);
+      closeModal();
       await refresh();
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : '신청에 실패했습니다.');
@@ -198,17 +199,21 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
 
       {/* 좌석 선택 모달 — 익명 배치도(좌석번호만, 이름 없음) */}
       {pickerOpen && (
-        <div className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center" onClick={() => setPickerOpen(false)}>
-          <div
-            className="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-3xl bg-white dark:bg-[#1c1c1e] shadow-2xl sm:rounded-3xl"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <AnimatedOverlay
+          onClose={() => setPickerOpen(false)}
+          align="bottom"
+          ariaLabel="자리 선택"
+          backdropClassName="fixed inset-0 z-[90] flex items-end justify-center bg-slate-900/40 backdrop-blur-sm sm:items-center"
+          panelClassName="flex max-h-[88vh] w-full max-w-2xl flex-col rounded-t-3xl bg-white dark:bg-[#1c1c1e] shadow-2xl sm:rounded-3xl"
+        >
+          {(requestClose) => (
+          <>
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-white/10 px-5 py-4">
               <div>
                 <h4 className="text-base font-black text-slate-900 dark:text-slate-100">자리 선택</h4>
                 <p className="mt-0.5 text-[11px] font-semibold text-slate-400">회색은 사용 중이거나 신청된 자리예요. 빈자리를 눌러 신청하세요.</p>
               </div>
-              <button type="button" onClick={() => setPickerOpen(false)} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700" aria-label="닫기">
+              <button type="button" onClick={requestClose} className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-700" aria-label="닫기">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -268,7 +273,7 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                                     key={ci}
                                     type="button"
                                     disabled={disabled}
-                                    onClick={() => pickSeat(cell)}
+                                    onClick={() => pickSeat(cell, requestClose)}
                                     aria-label={isMine ? `${cell}번 (내 자리)` : isOccupied ? `${cell}번 (사용 중)` : isRequested ? `${cell}번 (신청됨)` : `${cell}번 자리 신청`}
                                     className={`relative flex h-8 items-center justify-center rounded-lg border text-[11px] font-black transition ${
                                       isMine
@@ -308,8 +313,9 @@ export function SeatMoveCard({ campus, active }: { campus: string; active: boole
                 </div>
               </>
             )}
-          </div>
-        </div>
+          </>
+          )}
+        </AnimatedOverlay>
       )}
     </div>
   );

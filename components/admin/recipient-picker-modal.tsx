@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2, Search, Users, X, MessageSquare } from 'lucide-react';
 import type { Student } from '@/lib/types/student';
+import { useOverlayTransition } from '@/hooks/use-overlay-transition';
 
 const CAMPUS_FILTERS = ['all', 'wonju', 'chuncheon', 'chungju'];
 const getCampusLabel = (c: string) => ({ wonju: '원주', chuncheon: '춘천', chungju: '충주' }[c] ?? '기타');
@@ -64,6 +65,8 @@ export function RecipientPickerModal({
   const [contactSel, setContactSel] = useState<Set<string>>(() => new Set());
   const [statusSel, setStatusSel] = useState<Set<PartStatus>>(() => new Set());
   const [query, setQuery] = useState('');
+  // 닫힘 전환 — 취소(X·닫기)는 exit 애니메이션 재생 후 onCancel. 발송(onSend)은 부모가 언마운트 관리.
+  const { closing, requestClose } = useOverlayTransition(onCancel);
 
   const statusOf = (id: string): PartStatus => participations?.get(id) ?? 'pending';
   const toggleCampus = (c: string) => setCampusSel((p) => { const n = new Set(p); if (n.has(c)) n.delete(c); else n.add(c); return n; });
@@ -100,8 +103,8 @@ export function RecipientPickerModal({
   const selectedCount = selected.size;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
-      <div className="w-full max-w-lg rounded-3xl glass-strong shadow-2xl flex flex-col max-h-[85vh]">
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`} style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+      <div className={`w-full max-w-lg rounded-3xl glass-strong shadow-2xl flex flex-col max-h-[85vh] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out zoom-out-95 fade-out-0' : 'animate-in zoom-in-95 fade-in-0'}`}>
         {/* 헤더 */}
         <div className="flex items-start justify-between gap-3 p-5 pb-3">
           <div className="min-w-0">
@@ -112,7 +115,7 @@ export function RecipientPickerModal({
               {eventName} · 체크된 학생에게만 알림이 갑니다.
             </p>
           </div>
-          <button type="button" onClick={onCancel} disabled={sending}
+          <button type="button" onClick={requestClose} disabled={sending}
             className="rounded-lg p-1.5 text-slate-400 hover:text-slate-600 hover:bg-black/5 dark:hover:bg-white/10 transition shrink-0">
             <X className="w-4 h-4" />
           </button>
@@ -216,7 +219,7 @@ export function RecipientPickerModal({
 
         {/* 푸터 */}
         <div className="flex gap-2 justify-end p-5 pt-3 border-t border-black/[0.06] dark:border-white/10">
-          <button type="button" onClick={onCancel} disabled={sending}
+          <button type="button" onClick={requestClose} disabled={sending}
             className="h-9 rounded-2xl bg-[#F5F5F7] dark:bg-white/10 px-4 text-[12px] font-bold text-slate-900 dark:text-slate-100 hover:bg-[#E5E5EA] dark:hover:bg-white/15 transition-colors disabled:opacity-50">
             닫기
           </button>

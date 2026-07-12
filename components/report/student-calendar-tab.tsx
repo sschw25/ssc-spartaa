@@ -13,6 +13,7 @@ import type {
   StudentCalendarItem, CalendarItemKind, CalendarResponseState, MaterialProgressSummary,
 } from '@/lib/student-calendar';
 import { readableTextOn } from '@/lib/material-color';
+import { useOverlayTransition } from '@/hooks/use-overlay-transition';
 
 type RiskLevel = MaterialProgressSummary['riskLevel'];
 
@@ -640,6 +641,30 @@ function MaterialProgressRow({ m, onOpen, canOpen }: { m: MaterialProgressSummar
   );
 }
 
+// 사진 공지 라이트박스 — 열림/닫힘 전환(배경 페이드 + 이미지 줌). 조건부 마운트라 재열림 시 잔상 없음.
+function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClose: () => void }) {
+  const { closing, requestClose } = useOverlayTransition(onClose);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') requestClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [requestClose]);
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      onClick={requestClose}
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`}
+    >
+      <button type="button" onClick={requestClose} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white">
+        <X className="h-5 w-5" />
+      </button>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt={alt} onClick={(e) => e.stopPropagation()} className={`max-h-[85vh] max-w-full rounded-xl object-contain duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out zoom-out-95 fade-out-0' : 'animate-in zoom-in-95 fade-in-0'}`} />
+    </div>
+  );
+}
+
 function CalendarDetailRow({
   item, onResponded, onNavigateToGrades, onDeletePersonal, onEditPersonal,
 }: {
@@ -650,14 +675,6 @@ function CalendarDetailRow({
   onEditPersonal?: (sourceId: string, title: string, memo: string) => void;
 }) {
   const [zoom, setZoom] = useState(false);
-
-  // 라이트박스 열림 동안 Escape 로 닫기
-  useEffect(() => {
-    if (!zoom) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setZoom(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [zoom]);
 
   // 응답형(미응답) — 기존 응답 카드 재사용
   if (item.responseState === 'needs-response') {
@@ -689,20 +706,7 @@ function CalendarDetailRow({
             <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-bold text-[#0071E3]"><Megaphone className="h-3 w-3" /> 눌러서 크게 보기</span>
           </span>
         </button>
-        {zoom && (
-          <div
-            role="dialog"
-            aria-modal="true"
-            onClick={() => setZoom(false)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4"
-          >
-            <button type="button" onClick={() => setZoom(false)} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white">
-              <X className="h-5 w-5" />
-            </button>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={item.imageUrl} alt={item.title} className="max-h-[85vh] max-w-full rounded-xl object-contain" onClick={(e) => e.stopPropagation()} />
-          </div>
-        )}
+        {zoom && <ImageLightbox src={item.imageUrl} alt={item.title} onClose={() => setZoom(false)} />}
       </>
     );
   }

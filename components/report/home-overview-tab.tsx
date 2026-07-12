@@ -7,6 +7,7 @@ import { Student, DDayEvent } from '@/lib/types/student';
 import type { BookProgress, ConsultationBooking, LectureProgress } from '@/lib/types/student';
 import type { DeadlineGoal } from '@/lib/deadline-goals';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { AnimatedOverlay } from '@/components/ui/animated-overlay';
 import { HomeHighlightsPanel } from './home-highlights-panel';
 import { StudyStatsCard, StudyStats } from './study-stats-card';
 import { LeaderboardCard } from './leaderboard-card';
@@ -1694,18 +1695,22 @@ export function HomeOverviewTab({
 
     {/* D-Day 관리 모달 */}
     {isStudentReport && ddayOpen && (
-          <div className="fixed inset-0 z-50 flex items-end justify-center pb-6 px-4 bg-black/30 backdrop-blur-sm no-print" onClick={() => setDdayOpen(false)}>
-            <div
-              className="w-full max-w-sm rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-2xl overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <AnimatedOverlay
+            onClose={() => setDdayOpen(false)}
+            align="bottom"
+            ariaLabel="D-Day 관리"
+            backdropClassName="fixed inset-0 z-50 flex items-end justify-center pb-6 px-4 bg-black/30 backdrop-blur-sm no-print"
+            panelClassName="w-full max-w-sm rounded-3xl bg-white dark:bg-[#1c1c1e] shadow-2xl overflow-hidden"
+          >
+          {(requestClose) => (
+            <>
               {/* 헤더 */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-black/[0.06] dark:border-white/10 bg-[#FAFAFA] dark:bg-white/5">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-4 h-4 text-[#0071E3]" />
                   <h3 className="text-sm font-black text-slate-900 dark:text-slate-100">D-Day 관리</h3>
                 </div>
-                <button onClick={() => setDdayOpen(false)} className="text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                <button onClick={requestClose} className="text-slate-400 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
                   <X className="w-4 h-4" />
                 </button>
               </div>
@@ -1771,8 +1776,9 @@ export function HomeOverviewTab({
                   D-Day 추가
                 </button>
               </div>
-            </div>
-          </div>
+            </>
+          )}
+          </AnimatedOverlay>
     )}
     </>
   );

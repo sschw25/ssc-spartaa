@@ -10,6 +10,7 @@ import { MATERIAL_COLORS, getMaterialColor, hasExplicitColor } from '@/lib/mater
 import { toast } from 'sonner';
 import { InputHeatmap } from './input-heatmap';
 import { StartPointAdjustPanel, type StartPointAdjustInfo, type StartPointAdjustResult } from './start-point-adjust-panel';
+import { useOverlayTransition } from '@/hooks/use-overlay-transition';
 
 // 자료(교재/인강) 상세 시트 — 학생 뷰 전용 풀스크린 오버레이.
 // 홈/시간표/과목별 진도의 어떤 항목을 눌러도 그 자료의 진도·계획·기록을 한곳에서 보여준다.
@@ -74,6 +75,8 @@ export function MaterialDetailSheet({
   onOpenChangeRequest,
 }: MaterialDetailSheetProps) {
   const [adjustOpen, setAdjustOpen] = useState(false);
+  // 닫힘 전환 — exit 애니메이션 재생 후 실제 onClose. 모든 닫기 트리거를 requestClose 로 라우팅.
+  const { closing, requestClose } = useOverlayTransition(onClose);
 
   // ESC 로 닫기 + 열려 있는 동안 배경 스크롤 잠금.
   useEffect(() => {
@@ -82,7 +85,7 @@ export function MaterialDetailSheet({
       // 입력 중(사유 textarea·숫자 입력 등) ESC 는 시트를 닫지 않는다 — 입력 취소 용도로 남겨둔다.
       const target = e.target as HTMLElement | null;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT' || target.isContentEditable)) return;
-      onClose();
+      requestClose();
     };
     window.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
@@ -91,7 +94,7 @@ export function MaterialDetailSheet({
       window.removeEventListener('keydown', onKey);
       document.body.style.overflow = prevOverflow;
     };
-  }, [onClose]);
+  }, [requestClose]);
 
   const leaveDates = useMemo(() => getLeaveDates(student), [student]);
 
@@ -191,15 +194,15 @@ export function MaterialDetailSheet({
 
   return (
     <div
-      className="no-print fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6"
-      onClick={onClose}
+      className={`no-print fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6 duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`}
+      onClick={requestClose}
       role="dialog"
       aria-modal="true"
       aria-label={`${subjectName} ${title} 상세`}
     >
       <div
         // 시트 표면 — glass-strong(72% 흰색)이 어두운 오버레이 위에서 회색빛으로 보여, 학생 시트는 더 하얀 유리로.
-        className="flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/60 dark:border-white/10 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_10px_40px_rgba(0,0,0,0.15)] sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px]"
+        className={`flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/60 dark:border-white/10 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_10px_40px_rgba(0,0,0,0.15)] sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out slide-out-to-bottom-4 fade-out-0 sm:zoom-out-95' : 'animate-in slide-in-from-bottom-4 fade-in-0 sm:zoom-in-95'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. 헤더 — 과목·자료명·종류·단위 + 닫기 */}
@@ -221,7 +224,7 @@ export function MaterialDetailSheet({
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={requestClose}
             aria-label="닫기"
             className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100/80 dark:bg-white/10 text-slate-500 dark:text-slate-300 transition hover:bg-slate-200/80 dark:hover:bg-white/15 active:scale-95"
           >
