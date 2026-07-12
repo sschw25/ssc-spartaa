@@ -543,10 +543,11 @@ export function HomeOverviewTab({
               {checklistTip}
             </p>
 
-            {/* 오늘의 한마디 — 라운지 글귀 감성. 장식 인용부호 + 라벨. */}
-            <div className="relative mt-3 overflow-hidden rounded-2xl border border-[#0071E3]/12 bg-gradient-to-br from-[#0071E3]/[0.05] to-transparent px-4 py-3 dark:border-white/10 dark:from-[#0071E3]/12">
-              <Quote className="pointer-events-none absolute -right-1.5 -top-1.5 h-11 w-11 rotate-6 fill-[#0071E3]/[0.06] text-[#0071E3]/[0.06] dark:fill-[#0071E3]/15 dark:text-[#0071E3]/15" />
-              <p className="text-[9px] font-black uppercase tracking-[0.14em] text-[#0071E3]/70">오늘의 한마디</p>
+            {/* 오늘의 한마디 — 라운지 글귀 감성. 라벨 옆 작은 인용부호(장식 잘림 없이 깔끔). */}
+            <div className="mt-3 rounded-2xl border border-[#0071E3]/12 bg-gradient-to-br from-[#0071E3]/[0.05] to-transparent px-4 py-3 dark:border-white/10 dark:from-[#0071E3]/12">
+              <p className="flex items-center gap-1 text-[9px] font-black uppercase tracking-[0.14em] text-[#0071E3]/70">
+                <Quote className="h-2.5 w-2.5 fill-current" /> 오늘의 한마디
+              </p>
               <p className="mt-1 break-keep text-[13px] font-bold leading-relaxed text-slate-700 dark:text-slate-100">
                 {getDailyQuote()}
               </p>
