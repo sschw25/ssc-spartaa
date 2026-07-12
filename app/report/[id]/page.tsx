@@ -818,6 +818,7 @@ function StudentReportInner() {
           openNotifications={openNotificationsTab}
           openLeaveRequests={openLeaveRequestsTab}
           openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
+          sendRequest={sendRequest}
         />
 
         {/* 2. 오늘 계획 (시간표) 탭 */}

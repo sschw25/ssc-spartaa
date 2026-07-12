@@ -3,6 +3,7 @@ import { canAdminAccessStudent } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
 import { generateDetailedPlans, getMaterialStudyDays } from '@/lib/progress-plan';
 import { appendThreadMessage } from '@/lib/thread';
+import { weekKeyOf } from '@/lib/makeup-carryover';
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
@@ -324,6 +325,31 @@ export async function PATCH(
       appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
       target.adminReply = noticeText;
       target.repliedAt = nowIso;
+    }
+
+    // 학생 주말 보강 수정 제안(makeup) — 승인 시 해당 자료의 makeupDone(주 스코프)을 제안값으로 반영한다.
+    // 진도(currentPage/completedLectures)는 건드리지 않는다 → 재승인(resolved 토글) 시에도 멱등.
+    if (status === 'resolved' && target.proposedMakeup) {
+      const { materialId, materialType, done } = target.proposedMakeup;
+      const weekKey = weekKeyOf(kstDateKey());
+      const applyMakeup = (material: any) => {
+        if (material.id !== materialId) return material;
+        const total = materialType === 'book' ? Number(material.totalPages) : Number(material.totalLectures);
+        const cap = Number.isFinite(total) && total > 0 ? total : 9999;
+        const nextDone = Math.max(0, Math.min(Math.round(Number(done) || 0), cap));
+        return { ...material, makeupDone: nextDone, makeupWeekKey: weekKey, updatedAt: nowIso };
+      };
+      if (materialType === 'book') {
+        if (student.subjects) {
+          student.subjects = student.subjects.map((sub: any) => ({ ...sub, books: (sub.books || []).map(applyMakeup) }));
+        }
+        student.books = (student.books || []).map(applyMakeup);
+      } else {
+        if (student.subjects) {
+          student.subjects = student.subjects.map((sub: any) => ({ ...sub, lectures: (sub.lectures || []).map(applyMakeup) }));
+        }
+        student.lectures = (student.lectures || []).map(applyMakeup);
+      }
     }
   }
   });

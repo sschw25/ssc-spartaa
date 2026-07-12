@@ -1380,7 +1380,13 @@ export function useReportState() {
     }
   };
 
-  const sendRequest = async (requestType: string, rawMessage: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial) => {
+  const sendRequest = async (
+    requestType: string,
+    rawMessage: string,
+    proposedGoal?: ProposedGoal,
+    proposedMaterial?: ProposedMaterial,
+    proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number },
+  ) => {
     const message = (rawMessage || '').trim();
     if (!message) {
       setRequestError('신청 내용을 입력해 주세요.');
@@ -1392,7 +1398,7 @@ export function useReportState() {
       const res = await fetch('/api/student/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial }),
+        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial, proposedMakeup }),
       });
       const json = await res.json();
       if (res.ok && json.success) {

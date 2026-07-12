@@ -223,7 +223,7 @@ export interface ConsultationLog {
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
   type?: 'learning' | 'life' | 'request' | 'suggestion'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
-  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'etc'; // 신청 분류
+  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'makeup' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
   acknowledgedAt?: string;                                // 관리자가 확인했지만 아직 완료하지 않은 시각 (ISO)
   createdAt?: string;                                     // 신청 시각 (ISO)
@@ -233,6 +233,7 @@ export interface ConsultationLog {
   thread?: ThreadMessage[];                               // 양방향 재답변 대화 (head=content 이후의 추가 메시지들)
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
   proposedMaterial?: ProposedMaterial;                    // 학생 교재/인강 추가 제안 데이터(materialAdd)
+  proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }; // 주말 보강 수정 제안(makeup)
 }
 
 // 상담 담당자 휴무/출장으로 특정 날짜(또는 일부 슬롯)를 예약 불가로 막는 차단 항목.

@@ -137,8 +137,22 @@ export const REQUEST_TYPE_LABEL: Record<NonNullable<ConsultationLog['requestType
   halfDay: '반차 신청',
   restPass: '휴식권 신청',
   materialAdd: '교재/인강 추가',
+  makeup: '보강 수정',
   etc: '기타',
 };
+
+// 주말 보강 수정 제안(makeup) 정규화. 관리자 승인 시 해당 자료의 makeupDone 을 이 값으로 반영한다.
+// 자료 식별(materialId/materialType) 불가하면 폐기(undefined). done 은 유한수 0~9999 클램프.
+export function normalizeProposedMakeup(raw: unknown): NonNullable<ConsultationLog['proposedMakeup']> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const m = raw as Record<string, unknown>;
+  const materialId = typeof m.materialId === 'string' ? m.materialId.trim().slice(0, 100) : '';
+  const materialType = m.materialType === 'book' || m.materialType === 'lecture' ? m.materialType : null;
+  if (!materialId || !materialType) return undefined;
+  const doneNum = Number(m.done);
+  const done = Number.isFinite(doneNum) ? Math.max(0, Math.min(9999, Math.round(doneNum))) : 0;
+  return { materialId, materialType, done };
+}
 
 export type PendingChangeRequestRow = {
   student: Student;

@@ -109,6 +109,8 @@ interface HomeOverviewTabProps {
   openLeaveRequests?: () => void;
   // 자료 상세 시트 열기 — 오늘 계획·자율 목표·주말 보강·기간목표 항목 탭 시(학생 뷰 전용, 미전달 시 비활성).
   openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
+  // 학생 변경 신청 전송 — 주말 보강 '수정 요청'(makeup)에 사용(학생 뷰 전용, 미전달 시 버튼 숨김).
+  sendRequest?: (type: string, message: string, proposedGoal?: undefined, proposedMaterial?: undefined, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }) => Promise<void>;
 }
 
 export function HomeOverviewTab({
@@ -159,6 +161,7 @@ export function HomeOverviewTab({
   openNotifications,
   openLeaveRequests,
   openMaterialDetail,
+  sendRequest,
 }: HomeOverviewTabProps) {
   const confirm = useConfirm();
   // 자료(교재/인강) id → 학생 지정 색(hex). 오늘 할 일 태그에 색 점으로 쓴다(태그만, 카드 전체색 X).
@@ -196,6 +199,11 @@ export function HomeOverviewTab({
   const [makeupOpenId, setMakeupOpenId] = useState<string | null>(null);
   const [makeupAmount, setMakeupAmount] = useState(1);
   const [makeupSaving, setMakeupSaving] = useState(false);
+  // 주말 보강 '수정 요청'(makeup) — 열린 항목 id·제안 분량·사유·전송 중.
+  const [makeupEditId, setMakeupEditId] = useState<string | null>(null);
+  const [makeupEditAmount, setMakeupEditAmount] = useState(0);
+  const [makeupEditReason, setMakeupEditReason] = useState('');
+  const [makeupEditSending, setMakeupEditSending] = useState(false);
 
   // 아침 자가 점검표 — 계획 항목과 동일한 토글 패턴(펼쳐서 입력 → 완료 → 수정 가능).
   const [checklistEditing, setChecklistEditing] = useState(false);
@@ -1388,6 +1396,90 @@ export function HomeOverviewTab({
                               </button>
                             </div>
                           </div>
+                        )}
+
+                        {/* 보강 분량이 실제와 다를 때 — 사유와 함께 관리자에게 '수정 요청'(승인 시 반영). 학생 본인 뷰 전용. */}
+                        {isStudentReport && sendRequest && (
+                          makeupEditId === it.id ? (
+                            <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
+                              <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">실제 보강한 양 (제안)</p>
+                              <div className="mt-2 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => setMakeupEditAmount((v) => Math.max(0, v - 1))}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                                >
+                                  -
+                                </button>
+                                <span className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-900 dark:text-slate-100">
+                                  {makeupEditAmount}{it.unit}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setMakeupEditAmount((v) => v + 1)}
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
+                                >
+                                  +
+                                </button>
+                              </div>
+                              <p className="mt-3 text-[11px] font-semibold text-slate-600 dark:text-slate-400">수정 사유</p>
+                              <textarea
+                                value={makeupEditReason}
+                                onChange={(e) => setMakeupEditReason(e.target.value)}
+                                rows={2}
+                                placeholder="예: 이미 평일에 따라잡아서 보강 분량이 달라요."
+                                className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-[12px] text-slate-800 dark:text-slate-200 placeholder:text-slate-400 focus:border-amber-300 focus:outline-none"
+                              />
+                              <div className="mt-3 flex gap-2">
+                                <button
+                                  type="button"
+                                  disabled={makeupEditSending || !makeupEditReason.trim()}
+                                  onClick={async () => {
+                                    if (makeupEditSending || !makeupEditReason.trim()) return;
+                                    setMakeupEditSending(true);
+                                    try {
+                                      const reason = makeupEditReason.trim();
+                                      const msg = `[보강 수정] ${it.subjectName} · ${it.materialTitle} · 제안 ${makeupEditAmount}${it.unit} · 사유: ${reason}`;
+                                      await sendRequest('makeup', msg, undefined, undefined, {
+                                        materialId: it.materialId,
+                                        materialType: it.materialType,
+                                        done: makeupEditAmount,
+                                      });
+                                      setMakeupEditId(null);
+                                      setMakeupEditReason('');
+                                      toast.success('보강 수정 요청을 보냈어요.', { description: '코멘터 확인 후 반영해 드릴게요.' });
+                                    } finally {
+                                      setMakeupEditSending(false);
+                                    }
+                                  }}
+                                  className="flex-1 rounded-full bg-amber-500 py-2 text-[11px] font-semibold text-white hover:bg-amber-600 active:scale-[0.97] disabled:opacity-60"
+                                >
+                                  {makeupEditSending ? '보내는 중...' : '요청 보내기'}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={makeupEditSending}
+                                  onClick={() => { setMakeupEditId(null); setMakeupEditReason(''); }}
+                                  className="flex-1 rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] py-2 text-[11px] font-semibold text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.97] disabled:opacity-60"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMakeupOpenId(null);
+                                setMakeupEditId(it.id);
+                                setMakeupEditAmount(it.done);
+                                setMakeupEditReason('');
+                              }}
+                              className="mt-2 text-[11px] font-semibold text-amber-700/90 dark:text-amber-300/90 underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-200"
+                            >
+                              보강 분량이 달라요 · 수정 요청
+                            </button>
+                          )
                         )}
                       </div>
                     );
