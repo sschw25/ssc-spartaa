@@ -944,20 +944,48 @@ function AdminAttendanceContent() {
                             <span className="ml-2 text-[9px] font-bold text-slate-500 dark:text-slate-400 bg-[#F5F5F7] dark:bg-white/5 px-1.5 py-0.5 rounded-full">{campusLabel(r.campus)}</span>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <input
-                              type="time"
-                              value={edit.checkIn}
-                              onChange={(e) => setEdits((prev) => ({ ...prev, [r.id]: { ...edit, checkIn: e.target.value } }))}
-                              className="w-28 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
-                            />
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="time"
+                                value={edit.checkIn}
+                                onChange={(e) => setEdits((prev) => ({ ...prev, [r.id]: { ...edit, checkIn: e.target.value } }))}
+                                className="w-[124px] shrink-0 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
+                              />
+                              {/* 등원 처리 = 등원시간을 지금으로 설정하는 것. 별도 버튼 대신 시간 칸 옆 '지금' 칩으로 통합 */}
+                              {date === todayKST() && r.isAbsent && (
+                                <button
+                                  onClick={() => quickAttendance(r, 'check-in')}
+                                  disabled={savingId === r.id}
+                                  title="지금 시각으로 등원 처리"
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1.5 text-[10px] font-black text-white hover:bg-emerald-700 disabled:opacity-50"
+                                >
+                                  <LogIn className="h-3 w-3" />
+                                  지금
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <input
-                              type="time"
-                              value={edit.checkOut}
-                              onChange={(e) => setEdits((prev) => ({ ...prev, [r.id]: { ...edit, checkOut: e.target.value } }))}
-                              className="w-28 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
-                            />
+                            <div className="flex items-center gap-1.5">
+                              <input
+                                type="time"
+                                value={edit.checkOut}
+                                onChange={(e) => setEdits((prev) => ({ ...prev, [r.id]: { ...edit, checkOut: e.target.value } }))}
+                                className="w-[124px] shrink-0 rounded-lg border border-black/[0.08] dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1 text-xs font-bold outline-none focus:border-[#0071E3]"
+                              />
+                              {/* 하원 처리 = 하원시간을 지금으로 설정하는 것. 등원중일 때만 노출 */}
+                              {date === todayKST() && r.isOpen && (
+                                <button
+                                  onClick={() => quickAttendance(r, 'check-out')}
+                                  disabled={savingId === r.id}
+                                  title="지금 시각으로 하원 처리"
+                                  className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-2 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50"
+                                >
+                                  <LogOut className="h-3 w-3" />
+                                  지금
+                                </button>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-slate-500 dark:text-slate-400 hidden sm:table-cell whitespace-nowrap">{r.isAbsent ? '-' : fmtMin(r.minutes)}</td>
                           <td className="px-4 py-3">
@@ -981,7 +1009,7 @@ function AdminAttendanceContent() {
                                 value={r.expectedArrival}
                                 onChange={(e) => { if (e.target.value) changeArrival(r.id, e.target.value); }}
                                 title="수동 지각 기준 시각 (예: 09:40)"
-                                className={`w-[88px] text-[11px] font-bold bg-white dark:bg-[#1c1c1e] border rounded-md px-1.5 py-1 outline-none focus:border-[#0071E3] ${
+                                className={`w-[120px] text-[11px] font-bold bg-white dark:bg-[#1c1c1e] border rounded-md px-1.5 py-1 outline-none focus:border-[#0071E3] ${
                                   r.expectedArrival !== '08:20' && r.expectedArrival !== '09:00'
                                     ? 'border-[#0071E3] text-[#0071E3]'
                                     : 'border-black/[0.1] dark:border-white/10'
@@ -1018,26 +1046,6 @@ function AdminAttendanceContent() {
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
-                              {/* 등/하원 즉시 처리는 오늘 조회에서만 — 과거 날짜에서 누르면 오늘 세션이 오생성된다 */}
-                              {date !== todayKST() ? null : r.isAbsent ? (
-                                <button
-                                  onClick={() => quickAttendance(r, 'check-in')}
-                                  disabled={savingId === r.id}
-                                  className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[10px] font-black text-white hover:bg-emerald-700 disabled:opacity-50"
-                                >
-                                  <LogIn className="h-3 w-3" />
-                                  등원 처리
-                                </button>
-                              ) : r.isOpen ? (
-                                <button
-                                  onClick={() => quickAttendance(r, 'check-out')}
-                                  disabled={savingId === r.id}
-                                  className="inline-flex items-center gap-1 rounded-lg border border-amber-100 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 px-2.5 py-1.5 text-[10px] font-black text-amber-700 hover:bg-amber-100 dark:hover:bg-amber-500/20 disabled:opacity-50"
-                                >
-                                  <LogOut className="h-3 w-3" />
-                                  하원 처리
-                                </button>
-                              ) : null}
                               <button
                                 onClick={() => saveManual(r)}
                                 disabled={savingId === r.id}
