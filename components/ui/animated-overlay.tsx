@@ -68,7 +68,7 @@ export function AnimatedOverlay({
 
   return (
     <div
-      className={`${backdropClassName} duration-[260ms] ${EASE} ${backdropMotion}`}
+      className={`${backdropClassName} duration-300 ${EASE} ${backdropMotion}`}
       style={backdropStyle}
       onClick={closeOnBackdrop ? requestClose : undefined}
       role={role}
@@ -76,7 +76,7 @@ export function AnimatedOverlay({
       aria-label={ariaLabel}
     >
       <div
-        className={`${panelClassName} duration-[260ms] ${EASE} ${panelMotion}`}
+        className={`${panelClassName} duration-300 ${EASE} ${panelMotion}`}
         style={panelStyle}
         onClick={(e) => e.stopPropagation()}
       >

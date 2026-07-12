@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from '@/lib/auth';
-import { uploadAnnouncementImage } from '@/lib/store';
+import { uploadAnnouncementImage, deleteAnnouncementImage } from '@/lib/store';
 
 const CAMPUSES = ['wonju', 'chuncheon', 'chungju'];
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB — 클라이언트에서 압축 후 업로드되므로 상한
@@ -55,6 +55,35 @@ export async function POST(request: Request) {
   } catch (error: unknown) {
     return NextResponse.json(
       { success: false, message: error instanceof Error ? error.message : '업로드에 실패했습니다.' },
+      { status: 500 },
+    );
+  }
+}
+
+// 관리자: 업로드 직후 일정 등록이 실패했을 때 고아 이미지를 정리한다.
+// 삭제는 업로드가 만든 경로 형식({campus}/{date}-{ts}-{rand}.{ext})만 허용 — 임의 키 삭제 방지.
+const UPLOAD_PATH_RE = /^[a-z]+\/\d{4}-\d{2}-\d{2}-\d+-[a-z0-9]+\.(jpg|png|webp)$/;
+
+export async function DELETE(request: Request) {
+  const session = await getAdminSession();
+  if (!session) {
+    return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 401 });
+  }
+  const path = new URL(request.url).searchParams.get('path') ?? '';
+  if (!UPLOAD_PATH_RE.test(path)) {
+    return NextResponse.json({ success: false, message: '잘못된 경로입니다.' }, { status: 400 });
+  }
+  // 범위 관리자는 자기 센터(또는 all) 경로만 정리할 수 있다.
+  const pathCampus = path.split('/')[0];
+  if (session.campus !== 'all' && pathCampus !== session.campus && pathCampus !== 'all') {
+    return NextResponse.json({ success: false, message: '해당 센터 이미지를 삭제할 권한이 없습니다.' }, { status: 403 });
+  }
+  try {
+    await deleteAnnouncementImage(path);
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      { success: false, message: error instanceof Error ? error.message : '삭제에 실패했습니다.' },
       { status: 500 },
     );
   }

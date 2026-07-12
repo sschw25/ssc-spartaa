@@ -14,6 +14,7 @@ import type {
 } from '@/lib/student-calendar';
 import { readableTextOn } from '@/lib/material-color';
 import { useOverlayTransition } from '@/hooks/use-overlay-transition';
+import { useConfirm } from '@/components/ui/confirm-dialog';
 
 type RiskLevel = MaterialProgressSummary['riskLevel'];
 
@@ -96,6 +97,7 @@ function formatDateLabel(dateKey: string) {
 }
 
 export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, openMaterialDetail }: StudentCalendarTabProps) {
+  const confirm = useConfirm();
   const [items, setItems] = useState<StudentCalendarItem[]>([]);
   const [studyByDate, setStudyByDate] = useState<Record<string, { planned: number; done: number }>>({});
   const [materialSummaries, setMaterialSummaries] = useState<MaterialProgressSummary[]>([]);
@@ -221,11 +223,12 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
   }, []);
 
   const deleteEntry = useCallback(async (sourceId: string) => {
+    if (!(await confirm({ title: '이 일정을 삭제할까요?', tone: 'danger', confirmText: '삭제' }))) return;
     try {
       const res = await fetch(`/api/student/calendar-entry?id=${encodeURIComponent(sourceId)}`, { method: 'DELETE', credentials: 'same-origin' });
       if (res.ok) await load();
     } catch { /* noop */ }
-  }, [load]);
+  }, [load, confirm]);
 
   const itemsByDate = useMemo(() => {
     const map = new Map<string, StudentCalendarItem[]>();
@@ -654,13 +657,13 @@ function ImageLightbox({ src, alt, onClose }: { src: string; alt: string; onClos
       role="dialog"
       aria-modal="true"
       onClick={requestClose}
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`}
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`}
     >
       <button type="button" onClick={requestClose} className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/15 text-white">
         <X className="h-5 w-5" />
       </button>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} onClick={(e) => e.stopPropagation()} className={`max-h-[85vh] max-w-full rounded-xl object-contain duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out zoom-out-95 fade-out-0' : 'animate-in zoom-in-95 fade-in-0'}`} />
+      <img src={src} alt={alt} onClick={(e) => e.stopPropagation()} className={`max-h-[85vh] max-w-full rounded-xl object-contain duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out zoom-out-95 fade-out-0' : 'animate-in zoom-in-95 fade-in-0'}`} />
     </div>
   );
 }

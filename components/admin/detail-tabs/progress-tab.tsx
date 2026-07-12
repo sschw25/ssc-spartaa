@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -97,6 +97,19 @@ function MaterialStudyTimePicker({
   const [mode, setMode] = useState<'preset' | 'time'>(isTime ? 'time' : 'preset');
   const [startT, setStartT] = useState(parsed ? fromMin(parsed.startMin) : '13:50');
   const [endT, setEndT] = useState(parsed ? fromMin(parsed.endMin) : '15:00');
+
+  // 다른 경로(반차 슬롯 전파·전체 저장 등)로 studyTime 이 바뀌면 내부 입력 상태를 재동기화한다.
+  useEffect(() => {
+    const p = parseTimeSlot(studyTime);
+    if (p) {
+      setMode('time');
+      setStartT(fromMin(p.startMin));
+      setEndT(fromMin(p.endMin));
+    } else {
+      setMode('preset');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studyTime]);
 
   // 시간표에 t: 값을 쓰려면 onChange 의 좁은 유니온 타입을 우회(캐스트) — 저장 경로(updateMaterialStudyTime)는 문자열을 그대로 저장한다.
   const commit = (value: string) =>

@@ -103,8 +103,8 @@ export function RecipientPickerModal({
   const selectedCount = selected.size;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`} style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
-      <div className={`w-full max-w-lg rounded-3xl glass-strong shadow-2xl flex flex-col max-h-[85vh] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out zoom-out-95 fade-out-0' : 'animate-in zoom-in-95 fade-in-0'}`}>
+    <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`} style={{ backgroundColor: 'rgba(0,0,0,0.45)' }}>
+      <div className={`w-full max-w-lg rounded-3xl glass-strong shadow-2xl flex flex-col max-h-[85vh] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out zoom-out-95 fade-out-0' : 'animate-in zoom-in-95 fade-in-0'}`}>
         {/* 헤더 */}
         <div className="flex items-start justify-between gap-3 p-5 pb-3">
           <div className="min-w-0">

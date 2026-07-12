@@ -724,6 +724,12 @@ export async function uploadAnnouncementImage(
   return uploadAnnouncementImageSupabase(campus, dateKey, body, contentType, ext);
 }
 
+// 업로드 후 일정 등록 실패 시 고아 이미지 정리용 — 경로 형식 검증은 호출부(라우트) 책임.
+export async function deleteAnnouncementImage(path: string): Promise<void> {
+  requireSupabase();
+  return deleteAnnouncementImageSupabase(path);
+}
+
 export async function pruneOldNotices(beforeCreatedIso: string, campus?: string): Promise<number> {
   requireSupabase();
   return pruneOldNoticesSupabase(beforeCreatedIso, campus);

@@ -194,7 +194,7 @@ export function MaterialDetailSheet({
 
   return (
     <div
-      className={`no-print fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6 duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`}
+      className={`no-print fixed inset-0 z-50 flex items-end justify-center bg-black/30 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out fade-out-0' : 'animate-in fade-in-0'}`}
       onClick={requestClose}
       role="dialog"
       aria-modal="true"
@@ -202,7 +202,7 @@ export function MaterialDetailSheet({
     >
       <div
         // 시트 표면 — glass-strong(72% 흰색)이 어두운 오버레이 위에서 회색빛으로 보여, 학생 시트는 더 하얀 유리로.
-        className={`flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/60 dark:border-white/10 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_10px_40px_rgba(0,0,0,0.15)] sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px] duration-[260ms] ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out slide-out-to-bottom-4 fade-out-0 sm:zoom-out-95' : 'animate-in slide-in-from-bottom-4 fade-in-0 sm:zoom-in-95'}`}
+        className={`flex h-[94dvh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] border border-white/60 dark:border-white/10 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-2xl backdrop-saturate-150 shadow-[0_10px_40px_rgba(0,0,0,0.15)] sm:h-auto sm:max-h-[88dvh] sm:rounded-[28px] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${closing ? 'animate-out slide-out-to-bottom-4 fade-out-0 sm:zoom-out-95' : 'animate-in slide-in-from-bottom-4 fade-in-0 sm:zoom-in-95'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 1. 헤더 — 과목·자료명·종류·단위 + 닫기 */}

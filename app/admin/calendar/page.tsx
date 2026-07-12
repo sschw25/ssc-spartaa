@@ -174,6 +174,7 @@ export default function AdminCalendarPage() {
     if (!noticeForm.blob) { toast.error('공지 사진을 선택해 주세요.'); return; }
     if (!noticeForm.date) { toast.error('날짜를 선택해 주세요.'); return; }
     setNoticeBusy(true);
+    let uploadedPath = '';
     try {
       // 1) 압축 이미지 업로드 → 공개 URL
       const fd = new FormData();
@@ -183,6 +184,7 @@ export default function AdminCalendarPage() {
       const upRes = await fetch('/api/admin/announcement-image', { method: 'POST', body: fd, credentials: 'same-origin' });
       const upJson = await upRes.json();
       if (!upRes.ok || !upJson.success) { toast.error(upJson.message || '이미지 업로드에 실패했습니다.'); return; }
+      uploadedPath = upJson.path;
 
       // 2) 공지 일정(category=notice) 등록
       const res = await fetch('/api/admin/campus-events', {
@@ -204,9 +206,18 @@ export default function AdminCalendarPage() {
         setNoticeModalOpen(false);
         toast.success('공지가 등록됐습니다.');
       } else {
+        // 일정 등록 실패 → 방금 올린 이미지가 고아로 남지 않게 정리(실패해도 무시).
+        fetch(`/api/admin/announcement-image?path=${encodeURIComponent(uploadedPath)}`, {
+          method: 'DELETE', credentials: 'same-origin',
+        }).catch(() => {});
         toast.error(json.message || '등록에 실패했습니다.');
       }
     } catch {
+      if (uploadedPath) {
+        fetch(`/api/admin/announcement-image?path=${encodeURIComponent(uploadedPath)}`, {
+          method: 'DELETE', credentials: 'same-origin',
+        }).catch(() => {});
+      }
       toast.error('등록 중 오류가 발생했습니다.');
     } finally {
       setNoticeBusy(false);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStudentSessionId, isAdmin, canViewStudent } from '@/lib/auth';
-import { activeBackend, getStudents, getStudyMinutesByStudent, getOpenSessions } from '@/lib/store';
+import { activeBackend, getStudentsSummary, getStudyMinutesByStudent, getOpenSessions } from '@/lib/store';
 import { getPeriodBounds, buildMyStanding, focusMinutesByStudent } from '@/lib/study-stats';
 
 // 내 순공 위치(동기부여) — 타인 명단 없이 본인 중심, 총원/절대등수(10위 밖) 비노출.
@@ -29,8 +29,9 @@ export async function GET(request: Request) {
 
   try {
     const { weekStart, todayStr } = getPeriodBounds();
+    // 순공 계산에는 id·specialNote 만 필요 — subjects 등 무거운 jsonb 를 빼고 요약 조회(관리자 리더보드와 동일).
     const [students, weekAtt, dayAtt, openSessions] = await Promise.all([
-      getStudents(),
+      getStudentsSummary(),
       getStudyMinutesByStudent(weekStart),
       getStudyMinutesByStudent(todayStr),
       getOpenSessions(),

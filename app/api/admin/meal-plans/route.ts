@@ -68,6 +68,19 @@ export async function POST(request: Request) {
     campus = CAMPUSES.includes(raw) ? raw : undefined;
   }
 
+  // 주·센터당 1라운드 불변조건을 서버에서도 강제 — 동시 생성·구화면 생성 경로의 중복 라운드 차단.
+  try {
+    const dup = (await getMealPlans()).some(
+      (p) => p.weekStart === weekStart && (p.campus || 'all') === (campus || 'all'),
+    );
+    if (dup) {
+      return NextResponse.json(
+        { success: false, message: '해당 주·센터에는 이미 도시락 라운드가 있습니다. 기존 라운드를 수정하세요.' },
+        { status: 409 },
+      );
+    }
+  } catch { /* 조회 실패 시 생성 자체는 막지 않는다(기존 동작 유지) */ }
+
   const plan: MealPlan = {
     id: `meal_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     weekStart,

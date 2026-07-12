@@ -281,6 +281,8 @@ type ProgressMaterialType = 'book' | 'lecture';
 const STUDENT_TAB_IDS = [
   'report-overview',
   'learning',
+  'focus',
+  'calendar',
   'life',
   'student-notifications',
   'attendance-status',
