@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
@@ -793,66 +793,96 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     return () => window.removeEventListener('beforeunload', handler);
   }, [subjectsState, progressDrafts, isAutoSaving, isConsultationDraftDirty, isConsultationPlanDirty]);
 
+  // 오늘 등원 현황 조회 — 초기 로드/폴링과 체크인·체크아웃 직후 즉시 새로고침 양쪽에서 재사용.
+  const loadTodayAttendance = useCallback(async (studentId: string) => {
+    try {
+      const res = await fetch('/api/admin/attendance/today', { cache: 'no-store' });
+      const json = await res.json();
+
+      if (!res.ok || !json.success) {
+        setTodayAttendanceStatus({ configured: false, status: 'unknown' });
+        return;
+      }
+      if (json.configured === false) {
+        setTodayAttendanceStatus({ configured: false, status: 'unconfigured', today: json.today });
+        return;
+      }
+
+      const present = (json.present || []).find((row: any) => row.id === studentId);
+      if (present) {
+        setTodayAttendanceStatus({
+          configured: true,
+          status: 'present',
+          today: json.today,
+          checkInAt: present.checkInAt,
+          minutes: present.todayMinutes ?? present.minutesSoFar ?? 0,
+          minutesSoFar: present.minutesSoFar ?? 0,
+        });
+        return;
+      }
+
+      const left = (json.leftToday || []).find((row: any) => row.id === studentId);
+      if (left) {
+        setTodayAttendanceStatus({
+          configured: true,
+          status: 'left',
+          today: json.today,
+          checkInAt: left.checkInAt,
+          checkOutAt: left.checkOutAt,
+          minutes: left.minutes ?? null,
+          autoClosed: Boolean(left.autoClosed),
+        });
+        return;
+      }
+
+      setTodayAttendanceStatus({ configured: true, status: 'absent', today: json.today, minutes: 0 });
+    } catch {
+      setTodayAttendanceStatus({ configured: false, status: 'unknown' });
+    }
+  }, []);
+
   useEffect(() => {
     if (!student?.id || !isOpen) return;
-
     let active = true;
-    const loadTodayAttendance = async () => {
-      try {
-        const res = await fetch('/api/admin/attendance/today', { cache: 'no-store' });
-        const json = await res.json();
-        if (!active) return;
-
-        if (!res.ok || !json.success) {
-          setTodayAttendanceStatus({ configured: false, status: 'unknown' });
-          return;
-        }
-        if (json.configured === false) {
-          setTodayAttendanceStatus({ configured: false, status: 'unconfigured', today: json.today });
-          return;
-        }
-
-        const present = (json.present || []).find((row: any) => row.id === student.id);
-        if (present) {
-          setTodayAttendanceStatus({
-            configured: true,
-            status: 'present',
-            today: json.today,
-            checkInAt: present.checkInAt,
-            minutes: present.todayMinutes ?? present.minutesSoFar ?? 0,
-            minutesSoFar: present.minutesSoFar ?? 0,
-          });
-          return;
-        }
-
-        const left = (json.leftToday || []).find((row: any) => row.id === student.id);
-        if (left) {
-          setTodayAttendanceStatus({
-            configured: true,
-            status: 'left',
-            today: json.today,
-            checkInAt: left.checkInAt,
-            checkOutAt: left.checkOutAt,
-            minutes: left.minutes ?? null,
-            autoClosed: Boolean(left.autoClosed),
-          });
-          return;
-        }
-
-        setTodayAttendanceStatus({ configured: true, status: 'absent', today: json.today, minutes: 0 });
-      } catch {
-        if (active) setTodayAttendanceStatus({ configured: false, status: 'unknown' });
-      }
-    };
-
     setTodayAttendanceStatus(null);
-    loadTodayAttendance();
-    const timer = setInterval(loadTodayAttendance, 30_000);
+    const tick = () => { if (active) loadTodayAttendance(student.id); };
+    tick();
+    const timer = setInterval(tick, 30_000);
     return () => {
       active = false;
       clearInterval(timer);
     };
-  }, [student?.id, isOpen]);
+  }, [student?.id, isOpen, loadTodayAttendance]);
+
+  // 관리자 수동 등원/하원 처리 — 좌석판의 'QR 대체' 경로(app/api/admin/attendance/check-in)를 그대로 재사용.
+  const [attendanceActionBusy, setAttendanceActionBusy] = useState(false);
+  const handleAdminAttendanceAction = async (action: 'check-in' | 'check-out') => {
+    if (!student?.id || attendanceActionBusy) return;
+    const label = action === 'check-in' ? '등원' : '하원';
+    const ok = await confirm({
+      title: `${student.name} ${label} 처리할까요?`,
+      description: action === 'check-in' ? 'QR 대신 지금 등원으로 기록합니다.' : undefined,
+      confirmText: `${label} 처리`,
+    });
+    if (!ok) return;
+    setAttendanceActionBusy(true);
+    try {
+      const res = await fetch('/api/admin/attendance/check-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ studentId: student.id, action }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || `${label} 처리 실패`);
+      toast.success(`${student.name} ${label} 처리했습니다.`);
+      await loadTodayAttendance(student.id);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : `${label} 처리에 실패했습니다.`);
+    } finally {
+      setAttendanceActionBusy(false);
+    }
+  };
 
   if (!student) return null;
 
@@ -4683,6 +4713,8 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 todayPomodoroStats={todayPomodoroStats}
                 todayChecklist={todayChecklist}
                 studentId={student?.id}
+                onAttendanceAction={handleAdminAttendanceAction}
+                attendanceActionBusy={attendanceActionBusy}
                 leaveRequests={leaveRequestsLocal}
                 leaveActionBusy={leaveActionBusy}
                 leaveReplyDrafts={leaveReplyDrafts}

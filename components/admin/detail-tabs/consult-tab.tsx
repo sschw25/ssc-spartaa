@@ -77,6 +77,9 @@ interface ConsultTabProps {
   todayActivityKey?: string;
   todayPomodoroStats?: { sessions: number; minutes: number };
   todayChecklist?: DailyChecklistEntry | null;
+  // 관리자 수동 등원/하원 처리 (QR 대체 — 좌석판과 동일 API)
+  onAttendanceAction?: (action: 'check-in' | 'check-out') => void;
+  attendanceActionBusy?: boolean;
   // 휴가 신청
   studentId?: string;
   leaveRequests?: LeaveRequest[];
@@ -96,6 +99,8 @@ export function ConsultTab({
   todayActivityKey,
   todayPomodoroStats = { sessions: 0, minutes: 0 },
   todayChecklist = null,
+  onAttendanceAction,
+  attendanceActionBusy = false,
   studentId,
   leaveRequests = [],
   leaveActionBusy = {},
@@ -165,12 +170,38 @@ export function ConsultTab({
 
         <div className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
           <div className="rounded-lg bg-[#F5F5F7] dark:bg-white/5 px-3 py-3">
-            <p className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-              <Clock className="w-3.5 h-3.5" />
-              오늘 등원정보
-            </p>
-            <p className={`mt-1 text-sm font-semibold ${attendanceLabel.tone}`}>{attendanceLabel.title}</p>
-            <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{attendanceLabel.detail}</p>
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                  <Clock className="w-3.5 h-3.5" />
+                  오늘 등원정보
+                </p>
+                <p className={`mt-1 text-sm font-semibold ${attendanceLabel.tone}`}>{attendanceLabel.title}</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-slate-400">{attendanceLabel.detail}</p>
+              </div>
+              {onAttendanceAction && (todayAttendanceStatus?.status === 'absent' || todayAttendanceStatus?.status === 'unconfigured') && (
+                <button
+                  type="button"
+                  onClick={() => onAttendanceAction('check-in')}
+                  disabled={attendanceActionBusy}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 disabled:opacity-50"
+                >
+                  {attendanceActionBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  등원 처리
+                </button>
+              )}
+              {onAttendanceAction && todayAttendanceStatus?.status === 'present' && (
+                <button
+                  type="button"
+                  onClick={() => onAttendanceAction('check-out')}
+                  disabled={attendanceActionBusy}
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[10px] font-black text-[#0071E3] transition hover:bg-[#0071E3]/[0.12] active:scale-95 disabled:opacity-50"
+                >
+                  {attendanceActionBusy ? <Loader2 className="w-3 h-3 animate-spin" /> : null}
+                  하원 처리
+                </button>
+              )}
+            </div>
           </div>
 
           <div className="rounded-lg bg-[#F5F5F7] dark:bg-white/5 px-3 py-3">
