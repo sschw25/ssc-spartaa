@@ -722,7 +722,7 @@ function StudentReportInner() {
               eyebrow="Focus"
               icon={Timer}
               title="집중"
-              description="화면을 켜두고 공부하면 오늘의 순공이 쌓여요. 순위는 이 집중 시간으로 매겨져요(재석 시간 상한)."
+              description="타이머를 켜면 화면을 벗어나도 집중 시간이 계속 쌓여요. 순위는 이 집중 시간으로 매겨져요(체류 시간 상한)."
             />
             <PomodoroTimer
               student={student}
