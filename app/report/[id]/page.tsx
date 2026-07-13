@@ -13,6 +13,7 @@ import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
 import { LearningRequestPanel } from '@/components/report/learning-request-panel';
 import { MakeupTab } from '@/components/report/makeup-tab';
 import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
+import { MockReviewPanel } from '@/components/report/mock-review-panel';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
@@ -880,6 +881,9 @@ function StudentReportInner() {
           setBookIncorrectTag={setBookIncorrectTag}
           activeTab={activeTab}
         />
+
+        {/* 오답노트 탭 하단 — 모의고사 오답분석 제출(쿠폰 미션 mock_review_complete 유일한 제출 경로) */}
+        <MockReviewPanel isStudentReport={isStudentReport} activeTab={activeTab} />
 
         {/* 5. 성적 분석 탭 */}
         <GradeAnalysisTab

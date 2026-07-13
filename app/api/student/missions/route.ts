@@ -131,7 +131,7 @@ export async function GET() {
           return sum;
         };
         const currentRatio = Math.min(100, Math.round((Math.min(focusInRange(weekStart, todayStr), weeklyMinutes) / weeklyMinutes) * 100));
-        if (previousWeeklyMinutes <= 0) return `이번 주 집중률 ${currentRatio}% · 지난주 기록이 있어야 상승폭을 계산할 수 있어요`;
+        if (previousWeeklyMinutes <= 0) return `이번 주 집중률 ${currentRatio}% · 지난주 기록 필요(상승폭 계산 불가)`;
         const previousRatio = Math.min(100, Math.round((Math.min(focusInRange(previousWeekStart, previousWeekEnd), previousWeeklyMinutes) / previousWeeklyMinutes) * 100));
         const delta = currentRatio - previousRatio;
         return `집중률 ${currentRatio}% (지난주 ${previousRatio}%) · ${delta >= 0 ? '+' : ''}${delta}%p/${needPt}%p · 체류 ${fmtMin(weeklyMinutes)}`;

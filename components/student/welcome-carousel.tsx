@@ -38,7 +38,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
   const isLast = idx >= stepIds.length - 1;
   const current = stepContent[stepIds[idx]];
 
-  // tab 을 주면 온보딩 완료 후 해당 학생 탭으로 딥링크(예: 'student-requests' = 신청 탭).
+  // tab 을 주면 온보딩 완료 후 해당 학생 탭으로 딥링크(예: 'learning-request' = 신청 탭의 학습신청 서브탭).
   async function finish(tab?: string) {
     if (busy) return;
     setBusy(true);
@@ -86,7 +86,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
               목표시험에 맞춰 과목을 미리 만들어뒀어요. 과목별로 교재·강의를 신청해 계획을 세워보세요.
             </p>
             <button
-              onClick={() => finish('student-requests')}
+              onClick={() => finish('learning-request')}
               disabled={busy}
               className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold bg-[#0071E3] text-white disabled:opacity-60"
             >

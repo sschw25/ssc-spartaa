@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Bell, CalendarClock, ClipboardCheck, ClipboardPaste, Loader2, Trash2, UserPlus, X } from 'lucide-react';
 import type { AwaySchedule, Student } from '@/lib/types/student';
 import { useConfirm } from '@/components/ui/confirm-dialog';
+import { CUSTOM_STREAM_ID, CUSTOM_STREAM_LABEL, EXAM_STREAMS, findStreamByLabel } from '@/lib/streams';
 
 interface AddStudentModalProps {
   isOpen: boolean;
@@ -146,6 +147,8 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   const [campus, setCampus] = useState('wonju');
   const [manager, setManager] = useState('');
   const [contact, setContact] = useState('');
+  // 목표 시험: 표준 직렬 Select + 기타(직접 입력) — info-tab.tsx와 동일 패턴.
+  const [contactCustomMode, setContactCustomMode] = useState(false);
   const [seatNumber, setSeatNumber] = useState('');
   const [enrollmentEndDate, setEnrollmentEndDate] = useState('');
   const [weeklyGradeCheck, setWeeklyGradeCheck] = useState(false);
@@ -165,6 +168,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   const [bulkCampus, setBulkCampus] = useState('wonju');
   const [bulkManager, setBulkManager] = useState('');
   const [bulkContact, setBulkContact] = useState('');
+  const [bulkContactCustomMode, setBulkContactCustomMode] = useState(false);
   const [bulkEnrollmentEndDate, setBulkEnrollmentEndDate] = useState('');
   const [bulkWeeklyGradeCheck, setBulkWeeklyGradeCheck] = useState(false);
   const [pasteText, setPasteText] = useState('');
@@ -172,13 +176,32 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkDone, setBulkDone] = useState(0);
 
-  const uniqueExams = Array.from(
-    new Set(
-      students
-        .map((s) => s.contact)
-        .filter((exam): exam is string => typeof exam === 'string' && exam.trim() !== '')
-    )
-  );
+  // 목표 시험 Select 상태 파생 — info-tab.tsx와 동일 규칙(표준 라벨 불일치는 기타 모드).
+  const matchedContactStream = findStreamByLabel(contact);
+  const standardContactStream = matchedContactStream && matchedContactStream.id !== CUSTOM_STREAM_ID ? matchedContactStream : undefined;
+  const isCustomContact = contactCustomMode || (!standardContactStream && contact.trim() !== '');
+  const contactSelectValue = isCustomContact ? CUSTOM_STREAM_LABEL : (standardContactStream ? standardContactStream.label : '');
+  const handleContactSelect = (value: string) => {
+    if (value === CUSTOM_STREAM_LABEL) {
+      setContactCustomMode(true);
+      return;
+    }
+    setContactCustomMode(false);
+    setContact(value);
+  };
+
+  const matchedBulkContactStream = findStreamByLabel(bulkContact);
+  const standardBulkContactStream = matchedBulkContactStream && matchedBulkContactStream.id !== CUSTOM_STREAM_ID ? matchedBulkContactStream : undefined;
+  const isCustomBulkContact = bulkContactCustomMode || (!standardBulkContactStream && bulkContact.trim() !== '');
+  const bulkContactSelectValue = isCustomBulkContact ? CUSTOM_STREAM_LABEL : (standardBulkContactStream ? standardBulkContactStream.label : '');
+  const handleBulkContactSelect = (value: string) => {
+    if (value === CUSTOM_STREAM_LABEL) {
+      setBulkContactCustomMode(true);
+      return;
+    }
+    setBulkContactCustomMode(false);
+    setBulkContact(value);
+  };
 
   // 좌석 충돌 — 같은 센터에 동일 좌석번호를 쓰는 기존 원생(0번/미지정은 충돌 아님)
   const parsedSeat = normalizeSeatNumber(seatNumber);
@@ -224,6 +247,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     setCampus('wonju');
     setManager('');
     setContact('');
+    setContactCustomMode(false);
     setSeatNumber('');
     setEnrollmentEndDate('');
     setWeeklyGradeCheck(false);
@@ -240,6 +264,7 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
     setBulkCampus('wonju');
     setBulkManager('');
     setBulkContact('');
+    setBulkContactCustomMode(false);
     setBulkEnrollmentEndDate('');
     setBulkWeeklyGradeCheck(false);
     setPasteText('');
@@ -589,17 +614,28 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="new-contact" className="text-xs font-semibold text-slate-900 dark:text-slate-200">목표 시험</Label>
-                  <Input
-                    id="new-contact"
-                    placeholder="예: 수능, 9급 공무원, 임용"
-                    value={contact}
-                    onChange={(e) => setContact(e.target.value)}
-                    list="target-exams-list"
-                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
-                  />
-                  <datalist id="target-exams-list">
-                    {uniqueExams.map((exam) => <option key={exam} value={exam} />)}
-                  </datalist>
+                  <Select value={contactSelectValue} onValueChange={handleContactSelect}>
+                    <SelectTrigger id="new-contact" className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white">
+                      <SelectValue placeholder="직렬 선택" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-[#1c1c1e]">
+                      {EXAM_STREAMS.map((stream) => (
+                        <SelectItem key={stream.id} value={stream.label} className="text-xs">
+                          {stream.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isCustomContact && (
+                    <Input
+                      id="new-contact-custom"
+                      value={contact}
+                      onChange={(e) => setContact(e.target.value)}
+                      maxLength={40}
+                      placeholder="목표 시험 직접 입력"
+                      className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] focus:border-[#0071E3] focus:ring-[#0071E3] text-xs h-9 bg-white"
+                    />
+                  )}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="new-seat-number" className="text-xs font-semibold text-slate-900 dark:text-slate-200">좌석 번호</Label>
@@ -915,16 +951,27 @@ export function AddStudentModal({ isOpen, onClose, onSuccess, students = [] }: A
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">목표 시험</Label>
-                <Input
-                  placeholder="수능, 공무원…"
-                  value={bulkContact}
-                  onChange={(e) => setBulkContact(e.target.value)}
-                  list="bulk-exams-list"
-                  className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white"
-                />
-                <datalist id="bulk-exams-list">
-                  {uniqueExams.map((exam) => <option key={exam} value={exam} />)}
-                </datalist>
+                <Select value={bulkContactSelectValue} onValueChange={handleBulkContactSelect}>
+                  <SelectTrigger className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white">
+                    <SelectValue placeholder="직렬 선택" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-[#1c1c1e]">
+                    {EXAM_STREAMS.map((stream) => (
+                      <SelectItem key={stream.id} value={stream.label} className="text-xs">
+                        {stream.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isCustomBulkContact && (
+                  <Input
+                    value={bulkContact}
+                    onChange={(e) => setBulkContact(e.target.value)}
+                    maxLength={40}
+                    placeholder="목표 시험 직접 입력"
+                    className="rounded-xl border-black/[0.08] dark:border-white/10 dark:bg-[#1c1c1e] text-xs h-9 bg-white"
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold text-slate-900 dark:text-slate-200">등록 종료일</Label>

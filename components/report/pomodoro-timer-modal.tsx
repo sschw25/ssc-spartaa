@@ -521,7 +521,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
             <ControlButton running={running} big hasProgress={hasProgress} onStart={start} onPause={pause} />
           </div>
 
-          <p className="pointer-events-none absolute bottom-5 text-[11px] font-semibold text-white/30">일시 정지를 누르기 전까지 계속 흘러요 · 쉴 때는 잊지 말고 정지</p>
+          <p className="pointer-events-none absolute bottom-5 text-[11px] font-semibold text-white/30">일시 정지를 누르기 전까지 계속 흘러요 · 쉴 때는 잊지 말고 눌러서 멈춰 주세요</p>
         </div>,
         document.body,
       )}
