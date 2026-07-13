@@ -749,6 +749,7 @@ function StudentReportInner() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
               openMaterialDetail={isStudentReport ? openMaterialDetail : undefined}
+              studentId={student.id}
             />
           </section>
         )}

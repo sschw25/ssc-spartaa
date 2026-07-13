@@ -53,6 +53,9 @@ interface StudentCalendarTabProps {
   onActionableChange?: (count: number) => void;
   // 자료 기간 바·진행 행 클릭 → 자료 상세 시트 열기(학생 뷰 전용).
   openMaterialDetail?: (materialType: 'book' | 'lecture', materialId: string) => void;
+  // 관리자가 ?audience=student 로 열람할 때(세션이 없는 대신) 대상 학생 id를 명시 전달.
+  // 학생 본인 세션이면 서버가 이 값을 무시하고 세션 기준으로 응답하므로 항상 넘겨도 안전하다.
+  studentId?: string;
 }
 
 const KIND_META: Record<CalendarItemKind, { label: string; icon: React.ComponentType<{ className?: string }>; dot: string; chip: string }> = {
@@ -96,8 +99,12 @@ function formatDateLabel(dateKey: string) {
   return `${m}월 ${d}일 (${wd})`;
 }
 
-export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, openMaterialDetail }: StudentCalendarTabProps) {
+export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, openMaterialDetail, studentId }: StudentCalendarTabProps) {
   const confirm = useConfirm();
+  // 관리자가 학생페이지를 열람 중이면 서버가 'admin'으로 응답 — 개인 일정 추가/수정/삭제는 학생
+  // 본인 세션 전용 API라 조용히 실패하므로, 관리자 뷰에서는 해당 컨트롤을 아예 숨긴다(읽기 전용).
+  const [viewerRole, setViewerRole] = useState<'student' | 'admin'>('student');
+  const studentIdQuery = studentId ? `studentId=${encodeURIComponent(studentId)}` : '';
   const [items, setItems] = useState<StudentCalendarItem[]>([]);
   const [studyByDate, setStudyByDate] = useState<Record<string, { planned: number; done: number }>>({});
   const [materialSummaries, setMaterialSummaries] = useState<MaterialProgressSummary[]>([]);
@@ -117,12 +124,13 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch('/api/student/calendar', { credentials: 'same-origin', cache: 'no-store' });
+      const res = await fetch(`/api/student/calendar${studentIdQuery ? `?${studentIdQuery}` : ''}`, { credentials: 'same-origin', cache: 'no-store' });
       const json = await res.json();
       if (json.success) {
         setItems(json.items || []);
         setStudyByDate(json.studyByDate || {});
         setMaterialSummaries(json.materialSummaries || []);
+        setViewerRole(json.viewerRole === 'admin' ? 'admin' : 'student');
         onActionableChange?.(json.actionableCount || 0);
         if (json.todayKey) {
           setTodayKey((prev) => prev || json.todayKey);
@@ -139,7 +147,7 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
     } finally {
       setLoading(false);
     }
-  }, [onActionableChange]);
+  }, [onActionableChange, studentIdQuery]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -182,12 +190,12 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
     if (!selectedDate) return;
     let cancelled = false;
     setDayPlan(null);
-    fetch(`/api/student/day-plan?date=${selectedDate}`, { credentials: 'same-origin', cache: 'no-store' })
+    fetch(`/api/student/day-plan?date=${selectedDate}${studentIdQuery ? `&${studentIdQuery}` : ''}`, { credentials: 'same-origin', cache: 'no-store' })
       .then((r) => r.json())
       .then((j) => { if (!cancelled && j.success) setDayPlan({ summary: j.summary, items: j.items || [] }); })
       .catch(() => { /* graceful */ });
     return () => { cancelled = true; };
-  }, [selectedDate]);
+  }, [selectedDate, studentIdQuery]);
 
   const resetForm = useCallback(() => {
     setAdding(false); setEditingId(null); setNewTitle(''); setNewMemo('');
@@ -478,7 +486,7 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
       <div className="space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <h2 className="text-sm font-black text-slate-900 dark:text-slate-100">{selectedDate ? formatDateLabel(selectedDate) : ''}</h2>
-          {selectedDate && !adding && (
+          {selectedDate && !adding && viewerRole === 'student' && (
             <button
               type="button"
               onClick={() => { setEditingId(null); setNewTitle(''); setNewMemo(''); setAdding(true); }}
@@ -577,7 +585,9 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
 
         {selectedItems.length === 0 && !adding && !(dayPlan && dayPlan.items.length > 0) ? (
           <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-xs font-semibold text-slate-400 dark:border-white/10 dark:bg-[#1c1c1e]">
-            이 날 일정이 없어요. <span className="font-black text-slate-700 dark:text-slate-200">‘내 일정 추가’</span>로 내 스케줄을 적어보세요.
+            {viewerRole === 'admin'
+              ? '이 날 등록된 일정이 없습니다.'
+              : (<>이 날 일정이 없어요. <span className="font-black text-slate-700 dark:text-slate-200">‘내 일정 추가’</span>로 내 스케줄을 적어보세요.</>)}
           </div>
         ) : (
           selectedItems.map((item) => (
@@ -586,8 +596,8 @@ export function StudentCalendarTab({ onNavigateToGrades, onActionableChange, ope
               item={item}
               onResponded={load}
               onNavigateToGrades={onNavigateToGrades}
-              onDeletePersonal={deleteEntry}
-              onEditPersonal={(id, title, memo) => startEdit(id, title, memo)}
+              onDeletePersonal={viewerRole === 'student' ? deleteEntry : undefined}
+              onEditPersonal={viewerRole === 'student' ? (id, title, memo) => startEdit(id, title, memo) : undefined}
             />
           ))
         )}

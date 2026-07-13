@@ -1,13 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getStudentSessionId } from '@/lib/auth';
+import { getStudentSessionId, isAdmin, canAdminAccessStudent } from '@/lib/auth';
 import { getStudentById } from '@/lib/store';
 import { getDayStudyItems, summarizeDayStudy } from '@/lib/student-calendar';
 
 // 학생: 특정 날짜의 공부 계획 항목 + 달성 요약 (수험 캘린더 상세용).
+// 관리자가 학생페이지(?audience=student)로 열람할 때는 세션이 없으므로 ?studentId= + 캠퍼스 권한으로 허용(읽기 전용).
 export async function GET(req: NextRequest) {
-  const studentId = await getStudentSessionId();
+  const selfId = await getStudentSessionId();
+  let studentId = selfId;
   if (!studentId) {
-    return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
+    if (!(await isAdmin())) {
+      return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
+    }
+    const targetId = req.nextUrl.searchParams.get('studentId') || '';
+    if (!targetId || !(await canAdminAccessStudent(targetId))) {
+      return NextResponse.json({ success: false, message: '열람 권한이 없습니다.' }, { status: 403 });
+    }
+    studentId = targetId;
   }
   const date = req.nextUrl.searchParams.get('date') || '';
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
