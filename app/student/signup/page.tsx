@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { CUSTOM_STREAM_LABEL, EXAM_STREAMS } from '@/lib/streams';
 
 const CAMPUS_OPTIONS = [
   { value: 'wonju', label: '원주' },
@@ -39,8 +40,14 @@ export default function StudentSignupPage() {
   const [parentPhone, setParentPhone] = useState('');
   const [smsParent, setSmsParent] = useState(true);
   const [smsStudent, setSmsStudent] = useState(false);
-  const [contact, setContact] = useState('');
+  // 목표시험: 표준 직렬 라벨 선택 + '기타(직접 입력)'일 때만 자유 텍스트.
+  // contact 에는 라벨(또는 기타 자유값)을 그대로 저장해 기존 substring 필터와 호환.
+  const [examStream, setExamStream] = useState('');
+  const [customExam, setCustomExam] = useState('');
   const [campus, setCampus] = useState('');
+
+  const isCustomStream = examStream === CUSTOM_STREAM_LABEL;
+  const contactValue = isCustomStream ? customExam.trim() : examStream;
 
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -107,7 +114,7 @@ export default function StudentSignupPage() {
           studentPhone: trimmedStudentPhone,
           parentPhone: trimmedParentPhone,
           smsTargets,
-          contact: contact.trim(),
+          contact: contactValue,
           campus,
         }),
       });
@@ -329,13 +336,36 @@ export default function StudentSignupPage() {
                     <Label htmlFor="signup-contact" className="text-sm font-semibold">
                       목표시험
                     </Label>
-                    <Input
-                      id="signup-contact"
-                      value={contact}
-                      onChange={(event) => setContact(event.target.value)}
-                      placeholder="예: 9급 공무원, 수능"
-                      className="h-12 rounded-xl border-black/[0.08] bg-white text-base"
-                    />
+                    <Select value={examStream} onValueChange={setExamStream}>
+                      <SelectTrigger
+                        id="signup-contact"
+                        className="!h-12 rounded-xl border-black/[0.08] bg-white text-base"
+                      >
+                        <SelectValue placeholder="목표시험 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EXAM_STREAMS.map((stream) => (
+                          <SelectItem key={stream.id} value={stream.label}>
+                            {stream.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {isCustomStream && (
+                      <Input
+                        id="signup-contact-custom"
+                        value={customExam}
+                        onChange={(event) => setCustomExam(event.target.value)}
+                        maxLength={40}
+                        placeholder="준비 중인 시험을 입력해 주세요"
+                        className="h-12 rounded-xl border-black/[0.08] bg-white text-base"
+                      />
+                    )}
+                    <p className="text-xs leading-5 text-slate-500">
+                      {isCustomStream
+                        ? '준비 중인 시험 이름을 자유롭게 적어 주세요.'
+                        : '선택한 시험에 맞춰 과목이 자동으로 준비돼요.'}
+                    </p>
                   </div>
 
                   <div className="space-y-2">

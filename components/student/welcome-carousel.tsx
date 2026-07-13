@@ -11,10 +11,12 @@ interface WelcomeCarouselProps {
   campus: string;
   enrollStartDate?: string;
   showMock: boolean;
+  // 승인 시 직렬 기반 과목이 자동생성됐는지 — 마지막 카드에서 계획수립(신청 탭) CTA 노출
+  hasPreparedSubjects?: boolean;
   replay: boolean;
 }
 
-export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, showMock, replay }: WelcomeCarouselProps) {
+export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, showMock, hasPreparedSubjects, replay }: WelcomeCarouselProps) {
   const router = useRouter();
   const stepIds = useMemo(() => buildWelcomeStepIds(showMock), [showMock]);
   const [idx, setIdx] = useState(0);
@@ -36,7 +38,8 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
   const isLast = idx >= stepIds.length - 1;
   const current = stepContent[stepIds[idx]];
 
-  async function finish() {
+  // tab 을 주면 온보딩 완료 후 해당 학생 탭으로 딥링크(예: 'student-requests' = 신청 탭).
+  async function finish(tab?: string) {
     if (busy) return;
     setBusy(true);
     try {
@@ -44,7 +47,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
         await fetch('/api/student/onboarding', { method: 'POST' }).catch(() => {});
       }
     } finally {
-      router.push(`/report/${studentId}?audience=student`);
+      router.push(`/report/${studentId}?audience=student${tab ? `&tab=${tab}` : ''}`);
     }
   }
 
@@ -72,10 +75,25 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
         onTouchEnd={onTouchEnd}
       >
         <div className="flex justify-end">
-          <button onClick={finish} className="text-xs text-slate-500 dark:text-slate-400" disabled={busy}>건너뛰기</button>
+          <button onClick={() => finish()} className="text-xs text-slate-500 dark:text-slate-400" disabled={busy}>건너뛰기</button>
         </div>
         <h2 className="text-xl font-semibold mt-2 text-slate-900 dark:text-slate-100">{current.title}</h2>
         <p className="text-sm text-slate-900/80 dark:text-slate-300 mt-3 leading-relaxed">{current.body}</p>
+        {isLast && hasPreparedSubjects && (
+          <div className="mt-4 rounded-2xl bg-[#0071E3]/[0.06] dark:bg-[#0A84FF]/10 p-4">
+            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">과목이 준비됐어요</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+              목표시험에 맞춰 과목을 미리 만들어뒀어요. 과목별로 교재·강의를 신청해 계획을 세워보세요.
+            </p>
+            <button
+              onClick={() => finish('student-requests')}
+              disabled={busy}
+              className="mt-3 w-full rounded-full py-2.5 text-sm font-semibold bg-[#0071E3] text-white disabled:opacity-60"
+            >
+              교재·강의 신청하러 가기
+            </button>
+          </div>
+        )}
         <div className="flex gap-1.5 justify-center mt-6">
           {stepIds.map((s, i) => (
             <button
@@ -98,7 +116,7 @@ export function WelcomeCarousel({ studentId, name, campus, enrollStartDate, show
           {!isLast ? (
             <button onClick={() => setIdx((v) => v + 1)} className="flex-1 rounded-full py-2.5 text-sm bg-[#0071E3] text-white">다음</button>
           ) : (
-            <button onClick={finish} className="flex-1 rounded-full py-2.5 text-sm bg-[#0071E3] text-white" disabled={busy}>시작하기</button>
+            <button onClick={() => finish()} className="flex-1 rounded-full py-2.5 text-sm bg-[#0071E3] text-white" disabled={busy}>시작하기</button>
           )}
         </div>
       </div>

@@ -119,12 +119,22 @@ export async function GET() {
       case 'phone_focus_week':
         return `이번 주 휴대폰 제출/보관 ${phoneFocusStats.count}/${c.phoneFocusDays ?? 5}일`;
       case 'weekly_growth': {
+        // 집중률 = 집중(타이머) ÷ 체류(등원~하원), 최대 100%. 판정은 전주 대비 %p 상승(정산 엔진과 동일).
         const needHours = c.growthMinHours ?? 20;
-        const needGrowth = c.growthPercent ?? 15;
-        if (weeklyMinutes <= 0) return `이번 주 순공 기록 없음 · 최소 ${needHours}시간 필요`;
-        if (previousWeeklyMinutes <= 0) return `이번 주 ${fmtMin(weeklyMinutes)} · 지난주 기록이 있어야 성장률 계산 가능`;
-        const growth = ((weeklyMinutes - previousWeeklyMinutes) / previousWeeklyMinutes) * 100;
-        return `이번 주 ${fmtMin(weeklyMinutes)} · 전주 대비 ${Math.round(growth)}%/${needGrowth}% · 최소 ${needHours}시간`;
+        const needPt = c.growthPercent ?? 15;
+        if (weeklyMinutes <= 0) return `이번 주 체류 기록 없음 · 체류 ${needHours}시간 필요`;
+        const focusInRange = (since: string, until: string): number => {
+          const pm = note.pomodoro_minutes;
+          if (!pm || typeof pm !== 'object') return 0;
+          let sum = 0;
+          for (const [d, v] of Object.entries(pm)) if (d >= since && d <= until) sum += Number(v) || 0;
+          return sum;
+        };
+        const currentRatio = Math.min(100, Math.round((Math.min(focusInRange(weekStart, todayStr), weeklyMinutes) / weeklyMinutes) * 100));
+        if (previousWeeklyMinutes <= 0) return `이번 주 집중률 ${currentRatio}% · 지난주 기록이 있어야 상승폭을 계산할 수 있어요`;
+        const previousRatio = Math.min(100, Math.round((Math.min(focusInRange(previousWeekStart, previousWeekEnd), previousWeeklyMinutes) / previousWeeklyMinutes) * 100));
+        const delta = currentRatio - previousRatio;
+        return `집중률 ${currentRatio}% (지난주 ${previousRatio}%) · ${delta >= 0 ? '+' : ''}${delta}%p/${needPt}%p · 체류 ${fmtMin(weeklyMinutes)}`;
       }
       case 'deadline_zero_overdue':
         if (deadlineStats.activeCount <= 0) return '진행 중인 기간 목표 없음';

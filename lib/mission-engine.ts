@@ -3,7 +3,7 @@
 // 멱등성: 학생 specialNote.rewards_log 에 {date: periodKey, missionName} 으로 기록 — 같은 기간 중복 지급 방지.
 import { Student } from './types/student';
 import { getStudents, getStudentById, getStudyMinutesByStudent, getSessionsInRange, patchStudentProgress, getAppSetting, setAppSetting, activeBackend } from './store';
-import { getPeriodBounds } from './study-stats';
+import { getPeriodBounds, focusMinutesByStudent } from './study-stats';
 import {
   MissionId,
   MISSION_ORDER,
@@ -255,15 +255,21 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
     }
   }
 
-  // 6) 전주 대비 순공 성장
+  // 6) 전주 대비 집중률 성장 — 집중률 = 집중(타이머) ÷ 체류(등원~하원), 0~100%.
+  // 순공 분(minutes) 성장률은 전주가 작으면 수백%로 폭주해 상한 논란이 있었다(운영 결정 2026-07-13):
+  // 체류보다 집중이 길 수 없으므로 비율은 자연 상한 100%가 되고, 성장은 %p 상승으로 판정한다.
   if (runs('weekly_growth') && sessionsAvailable) {
-    const needGrowth = (config.weekly_growth.growthPercent ?? 15) / 100;
-    const minCurrent = (config.weekly_growth.growthMinHours ?? 20) * 60;
+    const needGrowthPt = config.weekly_growth.growthPercent ?? 15; // %p 상승
+    const minAttend = (config.weekly_growth.growthMinHours ?? 20) * 60; // 이번 주 최소 체류
+    const weekFocus = focusMinutesByStudent(students, weekStart, todayStr, weekMin);
+    const previousFocus = focusMinutesByStudent(students, previousWeekStart, previousWeekEnd, previousWeekMin);
     for (const s of students) {
-      const current = weekMin[s.id] || 0;
-      const previous = previousWeekMin[s.id] || 0;
-      if (current < minCurrent || previous <= 0) continue;
-      if ((current - previous) / previous >= needGrowth) {
+      const attend = weekMin[s.id] || 0;
+      const prevAttend = previousWeekMin[s.id] || 0;
+      if (attend < minAttend || prevAttend <= 0) continue;
+      const currentRatio = Math.min(100, ((weekFocus[s.id] || 0) / attend) * 100);
+      const previousRatio = Math.min(100, ((previousFocus[s.id] || 0) / prevAttend) * 100);
+      if (currentRatio - previousRatio >= needGrowthPt) {
         addGrant(s.id, 'weekly_growth', weekKey, config.weekly_growth.coupons);
       }
     }

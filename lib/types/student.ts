@@ -578,6 +578,10 @@ export interface SubjectProgress {
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; // (deprecated)
   books: BookProgress[];   // 이 과목 하위의 교재 진도
   lectures: LectureProgress[]; // 이 과목 하위의 강의 진도
+  // 학생이 직접 만든 오답 태그(표시 문자열 그대로 저장, 예: '구조독해'). 기본 4종 뒤에 추가 노출.
+  // 과목 단위 최대 12개 · 1~10자. 삭제해도 기존 노트에 저장된 태그 문자열은 건드리지 않는다(라벨 그대로 표시).
+  // subjects jsonb 에 통째 저장 — 마이그레이션 불필요(JSON).
+  customWrongTags?: string[];
   updatedAt: string;
 }
 

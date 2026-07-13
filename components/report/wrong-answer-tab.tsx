@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Target, Plus, Minus, Camera, ImageIcon, Loader2, Trash2, Pencil, Check, X, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, BookProgress, WrongNote } from '@/lib/types/student';
@@ -26,6 +26,24 @@ const COUNT_CLS: Record<string, string> = {
 };
 const TAG_LABEL: Record<string, string> = Object.fromEntries(TAGS.map((t) => [t.key, t.label]));
 
+// 커스텀 태그 공용 색 — 학생이 만든 태그는 전부 이 색(기본 4종과 구분되는 역할 색).
+const CUSTOM_TAG_CLS = 'bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-300';
+const tagCls = (key: string) => COUNT_CLS[key] || CUSTOM_TAG_CLS;
+// 커스텀 태그는 저장된 문자열이 곧 라벨 — 태그를 삭제해도 노트에 남은 문자열은 그대로 표시된다.
+const tagLabel = (key: string) => TAG_LABEL[key] || key;
+const MAX_TAG_NAME_LEN = 10;
+
+// 기본 4종 + 과목 커스텀 태그를 선택 가능한 {key,label} 목록으로 합친다(커스텀은 key=label=문자열).
+const buildSelectableTags = (customTags: string[]) => [
+  ...TAGS.map((t) => ({ key: t.key as string, label: t.label })),
+  ...customTags.map((t) => ({ key: t, label: t })),
+];
+
+const fmtNoteDate = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getMonth() + 1}.${d.getDate()}`;
+};
+
 interface WrongAnswerTabProps {
   student: Student;
   isStudentReport: boolean;
@@ -39,9 +57,11 @@ interface WrongAnswerTabProps {
 // (버그 원인: 예전엔 표시값이 서버 왕복 뒤에만 갱신돼, 빠르게 두 번 누르면 같은 값이 두 번 전송됐다.)
 function BookTagStepper({
   book,
+  customTags,
   setBookIncorrectTag,
 }: {
   book: BookProgress;
+  customTags: string[]; // 과목 커스텀 태그 — 기본 4종 뒤에 붙여 같은 방식으로 +/- 센다(키=태그 문자열).
   setBookIncorrectTag: WrongAnswerTabProps['setBookIncorrectTag'];
 }) {
   const serverTags = book.incorrectTags;
@@ -63,7 +83,10 @@ function BookTagStepper({
     }
   }, [serverTags]);
 
-  const total = TAGS.reduce((sum, t) => sum + (Number(localTags[t.key]) || 0), 0);
+  // 표시·집계 대상 태그 — 기본 4종 + 커스텀. 삭제된 커스텀 태그의 누적치는 스테퍼에서 사라진다
+  // (incorrectTags 값 자체는 남아 있어 태그를 다시 만들면 이어서 센다).
+  const allTags = useMemo(() => buildSelectableTags(customTags), [customTags]);
+  const total = allTags.reduce((sum, t) => sum + (Number(localTags[t.key]) || 0), 0);
 
   // 저장 큐 비우기 — in-flight 가 없을 때만 실행되고, 완료 후 그 사이 눌린 게 있으면 최신 스냅샷으로 한 번 더.
   // 절대값 전송 + 서버 conflict-재시도 특성상 병렬 전송은 마지막 탭을 잃을 수 있어 반드시 직렬화한다.
@@ -112,12 +135,12 @@ function BookTagStepper({
       </div>
       {/* 눌러서 올리고, 잘못 눌렀으면 −로 되돌린다 */}
       <div className="grid grid-cols-2 gap-2">
-        {TAGS.map((t) => {
+        {allTags.map((t) => {
           const n = Number(localTags[t.key]) || 0;
           return (
-            <div key={t.key} className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5">
-              <span className={`rounded-md px-1.5 py-0.5 text-[11px] font-black leading-none ${n > 0 ? COUNT_CLS[t.key] : 'text-slate-500 dark:text-slate-400'}`}>{t.label}</span>
-              <span className="flex items-center gap-1">
+            <div key={t.key} className="flex items-center justify-between gap-1 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5">
+              <span className={`min-w-0 truncate rounded-md px-1.5 py-0.5 text-[11px] font-black leading-none ${n > 0 ? tagCls(t.key) : 'text-slate-500 dark:text-slate-400'}`}>{t.label}</span>
+              <span className="flex shrink-0 items-center gap-1">
                 <button
                   type="button"
                   disabled={n <= 0}
@@ -153,12 +176,21 @@ function BookTagStepper({
 // 교재별 오답 문제 기록 — 타이핑/사진으로 남기고, 목록에서 수정·삭제한다. 로컬 상태로 관리.
 function BookWrongNotes({
   book,
+  customTags,
   signedUrls,
   onUploadedUrl,
+  onNotesChange,
+  onCreateTag,
+  onRemoveTag,
 }: {
   book: BookProgress;
+  customTags: string[]; // 이 교재가 속한 과목의 커스텀 태그
   signedUrls: Record<string, string>;
   onUploadedUrl: (path: string, url: string) => void;
+  // 로컬 노트 변화를 부모에 보고 — 태그 모아보기(교재 횡단 필터)가 이 세션의 추가/삭제도 반영하게.
+  onNotesChange: (bookId: string, notes: WrongNote[]) => void;
+  onCreateTag: (tag: string) => Promise<boolean>;
+  onRemoveTag: (tag: string) => Promise<boolean>;
 }) {
   const confirm = useConfirm();
   const [notes, setNotes] = useState<WrongNote[]>(() => book.wrongNotes || []);
@@ -171,14 +203,58 @@ function BookWrongNotes({
   const [editingId, setEditingId] = useState('');
   const [editText, setEditText] = useState('');
   const [editTags, setEditTags] = useState<string[]>([]);
+  // 인라인 태그 만들기/삭제 UI 상태
+  const [tagEditorOpen, setTagEditorOpen] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
+  const [tagBusy, setTagBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // student prop 이 바뀌어 book.wrongNotes 가 갱신되면 로컬도 재동기화(다른 기기 편집 반영).
   useEffect(() => { setNotes(book.wrongNotes || []); }, [book.wrongNotes]);
   // 로컬 미리보기 URL 정리
   useEffect(() => () => { if (draftPreview) URL.revokeObjectURL(draftPreview); }, [draftPreview]);
+  // 부모에 최신 노트 스냅샷 보고(태그 필터 뷰 데이터 소스)
+  useEffect(() => { onNotesChange(book.id, notes); }, [book.id, notes, onNotesChange]);
 
   const toggleTag = (list: string[], key: string) => (list.includes(key) ? list.filter((k) => k !== key) : [...list, key]);
+  const selectableTags = buildSelectableTags(customTags);
+
+  const submitNewTag = async () => {
+    if (tagBusy) return;
+    const tag = newTagName.trim();
+    if (!tag) return;
+    if (tag.length > MAX_TAG_NAME_LEN) { toast.error(`태그는 ${MAX_TAG_NAME_LEN}자 이내로 지어 주세요.`); return; }
+    if (tag.includes(',')) { toast.error('태그 이름에는 쉼표를 쓸 수 없어요.'); return; }
+    setTagBusy(true);
+    try {
+      const ok = await onCreateTag(tag);
+      if (ok) setNewTagName('');
+    } finally {
+      setTagBusy(false);
+    }
+  };
+
+  const removeCustomTag = async (tag: string) => {
+    if (tagBusy) return;
+    const ok = await confirm({
+      title: `'${tag}' 태그를 삭제할까요?`,
+      description: '이미 기록한 오답에 붙은 태그는 그대로 남아요.',
+      tone: 'danger',
+      confirmText: '삭제',
+    });
+    if (!ok) return;
+    setTagBusy(true);
+    try {
+      const done = await onRemoveTag(tag);
+      if (done) {
+        // 선택 중이던 초안/수정 태그에서도 빼서, 저장 시 서버 화이트리스트에서 조용히 탈락하는 일을 막는다.
+        setDraftTags((prev) => prev.filter((k) => k !== tag));
+        setEditTags((prev) => prev.filter((k) => k !== tag));
+      }
+    } finally {
+      setTagBusy(false);
+    }
+  };
 
   const pickFile = async (file: File | undefined) => {
     if (!file) return;
@@ -286,11 +362,6 @@ function BookWrongNotes({
     }
   };
 
-  const fmtDate = (iso: string) => {
-    const d = new Date(iso);
-    return `${d.getMonth() + 1}.${d.getDate()}`;
-  };
-
   return (
     <div className="space-y-2.5 border-t border-slate-100 dark:border-white/10 pt-3">
       <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">오답 문제 기록</p>
@@ -326,12 +397,12 @@ function BookWrongNotes({
                           placeholder="문제/오답 내용"
                         />
                         <div className="flex flex-wrap gap-1">
-                          {TAGS.map((t) => (
+                          {selectableTags.map((t) => (
                             <button
                               key={t.key}
                               type="button"
                               onClick={() => setEditTags((prev) => toggleTag(prev, t.key))}
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-black transition ${editTags.includes(t.key) ? COUNT_CLS[t.key] : 'bg-white dark:bg-[#1c1c1e] text-slate-400 border border-slate-200 dark:border-white/10'}`}
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-black transition ${editTags.includes(t.key) ? tagCls(t.key) : 'bg-white dark:bg-[#1c1c1e] text-slate-400 border border-slate-200 dark:border-white/10'}`}
                             >
                               {t.label}
                             </button>
@@ -352,12 +423,12 @@ function BookWrongNotes({
                         {note.tags && note.tags.length > 0 && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             {note.tags.map((k) => (
-                              <span key={k} className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${COUNT_CLS[k] || 'bg-slate-100 text-slate-500'}`}>{TAG_LABEL[k] || k}</span>
+                              <span key={k} className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${tagCls(k)}`}>{tagLabel(k)}</span>
                             ))}
                           </div>
                         )}
                         <div className="mt-1.5 flex items-center gap-2">
-                          <span className="text-[10px] font-bold text-slate-400">{fmtDate(note.createdAt)}</span>
+                          <span className="text-[10px] font-bold text-slate-400">{fmtNoteDate(note.createdAt)}</span>
                           {note.resolvedAt && (
                             <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-black text-emerald-600 dark:text-emerald-300">
                               <Check className="h-2.5 w-2.5" /> 확인됨
@@ -391,18 +462,73 @@ function BookWrongNotes({
           className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-[#0071E3]/50"
           placeholder="틀린 문제나 오답 내용을 적어 주세요. 사진만 올려도 돼요."
         />
-        <div className="flex flex-wrap gap-1">
-          {TAGS.map((t) => (
+        <div className="flex flex-wrap items-center gap-1">
+          {selectableTags.map((t) => (
             <button
               key={t.key}
               type="button"
               onClick={() => setDraftTags((prev) => toggleTag(prev, t.key))}
-              className={`rounded-full px-2 py-0.5 text-[10px] font-black transition ${draftTags.includes(t.key) ? COUNT_CLS[t.key] : 'bg-slate-50 dark:bg-white/5 text-slate-400 border border-slate-200 dark:border-white/10'}`}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-black transition ${draftTags.includes(t.key) ? tagCls(t.key) : 'bg-slate-50 dark:bg-white/5 text-slate-400 border border-slate-200 dark:border-white/10'}`}
             >
               {t.label}
             </button>
           ))}
+          {/* 커스텀 태그 만들기/정리 토글 */}
+          <button
+            type="button"
+            onClick={() => setTagEditorOpen((v) => !v)}
+            className={`inline-flex items-center gap-0.5 rounded-full border border-dashed px-2 py-0.5 text-[10px] font-black transition ${tagEditorOpen ? 'border-[#0071E3]/50 text-[#0071E3]' : 'border-slate-300 dark:border-white/20 text-slate-400 hover:text-[#0071E3] hover:border-[#0071E3]/40'}`}
+            aria-expanded={tagEditorOpen}
+          >
+            <Plus className="h-2.5 w-2.5" /> 태그 만들기
+          </button>
         </div>
+
+        {/* 인라인 태그 편집기 — 내 태그 추가/삭제. 과목 단위로 저장돼 같은 과목의 다른 교재에서도 함께 쓰여요. */}
+        {tagEditorOpen && (
+          <div className="space-y-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 p-2.5">
+            <div className="flex items-center gap-1.5">
+              <input
+                type="text"
+                value={newTagName}
+                maxLength={MAX_TAG_NAME_LEN}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void submitNewTag(); } }}
+                placeholder="예: 구조독해, 문법"
+                className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-[#0071E3]/50"
+              />
+              <button
+                type="button"
+                onClick={() => void submitNewTag()}
+                disabled={tagBusy || !newTagName.trim()}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-[#0071E3] px-2.5 py-1.5 text-[11px] font-black text-white transition hover:bg-[#0060c0] disabled:opacity-40"
+              >
+                {tagBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />} 추가
+              </button>
+            </div>
+            {customTags.length > 0 && (
+              <div className="flex flex-wrap gap-1">
+                {customTags.map((t) => (
+                  <span key={t} className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black ${CUSTOM_TAG_CLS}`}>
+                    {t}
+                    <button
+                      type="button"
+                      onClick={() => void removeCustomTag(t)}
+                      disabled={tagBusy}
+                      className="grid h-3.5 w-3.5 place-items-center rounded-full transition hover:bg-teal-600/15 disabled:opacity-40"
+                      aria-label={`${t} 태그 삭제`}
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+            <p className="text-[10px] font-semibold text-slate-400 break-keep">
+              내 태그는 과목당 12개까지, 10자 이내로 만들 수 있어요. 지워도 이미 기록한 오답에는 그대로 남아요.
+            </p>
+          </div>
+        )}
         {draftPreview && (
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -436,12 +562,77 @@ function BookWrongNotes({
   );
 }
 
+// 과목 id → 커스텀 태그 목록 맵 생성(학생 prop 기준 초기값/재동기화용).
+const buildCustomTagMap = (subjects: Student['subjects']): Record<string, string[]> =>
+  Object.fromEntries((subjects || []).map((s) => [s.id, s.customWrongTags || []]));
+
 export function WrongAnswerTab({ student, isStudentReport, setBookIncorrectTag, activeTab }: WrongAnswerTabProps) {
   // 학생 본인 화면 전용 도구(오답 입력). 학부모 리포트에는 노출하지 않는다.
   const books = useMemo(
-    () => (student.subjects || []).flatMap((sub) => (sub.books || []).map((book) => ({ subjectName: sub.name, book }))),
+    () => (student.subjects || []).flatMap((sub) => (sub.books || []).map((book) => ({ subjectId: sub.id, subjectName: sub.name, book }))),
     [student.subjects],
   );
+
+  // 과목별 커스텀 태그 — 서버(PUT) 응답으로 즉시 갱신하는 로컬 맵(학생 prop 재조회 없이 반영).
+  const [customTagsBySubject, setCustomTagsBySubject] = useState<Record<string, string[]>>(() => buildCustomTagMap(student.subjects));
+  useEffect(() => { setCustomTagsBySubject(buildCustomTagMap(student.subjects)); }, [student.subjects]);
+
+  const mutateCustomTag = useCallback(async (subjectId: string, action: 'add' | 'remove', tag: string): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/student/wrong-note', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ subjectId, action, tag }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setCustomTagsBySubject((prev) => ({ ...prev, [subjectId]: json.customWrongTags || [] }));
+        toast.success(action === 'add' ? '태그를 만들었어요.' : '태그를 삭제했어요.');
+        return true;
+      }
+      toast.error(json.message || '태그 저장에 실패했어요.');
+      return false;
+    } catch {
+      toast.error('태그 저장 중 오류가 발생했어요.');
+      return false;
+    }
+  }, []);
+
+  // 이 세션에서 추가/삭제된 노트 반영용 오버라이드 — 태그 모아보기가 최신 목록을 보게 한다.
+  const [notesOverride, setNotesOverride] = useState<Record<string, WrongNote[]>>({});
+  const handleNotesChange = useCallback((bookId: string, notes: WrongNote[]) => {
+    setNotesOverride((prev) => ({ ...prev, [bookId]: notes }));
+  }, []);
+  const notesOf = useCallback(
+    (book: BookProgress) => notesOverride[book.id] ?? (book.wrongNotes || []),
+    [notesOverride],
+  );
+
+  // 태그 모아보기 — 단일 태그 필터. 노트에 실제로 달린 태그만 칩으로 노출(기본 4종 순서 우선).
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const usedTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    books.forEach(({ book }) => notesOf(book).forEach((n) => (n.tags || []).forEach((t) => counts.set(t, (counts.get(t) || 0) + 1))));
+    const ordered: Array<{ key: string; count: number }> = [];
+    TAGS.forEach((t) => {
+      const c = counts.get(t.key);
+      if (c) { ordered.push({ key: t.key, count: c }); counts.delete(t.key); }
+    });
+    counts.forEach((count, key) => ordered.push({ key, count }));
+    return ordered;
+  }, [books, notesOf]);
+
+  const filteredNotes = useMemo(() => {
+    if (!tagFilter) return [];
+    return books
+      .flatMap(({ subjectName, book }) =>
+        notesOf(book)
+          .filter((n) => (n.tags || []).includes(tagFilter))
+          .map((note) => ({ subjectName, book, note })),
+      )
+      .sort((a, b) => (a.note.createdAt < b.note.createdAt ? 1 : -1));
+  }, [books, notesOf, tagFilter]);
 
   // 오답 사진 서명 URL 맵(비공개 버킷). 탭이 활성화될 때 한 번 조회하고, 추가 시 병합한다.
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
@@ -472,31 +663,125 @@ export function WrongAnswerTab({ student, isStudentReport, setBookIncorrectTag, 
         description="틀린 문제를 사진·글로 남기고, 사유 태그로 약점 유형까지 쌓아 두면 복습이 쉬워져요."
       />
 
-      {books.length === 0 ? (
+      {/* 태그 모아보기 — 태그를 누르면 모든 교재를 가로질러 그 태그가 달린 오답만 모아 보여줘요. */}
+      {usedTags.length > 0 && (
+        <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3.5 shadow-sm">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">태그 모아보기</p>
+            {tagFilter && (
+              <button
+                type="button"
+                onClick={() => setTagFilter(null)}
+                className="inline-flex items-center gap-0.5 rounded-full bg-slate-100 dark:bg-white/10 px-2 py-0.5 text-[10px] font-black text-slate-500 dark:text-slate-400 transition hover:text-slate-700"
+              >
+                <X className="h-2.5 w-2.5" /> 전체 보기
+              </button>
+            )}
+          </div>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {usedTags.map(({ key, count }) => {
+              const selected = tagFilter === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setTagFilter(selected ? null : key)}
+                  className={`rounded-full px-2.5 py-1 text-[11px] font-black transition active:scale-95 ${
+                    selected
+                      ? `${tagCls(key)} ring-1 ring-current`
+                      : 'border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400'
+                  }`}
+                  aria-pressed={selected}
+                >
+                  {tagLabel(key)} <span className="tabular-nums opacity-70">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tagFilter ? (
+        // 태그 필터 뷰 — 과목·교재 라벨을 병기한 교재 횡단 모아보기(읽기 전용).
+        filteredNotes.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-white/5 p-8 text-center">
+            <p className="text-sm font-black text-slate-700 dark:text-slate-300">이 태그가 달린 오답이 없어요.</p>
+            <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-400">전체 보기로 돌아가 오답을 기록해 보세요.</p>
+          </div>
+        ) : (
+          <ul className="space-y-2.5">
+            {filteredNotes.map(({ subjectName, book, note }) => {
+              const url = note.imagePath ? signedUrls[note.imagePath] : undefined;
+              return (
+                <li key={`${book.id}-${note.id}`} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3.5 shadow-sm">
+                  <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider" style={{ color: getMaterialColor(book) }}>
+                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(book) }} />
+                    <span className="truncate">{subjectName || '과목'} · {book.title}</span>
+                  </p>
+                  <div className="mt-2 flex gap-2.5">
+                    {note.imagePath && (
+                      url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={url} alt="오답 사진" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
+                      ) : (
+                        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-lg bg-slate-100 dark:bg-white/10 text-slate-400">
+                          <ImageIcon className="h-4 w-4" />
+                        </span>
+                      )
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {note.text && <p className="whitespace-pre-wrap break-keep text-xs font-semibold text-slate-800 dark:text-slate-100">{note.text}</p>}
+                      {note.tags && note.tags.length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {note.tags.map((k) => (
+                            <span key={k} className={`rounded-md px-1.5 py-0.5 text-[10px] font-black ${tagCls(k)}`}>{tagLabel(k)}</span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="mt-1.5 text-[10px] font-bold text-slate-400">{fmtNoteDate(note.createdAt)}</p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      ) : books.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-slate-200 dark:border-white/10 bg-slate-50/80 dark:bg-white/5 p-8 text-center">
           <p className="text-sm font-black text-slate-700 dark:text-slate-300">등록된 교재가 없어요.</p>
           <p className="mt-1 text-xs font-semibold text-slate-400 dark:text-slate-400">교재가 추가되면 여기에서 오답을 기록할 수 있어요.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {books.map(({ subjectName, book }) => (
-            <div key={book.id} className="space-y-3 rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider" style={{ color: getMaterialColor(book) }}>
-                    <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(book) }} />
-                    {subjectName || '과목'}
-                  </p>
-                  <h3 className="mt-0.5 truncate text-sm font-black text-slate-900 dark:text-slate-100">{book.title}</h3>
+          {books.map(({ subjectId, subjectName, book }) => {
+            const customTags = customTagsBySubject[subjectId] || [];
+            return (
+              <div key={book.id} className="space-y-3 rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider" style={{ color: getMaterialColor(book) }}>
+                      <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: getMaterialColor(book) }} />
+                      {subjectName || '과목'}
+                    </p>
+                    <h3 className="mt-0.5 truncate text-sm font-black text-slate-900 dark:text-slate-100">{book.title}</h3>
+                  </div>
+                  <NotebookPen className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
                 </div>
-                <NotebookPen className="h-4 w-4 shrink-0 text-slate-300 dark:text-slate-600" />
+
+                <BookTagStepper book={book} customTags={customTags} setBookIncorrectTag={setBookIncorrectTag} />
+
+                <BookWrongNotes
+                  book={book}
+                  customTags={customTags}
+                  signedUrls={signedUrls}
+                  onUploadedUrl={mergeUrl}
+                  onNotesChange={handleNotesChange}
+                  onCreateTag={(tag) => mutateCustomTag(subjectId, 'add', tag)}
+                  onRemoveTag={(tag) => mutateCustomTag(subjectId, 'remove', tag)}
+                />
               </div>
-
-              <BookTagStepper book={book} setBookIncorrectTag={setBookIncorrectTag} />
-
-              <BookWrongNotes book={book} signedUrls={signedUrls} onUploadedUrl={mergeUrl} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

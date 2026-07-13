@@ -24,6 +24,9 @@ export default async function StudentWelcomePage({
     redirect(`/report/${sid}?audience=student`);
   }
 
+  // 직렬 기반으로 과목이 미리 생성돼 있으면 마지막 카드에서 계획수립(교재·강의 신청)으로 유도.
+  const hasPreparedSubjects = (student.subjects?.length ?? 0) > 0;
+
   return (
     <WelcomeCarousel
       studentId={sid}
@@ -31,6 +34,7 @@ export default async function StudentWelcomePage({
       campus={student.campus}
       enrollStartDate={student.enrollStartDate}
       showMock={shouldShowMockStep(student.contact)}
+      hasPreparedSubjects={hasPreparedSubjects}
       replay={isReplay}
     />
   );

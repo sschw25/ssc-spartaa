@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import {
   ChevronLeft, Utensils, RefreshCw, Loader2, Plus, Trash2,
-  Bell, MessageSquare, X,
+  Bell, BellOff, MessageSquare, X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, MealPlan, MealKind, MealDay } from '@/lib/types/student';
@@ -74,7 +74,8 @@ function createRoutineDraft(campus = 'all'): MealPlanRoutineTemplate {
     deadlineBase: 'create',
     deadlineDay: 5,
     deadlineTime: '14:00',
-    notifyMode: 'none',
+    // 기본 = 생성 즉시 발송. 'none'이면 라운드가 생겨도 학생에게 안 보인다(미노출 사고 방지).
+    notifyMode: 'on_create',
     notifyDay: 1,
     notifyTime: '14:00',
     createdAt: now,
@@ -299,7 +300,12 @@ export default function MealsPage() {
       const res = await fetch('/api/admin/meal-routines/run', { method: 'POST' });
       const json = await res.json();
       if (json.success) {
-        toast.success(`반복 실행 완료: 생성 ${json.created || 0}건, 알림 ${json.notified || 0}건`);
+        const parts = [`생성 ${json.created || 0}건`, `발송 ${json.notified || 0}건`];
+        if (json.skippedNotDue) {
+          const nextDue = Array.isArray(json.nextDue) && json.nextDue.length ? ` · 다음 예정 ${json.nextDue.join(', ')}` : '';
+          parts.push(`생성 시각 대기 ${json.skippedNotDue}건${nextDue}`);
+        }
+        toast.success(`반복 실행 완료: ${parts.join(' · ')}`);
         await loadAll();
       } else {
         toast.error(json.message || '반복 실행 실패');
@@ -489,9 +495,14 @@ export default function MealsPage() {
                           {isPastDeadline(plan) ? '마감됨' : `마감 ${formatDeadline(plan.deadline)}`}
                         </span>
                       )}
-                      {plan.notifiedAt && (
+                      {plan.notifiedAt ? (
                         <span className="flex items-center gap-1 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-1.5 py-0.5 text-[9px] font-black">
                           <Bell className="w-2 h-2" /> 알림됨
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 rounded-lg bg-amber-100 dark:bg-amber-500/15 text-amber-700 dark:text-amber-400 px-1.5 py-0.5 text-[9px] font-black"
+                          title="'학생 알림' 발송 전까지 학생 화면에 노출되지 않습니다">
+                          <BellOff className="w-2 h-2" /> 미발송 · 학생에게 안 보임
                         </span>
                       )}
                     </div>
@@ -567,6 +578,9 @@ export default function MealsPage() {
                     <option value={1}>다음 주</option>
                     <option value={2}>2주 뒤</option>
                   </select>
+                  <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+                    지금 기준 {weekRangeLabel(addDaysYmd(thisMonday(), routineForm.targetWeekOffset * 7))} 주 생성
+                  </span>
                 </label>
               </div>
 
@@ -595,10 +609,13 @@ export default function MealsPage() {
                   알림
                   <select value={routineForm.notifyMode} onChange={(e) => setRoutineForm((f) => ({ ...f, notifyMode: e.target.value as MealPlanRoutineTemplate['notifyMode'] }))}
                     className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none">
-                    <option value="none">보내지 않음</option>
                     <option value="on_create">생성 즉시</option>
                     <option value="scheduled">예약 발송</option>
+                    <option value="none">보내지 않음 (학생에게 안 보임)</option>
                   </select>
+                  {routineForm.notifyMode === 'none' && (
+                    <span className="text-[10px] font-black text-amber-600 dark:text-amber-400">발송 전까지 학생 화면 미노출</span>
+                  )}
                 </label>
               </div>
 
@@ -709,6 +726,11 @@ export default function MealsPage() {
                       <p className="text-[11px] font-semibold text-slate-400">
                         마감 {template.deadlineBase === 'create' ? '생성 주' : '대상 주'} {DAY_OPTIONS.find((d) => d.value === template.deadlineDay)?.label} {template.deadlineTime} · 알림 {template.notifyMode === 'none' ? '없음' : template.notifyMode === 'on_create' ? '생성 즉시' : '예약'}
                       </p>
+                      {template.notifyMode === 'none' && (
+                        <p className="mt-0.5 flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400">
+                          <BellOff className="w-2.5 h-2.5 shrink-0" /> 발송 안 함 설정 · 생성돼도 학생에게 안 보임
+                        </p>
+                      )}
                     </div>
                     <button type="button" onClick={() => setRoutineForm(template)}
                       className="rounded-lg px-2 py-1.5 text-[11px] font-black text-[#0071E3] hover:bg-[#0071E3]/10">

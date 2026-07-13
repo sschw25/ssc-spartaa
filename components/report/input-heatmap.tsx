@@ -87,10 +87,12 @@ export function InputHeatmap({
 
   return (
     <div className="mt-3">
-      <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold text-slate-400 dark:text-slate-400">
+      {/* 범례 — 셀과 동일한 세 상태: 파랑=입력한 날 / 옅은칸=학습일인데 미입력 / 빈칸(테두리)=비학습일·휴가 */}
+      <p className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] font-bold text-slate-400 dark:text-slate-400">
         진도 입력 최근 5주
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-[#0071E3]" /> 입력</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-slate-100 dark:bg-white/10" /> 미입력</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-[#0071E3]" /> 입력한 날</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] bg-slate-100 dark:bg-white/10" /> 학습일·미입력</span>
+        <span className="inline-flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-[3px] ring-1 ring-inset ring-slate-200 dark:ring-white/15" /> 학습일 아님·휴가</span>
         {interactive && <span className="text-slate-400 dark:text-slate-500">· 칸을 누르면 그날 계획·실적</span>}
       </p>
       <div className="flex flex-wrap gap-[3px]" aria-label="진도 입력 히트맵">

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { X, BookOpen, Tv, ChevronRight, CalendarDays, Clock, Target, History, FileText } from 'lucide-react';
+import { X, BookOpen, Tv, ChevronRight, CalendarDays, Clock, Target, History, FileText, Pencil } from 'lucide-react';
 import type { Student, BookProgress, LectureProgress, SubjectProgress, DetailedPlan } from '@/lib/types/student';
 import { getMaterialStudyDays, getLeaveDates, toDateKey } from '@/lib/progress-plan';
 import { getPlanDailyCompletion } from '@/lib/student-activity';
@@ -218,9 +218,7 @@ export function MaterialDetailSheet({
                 단위 {unit}
               </span>
             </p>
-            <h2 className="mt-1 break-keep text-[16px] font-semibold leading-snug text-slate-900 dark:text-slate-100">
-              {title}
-            </h2>
+            <MaterialTitleEditor materialType={materialType} materialId={materialId} title={title} />
           </div>
           <button
             type="button"
@@ -411,6 +409,10 @@ export function MaterialDetailSheet({
               <FileText className="h-3.5 w-3.5 text-[#0071E3]" />
               공부한 날
             </p>
+            {/* 히트맵 읽는 법 — 세 상태(입력/학습일 미입력/비학습·휴가) 설명. 범례는 InputHeatmap 안에. */}
+            <p className="mt-1.5 break-keep text-[11px] font-medium text-slate-400 dark:text-slate-400">
+              진도를 입력한 날이 파란색으로 칠해져요. 옅은 칸은 학습 요일인데 입력이 없던 날, 빈 칸은 학습 요일이 아니거나 휴가였던 날이에요.
+            </p>
             <InputHeatmap inputLog={material.inputLog} studyDays={studyDays} leaveDates={leaveDates} detailedPlans={material.detailedPlans} unit={unit} isSelfPaced={isSelfPaced} reviewLog={material.reviewLog} />
           </div>
 
@@ -514,6 +516,127 @@ export function MaterialDetailSheet({
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// 자료 이름 인라인 편집 — 연필을 누르면 입력 모드. 저장 즉시 반영(승인 불필요), 관리자에겐 변경 이력만 남는다.
+// 저장은 /api/student/material-rename(본인 세션 자료만, patch 방식). 시트 안에서는 로컬 오버라이드로 즉시 갱신하고,
+// 홈/시간표 등 나머지 화면은 기존 조용한 갱신(포커스 복귀 재조회) 때 새 이름으로 따라온다.
+function MaterialTitleEditor({
+  materialType,
+  materialId,
+  title,
+}: {
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  title: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(title);
+  const [saving, setSaving] = useState(false);
+  // 저장 성공 직후 새 이름 — 전역 student 상태가 갱신되기 전까지 시트 표시를 담당.
+  const [override, setOverride] = useState<string | null>(null);
+
+  // 다른 자료로 시트가 바뀌면 편집 상태·오버라이드 초기화.
+  useEffect(() => {
+    setEditing(false);
+    setOverride(null);
+  }, [materialId]);
+
+  const shown = override ?? title;
+
+  const save = async () => {
+    const next = draft.trim().replace(/\s+/g, ' ');
+    if (!next) {
+      toast.error('자료 이름을 입력해 주세요.');
+      return;
+    }
+    if (next.length > 40) {
+      toast.error('자료 이름은 40자까지 입력할 수 있어요.');
+      return;
+    }
+    if (next === shown) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/student/material-rename', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialType, materialId, newTitle: next }),
+      });
+      const json = await res.json().catch(() => null);
+      if (res.ok && json?.success) {
+        setOverride(next);
+        setEditing(false);
+        toast.success('자료 이름을 바꿨어요. 선생님께도 변경 내역이 전달돼요.');
+      } else {
+        toast.error(json?.message || '이름 변경에 실패했어요. 다시 시도해 주세요.');
+      }
+    } catch {
+      toast.error('이름 변경에 실패했어요. 다시 시도해 주세요.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <div className="mt-1 flex items-start gap-1.5">
+        <h2 className="min-w-0 break-keep text-[16px] font-semibold leading-snug text-slate-900 dark:text-slate-100">
+          {shown}
+        </h2>
+        <button
+          type="button"
+          onClick={() => { setDraft(shown); setEditing(true); }}
+          aria-label="자료 이름 바꾸기"
+          title="자료 이름 바꾸기"
+          className="mt-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-100/80 dark:bg-white/10 text-slate-400 dark:text-slate-400 transition hover:bg-slate-200/80 dark:hover:bg-white/15 hover:text-[#0071E3] active:scale-95"
+        >
+          <Pencil className="h-3 w-3" />
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1">
+      <div className="flex items-center gap-1.5">
+        <input
+          type="text"
+          value={draft}
+          maxLength={40}
+          disabled={saving}
+          autoFocus
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') { e.preventDefault(); void save(); }
+            if (e.key === 'Escape') setEditing(false);
+          }}
+          className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-[14px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none disabled:opacity-60"
+        />
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => void save()}
+          className="shrink-0 rounded-xl bg-[#0071E3] px-3 py-1.5 text-[11px] font-semibold text-white transition hover:bg-[#0077ED] active:scale-95 disabled:opacity-40"
+        >
+          {saving ? '저장 중' : '저장'}
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => setEditing(false)}
+          className="shrink-0 rounded-xl border border-slate-200 dark:border-white/10 px-2.5 py-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95 disabled:opacity-40"
+        >
+          취소
+        </button>
+      </div>
+      <p className="mt-1 break-keep text-[10px] font-medium text-slate-400 dark:text-slate-400">
+        1~40자로 입력해요. 바꾼 이름은 바로 반영되고, 선생님께 변경 내역이 남아요.
+      </p>
     </div>
   );
 }

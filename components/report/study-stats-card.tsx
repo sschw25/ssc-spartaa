@@ -16,6 +16,8 @@ export interface StudyStats {
   weekExpectedDays?: number;
   weekAbsentDays?: number;
   currentStreak?: number;
+  weekFocusMin?: number;  // 집중(타이머) 순공 — 체류 상한 클램프
+  monthFocusMin?: number;
 }
 
 function fmt(min: number): string {
@@ -29,7 +31,7 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
   if (!stats) return null;
 
   const maxMin = Math.max(1, ...stats.byWeekday.map((d) => d.min));
-  const hasAny = stats.monthTotalMin > 0;
+  const hasAny = stats.monthTotalMin > 0 || (stats.monthFocusMin ?? 0) > 0;
 
   return (
     <div className="@container rounded-3xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 md:p-8 shadow-sm space-y-6">
@@ -40,23 +42,23 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
 
       {!hasAny ? (
         <div className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">
-          아직 등하원 기록이 없어요. QR로 등하원을 체크하면 순공 시간이 쌓입니다.
+          아직 기록이 없어요. QR로 등하원을 체크하고 집중 타이머를 켜면 시간이 쌓여요.
         </div>
       ) : (
         <>
-          {/* 요약 3종 — 카드 폭 기준(@container) 반응형: 좁으면 2열+상위 가로, 넓으면 3열 */}
+          {/* 집중(타이머) — 대표 지표. 체류를 넘을 수 없어요(재석 클램프) */}
           <div className="grid grid-cols-2 @md:grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-[#F5F5F7] dark:bg-white/5 p-4">
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                <CalendarDays className="w-3.5 h-3.5 shrink-0" /> 이번 주 순공
+            <div className="rounded-2xl bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/12 border border-[#0071E3]/15 p-4">
+              <div className="text-[11px] text-[#0071E3] font-semibold flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 shrink-0" /> 이번 주 집중
               </div>
-              <div className="text-lg @md:text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 tabular-nums whitespace-nowrap">{fmt(stats.weekTotalMin)}</div>
+              <div className="text-lg @md:text-xl font-bold text-[#0071E3] mt-1 tabular-nums whitespace-nowrap">{fmt(stats.weekFocusMin ?? 0)}</div>
             </div>
-            <div className="rounded-2xl bg-[#F5F5F7] dark:bg-white/5 p-4">
-              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
-                <CalendarDays className="w-3.5 h-3.5 shrink-0" /> 이번 달 순공
+            <div className="rounded-2xl bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/12 border border-[#0071E3]/15 p-4">
+              <div className="text-[11px] text-[#0071E3] font-semibold flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 shrink-0" /> 이번 달 집중
               </div>
-              <div className="text-lg @md:text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 tabular-nums whitespace-nowrap">{fmt(stats.monthTotalMin)}</div>
+              <div className="text-lg @md:text-xl font-bold text-[#0071E3] mt-1 tabular-nums whitespace-nowrap">{fmt(stats.monthFocusMin ?? 0)}</div>
             </div>
             <div className="col-span-2 @md:col-span-1 rounded-2xl bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 border border-[#0071E3]/15 p-4 flex flex-row @md:flex-col items-center justify-center @md:text-center gap-3 @md:gap-1.5">
               <div className="relative h-16 w-16 shrink-0">
@@ -76,7 +78,7 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
               </div>
               <div className="flex flex-col @md:items-center gap-1 min-w-0">
                 <div className="text-[11px] font-semibold text-[#0071E3] flex items-center gap-1">
-                  <Trophy className="w-3.5 h-3.5 shrink-0" /> 이번 주 상위
+                  <Trophy className="w-3.5 h-3.5 shrink-0" /> 이번 주 체류 상위
                 </div>
                 <p className="text-[10px] font-bold leading-tight text-[#0071E3]/70">
                   상위권에 가까울수록 링이 가득 차요
@@ -84,6 +86,25 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
               </div>
             </div>
           </div>
+
+          {/* 체류(등원~하원) — 보조 지표 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-[#F5F5F7] dark:bg-white/5 p-4">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <CalendarDays className="w-3.5 h-3.5 shrink-0" /> 이번 주 체류
+              </div>
+              <div className="text-lg @md:text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 tabular-nums whitespace-nowrap">{fmt(stats.weekTotalMin)}</div>
+            </div>
+            <div className="rounded-2xl bg-[#F5F5F7] dark:bg-white/5 p-4">
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold flex items-center gap-1">
+                <CalendarDays className="w-3.5 h-3.5 shrink-0" /> 이번 달 체류
+              </div>
+              <div className="text-lg @md:text-xl font-bold text-slate-900 dark:text-slate-100 mt-1 tabular-nums whitespace-nowrap">{fmt(stats.monthTotalMin)}</div>
+            </div>
+          </div>
+          <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 -mt-2">
+            집중은 타이머로 잰 진짜 순공, 체류는 등원~하원 시간이에요. 집중은 체류를 넘을 수 없어요.
+          </p>
 
           {/* 이번 주 출석 현황 */}
           {typeof stats.weekExpectedDays === 'number' && stats.weekExpectedDays > 0 && (
@@ -126,10 +147,10 @@ export function StudyStatsCard({ stats }: { stats: StudyStats | null }) {
           {/* 요일별 분포 */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">요일별 공부량 (이번 달)</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100">요일별 체류 (이번 달)</span>
               {stats.peakWeekday && (
                 <span className="inline-flex items-center gap-1 text-[11px] font-bold text-[#F56300] bg-[#F56300]/10 px-2 py-0.5 rounded-full">
-                  <Flame className="w-3 h-3" /> {stats.peakWeekday.label}요일 집중
+                  <Flame className="w-3 h-3" /> {stats.peakWeekday.label}요일 최다
                 </span>
               )}
             </div>

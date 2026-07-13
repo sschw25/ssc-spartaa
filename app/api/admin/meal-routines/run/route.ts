@@ -12,10 +12,14 @@ function isCronRequest(request: Request): boolean {
 async function handle() {
   try {
     const results = await runDueMealRoutineTemplates();
+    const notDue = results.filter((result) => result.skippedReason === 'not_due');
     return NextResponse.json({
       success: true,
       created: results.filter((result) => result.created).length,
       notified: results.filter((result) => result.notified).length,
+      // 생성 시각(createDay/createTime)이 아직 안 돼 건너뛴 템플릿 수 + 다음 예정 라벨("월 14:00")
+      skippedNotDue: notDue.length,
+      nextDue: Array.from(new Set(notDue.map((result) => result.nextDueLabel).filter(Boolean))),
       results,
     });
   } catch (error) {

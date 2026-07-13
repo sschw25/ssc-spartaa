@@ -7,6 +7,7 @@ import {
   deleteStudent,
   getStudentAuthRecords,
 } from '@/lib/store';
+import { buildDefaultSubjectsForContact } from '@/lib/streams';
 import type { Student } from '@/lib/types/student';
 
 const STUDENT_CAMPUSES = ['wonju', 'chuncheon', 'chungju'];
@@ -81,7 +82,9 @@ export async function POST(
       lectures: [],
       consultationLogs: [],
       grades: [],
-      subjects: [],
+      // 목표시험(contact)이 표준 직렬 라벨과 일치하면 기본 과목을 빈 껍데기(자료 없음)로 자동생성.
+      // 신규 학생이라 기존 과목이 없고, 헬퍼 자체도 이름 중복을 건너뛰므로 멱등하다.
+      subjects: buildDefaultSubjectsForContact(application.contact),
       awaySchedules: [],
     };
 

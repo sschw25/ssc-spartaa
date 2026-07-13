@@ -30,6 +30,8 @@ export async function GET(request: Request) {
   try {
     const { weekStart, todayStr } = getPeriodBounds();
     // 순공 계산에는 id·specialNote 만 필요 — subjects 등 무거운 jsonb 를 빼고 요약 조회(관리자 리더보드와 동일).
+    // 재석분(weekAtt/dayAtt)은 QR 세션 + 좌석판 수기 출석(present) 파생 합산(store.getStudyMinutesByStudent)
+    // — 좌석판으로만 출석 처리된 날도 집중 클램프가 재석 0 으로 죽지 않는다.
     const [students, weekAtt, dayAtt, openSessions] = await Promise.all([
       getStudentsSummary(),
       getStudyMinutesByStudent(weekStart),

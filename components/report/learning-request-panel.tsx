@@ -533,6 +533,7 @@ export function LearningRequestPanel({
                     </button>
                   ))}
                 </div>
+                <p className="break-keep text-[9.5px] font-semibold text-slate-400">이 자료를 공부할 요일이에요. 고르지 않으면 기본 요일로 자동 설정돼요.</p>
               </div>
 
               {/* 시간대 */}
@@ -890,9 +891,7 @@ export function LearningRequestPanel({
                             </button>
                           ))}
                         </div>
-                        {requestForm.studyDays.length === 0 && (
-                          <p className="text-[9.5px] font-semibold text-slate-400">미선택 시 현재 요일 설정을 그대로 둬요.</p>
-                        )}
+                        <p className="break-keep text-[9.5px] font-semibold text-slate-400">이 자료를 공부할 요일이에요. 선택하지 않으면 지금 요일 설정이 그대로 유지돼요.</p>
                       </div>
 
                       {requestForm.materialType === 'lecture' && (

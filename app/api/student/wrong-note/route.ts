@@ -13,14 +13,31 @@ const MAX_BYTES = 6 * 1024 * 1024;
 const MIME_EXT: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 const MAX_NOTES_PER_BOOK = 50; // 자료당 오답 노트 상한
 const MAX_TEXT_LEN = 2000;     // 문제/오답 내용 길이 상한
-const ALLOWED_TAGS = new Set(['calculation_error', 'time_limit', 'misread_condition', 'concept_leak']);
+// 기본 오답 사유 태그 4종 — 여기에 학생이 만든 커스텀 태그(subject.customWrongTags)가 더해져
+// "그 학생의 동적 화이트리스트"가 된다(고정 화이트리스트 대체).
+const BASE_TAGS = new Set(['calculation_error', 'time_limit', 'misread_condition', 'concept_leak']);
+const BASE_TAG_LABELS = new Set(['연산', '시간', '오독', '개념']); // 커스텀 태그명으로 금지(기본과 혼동 방지)
+const MAX_CUSTOM_TAGS_PER_SUBJECT = 12; // 학생당 과목별 커스텀 태그 상한
+const MAX_TAG_NAME_LEN = 10;            // 커스텀 태그명 길이 상한(1~10자)
 
-// 문자열 태그 배열 정규화 — 허용 키만, 중복 제거, 최대 4개.
-function normalizeTags(raw: unknown): string[] | undefined {
+// 그 학생에게 허용된 태그 전체 — 기본 4종 + 모든 과목의 커스텀 태그(union).
+function allowedTagSet(student: Student): Set<string> {
+  const set = new Set(BASE_TAGS);
+  (student.subjects || []).forEach((s) => (s.customWrongTags || []).forEach((t) => set.add(t)));
+  return set;
+}
+
+// 요청 태그 원본 파싱 — 트림·중복 제거만. 화이트리스트 검증은 학생 로드 후 finalizeTags 로.
+function parseTagList(raw: unknown): string[] {
   let arr: string[] = [];
   if (Array.isArray(raw)) arr = raw.map((v) => String(v));
   else if (typeof raw === 'string') arr = raw.split(',');
-  const cleaned = Array.from(new Set(arr.map((v) => v.trim()).filter((v) => ALLOWED_TAGS.has(v)))).slice(0, 4);
+  return Array.from(new Set(arr.map((v) => v.trim()).filter(Boolean))).slice(0, 12);
+}
+
+// 화이트리스트(기본+커스텀) 적용 + 노트당 최대 4개 유지.
+function finalizeTags(list: string[], allowed: Set<string>): string[] | undefined {
+  const cleaned = list.filter((v) => allowed.has(v)).slice(0, 4);
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
@@ -61,6 +78,69 @@ export async function GET() {
   return NextResponse.json({ success: true, urls });
 }
 
+// 학생: 커스텀 오답 태그 추가/삭제 (과목 단위 · subject.customWrongTags).
+// 삭제해도 기존 노트에 저장된 태그 문자열은 건드리지 않는다(노트 라벨은 그대로 표시).
+export async function PUT(req: NextRequest) {
+  const studentId = await getStudentSessionId();
+  if (!studentId) {
+    return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
+  }
+  let body: { subjectId?: unknown; action?: unknown; tag?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ success: false, message: '잘못된 요청입니다.' }, { status: 400 });
+  }
+  const subjectId = typeof body.subjectId === 'string' ? body.subjectId : '';
+  const action = body.action === 'add' || body.action === 'remove' ? body.action : null;
+  const tag = typeof body.tag === 'string' ? body.tag.trim() : '';
+  if (!subjectId || !action || !tag) {
+    return NextResponse.json({ success: false, message: '태그 정보가 올바르지 않습니다.' }, { status: 400 });
+  }
+  if (action === 'add') {
+    if (tag.length > MAX_TAG_NAME_LEN) {
+      return NextResponse.json({ success: false, message: `태그는 ${MAX_TAG_NAME_LEN}자 이내로 지어 주세요.` }, { status: 400 });
+    }
+    // ','는 노트 태그 전송(comma join) 구분자와 충돌 — 태그명에 금지.
+    if (tag.includes(',')) {
+      return NextResponse.json({ success: false, message: '태그 이름에는 쉼표를 쓸 수 없어요.' }, { status: 400 });
+    }
+    if (BASE_TAGS.has(tag) || BASE_TAG_LABELS.has(tag)) {
+      return NextResponse.json({ success: false, message: '기본 태그와 같은 이름은 만들 수 없어요.' }, { status: 400 });
+    }
+  }
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const student = await getStudentById(studentId);
+    if (!student) return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
+    const originalUpdatedAt = student.updatedAt ?? '';
+    const subject = (student.subjects || []).find((s) => s.id === subjectId);
+    if (!subject) return NextResponse.json({ success: false, message: '해당 과목을 찾을 수 없습니다.' }, { status: 404 });
+    const current = subject.customWrongTags || [];
+
+    if (action === 'add') {
+      if (current.includes(tag)) {
+        return NextResponse.json({ success: false, message: '이미 있는 태그예요.' }, { status: 400 });
+      }
+      if (current.length >= MAX_CUSTOM_TAGS_PER_SUBJECT) {
+        return NextResponse.json({ success: false, message: `태그는 과목당 최대 ${MAX_CUSTOM_TAGS_PER_SUBJECT}개까지 만들 수 있어요.` }, { status: 400 });
+      }
+      subject.customWrongTags = [...current, tag];
+    } else {
+      if (!current.includes(tag)) {
+        // 이미 없음 — 멱등 성공
+        return NextResponse.json({ success: true, customWrongTags: current });
+      }
+      subject.customWrongTags = current.filter((t) => t !== tag);
+    }
+
+    const saved = await patchStudentProgress(student, originalUpdatedAt);
+    if (saved === 'conflict') continue;
+    return NextResponse.json({ success: true, customWrongTags: subject.customWrongTags });
+  }
+  return NextResponse.json({ success: false, message: '저장이 지연되고 있습니다. 잠시 후 다시 시도해 주세요.' }, { status: 409 });
+}
+
 // 학생: 오답노트 문제 추가 (텍스트 + 선택 사진). multipart/form-data.
 export async function POST(req: NextRequest) {
   const studentId = await getStudentSessionId();
@@ -77,7 +157,7 @@ export async function POST(req: NextRequest) {
   const materialId = String(form.get('materialId') ?? '').trim();
   if (!materialId) return NextResponse.json({ success: false, message: '대상 교재 정보가 필요합니다.' }, { status: 400 });
   const text = cleanText(form.get('text'));
-  const tags = normalizeTags(form.get('tags'));
+  const rawTags = parseTagList(form.get('tags')); // 화이트리스트는 학생 로드 후 적용(커스텀 태그 반영)
   const file = form.get('file');
   const hasFile = file instanceof File && file.size > 0;
   if (!text && !hasFile) {
@@ -102,7 +182,6 @@ export async function POST(req: NextRequest) {
     id: `wn_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     ...(text ? { text } : {}),
     ...(imagePath ? { imagePath } : {}),
-    ...(tags ? { tags } : {}),
     createdAt: new Date().toISOString(),
   };
 
@@ -113,6 +192,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     }
     const originalUpdatedAt = student.updatedAt ?? '';
+    // 태그 확정 — 기본 4종 + 이 학생의 커스텀 태그만 통과(최대 4개).
+    const tags = finalizeTags(rawTags, allowedTagSet(student));
+    if (tags) note.tags = tags; else delete note.tags;
     const books = matchingBooks(student, materialId);
     if (books.length === 0) {
       if (imagePath) await deleteWrongNoteImage(imagePath);
@@ -151,12 +233,14 @@ export async function PATCH(req: NextRequest) {
   const hasText = body.text !== undefined;
   const hasTags = body.tags !== undefined;
   const nextText = hasText ? cleanText(body.text) : '';
-  const nextTags = hasTags ? normalizeTags(body.tags) : undefined;
+  const rawTags = hasTags ? parseTagList(body.tags) : [];
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const student = await getStudentById(studentId);
     if (!student) return NextResponse.json({ success: false, message: '학생 정보를 찾을 수 없습니다.' }, { status: 404 });
     const originalUpdatedAt = student.updatedAt ?? '';
+    // 태그 확정 — 기본 4종 + 이 학생의 커스텀 태그만 통과(최대 4개).
+    const nextTags = hasTags ? finalizeTags(rawTags, allowedTagSet(student)) : undefined;
     const books = matchingBooks(student, materialId);
     if (books.length === 0) return NextResponse.json({ success: false, message: '해당 교재를 찾을 수 없습니다.' }, { status: 404 });
     const target = (books[0].wrongNotes || []).find((n) => n.id === noteId);

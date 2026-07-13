@@ -37,6 +37,8 @@ export interface MealRoutineRunResult {
   created: boolean;
   notified: boolean;
   skippedReason?: string;
+  /** skippedReason === 'not_due' 일 때 다음 생성 예정(요일 시각) 라벨. 예: "월 14:00" */
+  nextDueLabel?: string;
   plan?: MealPlan;
 }
 
@@ -121,6 +123,15 @@ function isDue(todayYmd: string, nowHm: string, day: number, hm: string): boolea
   return ymdDayOfWeek(todayYmd) === day && nowHm >= hm;
 }
 
+// 이번 주 기준으로 해당 요일·시각이 이미 지났는지(당일 포함). 정각 틱을 놓친 예약 발송 보정에 사용.
+function hasPassedThisWeek(todayYmd: string, nowHm: string, day: number, hm: string): boolean {
+  const todayOffset = dayOffsetFromMonday(ymdDayOfWeek(todayYmd));
+  const dueOffset = dayOffsetFromMonday(day);
+  return todayOffset > dueOffset || (todayOffset === dueOffset && nowHm >= hm);
+}
+
+const KO_DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
 export function defaultMealRoutineTemplate(campus?: string): MealPlanRoutineTemplate {
   const now = new Date().toISOString();
   return {
@@ -136,7 +147,8 @@ export function defaultMealRoutineTemplate(campus?: string): MealPlanRoutineTemp
     deadlineBase: 'create',
     deadlineDay: 5,
     deadlineTime: '14:00',
-    notifyMode: 'none',
+    // 기본은 생성 즉시 발송 — 'none'이면 라운드가 생성돼도 학생에게 보이지 않아 미노출 사고가 난다.
+    notifyMode: 'on_create',
     createdAt: now,
     updatedAt: now,
   };
@@ -145,9 +157,10 @@ export function defaultMealRoutineTemplate(campus?: string): MealPlanRoutineTemp
 export function sanitizeMealRoutineTemplate(raw: unknown): MealPlanRoutineTemplate {
   const source = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
   const defaults = defaultMealRoutineTemplate(sanitizeCampus(source.campus));
-  const notifyMode = source.notifyMode === 'on_create' || source.notifyMode === 'scheduled'
+  // 명시된 'none'은 존중하되, 값이 없거나 깨졌으면 기본은 생성 즉시 발송.
+  const notifyMode = source.notifyMode === 'none' || source.notifyMode === 'on_create' || source.notifyMode === 'scheduled'
     ? source.notifyMode
-    : 'none';
+    : 'on_create';
   const deadlineBase = source.deadlineBase === 'target' ? 'target' : 'create';
   return {
     ...defaults,
@@ -240,6 +253,9 @@ export async function runDueMealRoutineTemplates(now = new Date()): Promise<Meal
       sameCampus(candidate.campus, template.campus)
     );
 
+    const notifyKey = `${template.id}:${targetWeekStart}`;
+    let acted = false;
+
     if (isDue(todayYmd, nowHm, template.createDay, template.createTime) && template.lastCreateKey !== createKey) {
       if (!plan) {
         plan = await saveMealPlan({
@@ -256,31 +272,48 @@ export async function runDueMealRoutineTemplates(now = new Date()): Promise<Meal
         });
         plans.push(plan);
         results.push({ templateId: template.id, templateName: template.name, campus: template.campus, targetWeekStart, created: true, notified: template.notifyMode === 'on_create', plan });
-      } else if (template.notifyMode === 'on_create' && !plan.notifiedAt) {
-        // 이미 라운드가 있지만 아직 미발송이면 on_create 알림은 발송(누락 방지)
-        plan = await notifyMealPlan(plan.id, nowIso);
-        results.push({ templateId: template.id, templateName: template.name, campus: template.campus, targetWeekStart, created: false, notified: true, skippedReason: 'already_exists', plan });
-      } else {
-        results.push({ templateId: template.id, templateName: template.name, campus: template.campus, targetWeekStart, created: false, notified: false, skippedReason: 'already_exists', plan });
+        // 생성과 동시에 발송했으면 notifyKey도 소진 — 관리자가 '알림 취소'한 라운드를 보정 루프가 되살리지 않게.
+        if (template.notifyMode === 'on_create') template.lastNotifyKey = notifyKey;
+        acted = true;
       }
       template.lastCreateKey = createKey;
       template.updatedAt = nowIso;
       changed = true;
     }
 
-    const notifyKey = `${template.id}:${targetWeekStart}`;
-    if (
-      template.notifyMode === 'scheduled' &&
-      plan &&
-      !plan.notifiedAt &&
-      template.lastNotifyKey !== notifyKey &&
-      isDue(todayYmd, nowHm, template.notifyDay ?? template.createDay, template.notifyTime || template.createTime)
-    ) {
-      const notifiedPlan = await notifyMealPlan(plan.id, nowIso);
-      results.push({ templateId: template.id, templateName: template.name, campus: template.campus, targetWeekStart, created: false, notified: true, plan: notifiedPlan });
+    // 미발송 보정 — 대상 주 라운드가 존재하는데 아직 미발송이면 notifyMode에 따라 발송.
+    // on_create: 생성 시점을 놓쳤어도(과거 'none' 생성분 포함) 실행 시점과 무관하게 즉시 보정.
+    // scheduled: 이번 주 알림 시각이 지났으면 발송(정각 틱을 놓친 경우 포함).
+    // 'none'은 자동 발송하지 않는다 — 관리자 화면의 '학생 알림' 버튼으로만 해소.
+    const notifyDueNow =
+      template.notifyMode === 'on_create' ||
+      (template.notifyMode === 'scheduled' &&
+        hasPassedThisWeek(todayYmd, nowHm, template.notifyDay ?? template.createDay, template.notifyTime || template.createTime));
+    if (plan && !plan.notifiedAt && notifyDueNow && template.lastNotifyKey !== notifyKey) {
+      plan = await notifyMealPlan(plan.id, nowIso);
+      results.push({ templateId: template.id, templateName: template.name, campus: template.campus, targetWeekStart, created: false, notified: true, skippedReason: acted ? undefined : 'already_exists', plan });
       template.lastNotifyKey = notifyKey;
       template.updatedAt = nowIso;
       changed = true;
+      acted = true;
+    }
+
+    // 아무 일도 안 했으면 이유를 결과에 남긴다 — '지금 실행'이 왜 0건인지 관리자에게 보여주기 위함.
+    if (!acted) {
+      if (plan) {
+        results.push({ templateId: template.id, templateName: template.name, campus: template.campus, targetWeekStart, created: false, notified: false, skippedReason: 'already_exists', plan });
+      } else {
+        results.push({
+          templateId: template.id,
+          templateName: template.name,
+          campus: template.campus,
+          targetWeekStart,
+          created: false,
+          notified: false,
+          skippedReason: 'not_due',
+          nextDueLabel: `${KO_DAY_LABELS[template.createDay] ?? ''} ${template.createTime}`,
+        });
+      }
     }
   }
 

@@ -25,6 +25,7 @@ import { StudentCalendarTab } from '@/components/report/student-calendar-tab';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
 import { MaterialDetailSheet } from '@/components/report/material-detail-sheet';
+import { DailyWrongQuiz } from '@/components/report/daily-wrong-quiz';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
 import { Loader2, AlertCircle, BookOpen, Shield, Timer, CalendarDays } from 'lucide-react';
 import { TabHero } from '@/components/report/tab-hero';
@@ -1000,6 +1001,18 @@ function StudentReportInner() {
           onOpenSubjectProgress={openSubjectProgressFromSheet}
           onOpenTimetable={openTimetableFromSheet}
           onOpenChangeRequest={openChangeRequestFromSheet}
+        />
+      )}
+
+      {/* 1일 1문제 — 오답노트가 있는 학생에게 홈 진입 시 하루 1회 랜덤 복습 문제 시트(노트 0개면 안 뜸) */}
+      {isStudentReport && (
+        <DailyWrongQuiz
+          student={student}
+          activeTab={activeTab}
+          onOpenWrongNote={() => {
+            selectReportTab('wrong-note');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
         />
       )}
 

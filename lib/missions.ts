@@ -120,14 +120,14 @@ export const MISSION_META: Record<MissionId, MissionMeta> = {
   },
   weekly_growth: {
     id: 'weekly_growth',
-    name: '전주 대비 순공 성장',
+    name: '전주 대비 집중률 성장',
     period: 'weekly',
-    settleHint: '매주 정산하세요. 주간 순공 랭킹과 달리 전주 대비 성장률로 판정합니다.',
+    settleHint: '매주 정산하세요. 집중률(집중 타이머 ÷ 체류 시간, 최대 100%)의 전주 대비 상승폭(%p)으로 판정합니다.',
     describe: (c) =>
-      `이번 주 순공이 ${c.growthMinHours ?? 20}시간 이상이고 지난주보다 ${c.growthPercent ?? 15}% 이상 늘면 쿠폰 ${c.coupons}장을 지급합니다.`,
+      `이번 주 체류(등원~하원)가 ${c.growthMinHours ?? 20}시간 이상이고, 집중률(집중 ÷ 체류)이 지난주보다 ${c.growthPercent ?? 15}%p 이상 오르면 쿠폰 ${c.coupons}장을 지급합니다.`,
     params: [
-      { key: 'growthPercent', label: '성장률', unit: '%', min: 5, max: 100 },
-      { key: 'growthMinHours', label: '최소 순공', unit: '시간', min: 1, max: 80 },
+      { key: 'growthPercent', label: '집중률 상승', unit: '%p', min: 5, max: 100 },
+      { key: 'growthMinHours', label: '최소 체류', unit: '시간', min: 1, max: 80 },
     ],
   },
   deadline_zero_overdue: {

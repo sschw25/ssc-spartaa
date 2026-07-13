@@ -409,15 +409,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
   const [studentPhone, setStudentPhone] = useState('');
   const [smsTargets, setSmsTargets] = useState<Array<'parent' | 'student'>>(['parent']);
 
-  // 등록된 기존 원생들의 목표시험 목록 중복제거 추출
-  const uniqueExams = Array.from(
-    new Set(
-      students
-        .map(s => s.contact)
-        .filter((exam): exam is string => typeof exam === 'string' && exam.trim() !== '')
-    )
-  );
-
   // 신규 과목 관련 상태
   const [subjectsState, setSubjectsState] = useState<SubjectProgress[]>([]);
   const [newSubjectName, setNewSubjectName] = useState('');
@@ -4874,7 +4865,6 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 seatNumber={seatNumber}
                 setSeatNumber={setSeatNumber}
                 seatConflictNames={seatConflictNames}
-                uniqueExams={uniqueExams}
                 loading={loading}
                 onUpdateInfo={handleUpdateInfo}
                 onDeleteStudent={handleDeleteStudent}

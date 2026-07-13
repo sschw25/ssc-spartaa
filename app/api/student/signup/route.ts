@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
 import { getStudentAuthRecords, getStudentApplications, addStudentApplication } from '@/lib/store';
 import { normalizeAttendanceCode, validateAttendanceCode } from '@/lib/attendance-code';
+import { CUSTOM_STREAM_ID, findStreamByLabel } from '@/lib/streams';
 import type { StudentApplication } from '@/lib/types/student';
 
 const onlyDigits = (value: unknown) => String(value ?? '').replace(/\D/g, '');
@@ -34,7 +35,13 @@ export async function POST(request: Request) {
   const code = normalizeAttendanceCode(body.password); // 비밀번호 = 출결번호(숫자 6자리)
   const studentPhone = onlyDigits(body.studentPhone);
   const parentPhone = onlyDigits(body.parentPhone);
-  const contact = String(body.contact ?? '').trim().slice(0, 40);
+  // 목표시험: 표준 직렬 라벨과 일치하면 정규화된 라벨로 저장(공백 변형 흡수),
+  // 아니면 기타(직접 입력) 자유값 — 40자 제한. '기타(직접 입력)' 라벨 자체는 값이 아니므로 버린다.
+  const contactRaw = String(body.contact ?? '').trim().slice(0, 40);
+  const matchedStream = findStreamByLabel(contactRaw);
+  const contact = matchedStream
+    ? (matchedStream.id === CUSTOM_STREAM_ID ? '' : matchedStream.label)
+    : contactRaw;
   const campusRaw = String(body.campus ?? '').trim();
   const campus = ALLOWED_CAMPUS.includes(campusRaw) ? campusRaw : undefined;
   const smsTargets = Array.isArray(body.smsTargets)

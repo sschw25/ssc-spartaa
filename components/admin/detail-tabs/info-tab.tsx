@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Loader2, KeyRound, Bell, CalendarClock, ClipboardCheck, ClipboardPaste, Link2, Copy, RotateCcw, X } from 'lucide-react';
+import { CUSTOM_STREAM_ID, CUSTOM_STREAM_LABEL, EXAM_STREAMS, findStreamByLabel } from '@/lib/streams';
 import type { AwaySchedule } from '@/lib/types/student';
 
 type SmsTarget = 'parent' | 'student';
@@ -60,7 +61,6 @@ interface InfoTabProps {
   seatNumber: string;
   setSeatNumber: (v: string) => void;
   seatConflictNames?: string[];   // 같은 센터에 동일 좌석을 쓰는 다른 원생 이름
-  uniqueExams: string[];
   loading: boolean;
   onUpdateInfo: () => void;
   onDeleteStudent: () => void;
@@ -96,7 +96,6 @@ export function InfoTab({
   seatNumber,
   setSeatNumber,
   seatConflictNames = [],
-  uniqueExams,
   loading,
   onUpdateInfo,
   onDeleteStudent,
@@ -119,6 +118,28 @@ export function InfoTab({
 }: InfoTabProps) {
   const [sharingLoading, setSharingLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // 목표 시험: 표준 직렬 Select + 기타(직접 입력) — 이후 수정부터 표준 라벨로 수렴.
+  // 기존 자유 텍스트 값(표준 라벨 불일치)은 기타 모드로 표시해 값을 보존한다.
+  const [contactCustomMode, setContactCustomMode] = useState(false);
+  // 다른 학생으로 전환되면 기타 모드를 초기화(렌더 중 상태 보정 — effect setState 경고 회피).
+  const [contactModeStudentId, setContactModeStudentId] = useState(studentId);
+  if (contactModeStudentId !== studentId) {
+    setContactModeStudentId(studentId);
+    setContactCustomMode(false);
+  }
+  const matchedStream = findStreamByLabel(contact);
+  const standardStream = matchedStream && matchedStream.id !== CUSTOM_STREAM_ID ? matchedStream : undefined;
+  const isCustomContact = contactCustomMode || (!standardStream && contact.trim() !== '');
+  const contactSelectValue = isCustomContact ? CUSTOM_STREAM_LABEL : (standardStream ? standardStream.label : '');
+  const handleContactSelect = (value: string) => {
+    if (value === CUSTOM_STREAM_LABEL) {
+      setContactCustomMode(true);
+      return;
+    }
+    setContactCustomMode(false);
+    setContact(value);
+  };
 
   const [newAwayTime, setNewAwayTime] = useState('14:30');
   const [newReturnTime, setNewReturnTime] = useState('');
@@ -290,19 +311,28 @@ export function InfoTab({
           <Label htmlFor="edit-contact" className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             목표 시험
           </Label>
-          <Input
-            id="edit-contact"
-            value={contact}
-            onChange={(e) => setContact(e.target.value)}
-            list="edit-target-exams-list"
-            placeholder="예: 수능, 9급 공무원, 임용"
-            className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
-          />
-          <datalist id="edit-target-exams-list">
-            {uniqueExams.map((exam) => (
-              <option key={exam} value={exam} />
-            ))}
-          </datalist>
+          <Select value={contactSelectValue} onValueChange={handleContactSelect}>
+            <SelectTrigger id="edit-contact" className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100">
+              <SelectValue placeholder="직렬 선택" />
+            </SelectTrigger>
+            <SelectContent className="bg-white dark:bg-[#1c1c1e]">
+              {EXAM_STREAMS.map((stream) => (
+                <SelectItem key={stream.id} value={stream.label} className="text-xs">
+                  {stream.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {isCustomContact && (
+            <Input
+              id="edit-contact-custom"
+              value={contact}
+              onChange={(e) => setContact(e.target.value)}
+              maxLength={40}
+              placeholder="목표 시험 직접 입력"
+              className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100"
+            />
+          )}
         </div>
 
         <div className="space-y-1.5">

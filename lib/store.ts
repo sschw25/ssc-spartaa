@@ -62,7 +62,7 @@ import {
   checkOutSupabase,
   autoCloseSessionSupabase,
   getStudySessionsSupabase,
-  getStudyMinutesByStudentSupabase,
+  getStudyMinutesByStudentDateSupabase,
   type StudentAuthRecord,
   type StudySession,
   getAdminAccountsSupabase,
@@ -75,8 +75,11 @@ import {
   setAppSettingIfUnchangedSupabase,
   getSeatAbsenceMarksSupabase,
   getStudentSeatAbsenceMarksSupabase,
+  getSeatPresenceMarksSupabase,
+  getStudentSeatPresenceMarksSupabase,
   getAttendedDaysSupabase,
 } from './supabase';
+import { deriveSeatPresenceMinutes, mergeAttendanceWithPresence } from './study-stats';
 
 export type { StudySession } from './supabase';
 import {
@@ -648,9 +651,16 @@ export async function getStudySessions(studentId: string, sinceDate?: string): P
   requireSupabase();
   return getStudySessionsSupabase(studentId, sinceDate);
 }
+// 기간 내 전체 학생의 (학생별) 재석 순공 합계 — 등수/미션/리더보드 클램프의 재석분 단일 소스.
+// QR 세션(study_sessions.minutes)이 기본이고, 세션분이 없는 날은 좌석판 수기 출석
+// (seat_statuses 'present' 마크)에서 교시 길이로 파생해 합산한다(읽기 시점 파생·멱등).
 export async function getStudyMinutesByStudent(sinceDate: string, untilDate?: string): Promise<Record<string, number>> {
   requireSupabase();
-  return getStudyMinutesByStudentSupabase(sinceDate, untilDate);
+  const [sessionMinByDate, presenceMarks] = await Promise.all([
+    getStudyMinutesByStudentDateSupabase(sinceDate, untilDate),
+    getSeatPresenceMarksSupabase(sinceDate, untilDate).catch(() => [] as { date: string; seatKey: string }[]),
+  ]);
+  return mergeAttendanceWithPresence(sessionMinByDate, deriveSeatPresenceMinutes(presenceMarks));
 }
 
 // ── 모의고사 일정 ──
@@ -831,6 +841,33 @@ export async function getStudentSeatAbsenceMarks(
 ): Promise<{ date: string; seatKey: string }[]> {
   if (isSupabaseConfigured()) return getStudentSeatAbsenceMarksSupabase(studentId, from, to);
   const all = await getSeatAbsenceMarks(from, to);
+  return all.filter((m) => m.seatKey.startsWith(`${studentId}:`));
+}
+
+// 기간 내 좌석판 수기 출석 마크(status 'present') — 순공 재석 파생용. Supabase 또는 로컬 폴백.
+export async function getSeatPresenceMarks(from: string, to?: string): Promise<{ date: string; seatKey: string }[]> {
+  if (isSupabaseConfigured()) return getSeatPresenceMarksSupabase(from, to);
+  const p = path.join(process.cwd(), 'data', 'seat_statuses.json');
+  if (!fs.existsSync(p)) return [];
+  try {
+    const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((r: any) => r && r.status === 'present' && typeof r.date === 'string' && r.date >= from && (!to || r.date <= to) && typeof r.seat_key === 'string')
+      .map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
+  } catch {
+    return [];
+  }
+}
+
+// 특정 학생의 기간 내 수기 출석 마크 — 본인 리포트 순공 통계(buildStudyStats) 파생용.
+export async function getStudentSeatPresenceMarks(
+  studentId: string,
+  from: string,
+  to: string,
+): Promise<{ date: string; seatKey: string }[]> {
+  if (isSupabaseConfigured()) return getStudentSeatPresenceMarksSupabase(studentId, from, to);
+  const all = await getSeatPresenceMarks(from, to);
   return all.filter((m) => m.seatKey.startsWith(`${studentId}:`));
 }
 

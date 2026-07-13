@@ -859,7 +859,11 @@ export function HomeOverviewTab({
                             <div data-stop className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
                               <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">{adjustInfo ? `지금 몇 ${adjustUnit}까지 했나요?` : '실제로 얼마나 했나요?'}</p>
                               {adjustInfo && (
-                                <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">이전 {adjustInfo.current}{adjustUnit} · 오늘 목표 {entry.dailyAmount}{adjustUnit}</p>
+                                <>
+                                  <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">이전 {adjustInfo.current}{adjustUnit} · 오늘 목표 {entry.dailyAmount}{adjustUnit}</p>
+                                  {/* '까지' = 오늘 한 양이 아니라 누적 현재 위치(절대값) — 개념 안내 상시 캡션 */}
+                                  <p className="mt-0.5 break-keep text-[10px] font-medium text-slate-400 dark:text-slate-500">오늘 한 양이 아니라 지금까지 도달한 위치(누적)를 입력해요. 예: 어제 30{adjustUnit}, 오늘 3{adjustUnit} 했으면 33{adjustUnit}.</p>
+                                </>
                               )}
                               <div className="mt-2 flex items-center gap-2">
                                 <button
@@ -1175,6 +1179,8 @@ export function HomeOverviewTab({
                           <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
                             <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">지금 몇 {item.unit}까지 했나요?</p>
                             <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">이전 누적 {item.current}{item.unit}</p>
+                            {/* '까지' = 오늘 한 양이 아니라 누적 현재 위치(절대값) — 개념 안내 상시 캡션 */}
+                            <p className="mt-0.5 break-keep text-[10px] font-medium text-slate-400 dark:text-slate-500">오늘 한 양이 아니라 지금까지 도달한 위치(누적)를 입력해요. 예: 어제 30{item.unit}, 오늘 3{item.unit} 했으면 33{item.unit}.</p>
                             <div className="mt-2 flex items-center gap-2">
                               <button
                                 type="button"

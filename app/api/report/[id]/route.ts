@@ -2,12 +2,12 @@ import { NextResponse } from 'next/server';
 import { timingSafeEqual } from 'crypto';
 import { compare } from 'bcryptjs';
 import { sharedRateLimit, clientIp } from '@/lib/rate-limit';
-import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getMockExams, getConsultationBookings, getSeatMoveRequests } from '@/lib/store';
+import { getStudentById, getStudents, getStudySessions, getStudyMinutesByStudent, getStudentSeatPresenceMarks, getMockExams, getConsultationBookings, getSeatMoveRequests } from '@/lib/store';
 import type { ConsultationBooking, SeatMoveRequest } from '@/lib/types/student';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
 import { canViewStudent } from '@/lib/auth';
 import { buildStudyStats, getPeriodBounds } from '@/lib/study-stats';
-import { serializeClientActivityNoteFromStudent, getRewardGrantsFromStudent } from '@/lib/student-activity';
+import { serializeClientActivityNoteFromStudent, getRewardGrantsFromStudent, parseSpecialNoteEnvelope } from '@/lib/student-activity';
 import type { Student } from '@/lib/types/student';
 import { buildConsultationDigest } from '@/lib/consultation-digest';
 import { filterMockExamsForStudent } from '@/lib/mock-exam-scope';
@@ -172,12 +172,17 @@ export async function GET(
       const materialBenchmarks = buildMaterialBenchmarks(students);
       let studyStats = null;
       try {
-        const { weekStart, monthStart } = getPeriodBounds();
-        const [sessions, weeklyMinutesByStudent] = await Promise.all([
+        const { weekStart, monthStart, todayStr } = getPeriodBounds();
+        const [sessions, weeklyMinutesByStudent, presenceMarks] = await Promise.all([
           getStudySessions(id, monthStart),
           getStudyMinutesByStudent(weekStart),
+          // 좌석판 수기 출석(present) — QR 세션 없는 날 재석 파생용
+          getStudentSeatPresenceMarks(id, monthStart, todayStr).catch(() => []),
         ]);
-        studyStats = buildStudyStats({ sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length });
+        studyStats = buildStudyStats({
+          sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length, presenceMarks,
+          focusMinutesByDate: parseSpecialNoteEnvelope(student.specialNote).pomodoro_minutes || undefined,
+        });
       } catch { /* 통계 실패 시 무시 */ }
       const mockExams = filterMockExamsForStudent(allExams, student);
       return NextResponse.json({ success: true, data: maskedStudent, materialBenchmarks, studyStats, mockExams });
@@ -203,17 +208,23 @@ export async function GET(
   try {
     // extras: 본문 없이 무거운 집계만 — core 렌더 후 백그라운드에서 호출된다.
     if (scope === 'extras') {
-      const { weekStart, monthStart } = getPeriodBounds();
-      const [students, sessions, weeklyMinutesByStudent] = await Promise.all([
+      const { weekStart, monthStart, todayStr } = getPeriodBounds();
+      const [students, sessions, weeklyMinutesByStudent, presenceMarks] = await Promise.all([
         getStudents(),
         getStudySessions(id, monthStart).catch(() => null),
         getStudyMinutesByStudent(weekStart).catch(() => null),
+        // 좌석판 수기 출석(present) — QR 세션 없는 날 재석 파생용
+        getStudentSeatPresenceMarks(id, monthStart, todayStr).catch(() => []),
       ]);
       const materialBenchmarks = buildMaterialBenchmarks(students);
       let studyStats = null;
       if (sessions && weeklyMinutesByStudent) {
         try {
-          studyStats = buildStudyStats({ sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length });
+          const me = students.find((s) => s.id === id);
+          studyStats = buildStudyStats({
+            sessions, weeklyMinutesByStudent, myId: id, totalStudents: students.length, presenceMarks,
+            focusMinutesByDate: me ? parseSpecialNoteEnvelope(me.specialNote).pomodoro_minutes || undefined : undefined,
+          });
         } catch { /* 통계 실패 시 무시 */ }
       }
       return NextResponse.json({ success: true, materialBenchmarks, studyStats });
@@ -272,11 +283,13 @@ export async function GET(
     }
 
     // 전체 응답(레거시/공유토큰 없는 단일 요청) — 집계 소스는 병렬로 로드
-    const { weekStart, monthStart } = getPeriodBounds();
-    const [students, sessions, weeklyMinutesByStudent] = await Promise.all([
+    const { weekStart, monthStart, todayStr } = getPeriodBounds();
+    const [students, sessions, weeklyMinutesByStudent, presenceMarks] = await Promise.all([
       getStudents(),
       getStudySessions(id, monthStart).catch(() => null),
       getStudyMinutesByStudent(weekStart).catch(() => null),
+      // 좌석판 수기 출석(present) — QR 세션 없는 날 재석 파생용
+      getStudentSeatPresenceMarks(id, monthStart, todayStr).catch(() => []),
     ]);
     const materialBenchmarks = buildMaterialBenchmarks(students);
 
@@ -289,6 +302,8 @@ export async function GET(
           weeklyMinutesByStudent,
           myId: id,
           totalStudents: students.length,
+          presenceMarks,
+          focusMinutesByDate: parseSpecialNoteEnvelope(student.specialNote).pomodoro_minutes || undefined,
         });
       } catch (e) {
         console.warn('studyStats 계산 생략:', (e as Error)?.message);

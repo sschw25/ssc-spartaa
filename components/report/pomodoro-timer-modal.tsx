@@ -7,11 +7,12 @@ import { toast } from 'sonner';
 import { Student } from '@/lib/types/student';
 
 // 열품타식 자습 집중 스톱워치.
-//  - 시작하면 카운트업. 화면(탭)이 보이는 동안 누적. 다른 앱 잠깐(≤GRACE) 써도 이어지고,
-//    GRACE 초과로 화면을 떠나 있으면 그 초과분은 인정하지 않고 자동 일시정지.
-//  - 그날 총 집중분을 주기적으로 서버에 SET-max 로 반영(중복적립 없음). 순위는 리더보드가 재석 상한 클램프.
+//  - 시작하면 벽시계 기준으로 카운트업. 화면(탭)을 벗어나도(강의 수강·다른 앱) 계속 흐르고,
+//    '일시 정지'를 눌러야 멈춘다. 페이지를 나갔다 와도 실행 상태가 복원돼 이어진다.
+//    (운영 결정 2026-07-13: 강의 듣는 동안에도 집중 시간이 쌓여야 함. 어뷰징은 리더보드의
+//     재석 상한 클램프가 방어 — 체류시간보다 집중시간이 길 수 없다.)
+//  - 그날 총 집중분을 주기적으로 서버에 SET-max 로 반영(중복적립 없음).
 //  - 전체화면은 '몰입 모드' 옵션(누적과 무관). 태블릿은 Wake Lock 으로 화면 유지.
-const HIDDEN_GRACE_SEC = 300; // 다른 앱/화면꺼짐 이 시간까지는 인정, 초과 시 자동 정지
 const FLUSH_EVERY_SEC = 60;   // 서버 반영 주기
 const RANK_REFRESH_MS = 60000;
 
@@ -116,21 +117,26 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
 
   useEffect(() => { setMounted(true); }, []);
 
-  // 로컬 저장 총량 복원(같은 날) — 서버값과 큰 쪽 사용(비감소)
+  // 로컬 저장 총량 복원(같은 날) — 서버값과 큰 쪽 사용(비감소).
+  // savedAt(마지막 기록 시각)이 있고 실행 중이었다면, 화면을 떠나 있던 경과분까지 얹어
+  // 이어서 실행한다(벽시계 기준 — 페이지 이탈/새로고침에도 타이머가 멈추지 않는다).
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(focusKey);
       if (raw) {
-        const p = JSON.parse(raw) as { sec?: number; dateKey?: string };
-        if (p.dateKey === todayKey && Number.isFinite(p.sec)) setTodaySec((prev) => Math.max(prev, Math.floor(p.sec!)));
-        else window.localStorage.removeItem(focusKey);
+        const p = JSON.parse(raw) as { sec?: number; dateKey?: string; running?: boolean; savedAt?: number };
+        if (p.dateKey === todayKey && Number.isFinite(p.sec)) {
+          const gap = p.running && Number.isFinite(p.savedAt) ? Math.max(0, Math.floor((Date.now() - p.savedAt!) / 1000)) : 0;
+          setTodaySec((prev) => Math.max(prev, Math.floor(p.sec!) + gap));
+          if (p.running) setRunning(true);
+        } else window.localStorage.removeItem(focusKey);
       }
     } catch { /* noop */ }
   }, [focusKey, todayKey]);
 
   useEffect(() => {
-    window.localStorage.setItem(focusKey, JSON.stringify({ sec: todaySec, dateKey: todayKey }));
-  }, [todaySec, focusKey, todayKey]);
+    window.localStorage.setItem(focusKey, JSON.stringify({ sec: todaySec, dateKey: todayKey, running, savedAt: Date.now() }));
+  }, [todaySec, running, focusKey, todayKey]);
 
   // 자정(KST) 넘김 감지 — 어제 누적이 새 날짜로 이월돼 순공이 부풀지 않게 상태를 리셋한다.
   const dayKeyRef = useRef(todayKey);
@@ -224,7 +230,9 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
     return () => { document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('webkitfullscreenchange', onFs); };
   }, []);
 
-  // 가시성 — 다른 앱/화면꺼짐. GRACE 이하면 그 시간 인정, 초과면 초과분 버리고 자동 정지.
+  // 가시성 — 다른 앱/화면꺼짐/강의 수강 중에도 벽시계 기준으로 계속 흐른다.
+  // 화면이 숨겨진 동안은 틱이 멈추므로, 돌아온 시점에 경과분 전체를 그대로 인정해 잇는다.
+  // ('일시 정지'를 눌러야만 멈춘다 — 자동 정지 없음)
   useEffect(() => {
     const onVis = () => {
       if (document.hidden) {
@@ -235,12 +243,11 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
         const hiddenAt = hiddenAtRef.current;
         hiddenAtRef.current = null;
         if (hiddenAt && runningRef.current) {
-          const gap = Math.floor((Date.now() - hiddenAt) / 1000);
-          const credit = Math.min(gap, HIDDEN_GRACE_SEC);
-          setTodaySec((prev) => prev + credit);
-          setSessionSec((prev) => prev + credit);
-          if (gap > HIDDEN_GRACE_SEC) { setRunning(false); flush(); }
-          else { acquireWake(); }
+          const gap = Math.max(0, Math.floor((Date.now() - hiddenAt) / 1000));
+          setTodaySec((prev) => prev + gap);
+          setSessionSec((prev) => prev + gap);
+          flush();
+          acquireWake();
         }
       }
     };
@@ -379,7 +386,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
 
         {isLectureTime && (
           <p className="rounded-2xl bg-amber-500/10 px-3.5 py-2.5 text-[11px] font-bold text-amber-700 ring-1 ring-inset ring-amber-500/15 dark:text-amber-300">
-            <BookOpen className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />지금은 강의 시간이에요 · 자습 집중은 강의 후에 이어가요
+            <BookOpen className="mr-1 -mt-0.5 inline h-3.5 w-3.5" />지금은 강의 시간이에요 · 타이머를 켜 두면 강의 듣는 시간도 집중으로 쌓여요
           </p>
         )}
 
@@ -454,7 +461,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
         )}
 
         <ControlButton running={running} hasProgress={hasProgress} onStart={start} onPause={pause} />
-        <p className="text-center text-[10.5px] font-semibold text-slate-400 dark:text-slate-500">화면을 켜두고 공부하면 순공이 쌓여요 · 5분 넘게 벗어나면 자동으로 멈춰요</p>
+        <p className="text-center text-[10.5px] font-semibold text-slate-400 dark:text-slate-500">한 번 켜면 화면을 벗어나도 계속 쌓여요 · 쉴 때는 일시 정지를 눌러 주세요</p>
       </div>
 
       {/* 몰입 모드(전체화면) — 옵션 */}
@@ -514,7 +521,7 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
             <ControlButton running={running} big hasProgress={hasProgress} onStart={start} onPause={pause} />
           </div>
 
-          <p className="pointer-events-none absolute bottom-5 text-[11px] font-semibold text-white/30">화면을 켜두고 공부하세요 · 5분 넘게 벗어나면 자동 정지</p>
+          <p className="pointer-events-none absolute bottom-5 text-[11px] font-semibold text-white/30">일시 정지를 누르기 전까지 계속 흘러요 · 쉴 때는 잊지 말고 정지</p>
         </div>,
         document.body,
       )}

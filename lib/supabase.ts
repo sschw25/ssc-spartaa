@@ -494,18 +494,25 @@ export async function getStudySessionsSupabase(studentId: string, sinceDate?: st
   return (data || []) as StudySession[];
 }
 
-// 기간 내 전체 학생의 (학생별) 순공 합계 — 등수 계산용 (서버 전용 집계)
-export async function getStudyMinutesByStudentSupabase(sinceDate: string, untilDate?: string): Promise<Record<string, number>> {
+// 기간 내 전체 학생의 (학생별·날짜별) 순공 합계 — 등수 계산용 (서버 전용 집계).
+// 날짜별로 쪼개 반환하는 이유: 좌석판 수기 출석(present) 파생을 '세션분이 없는 날'에만
+// 얹어야 해서(store.getStudyMinutesByStudent), 날짜 단위 판별이 필요하다.
+export async function getStudyMinutesByStudentDateSupabase(
+  sinceDate: string,
+  untilDate?: string,
+): Promise<Record<string, Record<string, number>>> {
   let query = getClient()
     .from('study_sessions')
-    .select('student_id, minutes')
+    .select('student_id, date, minutes')
     .gte('date', sinceDate);
   if (untilDate) query = query.lte('date', untilDate);
   const { data, error } = await query;
   if (error) throw error;
-  const totals: Record<string, number> = {};
+  const totals: Record<string, Record<string, number>> = {};
   (data || []).forEach((r: any) => {
-    if (r.minutes) totals[r.student_id] = (totals[r.student_id] || 0) + r.minutes;
+    if (!r.minutes) return;
+    const byDate = (totals[r.student_id] ||= {});
+    byDate[r.date] = (byDate[r.date] || 0) + r.minutes;
   });
   return totals;
 }
@@ -1297,6 +1304,38 @@ export async function getStudentSeatAbsenceMarksSupabase(
     .gte('date', from)
     .lte('date', to)
     .eq('status', 'absent')
+    .like('seat_key', `${studentId}:%`);
+  if (error) throw error;
+  return (data || []).map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
+}
+
+// 기간 내 좌석판 수기 출석 마크(status 'present') — 순공(재석) 읽기 시점 파생용.
+// QR 등하원 없이 관리자가 좌석판에서 출석 처리한 날의 재석분을 study_stats 쪽에서 파생한다.
+export async function getSeatPresenceMarksSupabase(from: string, to?: string): Promise<{ date: string; seatKey: string }[]> {
+  let query = getClient()
+    .from('seat_statuses')
+    .select('date, seat_key, status')
+    .gte('date', from)
+    .eq('status', 'present');
+  if (to) query = query.lte('date', to);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []).map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));
+}
+
+// 특정 학생의 기간 내 수기 출석 마크(status 'present') — 본인 리포트 순공 통계 파생용.
+// seat_key 는 "{studentId}:{periodIdx}" 형태라 prefix like 필터로 학생 스코프를 건다.
+export async function getStudentSeatPresenceMarksSupabase(
+  studentId: string,
+  from: string,
+  to: string,
+): Promise<{ date: string; seatKey: string }[]> {
+  const { data, error } = await getClient()
+    .from('seat_statuses')
+    .select('date, seat_key, status')
+    .gte('date', from)
+    .lte('date', to)
+    .eq('status', 'present')
     .like('seat_key', `${studentId}:%`);
   if (error) throw error;
   return (data || []).map((r: any) => ({ date: String(r.date), seatKey: String(r.seat_key) }));

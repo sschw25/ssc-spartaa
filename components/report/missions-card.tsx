@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { Trophy, Ticket, Loader2, CheckCircle2, CalendarClock, ArrowRight } from 'lucide-react';
+import { Trophy, Ticket, Loader2, CheckCircle2, CalendarClock, ArrowRight, ChevronRight } from 'lucide-react';
 
 interface Mission {
   id: string;
@@ -28,6 +28,27 @@ interface MissionsData {
   recent: RecentReward[];
 }
 
+// 미션 → 관련 화면 딥링크 매핑. tabId 는 학생 리포트의 메인 탭 id 또는 컨테이너 탭으로
+// 승격되는 서브탭 id(app/report/[id]/page.tsx applyContainerTab: study-stats→생활,
+// execution-plan→학습 등). 매핑이 없는 미션은 기존처럼 일반 카드로 남는다.
+const MISSION_TAB_TARGETS: Record<string, string> = {
+  daily_pomodoro: 'focus',                  // 하루 뽀모도로 → 집중 탭
+  phone_focus_week: 'focus',                // 휴대폰 몰입 루틴 → 집중 탭
+  mock_review_complete: 'wrong-note',       // 모의고사 오답분석 → 오답 노트
+  weekly_top_rank: 'study-stats',           // 주간 순공 랭킹 → 생활 > 순공 통계
+  weekly_growth: 'study-stats',             // 전주 대비 순공 성장 → 생활 > 순공 통계
+  weekend_study: 'learning',                // 주말 집중 학습 → 학습 탭
+  weekly_plan_completion: 'execution-plan', // 주간 계획 실행률 → 학습 > 학습 계획
+  deadline_zero_overdue: 'execution-plan',  // 기간 목표 지연 0건 → 학습 > 학습 계획
+  monthly_no_penalty: 'student-penalties',  // 벌점 0점 → 생활 > 벌점
+  punctual_checkin: 'attendance-status',    // 정시 등원 → 생활 > 등하원
+  ot_attendance: 'calendar',                // OT 참여 → 캘린더
+};
+
+// 학생 레이아웃(student-layout.tsx)이 수신하는 탭 이동 전역 이벤트 이름.
+// 부모가 onNavigateTab 을 배선하지 않아도 리포트 안에서는 딥링크가 동작하게 하는 폴백 채널.
+export const STUDENT_TAB_NAVIGATE_EVENT = 'ssc:navigate-student-tab';
+
 const periodLabel = (p: Mission['period']) => (p === 'weekly' ? '매주' : p === 'monthly' ? '매월' : p === 'daily' ? '매일' : 'OT');
 const periodCls = (p: Mission['period']) =>
   p === 'weekly' ? 'bg-[#0071E3]/10 text-[#0071E3]'
@@ -36,9 +57,22 @@ const periodCls = (p: Mission['period']) =>
   : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-400';
 
 // 쿠폰 적립(미션) 현황 카드. 쿠폰 '교환'은 별도 '쿠폰 교환소' 탭으로 분리 — onGoToExchange 로 이동.
-export function MissionsCard({ onGoToExchange }: { onGoToExchange?: () => void }) {
+// onNavigateTab: 미션 카드 클릭 시 관련 탭으로 딥링크(없으면 전역 이벤트 폴백으로 동작).
+export function MissionsCard({ onGoToExchange, onNavigateTab }: { onGoToExchange?: () => void; onNavigateTab?: (tabId: string) => void }) {
   const [data, setData] = useState<MissionsData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // 미션 카드 → 관련 화면 이동. 부모가 onNavigateTab 을 주면 그걸 쓰고,
+  // 없으면 학생 레이아웃이 수신하는 전역 이벤트로 폴백한다(추가 배선 없이 동작).
+  const goToMissionTab = (tabId: string) => {
+    if (onNavigateTab) {
+      onNavigateTab(tabId);
+      return;
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(STUDENT_TAB_NAVIGATE_EVENT, { detail: { tabId } }));
+    }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -94,31 +128,55 @@ export function MissionsCard({ onGoToExchange }: { onGoToExchange?: () => void }
 
       {data.missions.length > 0 && (
       <div className="space-y-2.5">
-        {data.missions.map((m) => (
-          <div key={m.id} className={`rounded-lg border p-3.5 flex items-start gap-3 ${m.earned ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white dark:border-white/10 dark:bg-[#1c1c1e]'}`}>
-            <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${m.earned ? 'bg-emerald-100 text-emerald-700' : 'bg-[#0071E3]/10 text-[#0071E3]'}`}>
-              {m.earned ? <CheckCircle2 className="w-4 h-4" /> : m.period === 'event' ? <CalendarClock className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
-            </span>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{m.name}</span>
-                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${periodCls(m.period)}`}>{periodLabel(m.period)}</span>
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 text-[10px] font-semibold">
-                  <Ticket className="w-2.5 h-2.5" /> +{m.coupons}
-                </span>
-                {m.earned && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold">
-                    <CheckCircle2 className="w-2.5 h-2.5" /> 달성
+        {data.missions.map((m) => {
+          const targetTab = MISSION_TAB_TARGETS[m.id];
+          const cardCls = `rounded-lg border p-3.5 flex items-start gap-3 ${m.earned ? 'border-emerald-200 bg-emerald-50/40' : 'border-slate-100 bg-white dark:border-white/10 dark:bg-[#1c1c1e]'}`;
+          const cardBody = (
+            <>
+              <span className={`mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg ${m.earned ? 'bg-emerald-100 text-emerald-700' : 'bg-[#0071E3]/10 text-[#0071E3]'}`}>
+                {m.earned ? <CheckCircle2 className="w-4 h-4" /> : m.period === 'event' ? <CalendarClock className="w-4 h-4" /> : <Trophy className="w-4 h-4" />}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">{m.name}</span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${periodCls(m.period)}`}>{periodLabel(m.period)}</span>
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[#0071E3]/10 text-[#0071E3] px-1.5 py-0.5 text-[10px] font-semibold">
+                    <Ticket className="w-2.5 h-2.5" /> +{m.coupons}
                   </span>
+                  {m.earned && (
+                    <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 text-emerald-700 px-1.5 py-0.5 text-[10px] font-semibold">
+                      <CheckCircle2 className="w-2.5 h-2.5" /> 달성
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{m.describe}</p>
+                {!m.earned && m.progress && (
+                  <p className="text-[11px] font-semibold text-[#0071E3] mt-1">{m.progress}</p>
                 )}
               </div>
-              <p className="text-[11px] font-semibold text-slate-500 mt-1 leading-relaxed">{m.describe}</p>
-              {!m.earned && m.progress && (
-                <p className="text-[11px] font-semibold text-[#0071E3] mt-1">{m.progress}</p>
-              )}
+            </>
+          );
+          // 매핑된 미션은 관련 화면으로 이동하는 버튼 카드(눌림 피드백 + chevron 힌트)
+          if (targetTab) {
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => goToMissionTab(targetTab)}
+                aria-label={`${m.name} — 관련 화면으로 이동`}
+                className={`${cardCls} w-full text-left transition active:scale-[0.98] hover:border-[#0071E3]/30`}
+              >
+                {cardBody}
+                <ChevronRight className="w-4 h-4 shrink-0 self-center text-slate-300 dark:text-slate-600" aria-hidden="true" />
+              </button>
+            );
+          }
+          return (
+            <div key={m.id} className={cardCls}>
+              {cardBody}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       )}
 

@@ -10,6 +10,8 @@ interface CouponTabProps {
   student: Student;
   activeTab: string;
   onGoToExchange?: () => void;
+  /** 미션 카드 딥링크 — 상위에서 setActiveTab 을 배선하면 전달(없으면 MissionsCard 가 전역 이벤트로 폴백) */
+  onNavigateTab?: (tabId: string) => void;
 }
 
 const redemptionStatus: Record<RewardRedemption['status'], { label: string; cls: string; icon: React.ComponentType<{ className?: string }> }> = {
@@ -34,7 +36,7 @@ function formatDate(value?: string) {
   return /^\d{4}-\d{2}(-\d{2})?$/.test(value) ? value : '시각 미기록';
 }
 
-export function CouponTab({ student, activeTab, onGoToExchange }: CouponTabProps) {
+export function CouponTab({ student, activeTab, onGoToExchange, onNavigateTab }: CouponTabProps) {
   if (activeTab !== 'student-coupons') return null;
 
   const coupons = student.leaveCoupons ?? 0;
@@ -144,7 +146,7 @@ export function CouponTab({ student, activeTab, onGoToExchange }: CouponTabProps
       </section>
 
       {/* 쿠폰 미션 — 미션 탭 해체로 여기(생활·쿠폰) 하단으로 이동. 획득 기회+최근 적립. */}
-      <MissionsCard onGoToExchange={onGoToExchange} />
+      <MissionsCard onGoToExchange={onGoToExchange} onNavigateTab={onNavigateTab} />
     </div>
   );
 }
