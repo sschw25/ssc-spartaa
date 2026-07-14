@@ -4,9 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { haptic } from '@/lib/haptics';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
-import { Menu, LogOut, Bell, X, LayoutDashboard, Printer, AlertTriangle, XCircle, MessageSquare, CheckCircle2, AlertCircle, Calendar, Search } from 'lucide-react';
+import { Menu, LogOut, LayoutDashboard, Printer, AlertTriangle, XCircle, Search } from 'lucide-react';
 import { Student } from '@/lib/types/student';
-import { StudentNotification, StudentNotificationTone } from './notifications-section';
+import { StudentNotification } from './notifications-section';
 import { ParentSidebar } from './parent-sidebar';
 import { STUDENT_TAB_NAVIGATE_EVENT } from './missions-card';
 
@@ -81,42 +81,6 @@ interface StudentLayoutProps {
   children: React.ReactNode;
 }
 
-const NOTIFICATION_TONE_ICON: Record<StudentNotificationTone, React.ElementType> = {
-  blue: MessageSquare,
-  emerald: CheckCircle2,
-  amber: AlertCircle,
-  red: AlertCircle,
-  slate: Calendar,
-};
-
-const NOTIFICATION_TONE_CLASS: Record<StudentNotificationTone, { item: string; icon: string; label: string }> = {
-  blue: {
-    item: 'border-[#0071E3]/15 bg-[#0071E3]/[0.04]',
-    icon: 'bg-[#0071E3] text-white',
-    label: 'bg-[#0071E3]/10 text-[#0071E3]',
-  },
-  emerald: {
-    item: 'border-emerald-200 bg-emerald-50/70',
-    icon: 'bg-emerald-600 text-white',
-    label: 'bg-emerald-100 text-emerald-700',
-  },
-  amber: {
-    item: 'border-amber-200 bg-amber-50/70',
-    icon: 'bg-amber-500 text-white',
-    label: 'bg-amber-100 text-amber-700',
-  },
-  red: {
-    item: 'border-red-200 bg-red-50/70',
-    icon: 'bg-red-500 text-white',
-    label: 'bg-red-100 text-red-700',
-  },
-  slate: {
-    item: 'border-slate-200 bg-slate-50/80',
-    icon: 'bg-slate-500 text-white',
-    label: 'bg-slate-200 text-slate-600',
-  },
-};
-
 export function StudentLayout({
   student,
   isStudentReport,
@@ -125,7 +89,6 @@ export function StudentLayout({
   isEnrollmentExpiredLocked,
   daysUntilEnrollmentEnd,
   notificationCount,
-  notificationPreview,
   reportNavItems,
   activeTab,
   setActiveTab,
@@ -133,7 +96,6 @@ export function StudentLayout({
   tabIds,
   handleLogout,
   handlePrint,
-  formatNotificationDate,
   children,
 }: StudentLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -158,11 +120,6 @@ export function StudentLayout({
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const truncateNotificationText = (value: string, max = 120) => {
-    const normalized = value.replace(/\s+/g, ' ').trim();
-    return normalized.length > max ? `${normalized.slice(0, max)}...` : normalized;
-  };
-
   const selectStudentTab = (tabId: string, scrollTargetId?: string, quickKey?: string) => {
     slideDirRef.current = tabIds.indexOf(tabId) >= tabIds.indexOf(activeTab) ? 1 : -1;
     setActiveTab(tabId);
@@ -177,10 +134,6 @@ export function StudentLayout({
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }, 0);
-  };
-
-  const openNotificationTab = () => {
-    selectStudentTab('student-notifications');
   };
 
   // 미션 카드 등 깊은 자식이 부모 배선 없이 탭 이동을 요청하는 전역 이벤트 수신
@@ -463,96 +416,6 @@ export function StudentLayout({
                     )}
 
                     <ThemeToggle className="mt-2 min-h-12 rounded-2xl border border-slate-100 bg-white px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200" />
-                  </motion.div>
-                )}
-                </AnimatePresence>
-              </div>
-
-              <div className="no-print fixed right-4 top-4 z-50 flex flex-col items-end">
-                <button
-                  type="button"
-                  onClick={() => { setNotificationPanelOpen((open) => !open); setMobileMenuOpen(false); }}
-                  className="glass-strong relative grid h-12 w-12 place-items-center rounded-2xl text-[#0071E3] transition-colors active:bg-[#0071E3]/10"
-                  aria-expanded={notificationPanelOpen}
-                  aria-label={`알림 열기, 현재 ${notificationCount}개`}
-                >
-                  <Bell className="h-5 w-5" />
-                  {notificationCount > 0 && (
-                    <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white shadow-sm">
-                      {notificationCount > 9 ? '9+' : notificationCount}
-                    </span>
-                  )}
-                </button>
-
-                <AnimatePresence>
-                {notificationPanelOpen && (
-                  <motion.div
-                    className="glass-strong mt-2 w-[min(86vw,360px)] rounded-3xl p-3"
-                    style={{ transformOrigin: 'top right' }}
-                    initial={{ opacity: 0, scale: 0.96, y: -8 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96, y: -8 }}
-                    transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-                  >
-                    <div className="mb-2 flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#0071E3]">Notifications</p>
-                        <p className="mt-0.5 text-sm font-black text-slate-900 dark:text-slate-100">학생 알림</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setNotificationPanelOpen(false)}
-                        className="grid h-8 w-8 place-items-center rounded-xl border border-slate-200 bg-white text-slate-400 shadow-sm"
-                        aria-label="알림 닫기"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    {notificationPreview.length > 0 ? (
-                      <div className="space-y-2">
-                        {notificationPreview.map((notification, i) => {
-                          const toneClass = NOTIFICATION_TONE_CLASS[notification.tone];
-                          const ToneIcon = NOTIFICATION_TONE_ICON[notification.tone];
-                          return (
-                            <button
-                              key={notification.id}
-                              type="button"
-                              onClick={openNotificationTab}
-                              style={{ animationDelay: `${i * 45}ms` }}
-                              className={`animate-stagger-in w-full rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98] ${toneClass.item}`}
-                            >
-                              <div className="flex items-start gap-2.5">
-                                <span className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-xl ${toneClass.icon}`}>
-                                  <ToneIcon className="h-3.5 w-3.5" />
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="flex items-center justify-between gap-2">
-                                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${toneClass.label}`}>{notification.label}</span>
-                                    <span className="shrink-0 text-[10px] font-bold text-slate-400">{formatNotificationDate(notification.date)}</span>
-                                  </span>
-                                  <span className="mt-1.5 block text-xs font-black leading-4 text-slate-900 dark:text-slate-100">{notification.title}</span>
-                                  <span className="mt-1 block text-[10px] font-semibold leading-4 text-slate-500">{truncateNotificationText(notification.body, 70)}</span>
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-5 text-center">
-                        <p className="text-xs font-black text-slate-700">새 알림이 없습니다.</p>
-                        <p className="mt-1 text-[10px] font-semibold text-slate-400">코멘터 답변과 신청 처리 상태가 여기에 표시돼요.</p>
-                      </div>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={openNotificationTab}
-                      className="mt-3 w-full rounded-2xl bg-[#0071E3] py-2.5 text-xs font-black text-white shadow-[0_8px_24px_rgba(0,113,227,0.18)] transition active:scale-[0.98]"
-                    >
-                      전체 알림 보기
-                    </button>
                   </motion.div>
                 )}
                 </AnimatePresence>

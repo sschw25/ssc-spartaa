@@ -48,21 +48,17 @@ const weekdayOf = (d: string) => { const [y, m, dd] = d.split('-').map(Number); 
     const sessions = await getStudySessions(stu.id, monthStart);
     const st = buildStudyStats({ sessions, weeklyMinutesByStudent: weekMin, myId: stu.id, totalStudents: students.length });
 
-    const byWeekdaySum = st.byWeekday.reduce((a, d) => a + d.min, 0);
-    const completedMonthMin = sessions.filter((s) => s.minutes != null).reduce((a, s) => a + (s.minutes || 0), 0);
     const distinctWeekDates = new Set(sessions.filter((s) => s.date >= weekStart).map((s) => s.date)).size;
     let expected = 0; for (let d = weekStart; d <= todayStr; ) { if (weekdayOf(d) !== 0) expected++; const [y, m, dd] = d.split('-').map(Number); const nx = new Date(Date.UTC(y, m - 1, dd + 1)); d = nx.toISOString().slice(0, 10); }
 
     const inv =
-      st.weekTotalMin >= 0 && st.monthTotalMin >= 0 &&
-      st.byWeekday.length === 7 &&
-      byWeekdaySum === completedMonthMin &&                 // 요일분포 합 == 이번달 완료순공
+      st.weekTotalMin >= 0 &&
       st.weekAttendedDays === distinctWeekDates &&          // 출석일 == 주간 distinct 날짜
       st.weekExpectedDays === expected &&                   // 기대출석 == 월~토 경과일
       st.weekAbsentDays === Math.max(0, expected - distinctWeekDates) &&
       st.weekAbsentDays >= 0;
     ok(`[${stu.name}] studyStats 불변식`, inv,
-      `주${st.weekTotalMin}분/월${st.monthTotalMin}분 출석${st.weekAttendedDays}/${st.weekExpectedDays} 결석${st.weekAbsentDays} ${st.weekRank ? `${st.weekRank.rank}등/${st.weekRank.total}` : '등수-'}`);
+      `주${st.weekTotalMin}분 출석${st.weekAttendedDays}/${st.weekExpectedDays} 결석${st.weekAbsentDays} ${st.weekRank ? `${st.weekRank.rank}등/${st.weekRank.total}` : '등수-'}`);
   }
 
   // ── C. 진도 기반 오늘 학습시간 (Phase1 학습요일 로직) ──

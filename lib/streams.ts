@@ -24,6 +24,7 @@ export const EXAM_STREAMS: ExamStream[] = [
   { id: 'g9-admin', label: '9급 일반행정', subjects: ['국어', '영어', '한국사', '행정법총론', '행정학개론'] },
   { id: 'g9-correction', label: '9급 교정직', subjects: ['국어', '영어', '한국사', '교정학개론', '형사소송법개론'] },
   { id: 'g9-tax', label: '9급 세무직', subjects: ['국어', '영어', '한국사', '세법개론', '회계학'] },
+  { id: 'g9-edu-admin', label: '9급 교육행정', subjects: ['국어', '영어', '한국사', '교육학개론', '행정법총론'] },
   { id: 'police', label: '경찰', subjects: ['헌법', '형사법', '경찰학'] },
   { id: 'fire', label: '소방', subjects: ['소방학개론', '소방관계법규', '행정법총론'] },
   { id: 'military-admin', label: '군무원 행정', subjects: ['국어', '행정법', '행정학'] },

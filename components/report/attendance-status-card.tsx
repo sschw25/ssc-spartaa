@@ -106,7 +106,7 @@ export function AttendanceStatusCard() {
                   <div className="pt-0.5">
                     <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600">
                       <Flame className="size-3 shrink-0" />
-                      {fmtMin(elapsedMin)}째 집중 중
+                      {fmtMin(elapsedMin)}째 재석 중
                     </span>
                   </div>
                 )}
@@ -134,11 +134,11 @@ export function AttendanceStatusCard() {
         </div>
       </div>
 
-      {/* 오늘 등하원 타임라인 + 오늘 순공 */}
+      {/* 오늘 등하원 타임라인 + 오늘 체류(등원~하원 재석) */}
       {!status.loading && (
         <div className="rounded-2xl bg-[#F5F5F7] dark:bg-white/5 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">오늘 학습 시간</span>
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">오늘 체류</span>
             <span className="text-sm font-black text-[#0071E3]">{fmtMin(status.todayMinutes)}</span>
           </div>
           {status.todaySessions.length > 0 ? (

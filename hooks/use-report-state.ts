@@ -670,6 +670,16 @@ export function useReportState() {
     setDismissedNotificationIds([]);
   };
 
+  // 지금 보이는(미확인) 알림 전체를 한 번에 확인 처리 — 개별 dismiss와 동일하게 병합 저장
+  const dismissAllNotifications = (notificationIds: string[]) => {
+    if (!student?.id || notificationIds.length === 0) return;
+    setDismissedNotificationIds((prev) => {
+      const next = Array.from(new Set([...prev, ...notificationIds]));
+      commitDismissedNotifications(next);
+      return next;
+    });
+  };
+
   // 학생이 코멘터 답변에 재답변 — 서버 append 후 로컬 스레드 낙관적 갱신
   const replyToThread = async (
     kind: 'request' | 'suggestion' | 'leave',
@@ -2040,7 +2050,10 @@ export function useReportState() {
     : 0;
   
   const homePomodoroMin = parseSpecialNoteObj(student.specialNote).pomodoro_minutes?.[getSeoulDateKey()] || 0;
-  const homeTotalMin = homeAttend.todayMinutes + homeElapsedMin + homePomodoroMin;
+  // 순공 이원화(운영 결정 2026-07-13): 집중=타이머로 잰 순공(뽀모도로), 체류=등원~현재 재석분.
+  // 홈 카드에서 두 값을 나눠 노출한다(예전엔 단순 합산 homeTotalMin 하나였음 — 의미 모호로 폐기).
+  const homeFocusMin = homePomodoroMin;
+  const homeStayMin = homeAttend.todayMinutes + homeElapsedMin;
 
   // weeklyDailyPlans 는 위의 useMemo 로 계산됨
 
@@ -2599,7 +2612,8 @@ export function useReportState() {
     homeHalfLeft,
     homeFullLeft,
     homeLeaveCoupons,
-    homeTotalMin,
+    homeFocusMin,
+    homeStayMin,
     weeklyDailyPlans,
     todayDailyPlan,
     todayPlanEntries,
@@ -2617,6 +2631,7 @@ export function useReportState() {
     studentNotifications,
     dismissedStudentNotifications,
     dismissNotification,
+    dismissAllNotifications,
     restoreNotification,
     restoreAllNotifications,
     replyToThread,

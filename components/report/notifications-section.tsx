@@ -68,6 +68,7 @@ interface NotificationsSectionProps {
   dismissedNotifications: StudentNotification[];
   notificationCount: number;
   onDismissNotification: (notificationId: string) => void;
+  onDismissAllNotifications: () => void;
   onRestoreNotification: (notificationId: string) => void;
   onRestoreAllNotifications: () => void;
   onReplyToThread?: (kind: 'request' | 'suggestion' | 'leave', id: string, text: string) => Promise<boolean>;
@@ -142,6 +143,7 @@ export function NotificationsSection({
   dismissedNotifications,
   notificationCount,
   onDismissNotification,
+  onDismissAllNotifications,
   onRestoreNotification,
   onRestoreAllNotifications,
   onReplyToThread,
@@ -179,16 +181,29 @@ export function NotificationsSection({
         </div>
       </div>
 
-      {dismissedCount > 0 && (
+      {(dismissedCount > 0 || studentNotifications.length > 0) && (
         <div className="no-print flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setShowDismissed((value) => !value)}
-            className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-500 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400 dark:hover:bg-white/5"
-          >
-            {showDismissed ? '확인한 알림 접기' : `확인한 알림 ${dismissedCount}개`}
-          </button>
-          {showDismissed && (
+          {studentNotifications.length > 0 && (
+            <button
+              type="button"
+              onClick={onDismissAllNotifications}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#0071E3]/20 bg-white px-3 text-[11px] font-black text-[#0071E3] shadow-sm transition hover:bg-[#0071E3]/5 active:scale-[0.98] dark:bg-[#1c1c1e]"
+              title="지금 보이는 알림을 모두 확인 처리합니다"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              모두 읽음
+            </button>
+          )}
+          {dismissedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowDismissed((value) => !value)}
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-[11px] font-black text-slate-500 shadow-sm transition hover:bg-slate-50 active:scale-[0.98] dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400 dark:hover:bg-white/5"
+            >
+              {showDismissed ? '확인한 알림 접기' : `확인한 알림 ${dismissedCount}개`}
+            </button>
+          )}
+          {dismissedCount > 0 && showDismissed && (
             <button
               type="button"
               onClick={onRestoreAllNotifications}

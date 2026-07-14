@@ -34,11 +34,9 @@ const mk = (date: string, minutes: number | null): StudySession => ({
 const sessions = [mk('2026-06-15', 120), mk('2026-06-16', 200), mk('2026-06-17', null), mk('2026-06-10', 90)];
 const st = buildStudyStats({ sessions, weeklyMinutesByStudent: { stu1: 320, stuX: 500 }, myId: 'stu1', totalStudents: 5, now });
 eq('weekTotalMin(완료분만 120+200)', st.weekTotalMin, 320);
-eq('monthTotalMin(120+200+90, 진행중 제외)', st.monthTotalMin, 410);
 eq('weekAttendedDays(월·화·수=3, 진행중 포함)', st.weekAttendedDays, 3);
 eq('weekExpectedDays(월·화·수 경과=3)', st.weekExpectedDays, 3);
 eq('weekAbsentDays', st.weekAbsentDays, 0);
-eq('peakWeekday(화 200)', st.peakWeekday?.label, '화');
 eq('weekRank(나320, 위에 500 1명 → 2등/5명)', st.weekRank, { rank: 2, total: 5 });
 
 // ── 결석 시나리오: 화 빠짐 → 출석 {월,수}=2, 기대 3 → 결석 1 ──

@@ -76,7 +76,8 @@ interface HomeOverviewTabProps {
   setPendingAmount: React.Dispatch<React.SetStateAction<number>>;
   updatePlanCompletion: (materialType: 'book' | 'lecture', materialId: string, planId: string, isCompleted: boolean, actualAmount?: number, dateKey?: string, reviewMinutes?: number) => Promise<boolean>;
   homeAttend: { loading: boolean; checkedIn: boolean; todayMinutes: number; since: string | null; sinceToday: boolean };
-  homeTotalMin: number;
+  homeFocusMin: number; // 오늘 집중(타이머 순공)
+  homeStayMin: number;  // 오늘 체류(등원~현재 재석)
   currentSubjectText: string;
   currentStudyLabel: string;
   timeGreeting: string;
@@ -132,7 +133,8 @@ export function HomeOverviewTab({
   setPendingAmount,
   updatePlanCompletion,
   homeAttend,
-  homeTotalMin,
+  homeFocusMin,
+  homeStayMin,
   currentSubjectText,
   currentStudyLabel,
   timeGreeting,
@@ -1571,13 +1573,18 @@ export function HomeOverviewTab({
               );
             })()}
             <div className="rounded-2xl border border-[#0071E3]/15 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-3.5">
-              <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]">오늘 누적 시간</p>
-              <p className="mt-2 text-base font-black text-[#0071E3] tabular-nums" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {fmtStudyMin(homeTotalMin)}
-              </p>
-              <p className="mt-1 text-[9px] font-bold text-slate-400 dark:text-slate-400">
-                {homeAttend.checkedIn ? '등원 및 순공 합산' : '등원 기록 없음'}
-              </p>
+              <div className="flex items-baseline justify-between gap-1">
+                <p className="text-[10px] font-black uppercase tracking-wider text-[#0071E3]">오늘 집중</p>
+                <p className="text-base font-black text-[#0071E3] tabular-nums" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {fmtStudyMin(homeFocusMin)}
+                </p>
+              </div>
+              <div className="mt-1.5 flex items-baseline justify-between gap-1 border-t border-[#0071E3]/10 pt-1.5">
+                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">오늘 체류</p>
+                <p className="text-sm font-black text-slate-700 dark:text-slate-200 tabular-nums" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  {fmtStudyMin(homeStayMin)}
+                </p>
+              </div>
             </div>
             <div className="rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/80 dark:bg-white/5 p-3.5">
               <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400">관리자 배정 코멘터</p>

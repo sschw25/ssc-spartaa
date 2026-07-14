@@ -77,8 +77,8 @@ interface ConsultTabProps {
   todayActivityKey?: string;
   todayPomodoroStats?: { sessions: number; minutes: number };
   todayChecklist?: DailyChecklistEntry | null;
-  // 관리자 수동 등원/하원 처리 (QR 대체 — 좌석판과 동일 API)
-  onAttendanceAction?: (action: 'check-in' | 'check-out') => void;
+  // 관리자 수동 등원/하원 처리 (QR 대체 — 좌석판과 동일 API). time 미지정 시 '지금'.
+  onAttendanceAction?: (action: 'check-in' | 'check-out', time?: string) => void;
   attendanceActionBusy?: boolean;
   // 휴가 신청
   studentId?: string;
@@ -115,6 +115,14 @@ export function ConsultTab({
     const m = safeMin % 60;
     return h > 0 ? `${h}시간 ${m}분` : `${m}분`;
   };
+
+  // 관리자 수기 등하원 시각 지정 — 빈값이면 '지금'. 오전/오후 프리셋 또는 직접 입력.
+  const [attendTime, setAttendTime] = useState('');
+  const attendPresets: Array<{ key: string; label: string; value: string }> = [
+    { key: 'now', label: '지금', value: '' },
+    { key: 'am', label: '오전', value: '09:00' },
+    { key: 'pm', label: '오후', value: '13:00' },
+  ];
 
   const attendanceLabel = (() => {
     if (!todayAttendanceStatus) return { title: '조회 중', detail: '실시간 출결을 불러오는 중입니다.', tone: 'text-slate-500' };
@@ -182,7 +190,7 @@ export function ConsultTab({
               {onAttendanceAction && (todayAttendanceStatus?.status === 'absent' || todayAttendanceStatus?.status === 'unconfigured') && (
                 <button
                   type="button"
-                  onClick={() => onAttendanceAction('check-in')}
+                  onClick={() => onAttendanceAction('check-in', attendTime || undefined)}
                   disabled={attendanceActionBusy}
                   className="shrink-0 inline-flex items-center gap-1 rounded-full border border-emerald-200 dark:border-emerald-500/25 bg-emerald-50 dark:bg-emerald-500/10 px-2.5 py-1 text-[10px] font-black text-emerald-700 dark:text-emerald-300 transition hover:bg-emerald-100 dark:hover:bg-emerald-500/20 active:scale-95 disabled:opacity-50"
                 >
@@ -193,7 +201,7 @@ export function ConsultTab({
               {onAttendanceAction && todayAttendanceStatus?.status === 'present' && (
                 <button
                   type="button"
-                  onClick={() => onAttendanceAction('check-out')}
+                  onClick={() => onAttendanceAction('check-out', attendTime || undefined)}
                   disabled={attendanceActionBusy}
                   className="shrink-0 inline-flex items-center gap-1 rounded-full border border-[#0071E3]/25 bg-[#0071E3]/[0.06] dark:bg-[#0071E3]/15 px-2.5 py-1 text-[10px] font-black text-[#0071E3] transition hover:bg-[#0071E3]/[0.12] active:scale-95 disabled:opacity-50"
                 >
@@ -202,6 +210,35 @@ export function ConsultTab({
                 </button>
               )}
             </div>
+
+            {/* 등하원 시각 지정 — 오전/오후 프리셋 또는 직접 입력(빈값=지금). 처리 가능한 상태에서만 노출. */}
+            {onAttendanceAction && (todayAttendanceStatus?.status === 'absent' || todayAttendanceStatus?.status === 'unconfigured' || todayAttendanceStatus?.status === 'present') && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-t border-black/[0.05] dark:border-white/10 pt-2.5">
+                <span className="text-[10px] font-semibold text-slate-400">시각</span>
+                <div className="inline-flex rounded-full bg-white dark:bg-white/5 p-0.5 border border-black/[0.06] dark:border-white/10">
+                  {attendPresets.map((p) => {
+                    const active = attendTime === p.value;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => setAttendTime(p.value)}
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-black transition ${active ? 'bg-[#0071E3] text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'}`}
+                      >
+                        {p.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="time"
+                  value={attendTime}
+                  onChange={(e) => setAttendTime(e.target.value)}
+                  className="h-6 rounded-md border border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 dark:text-slate-100 px-1.5 text-[10px]"
+                  aria-label="등하원 시각 직접 지정"
+                />
+              </div>
+            )}
           </div>
 
           <div className="rounded-lg bg-[#F5F5F7] dark:bg-white/5 px-3 py-3">

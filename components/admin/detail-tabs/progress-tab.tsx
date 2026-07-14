@@ -1069,7 +1069,7 @@ export function ProgressTab() {
                                             />
                                           </div>
                                           <div className="w-24 space-y-1">
-                                            <Label className="text-[9px] text-slate-500 dark:text-slate-400">총 분량({book.unit || '페이지'})</Label>
+                                            <Label className="text-[9px] text-slate-500 dark:text-slate-400">총 분량({book.unit || '페이지'}) <span className="text-slate-400">(0=미정)</span></Label>
                                             <Input
                                               type="number"
                                               value={editingMaterialTotal}
@@ -1104,7 +1104,8 @@ export function ProgressTab() {
                                             size="sm"
                                             onClick={async () => {
                                               if (!editingMaterialTitle.trim()) return toast.error('교재명을 입력해 주세요.');
-                                              if (editingMaterialTotal <= 0) return toast.error('올바른 총 분량을 입력해 주세요.');
+                                              // 총 분량 0 = 미정(자율). 총량 미확정 자료는 0으로 두고 이름·진도만 정정할 수 있게 허용.
+                                              if (editingMaterialTotal < 0) return toast.error('총 분량은 0 이상이어야 합니다.');
                                               await updateProgress(sub.id, 'book', book.id, 'edit', {
                                                 title: editingMaterialTitle,
                                                 total: editingMaterialTotal,
@@ -1502,7 +1503,7 @@ export function ProgressTab() {
                                             />
                                           </div>
                                           <div className="w-24 space-y-1">
-                                            <Label className="text-[9px] text-slate-500 dark:text-slate-400">총 강의 수</Label>
+                                            <Label className="text-[9px] text-slate-500 dark:text-slate-400">총 강의 수 <span className="text-slate-400">(0=미정)</span></Label>
                                             <Input
                                               type="number"
                                               value={editingMaterialTotal}
@@ -1553,7 +1554,8 @@ export function ProgressTab() {
                                             size="sm"
                                             onClick={async () => {
                                               if (!editingMaterialTitle.trim()) return toast.error('강좌명을 입력해 주세요.');
-                                              if (editingMaterialTotal <= 0) return toast.error('올바른 총 강의 수를 입력해 주세요.');
+                                              // 총 강의 수 0 = 미정(자율). 매주 갱신 강의 등 총량 미확정 자료는 0으로 두고 이름·진도만 정정할 수 있게 허용.
+                                              if (editingMaterialTotal < 0) return toast.error('총 강의 수는 0 이상이어야 합니다.');
                                               await updateProgress(sub.id, 'lecture', lec.id, 'edit', {
                                                 title: editingMaterialTitle,
                                                 total: editingMaterialTotal,

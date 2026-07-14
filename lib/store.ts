@@ -635,9 +635,10 @@ export async function setManualAttendance(
   await deleteSessionsByStudentDateSupabase(studentId, date); // 해당 일자 1건으로 정규화
   return insertManualSessionSupabase(studentId, date, checkInIso, checkOutIso);
 }
-export async function checkIn(studentId: string, source = 'qr'): Promise<StudySession> {
+export async function checkIn(studentId: string, source = 'qr', at?: Date): Promise<StudySession> {
   requireSupabase();
-  return checkInSupabase(studentId, source);
+  // at 미지정 시 checkInSupabase 의 기본값(new Date())이 적용된다.
+  return checkInSupabase(studentId, source, at);
 }
 export async function checkOut(session: StudySession, at?: Date): Promise<StudySession> {
   requireSupabase();

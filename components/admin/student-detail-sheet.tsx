@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -13,7 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest, AwaySchedule } from '@/lib/types/student';
+import { Student, BookProgress, LectureProgress, ConsultationLog, GradeItem, SubjectProgress, SharedMaterial, DetailedPlan, ReviewPassSetting, LeaveRequest, AwaySchedule, SmsLog } from '@/lib/types/student';
 import { getStudentTodayTotalStudyTimeMin, getMaterialStudyDays, generateDetailedPlans as generateDetailedPlansLib } from '@/lib/progress-plan';
 import { getGradeChartData, getGradeSubjects } from '@/lib/grade-chart';
 import { buildMaterialBenchmarks } from '@/lib/material-benchmark';
@@ -856,12 +857,13 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
 
   // 관리자 수동 등원/하원 처리 — 좌석판의 'QR 대체' 경로(app/api/admin/attendance/check-in)를 그대로 재사용.
   const [attendanceActionBusy, setAttendanceActionBusy] = useState(false);
-  const handleAdminAttendanceAction = async (action: 'check-in' | 'check-out') => {
+  const handleAdminAttendanceAction = async (action: 'check-in' | 'check-out', time?: string) => {
     if (!student?.id || attendanceActionBusy) return;
     const label = action === 'check-in' ? '등원' : '하원';
+    const whenText = time ? `${time}` : '지금';
     const ok = await confirm({
       title: `${student.name} ${label} 처리할까요?`,
-      description: action === 'check-in' ? 'QR 대신 지금 등원으로 기록합니다.' : undefined,
+      description: `QR 대신 ${whenText} 기준으로 ${label} 기록합니다.`,
       confirmText: `${label} 처리`,
     });
     if (!ok) return;
@@ -871,7 +873,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'same-origin',
-        body: JSON.stringify({ studentId: student.id, action }),
+        body: JSON.stringify({ studentId: student.id, action, time: time || undefined }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok || !json.success) throw new Error(json.message || `${label} 처리 실패`);
@@ -881,6 +883,60 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       toast.error(error instanceof Error ? error.message : `${label} 처리에 실패했습니다.`);
     } finally {
       setAttendanceActionBusy(false);
+    }
+  };
+
+  // 학생 상세 시트에서 바로 문자 발송 — 개별 발송 전용 API(app/api/admin/students/[id]/message) 재사용.
+  const [quickMessageOpen, setQuickMessageOpen] = useState(false);
+  const [quickMessageText, setQuickMessageText] = useState('');
+  const [quickMessageTargets, setQuickMessageTargets] = useState<Array<'parent' | 'student'>>(['parent']);
+  const [quickMessageSending, setQuickMessageSending] = useState(false);
+  const [quickMessageAdminId, setQuickMessageAdminId] = useState('관리자');
+
+  const openQuickMessage = () => {
+    setQuickMessageText('');
+    setQuickMessageTargets(normalizeSmsTargetsForState(student?.smsTargets));
+    setQuickMessageOpen(true);
+    fetch('/api/admin/auth/me', { credentials: 'same-origin' })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        const id = json?.userId || json?.username;
+        if (id) setQuickMessageAdminId(id);
+      })
+      .catch(() => {});
+  };
+
+  const toggleQuickMessageTarget = (t: 'parent' | 'student') => {
+    setQuickMessageTargets((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]));
+  };
+
+  const sendQuickMessage = async () => {
+    if (!student?.id || quickMessageSending) return;
+    if (!quickMessageText.trim()) { toast.error('메시지 내용을 입력해 주세요.'); return; }
+    if (quickMessageTargets.length === 0) { toast.error('받는 사람(학부모/학생)을 선택해 주세요.'); return; }
+    setQuickMessageSending(true);
+    try {
+      const res = await fetch(`/api/admin/students/${student.id}/message`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          message: quickMessageText.trim(),
+          targets: quickMessageTargets,
+          sentBy: quickMessageAdminId,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || '메시지 발송에 실패했습니다.');
+      const log = json.log as SmsLog | undefined;
+      onUpdate({ ...student, smsLogs: [...(student.smsLogs || []), ...(log ? [log] : [])] });
+      toast.success(`${student.name}에게 메시지를 보냈습니다.${json.sent ? ` (${json.sent}건)` : ''}`);
+      setQuickMessageText('');
+      setQuickMessageOpen(false);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : '메시지 발송에 실패했습니다.');
+    } finally {
+      setQuickMessageSending(false);
     }
   };
 
@@ -2349,13 +2405,16 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 );
                 newPlans = plans;
               }
+              // 총량 0 = 미정 → 자율(selfPaced)로 스냅하고 계획을 비운다(기존 계획 잔존으로 인한 마감/뒤처짐 오판 방지).
+              const zeroed = !(newTotal > 0);
               return {
                 ...b,
                 title: payload.title,
                 totalPages: newTotal,
-                currentPage: Math.min(b.currentPage, newTotal),
+                currentPage: Math.min(b.currentPage, Math.max(0, newTotal)),
                 estimatedMinutesPerUnit: payload.estimatedMinutesPerUnit !== undefined ? (payload.estimatedMinutesPerUnit === null ? undefined : payload.estimatedMinutesPerUnit) : b.estimatedMinutesPerUnit,
-                detailedPlans: newPlans,
+                goalType: zeroed ? 'selfPaced' : b.goalType,
+                detailedPlans: zeroed ? [] : newPlans,
                 updatedAt: nowStr
               };
             }
@@ -2446,14 +2505,17 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                 );
                 newPlans = plans;
               }
+              // 총량 0 = 미정 → 자율(selfPaced)로 스냅하고 계획을 비운다(기존 계획 잔존으로 인한 마감/뒤처짐 오판 방지).
+              const zeroed = !(newTotal > 0);
               return {
                 ...l,
                 name: payload.title,
                 totalLectures: newTotal,
-                completedLectures: Math.min(l.completedLectures, newTotal),
+                completedLectures: Math.min(l.completedLectures, Math.max(0, newTotal)),
                 estimatedMinutesPerUnit: payload.estimatedMinutesPerUnit !== undefined ? (payload.estimatedMinutesPerUnit === null ? undefined : payload.estimatedMinutesPerUnit) : l.estimatedMinutesPerUnit,
                 speedMultiplier: newSpeed,
-                detailedPlans: newPlans,
+                goalType: zeroed ? 'selfPaced' : l.goalType,
+                detailedPlans: zeroed ? [] : newPlans,
                 updatedAt: nowStr
               };
             }
@@ -2863,7 +2925,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         const attendText = `이번 주 출석: ${st.weekAttendedDays ?? 0}/${st.weekExpectedDays ?? 0}일`
           + ((st.weekAbsentDays ?? 0) > 0 ? ` (결석 ${st.weekAbsentDays}일)` : ' (개근)');
         const rankText = st.weekPercent != null ? `\n- 이번 주 순공 상위: 상위 ${st.weekPercent}%` : '';
-        attendanceBlock = `\n\n[출결·순공 현황]\n- 이번 주 순공: ${fmtStudyMin(st.weekTotalMin)} / 이번 달: ${fmtStudyMin(st.monthTotalMin)}\n- ${attendText}${rankText}`;
+        attendanceBlock = `\n\n[출결·순공 현황]\n- 이번 주 체류: ${fmtStudyMin(st.weekTotalMin)}\n- ${attendText}${rankText}`;
       }
     } catch {
       // 출결 데이터 없이 진행
@@ -4146,6 +4208,16 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
             <Button
               size="sm"
               variant="outline"
+              onClick={openQuickMessage}
+              className="bg-transparent border-white/20 hover:bg-white/10 text-white rounded-lg text-xs h-8.5 px-3 shrink-0"
+            >
+              <MessageSquare className="w-3.5 h-3.5 mr-1" />
+              <span>메시지 보내기</span>
+            </Button>
+
+            <Button
+              size="sm"
+              variant="outline"
               onClick={() => window.open(`/report/${student.id}?audience=student`, '_blank')}
               className="bg-transparent border-white/20 hover:bg-white/10 text-white rounded-lg text-xs h-8.5 px-3 shrink-0"
             >
@@ -4968,6 +5040,76 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    <Dialog open={quickMessageOpen} onOpenChange={setQuickMessageOpen}>
+      <DialogContent className="bg-white dark:bg-[#1c1c1e] border-black/[0.05] dark:border-white/10 sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-base text-slate-900 dark:text-slate-100">{student.name}에게 메시지 보내기</DialogTitle>
+          <DialogDescription className="text-xs leading-5 text-slate-600 dark:text-slate-400">
+            학부모/학생 연락처로 즉시 문자를 발송합니다.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {(['parent', 'student'] as const).map((t) => {
+              const phone = t === 'parent' ? student.parentPhone : student.studentPhone;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => toggleQuickMessageTarget(t)}
+                  disabled={!phone}
+                  title={phone ? undefined : '등록된 연락처가 없습니다.'}
+                  className={`rounded-xl px-3.5 py-1.5 text-xs font-black border transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
+                    quickMessageTargets.includes(t)
+                      ? 'border-[#0071E3] bg-[#0071E3] text-white'
+                      : 'border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400 hover:border-slate-300'
+                  }`}
+                >
+                  {t === 'parent' ? '학부모' : '학생 본인'}{phone ? '' : ' (연락처 없음)'}
+                </button>
+              );
+            })}
+          </div>
+          <textarea
+            value={quickMessageText}
+            onChange={(e) => setQuickMessageText(e.target.value)}
+            placeholder="[SSC스파르타] 로 시작하는 메시지를 작성하세요."
+            rows={4}
+            maxLength={500}
+            className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-4 py-3 text-sm font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none resize-none transition"
+          />
+          <p className="text-[11px] font-bold text-slate-400 text-right">{quickMessageText.length}/500자</p>
+        </div>
+        <DialogFooter className="sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setQuickMessageOpen(false)}
+            className="rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 text-xs font-bold text-slate-900 dark:text-slate-100"
+          >
+            취소
+          </Button>
+          <Button
+            type="button"
+            onClick={sendQuickMessage}
+            disabled={quickMessageSending || !quickMessageText.trim() || quickMessageTargets.length === 0}
+            className="rounded-lg bg-[#0071E3] text-xs font-bold text-white hover:bg-[#0077ED] disabled:opacity-40"
+          >
+            {quickMessageSending ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                발송 중...
+              </>
+            ) : (
+              <>
+                <Send className="w-3.5 h-3.5 mr-1.5" />
+                발송
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </>
   );
 }

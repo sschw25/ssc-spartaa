@@ -141,13 +141,8 @@ export function getPeriodBounds(now: Date = new Date()) {
   return { todayStr, weekStart, monthStart };
 }
 
-const WEEKDAY_LABELS = ['월', '화', '수', '목', '금', '토', '일'];
-
 export interface StudyStats {
   weekTotalMin: number;
-  monthTotalMin: number;
-  byWeekday: { label: string; min: number }[];
-  peakWeekday: { label: string; min: number } | null;
   weekRank: { rank: number; total: number } | null; // 본인 등수 (내부용 — 화면엔 상위%만 노출)
   weekPercent: number | null; // 상위 % (전체 원생 대비) — 절대등수/총원 비노출
   weekStart: string;
@@ -159,7 +154,6 @@ export interface StudyStats {
   // 집중(타이머) 순공 — 순공 이원화(운영 결정 2026-07-13): 체류(등원~하원)와 집중(스톱워치/뽀모도로)을
   // 나눠 표시한다. 집중은 체류를 넘을 수 없다(재석 상한 클램프, 리더보드와 동일 규칙).
   weekFocusMin?: number;
-  monthFocusMin?: number;
 }
 
 // 이름 마스킹: 가운데 글자를 O 로 (랭킹 등 타인 노출 시 프라이버시)
@@ -264,17 +258,12 @@ export function buildStudyStats(opts: {
   const { weekStart, monthStart } = getPeriodBounds(now);
 
   let weekTotalMin = 0;
-  let monthTotalMin = 0;
-  const byWeekdayMin = [0, 0, 0, 0, 0, 0, 0]; // 월..일
 
   const sessionMinByDate: Record<string, number> = {}; // 날짜별 세션분 — present 파생 적용 여부 판별용
   sessions.forEach((s) => {
     if (s.minutes == null) return; // 진행 중(미퇴실) 제외
     sessionMinByDate[s.date] = (sessionMinByDate[s.date] || 0) + s.minutes;
-    if (s.date >= monthStart) monthTotalMin += s.minutes;
     if (s.date >= weekStart) weekTotalMin += s.minutes;
-    const monIdx = (weekdayOf(s.date) + 6) % 7; // 월=0..일=6
-    byWeekdayMin[monIdx] += s.minutes;
   });
 
   // 당일 미퇴실(진행 중) 세션 — 등원→현재 경과분을 실시간 산입(리더보드 dayAttLive 와 동일 규칙).
@@ -288,9 +277,7 @@ export function buildStudyStats(opts: {
   });
   if (liveTodayMin > 0) {
     sessionMinByDate[todayLive] = (sessionMinByDate[todayLive] || 0) + liveTodayMin; // 아래 present 파생 이중 산입 방지
-    if (todayLive >= monthStart) monthTotalMin += liveTodayMin;
     if (todayLive >= weekStart) weekTotalMin += liveTodayMin;
-    byWeekdayMin[(weekdayOf(todayLive) + 6) % 7] += liveTodayMin;
   }
 
   // 좌석판 수기 출석(present) 파생 — 그 날 세션분이 없을 때만 보충(getStudyMinutesByStudent 와 동일 규칙).
@@ -301,15 +288,8 @@ export function buildStudyStats(opts: {
   for (const [date, min] of Object.entries(presenceByDate)) {
     if ((sessionMinByDate[date] || 0) > 0) continue;
     presenceDates.push(date);
-    if (date >= monthStart) monthTotalMin += min;
     if (date >= weekStart) weekTotalMin += min;
-    const monIdx = (weekdayOf(date) + 6) % 7;
-    byWeekdayMin[monIdx] += min;
   }
-
-  const byWeekday = WEEKDAY_LABELS.map((label, i) => ({ label, min: byWeekdayMin[i] }));
-  const peakIdx = byWeekdayMin.reduce((best, v, i, arr) => (v > arr[best] ? i : best), 0);
-  const peakWeekday = byWeekdayMin[peakIdx] > 0 ? { label: WEEKDAY_LABELS[peakIdx], min: byWeekdayMin[peakIdx] } : null;
 
   // 출석일: 이번 주(weekStart~) 등하원 기록이 있는 distinct 날짜 수 (진행 중 세션·수기 출석 포함)
   const weekDates = new Set<string>();
@@ -359,23 +339,20 @@ export function buildStudyStats(opts: {
     weekPercent = rank === 1 ? 1 : Math.max(1, Math.round((rank / Math.max(totalStudents, rank)) * 100));
   }
 
-  // 집중(타이머) 순공 — 주/월 합산 후 체류(재석)로 클램프. "집중 ≤ 체류" (리더보드와 동일 규칙).
+  // 집중(타이머) 순공 — 주간 합산 후 체류(재석)로 클램프. "집중 ≤ 체류" (리더보드와 동일 규칙).
   let weekFocusMin = 0;
-  let monthFocusMin = 0;
   if (focusMinutesByDate) {
     const todayStr2 = seoulToday(now);
     for (const [d, v] of Object.entries(focusMinutesByDate)) {
       const min = Number(v) || 0;
       if (min <= 0 || d > todayStr2) continue;
-      if (d >= monthStart) monthFocusMin += min;
       if (d >= weekStart) weekFocusMin += min;
     }
     weekFocusMin = Math.min(weekFocusMin, weekTotalMin);
-    monthFocusMin = Math.min(monthFocusMin, monthTotalMin);
   }
 
   return {
-    weekTotalMin, monthTotalMin, byWeekday, peakWeekday, weekRank, weekPercent, weekStart, monthStart,
-    weekAttendedDays, weekExpectedDays, weekAbsentDays, currentStreak, weekFocusMin, monthFocusMin,
+    weekTotalMin, weekRank, weekPercent, weekStart, monthStart,
+    weekAttendedDays, weekExpectedDays, weekAbsentDays, currentStreak, weekFocusMin,
   };
 }

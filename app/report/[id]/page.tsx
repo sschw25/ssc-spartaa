@@ -222,7 +222,8 @@ function StudentReportInner() {
     homeHalfLeft,
     homeFullLeft,
     homeLeaveCoupons,
-    homeTotalMin,
+    homeFocusMin,
+    homeStayMin,
     weeklyDailyPlans,
     todayDailyPlan,
     todayPlanEntries,
@@ -239,6 +240,7 @@ function StudentReportInner() {
     studentNotifications,
     dismissedStudentNotifications,
     dismissNotification,
+    dismissAllNotifications,
     restoreNotification,
     restoreAllNotifications,
     replyToThread,
@@ -621,6 +623,7 @@ function StudentReportInner() {
             dismissedNotifications={dismissedStudentNotifications}
             notificationCount={attentionCount}
             onDismissNotification={dismissNotification}
+            onDismissAllNotifications={() => dismissAllNotifications(studentNotifications.map((n: { id: string }) => n.id))}
             onRestoreNotification={restoreNotification}
             onRestoreAllNotifications={restoreAllNotifications}
             onReplyToThread={replyToThread}
@@ -790,7 +793,8 @@ function StudentReportInner() {
           setPendingAmount={setPendingAmount}
           updatePlanCompletion={updatePlanCompletion}
           homeAttend={homeAttend}
-          homeTotalMin={homeTotalMin}
+          homeFocusMin={homeFocusMin}
+          homeStayMin={homeStayMin}
           currentSubjectText={currentSubjectText}
           currentStudyLabel={currentStudyLabel}
           timeGreeting={timeGreeting}
