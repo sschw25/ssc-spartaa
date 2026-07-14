@@ -205,6 +205,20 @@ export interface ProposedMaterial {
   createdMaterialId?: string;        // 승인 시 생성한 자료 id — 재승인(resolved 토글) 시 중복 생성 방지(멱등)
 }
 
+// 학생이 신청하는 교재/인강(자료) 또는 과목 전체 삭제 제안. requestType==='materialDelete' 전용.
+// proposedMaterial(추가)과 대칭인 형제 필드 — 관리자 승인(resolved) 시 app/api/admin/students/[id]/requests
+// PATCH 가 subjects(진도 단일소스)와 top-level books/lectures 미러 양쪽에서 대상을 제거한다.
+export interface ProposedMaterialDelete {
+  scope: 'material' | 'subject';     // 자료 하나만 삭제 vs 과목 전체(하위 자료 전부) 삭제
+  subjectId?: string;                // scope==='subject'면 필수
+  subjectName: string;               // 표시용 — 항상 채움
+  materialType?: 'book' | 'lecture'; // scope==='material'이면 필수
+  materialId?: string;               // scope==='material'이면 필수
+  materialTitle?: string;            // 표시용
+  reason?: string;                   // 학생이 적은 사유(선택)
+  deletedAt?: string;                // 승인 처리 완료 마커 — 있으면 재승인(resolved 토글) 시 중복 삭제 방지(멱등)
+}
+
 // 학생↔관리자 양방향 대화 메시지 (요청/건의/휴가 신청에 누적되는 스레드)
 // adminReply(단일 답변)와 별개로 thread[]에 시간순 메시지를 쌓아 재답변/재재답변을 지원.
 // consultation_logs / leave_requests JSONB 안에 중첩 저장 — 별도 컬럼/마이그레이션 불필요.
@@ -223,7 +237,7 @@ export interface ConsultationLog {
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
   type?: 'learning' | 'life' | 'request' | 'suggestion'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
-  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'makeup' | 'etc'; // 신청 분류
+  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'materialDelete' | 'makeup' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
   acknowledgedAt?: string;                                // 관리자가 확인했지만 아직 완료하지 않은 시각 (ISO)
   createdAt?: string;                                     // 신청 시각 (ISO)
@@ -233,6 +247,7 @@ export interface ConsultationLog {
   thread?: ThreadMessage[];                               // 양방향 재답변 대화 (head=content 이후의 추가 메시지들)
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
   proposedMaterial?: ProposedMaterial;                    // 학생 교재/인강 추가 제안 데이터(materialAdd)
+  proposedMaterialDelete?: ProposedMaterialDelete;        // 학생 교재/인강 또는 과목 삭제 제안 데이터(materialDelete)
   proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }; // 주말 보강 수정 제안(makeup)
 }
 

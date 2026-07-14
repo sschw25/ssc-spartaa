@@ -330,6 +330,56 @@ export async function PATCH(
       target.repliedAt = nowIso;
     }
 
+    // 학생 교재/인강 또는 과목 삭제 제안(materialDelete) — proposedMaterial(추가)과 대칭인 형제 분기.
+    // subjects(진도 단일소스)와 top-level books/lectures 미러 양쪽에서 대상을 제거한다(dual-write).
+    // 이미 없는 대상(다른 경로로 지워짐 등)이어도 필터가 no-op 이므로 에러 없이 deletedAt만 마킹(멱등·안전 우선).
+    if (status === 'resolved' && target.proposedMaterialDelete && !target.proposedMaterialDelete.deletedAt) {
+      const pmd = target.proposedMaterialDelete;
+      if (pmd.scope === 'material' && pmd.materialId && pmd.materialType) {
+        const materialId = pmd.materialId;
+        if (pmd.materialType === 'book') {
+          if (student.subjects) {
+            student.subjects = student.subjects.map((sub: any) => ({
+              ...sub,
+              books: (sub.books || []).filter((b: any) => b.id !== materialId),
+            }));
+          }
+          student.books = (student.books || []).filter((b: any) => b.id !== materialId);
+        } else {
+          if (student.subjects) {
+            student.subjects = student.subjects.map((sub: any) => ({
+              ...sub,
+              lectures: (sub.lectures || []).filter((l: any) => l.id !== materialId),
+            }));
+          }
+          student.lectures = (student.lectures || []).filter((l: any) => l.id !== materialId);
+        }
+      } else if (pmd.scope === 'subject' && pmd.subjectId) {
+        const subjectId = pmd.subjectId;
+        const targetSubject = (student.subjects || []).find((s: any) => s.id === subjectId);
+        const removedBookIds = new Set((targetSubject?.books || []).map((b: any) => b.id));
+        const removedLectureIds = new Set((targetSubject?.lectures || []).map((l: any) => l.id));
+        if (student.subjects) {
+          student.subjects = student.subjects.filter((s: any) => s.id !== subjectId);
+        }
+        if (removedBookIds.size > 0) {
+          student.books = (student.books || []).filter((b: any) => !removedBookIds.has(b.id));
+        }
+        if (removedLectureIds.size > 0) {
+          student.lectures = (student.lectures || []).filter((l: any) => !removedLectureIds.has(l.id));
+        }
+      }
+
+      pmd.deletedAt = nowIso;
+
+      const noticeText = pmd.scope === 'subject'
+        ? `요청하신 대로 '${pmd.subjectName}' 과목을 삭제했어요.`
+        : `요청하신 대로 '${pmd.materialTitle || pmd.subjectName}'을(를) 삭제했어요.`;
+      appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
+      target.adminReply = noticeText;
+      target.repliedAt = nowIso;
+    }
+
     // 학생 주말 보강 수정 제안(makeup) — 승인 시 해당 자료의 makeupDone(주 스코프)을 제안값으로 반영한다.
     // 진도(currentPage/completedLectures)는 건드리지 않는다 → 재승인(resolved 토글) 시에도 멱등.
     if (status === 'resolved' && target.proposedMakeup) {

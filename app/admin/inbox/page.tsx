@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User, Search, Send, UserPlus, BookPlus
+  Target, BookOpen, Tv, User, Search, Send, UserPlus, BookPlus, Trash2, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ThreadMessage } from '@/lib/types/student';
+import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ProposedMaterialDelete, ThreadMessage } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
 import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
@@ -196,6 +196,37 @@ export default function AdminInboxPage() {
       return allBooks.find(b => b.id === proposedGoal.materialId)?.title || proposedGoal.materialId;
     }
     return allLectures.find(l => l.id === proposedGoal.materialId)?.name || proposedGoal.materialId;
+  };
+
+  // proposedMaterialDelete 삭제 대상의 현재 진도(표시용) 조회. 승인 시 사라질 진도를 미리 경고하는 용도.
+  const getMaterialDeleteProgress = (studentId: string, pmd: ProposedMaterialDelete): { percent: number; label: string } | null => {
+    const student = students.find(s => s.id === studentId);
+    if (!student || pmd.scope !== 'material' || !pmd.materialId) return null;
+    const allBooks = [...(student.books || []), ...(student.subjects || []).flatMap(s => s.books || [])];
+    const allLectures = [...(student.lectures || []), ...(student.subjects || []).flatMap(s => s.lectures || [])];
+    if (pmd.materialType === 'book') {
+      const book = allBooks.find(b => b.id === pmd.materialId);
+      if (!book) return null;
+      const total = Number(book.totalPages) || 0;
+      const current = Number(book.currentPage) || 0;
+      const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+      return { percent, label: total > 0 ? `${current}/${total}p (${percent}%)` : `${current}p 진행` };
+    }
+    const lecture = allLectures.find(l => l.id === pmd.materialId);
+    if (!lecture) return null;
+    const total = Number(lecture.totalLectures) || 0;
+    const current = Number(lecture.completedLectures) || 0;
+    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
+    return { percent, label: total > 0 ? `${current}/${total}강 (${percent}%)` : `${current}강 진행` };
+  };
+
+  // proposedMaterialDelete scope==='subject' 삭제 대상의 하위 자료 개수(표시용).
+  const getSubjectDeleteCount = (studentId: string, pmd: ProposedMaterialDelete): number => {
+    const student = students.find(s => s.id === studentId);
+    if (!student || pmd.scope !== 'subject' || !pmd.subjectId) return 0;
+    const subject = (student.subjects || []).find(s => s.id === pmd.subjectId);
+    if (!subject) return 0;
+    return (subject.books || []).length + (subject.lectures || []).length;
   };
 
   const getGoalTypeLabel = (goalType: string) => {
@@ -1379,6 +1410,51 @@ export default function AdminInboxPage() {
                   );
                 })()}
 
+                {/* proposedMaterialDelete 교재/강의(또는 과목 전체) 삭제 제안 표시 — 파괴적 작업이라 위험(red) 톤 */}
+                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterialDelete && (() => {
+                  const pmd: ProposedMaterialDelete = selectedItem.rawItem.proposedMaterialDelete;
+                  const isSubject = pmd.scope === 'subject';
+                  const progress = getMaterialDeleteProgress(selectedItem.studentId, pmd);
+                  const subjectCount = isSubject ? getSubjectDeleteCount(selectedItem.studentId, pmd) : 0;
+                  return (
+                    <div className="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50/60 dark:bg-red-500/10 p-4 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-wider">
+                        <Trash2 className="w-3.5 h-3.5" />
+                        교재/강의 삭제 요청
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        {isSubject
+                          ? <Target className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          : pmd.materialType === 'book'
+                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
+                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">
+                          {isSubject
+                            ? `과목 전체 삭제: ${pmd.subjectName}`
+                            : `자료 하나 삭제: ${pmd.subjectName} · ${pmd.materialTitle || pmd.materialId}`}
+                        </span>
+                      </div>
+                      {isSubject && (
+                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-red-200 dark:border-red-500/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                          하위 자료 {subjectCount}개 포함
+                        </span>
+                      )}
+                      {progress && (
+                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-red-200 dark:border-red-500/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
+                          현재 진도 {progress.label} — 삭제하면 사라져요
+                        </span>
+                      )}
+                      {pmd.reason && (
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {pmd.reason}</p>
+                      )}
+                      <p className="text-[9px] font-bold text-red-600/80 dark:text-red-400/80 flex items-center gap-1">
+                        <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                        승인 시 되돌릴 수 없이 삭제됩니다. 진도 기록도 함께 사라져요.
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 <div className="space-y-2 border-t border-slate-100 dark:border-white/10 pt-4">
                   {selectedItem.type === 'signup' ? (
                     <Button
@@ -1469,10 +1545,10 @@ export default function AdminInboxPage() {
                       <Button
                         disabled={processing}
                         onClick={() => handleProcessRequest('resolved')}
-                        className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                        className={`w-full rounded-xl text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all ${selectedItem.rawItem?.proposedMaterialDelete ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                       >
                         <Check className="w-3.5 h-3.5 mr-1" />
-                        {selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
+                        {selectedItem.rawItem?.proposedMaterialDelete ? '승인 및 삭제' : selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
                       </Button>
                       <Button
                         disabled={processing}

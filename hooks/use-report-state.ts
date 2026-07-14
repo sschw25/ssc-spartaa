@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target, Timer, CalendarDays } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, ProposedMaterial, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
+import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialDelete, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -1389,6 +1389,7 @@ export function useReportState() {
     proposedGoal?: ProposedGoal,
     proposedMaterial?: ProposedMaterial,
     proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number },
+    proposedMaterialDelete?: ProposedMaterialDelete,
   ): Promise<boolean> => {
     const message = (rawMessage || '').trim();
     if (!message) {
@@ -1401,7 +1402,7 @@ export function useReportState() {
       const res = await fetch('/api/student/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial, proposedMakeup }),
+        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial, proposedMakeup, proposedMaterialDelete }),
       });
       const json = await res.json();
       if (res.ok && json.success) {

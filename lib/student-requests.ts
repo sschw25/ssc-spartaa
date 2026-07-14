@@ -1,4 +1,4 @@
-import type { ConsultationLog, ProposedGoal, ProposedMaterial, Student } from '@/lib/types/student';
+import type { ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialDelete, Student } from '@/lib/types/student';
 import { getLeaveTypeLabel } from '@/lib/leave';
 
 const STUDY_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -130,6 +130,51 @@ export function normalizeProposedMaterial(raw: unknown): ProposedMaterial | unde
   return normalized;
 }
 
+// 학생이 신청하는 교재/인강 또는 과목 전체 삭제 제안(materialDelete)을 서버에서 정규화.
+// 관리자 승인 시 subjects(단일소스)+top-level books/lectures 미러 양쪽에서 대상을 제거하므로
+// 식별자(scope별 필수값) 없는 제안은 폐기(undefined).
+export function normalizeProposedMaterialDelete(raw: unknown): ProposedMaterialDelete | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const m = raw as Record<string, unknown>;
+
+  const subjectName = typeof m.subjectName === 'string' ? m.subjectName.trim().slice(0, 50) : '';
+  if (!subjectName) return undefined; // 표시/알림에 필요 — 없으면 폐기
+
+  if (m.scope === 'material') {
+    const materialId = typeof m.materialId === 'string' ? m.materialId.trim().slice(0, 100) : '';
+    const materialType = m.materialType === 'book' || m.materialType === 'lecture' ? m.materialType : null;
+    if (!materialId || !materialType) return undefined; // 자료 식별 불가한 제안은 폐기
+
+    const normalized: ProposedMaterialDelete = { scope: 'material', subjectName, materialId, materialType };
+    if (typeof m.subjectId === 'string' && m.subjectId.trim()) {
+      normalized.subjectId = m.subjectId.trim().slice(0, 100);
+    }
+    if (typeof m.materialTitle === 'string') {
+      const title = m.materialTitle.trim().slice(0, 100);
+      if (title) normalized.materialTitle = title;
+    }
+    if (typeof m.reason === 'string') {
+      const reason = m.reason.trim().slice(0, 300);
+      if (reason) normalized.reason = reason;
+    }
+    return normalized;
+  }
+
+  if (m.scope === 'subject') {
+    const subjectId = typeof m.subjectId === 'string' ? m.subjectId.trim().slice(0, 100) : '';
+    if (!subjectId) return undefined; // 과목 식별 불가한 제안은 폐기
+
+    const normalized: ProposedMaterialDelete = { scope: 'subject', subjectName, subjectId };
+    if (typeof m.reason === 'string') {
+      const reason = m.reason.trim().slice(0, 300);
+      if (reason) normalized.reason = reason;
+    }
+    return normalized;
+  }
+
+  return undefined; // scope가 위 두 값이 아니면 폐기
+}
+
 export const REQUEST_TYPE_LABEL: Record<NonNullable<ConsultationLog['requestType']>, string> = {
   progress: '진도 정정',
   subject: '과목 변경',
@@ -137,6 +182,7 @@ export const REQUEST_TYPE_LABEL: Record<NonNullable<ConsultationLog['requestType
   halfDay: '반차 신청',
   restPass: '휴식권 신청',
   materialAdd: '교재/인강 추가',
+  materialDelete: '교재/강의 삭제',
   makeup: '보강 수정',
   etc: '기타',
 };

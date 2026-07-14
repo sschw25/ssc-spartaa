@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { MessageSquare, Plus, Trash2, CheckCircle2, Calendar, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb } from 'lucide-react';
-import { ProposedGoal, ProposedMaterial, Student } from '@/lib/types/student';
+import { MessageSquare, Plus, Trash2, CheckCircle2, Calendar, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb, AlertTriangle } from 'lucide-react';
+import { ProposedGoal, ProposedMaterial, ProposedMaterialDelete, Student } from '@/lib/types/student';
 import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 
 const MA_DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -50,7 +50,7 @@ interface LearningRequestPanelProps {
   requestSubmitting: boolean;
   requestCustomOpen: boolean;
   setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }) => Promise<boolean>;
+  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }, proposedMaterialDelete?: ProposedMaterialDelete) => Promise<boolean>;
   cancelRequest: (id: string) => Promise<void>;
   showRequestHistory: boolean;
   setShowRequestHistory: (show: boolean) => void;
@@ -204,6 +204,86 @@ export function LearningRequestPanel({
     resetMaForm();
     setMaterialAddOpen(false);
   };
+
+  // 교재/강의(또는 과목 전체) 삭제 신청 — proposedMaterial(추가)과 대칭인 별도 로컬 state.
+  // 자료 목록은 subjects[]를 순회해 부모 과목(id/name)까지 함께 뽑는다(삭제 승인 시 subjectId가 필요).
+  const deletableMaterials = React.useMemo(() => {
+    type DeletableMaterial = { id: string; type: 'book' | 'lecture'; title: string; subjectId?: string; subjectName: string };
+    const list: DeletableMaterial[] = [];
+    const seen = new Set<string>();
+    for (const s of student.subjects || []) {
+      for (const b of s.books || []) {
+        if (b?.id && !seen.has(b.id)) { seen.add(b.id); list.push({ id: b.id, type: 'book', title: b.title, subjectId: s.id, subjectName: s.name }); }
+      }
+      for (const l of s.lectures || []) {
+        if (l?.id && !seen.has(l.id)) { seen.add(l.id); list.push({ id: l.id, type: 'lecture', title: l.name, subjectId: s.id, subjectName: s.name }); }
+      }
+    }
+    // 과목에 속하지 않은 top-level 전용 자료도 삭제 대상에 포함(subjectId 없음)
+    for (const b of student.books || []) {
+      if (b?.id && !seen.has(b.id)) { seen.add(b.id); list.push({ id: b.id, type: 'book', title: b.title, subjectName: '(과목 미지정)' }); }
+    }
+    for (const l of student.lectures || []) {
+      if (l?.id && !seen.has(l.id)) { seen.add(l.id); list.push({ id: l.id, type: 'lecture', title: l.name, subjectName: '(과목 미지정)' }); }
+    }
+    return list;
+  }, [student.subjects, student.books, student.lectures]);
+  const deletableSubjects = React.useMemo(
+    () => (student.subjects || []).map((s) => ({ id: s.id, name: s.name, bookCount: (s.books || []).length, lectureCount: (s.lectures || []).length })),
+    [student.subjects],
+  );
+  const [materialDeleteOpen, setMaterialDeleteOpen] = React.useState(false);
+  const [mdScope, setMdScope] = React.useState<'material' | 'subject'>('material');
+  const [mdMaterialId, setMdMaterialId] = React.useState('');
+  const [mdSubjectId, setMdSubjectId] = React.useState('');
+  const [mdReason, setMdReason] = React.useState('');
+  const [mdError, setMdError] = React.useState('');
+
+  const resetMdForm = () => {
+    setMdScope('material');
+    setMdMaterialId('');
+    setMdSubjectId('');
+    setMdReason('');
+    setMdError('');
+  };
+
+  const submitMaterialDelete = async () => {
+    if (mdScope === 'material') {
+      const mat = deletableMaterials.find((m) => m.id === mdMaterialId);
+      if (!mat) { setMdError('삭제할 자료를 선택해 주세요.'); return; }
+      setMdError('');
+      const proposedMaterialDelete: ProposedMaterialDelete = {
+        scope: 'material',
+        subjectId: mat.subjectId,
+        subjectName: mat.subjectName,
+        materialType: mat.type,
+        materialId: mat.id,
+        materialTitle: mat.title,
+        reason: mdReason.trim() || undefined,
+      };
+      const message = `[교재/강의 삭제] ${mat.subjectName} · ${mat.title}` + (mdReason.trim() ? `\n사유: ${mdReason.trim()}` : '');
+      const ok = await sendRequest('materialDelete', message, undefined, undefined, undefined, proposedMaterialDelete);
+      if (!ok) return; // 실패 시 입력 보존
+      resetMdForm();
+      setMaterialDeleteOpen(false);
+    } else {
+      const subj = deletableSubjects.find((s) => s.id === mdSubjectId);
+      if (!subj) { setMdError('삭제할 과목을 선택해 주세요.'); return; }
+      setMdError('');
+      const proposedMaterialDelete: ProposedMaterialDelete = {
+        scope: 'subject',
+        subjectId: subj.id,
+        subjectName: subj.name,
+        reason: mdReason.trim() || undefined,
+      };
+      const message = `[교재/강의 삭제] ${subj.name} · 과목 전체 삭제` + (mdReason.trim() ? `\n사유: ${mdReason.trim()}` : '');
+      const ok = await sendRequest('materialDelete', message, undefined, undefined, undefined, proposedMaterialDelete);
+      if (!ok) return; // 실패 시 입력 보존
+      resetMdForm();
+      setMaterialDeleteOpen(false);
+    }
+  };
+
   // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코멘터에게 '요청'으로 전달
   const [realignRequesting, setRealignRequesting] = React.useState<null | 'keepTargetDate' | 'keepPace'>(null);
   const [realignRequested, setRealignRequested] = React.useState(false);
@@ -233,19 +313,21 @@ export function LearningRequestPanel({
     halfDay: '휴식신청',
     restPass: '휴식권 신청',
     materialAdd: '교재/인강 추가',
+    materialDelete: '교재/강의 삭제',
     etc: '기타',
   };
 
   const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
 
-  // openAdd=true 인 항목은 구조화 '교재/인강 추가' 폼을 바로 연다(자유서술 폼으로 새지 않게).
+  // openAdd=true 인 항목은 구조화 '교재/인강 추가' 폼을, openDelete=true 인 항목은 '삭제' 폼을 바로 연다(자유서술 폼으로 새지 않게).
   const QUICK_REQUESTS = [
-    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.', openAdd: false },
-    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.', openAdd: false },
-    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.', openAdd: false },
-    { type: 'materialAdd', label: '교재·인강 추가', icon: BookPlus, message: '', openAdd: true },
-    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.', openAdd: false },
-    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.', openAdd: false },
+    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.', openAdd: false, openDelete: false },
+    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.', openAdd: false, openDelete: false },
+    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.', openAdd: false, openDelete: false },
+    { type: 'materialAdd', label: '교재·인강 추가', icon: BookPlus, message: '', openAdd: true, openDelete: false },
+    { type: 'materialDelete', label: '교재·강의 삭제', icon: Trash2, message: '', openAdd: false, openDelete: true },
+    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.', openAdd: false, openDelete: false },
+    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.', openAdd: false, openDelete: false },
   ];
 
   // 구조화 교재/인강 추가 폼 열기 + 스크롤(퀵버튼 '교재·인강 추가' 진입점)
@@ -253,6 +335,14 @@ export function LearningRequestPanel({
     setMaterialAddOpen(true);
     setTimeout(() => {
       document.getElementById('material-add-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  // 구조화 교재/강의 삭제 폼 열기 + 스크롤(퀵버튼 '교재·강의 삭제' 진입점)
+  const openMaterialDelete = () => {
+    setMaterialDeleteOpen(true);
+    setTimeout(() => {
+      document.getElementById('material-delete-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
   };
 
@@ -415,7 +505,7 @@ export function LearningRequestPanel({
                 key={q.label}
                 type="button"
                 disabled={requestSubmitting}
-                onClick={() => (q.openAdd ? openMaterialAdd() : handleQuickRequest(q.type, q.message))}
+                onClick={() => (q.openAdd ? openMaterialAdd() : q.openDelete ? openMaterialDelete() : handleQuickRequest(q.type, q.message))}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15 active:scale-[0.97] disabled:opacity-50"
               >
                 {React.createElement(q.icon, { className: 'h-4 w-4 shrink-0 text-[#0071E3]' })}
@@ -663,6 +753,113 @@ export function LearningRequestPanel({
                 className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
               >
                 {requestSubmitting ? '신청 중...' : '이 자료 추가 신청하기'}
+              </button>
+            </form>
+          )}
+
+          {/* 교재/강의(또는 과목 전체) 삭제 신청 — 파괴적 작업이라 색을 위험(red) 톤으로 구분 */}
+          <button
+            type="button"
+            onClick={() => setMaterialDeleteOpen((v) => !v)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-red-300/60 dark:border-red-500/25 bg-red-50/60 dark:bg-red-500/10 py-2.5 text-[11px] font-bold text-red-600 dark:text-red-400 transition hover:bg-red-50 dark:hover:bg-red-500/15"
+          >
+            <Trash2 className={`w-4 h-4 transition-transform ${materialDeleteOpen ? 'rotate-12' : ''}`} />
+            {materialDeleteOpen ? '교재/강의 삭제 닫기' : '필요없는 교재/강의 삭제하기'}
+          </button>
+
+          {materialDeleteOpen && (
+            <form
+              id="material-delete-form"
+              onSubmit={(e) => { e.preventDefault(); if (!requestSubmitting) submitMaterialDelete(); }}
+              className="space-y-3 rounded-2xl border border-red-200 dark:border-red-500/25 bg-white/70 dark:bg-[#1c1c1e]/95 p-3 scroll-mt-28"
+            >
+              <div className="flex items-start gap-1.5 rounded-xl border border-red-200 dark:border-red-500/25 bg-red-50 dark:bg-red-500/10 p-2.5 text-[10px] font-bold leading-normal text-red-600 dark:text-red-400">
+                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>삭제하면 지금까지 쌓인 진도 기록도 함께 사라져요. 되돌릴 수 없어요.</span>
+              </div>
+
+              {/* 삭제 범위 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">삭제 범위</label>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setMdScope('material'); setMdError(''); }}
+                    className={`flex-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition ${mdScope === 'material' ? 'bg-red-600 text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                  >
+                    자료 하나만
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setMdScope('subject'); setMdError(''); }}
+                    className={`flex-1 rounded-xl px-3 py-1.5 text-[11px] font-bold transition ${mdScope === 'subject' ? 'bg-red-600 text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                  >
+                    과목 전체
+                  </button>
+                </div>
+              </div>
+
+              {mdScope === 'material' ? (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">삭제할 자료</label>
+                  {deletableMaterials.length > 0 ? (
+                    <select
+                      value={mdMaterialId}
+                      onChange={(e) => { setMdMaterialId(e.target.value); setMdError(''); }}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-red-400 focus:outline-none"
+                    >
+                      <option value="">-- 삭제할 교재/인강 선택 --</option>
+                      {deletableMaterials.map((m) => (
+                        <option key={m.id} value={m.id}>{m.subjectName} · {m.title} ({m.type === 'book' ? '교재' : '인강'})</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-[10px] font-semibold text-slate-400">삭제할 수 있는 교재/인강이 없어요.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">삭제할 과목</label>
+                  {deletableSubjects.length > 0 ? (
+                    <select
+                      value={mdSubjectId}
+                      onChange={(e) => { setMdSubjectId(e.target.value); setMdError(''); }}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-red-400 focus:outline-none"
+                    >
+                      <option value="">-- 삭제할 과목 선택 --</option>
+                      {deletableSubjects.map((s) => (
+                        <option key={s.id} value={s.id}>{s.name} (교재 {s.bookCount}개 · 인강 {s.lectureCount}개)</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-[10px] font-semibold text-slate-400">삭제할 수 있는 과목이 없어요.</p>
+                  )}
+                  {mdSubjectId && (
+                    <p className="text-[9.5px] font-bold text-red-500">이 과목에 속한 교재/인강이 전부 함께 삭제돼요.</p>
+                  )}
+                </div>
+              )}
+
+              {/* 사유 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">사유 <span className="font-medium text-slate-400">(선택)</span></label>
+                <textarea
+                  value={mdReason}
+                  onChange={(e) => setMdReason(e.target.value)}
+                  placeholder="예: 더 이상 필요 없는 자료예요"
+                  rows={2}
+                  maxLength={300}
+                  className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-red-400 focus:outline-none"
+                />
+              </div>
+
+              {mdError && <p className="text-[10px] font-bold text-red-500">{mdError}</p>}
+              <button
+                type="submit"
+                disabled={requestSubmitting}
+                className="w-full rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
+              >
+                {requestSubmitting ? '신청 중...' : '삭제 신청하기'}
               </button>
             </form>
           )}
