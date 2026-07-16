@@ -8,6 +8,7 @@ import {
   MissionId,
   MISSION_ORDER,
   MISSION_META,
+  MISSION_LEGACY_NAMES,
   normalizeMissionConfig,
 } from './missions';
 import {
@@ -16,6 +17,7 @@ import {
   getMockReviewStats,
   getPhoneFocusStats,
   getWeeklyPlanCompletionStats,
+  getWrongNoteStats,
 } from './mission-metrics';
 import { readActivityEnvelope, writeActivityEnvelope } from './student-activity';
 
@@ -53,9 +55,10 @@ export async function getActiveMissionConfig() {
   return gated;
 }
 
-function hasReward(noteObj: any, periodKey: string, missionName: string): boolean {
+function hasReward(noteObj: any, periodKey: string, missionName: string, legacyNames?: string[]): boolean {
+  const names = new Set([missionName, ...(legacyNames || [])]);
   return (noteObj.rewards_log || []).some(
-    (l: any) => l.date === periodKey && l.missionName === missionName,
+    (l: any) => l.date === periodKey && names.has(l.missionName),
   );
 }
 
@@ -284,12 +287,16 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
     }
   }
 
-  // 8) 모의고사 오답분석/보완계획 제출
+  // 8) 오답노트 작성 (#19 통합) — 일반 오답노트 작성이 기본 판정.
+  // 기존 모의고사 오답분석 제출 데이터도 계속 인정한다(OR — 이미 달성한 판정을 깨지 않음).
   if (runs('mock_review_complete')) {
     const minChars = config.mock_review_complete.mockReviewMinChars ?? 10;
     for (const s of students) {
-      const stats = getMockReviewStats(s, weekStart, todayStr, minChars);
-      if (stats.count > 0) addGrant(s.id, 'mock_review_complete', weekKey, config.mock_review_complete.coupons);
+      const wrongNoteStats = getWrongNoteStats(s, weekStart, todayStr);
+      const legacyStats = wrongNoteStats.count > 0 ? null : getMockReviewStats(s, weekStart, todayStr, minChars);
+      if (wrongNoteStats.count > 0 || (legacyStats && legacyStats.count > 0)) {
+        addGrant(s.id, 'mock_review_complete', weekKey, config.mock_review_complete.coupons);
+      }
     }
   }
 
@@ -310,7 +317,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
       for (const sid of eligibleByMission.get(id) || []) {
         const st = studentById.get(sid);
         if (!st) continue;
-        if (hasReward(readActivityEnvelope(st), periodKey, missionName)) already += 1;
+        if (hasReward(readActivityEnvelope(st), periodKey, missionName, MISSION_LEGACY_NAMES[id])) already += 1;
         else pendingNames.push(st.name);
       }
       preview.push({
@@ -346,7 +353,7 @@ export async function settleMissions(opts: SettleOptions = {}): Promise<SettleRe
       const newlyGranted: MissionId[] = [];
       for (const g of list) {
         const missionName = MISSION_META[g.id].name;
-        if (hasReward(noteObj, g.periodKey, missionName)) continue; // 이미 지급됨
+        if (hasReward(noteObj, g.periodKey, missionName, MISSION_LEGACY_NAMES[g.id])) continue; // 이미 지급됨(옛 미션명 포함)
         noteObj.rewards_log.push({
           date: g.periodKey,
           missionName,

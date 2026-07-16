@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BookOpen, Tv, FileText, CheckCircle2, Clock, ChevronRight } from 'lucide-react';
-import { Student, DetailedPlan } from '@/lib/types/student';
+import { Student, DetailedPlan, BookProgress, LectureProgress } from '@/lib/types/student';
 import {
   MaterialBenchmarkMap,
   formatPaceComparison,
@@ -19,6 +19,10 @@ import { InputHeatmap } from '@/components/report/input-heatmap';
 
 // 자율 입력(selfPaced) 자료 — 진행률/목표 없이 "누적 N{단위}"만 보여주고,
 // 학생은 "오늘 한 만큼"을 더해 누적에 반영한다(절대값 = 기존 + 입력분).
+// 완독/완강 판정 — 총량 미정(0) 자료는 완료로 치지 않는다(순수 함수, 렌더 간 안정).
+const isCompletedBook = (book: BookProgress) => (book.totalPages || 0) > 0 && (book.currentPage || 0) >= book.totalPages;
+const isCompletedLecture = (lecture: LectureProgress) => (lecture.totalLectures || 0) > 0 && (lecture.completedLectures || 0) >= lecture.totalLectures;
+
 function SelfPacedInput({
   materialType,
   materialId,
@@ -34,15 +38,31 @@ function SelfPacedInput({
   canInput: boolean;
   updateProgress: (materialType: 'book' | 'lecture', materialId: string, value: number) => Promise<boolean>;
 }) {
-  const [add, setAdd] = React.useState(1);
+  // 범위 값은 raw 문자열로 보관 — 키 입력마다 클램프하면 타이핑이 안 되므로 검증은 저장 시에만.
+  const nextStart = Math.max(1, current + 1);
+  const [from, setFrom] = React.useState(String(nextStart));
+  const [to, setTo] = React.useState(String(nextStart));
   const [saving, setSaving] = React.useState(false);
+  React.useEffect(() => {
+    const next = Math.max(1, current + 1);
+    setFrom(String(next));
+    setTo(String(next));
+  }, [current]);
+
+  const fromNum = Math.round(Number(from)) || 0;
+  const toNum = Math.round(Number(to)) || 0;
+  const invalid = toNum <= current || toNum < fromNum;
 
   const submit = async () => {
-    if (saving || add <= 0) return;
+    if (saving || invalid) return;
     setSaving(true);
-    const ok = await updateProgress(materialType, materialId, current + add);
+    const ok = await updateProgress(materialType, materialId, toNum);
     setSaving(false);
-    if (ok) setAdd(1);
+    if (ok) {
+      const next = Math.max(1, toNum + 1);
+      setFrom(String(next));
+      setTo(String(next));
+    }
   };
 
   return (
@@ -54,41 +74,36 @@ function SelfPacedInput({
       {canInput ? (
         <>
           <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed break-keep">
-            오늘 한 만큼 더해서 기록해요. 학습 요일마다 꼭 채워야 하는 자율 목표예요.
+            오늘 학습한 범위를 입력하면 끝 위치까지 누적 진도가 자동 반영돼요.
           </p>
-          <div className="flex items-center gap-1.5">
-            <button
-              type="button"
-              onClick={() => setAdd((v) => Math.max(1, v - 1))}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[13px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
-              aria-label="입력값 감소"
-            >
-              -
-            </button>
+          <div className="grid grid-cols-[1fr_auto_1fr_auto] items-center gap-1.5">
             <input
               type="number"
               inputMode="numeric"
               min={1}
-              value={add}
-              onChange={(e) => setAdd(Math.max(1, Math.round(Number(e.target.value) || 1)))}
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
               className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-[13px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
-              aria-label="오늘 한 만큼"
+              aria-label="자율 학습 시작 범위"
+            />
+            <span className="shrink-0 text-[10px] font-semibold text-slate-400">~</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') void submit(); }}
+              className="min-w-0 flex-1 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-[13px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
+              aria-label="자율 학습 종료 범위"
             />
             <span className="shrink-0 text-[10px] font-semibold text-slate-500 dark:text-slate-400">{unit}</span>
             <button
               type="button"
-              onClick={() => setAdd((v) => v + 1)}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-[13px] font-semibold text-slate-600 dark:text-slate-400 active:scale-95"
-              aria-label="입력값 증가"
-            >
-              +
-            </button>
-            <button
-              type="button"
-              disabled={saving}
+              disabled={saving || invalid}
               onClick={() => { void submit(); }}
-              className="shrink-0 rounded-full bg-[#0071E3] px-3.5 py-1.5 text-[11px] font-black text-white transition hover:bg-[#0060c0] active:scale-[0.97] disabled:opacity-60"
+              className="col-span-4 rounded-full bg-[#0071E3] px-3.5 py-1.5 text-[11px] font-black text-white transition hover:bg-[#0060c0] active:scale-[0.97] disabled:opacity-60"
             >
               {saving ? '기록 중...' : '+ 기록'}
             </button>
@@ -169,6 +184,34 @@ export function SubjectProgressTab({
     new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(new Date());
 
   const todayKey = getSeoulDateKey();
+  const completedMaterials = React.useMemo(() => (
+    (student.subjects || []).flatMap((subject) => [
+      ...(subject.books || [])
+        .filter(isCompletedBook)
+        .map((book) => ({
+          id: book.id,
+          type: 'book' as const,
+          subject: subject.name,
+          title: book.title,
+          current: book.currentPage || 0,
+          total: book.totalPages || 0,
+          unit: book.unit || 'p',
+          updatedAt: book.updatedAt,
+        })),
+      ...(subject.lectures || [])
+        .filter(isCompletedLecture)
+        .map((lecture) => ({
+          id: lecture.id,
+          type: 'lecture' as const,
+          subject: subject.name,
+          title: lecture.name,
+          current: lecture.completedLectures || 0,
+          total: lecture.totalLectures || 0,
+          unit: '강',
+          updatedAt: lecture.updatedAt,
+        })),
+    ]).sort((a, b) => String(b.updatedAt || '').localeCompare(String(a.updatedAt || '')))
+  ), [student.subjects]);
 
   const getPlanActionKey = (materialType: 'book' | 'lecture', materialId: string, planId: string) =>
     `${materialType}:${materialId}:${planId}`;
@@ -516,7 +559,12 @@ export function SubjectProgressTab({
         ))
       ) : (
         <div className="space-y-6">
-          {student.subjects.map(sub => (
+          {student.subjects.map(sub => {
+            const activeBooks = (sub.books || []).filter((book) => !isCompletedBook(book));
+            const activeLectures = (sub.lectures || []).filter((lecture) => !isCompletedLecture(lecture));
+            if (activeBooks.length === 0 && activeLectures.length === 0) return null;
+
+            return (
             <div key={sub.id} className="p-6 md:p-8 rounded-[24px] border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] space-y-6 shadow-sm hover:shadow-md transition-all break-inside-avoid">
               <div className="border-b border-slate-100 dark:border-white/10 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                 <span className="text-xs font-black text-slate-800 dark:text-slate-200 px-3.5 py-2 bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl inline-block self-start shadow-sm tracking-wider">
@@ -526,7 +574,7 @@ export function SubjectProgressTab({
                     영구 노출되지 않게 표시를 내렸다. 데이터(sub.learningGoal)는 보존. */}
               </div>
 
-              {sub.books.length > 0 && (
+              {activeBooks.length > 0 && (
                 <div className="space-y-4">
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center">
                     <BookOpen className="w-4 h-4 mr-2 text-[#0071E3]" />
@@ -534,7 +582,7 @@ export function SubjectProgressTab({
                   </h4>
 
                   <div className="space-y-5">
-                    {sub.books.map(b => {
+                    {activeBooks.map(b => {
                       // 자율 입력(selfPaced): 진행률·목표·뒤처짐 판정 없이 누적만. 계획이 없어 스케줄/보강도 자연 제외.
                       const isSelfPaced = b.goalType === 'selfPaced';
                       const bookUnit = b.unit || 'p';
@@ -808,7 +856,7 @@ export function SubjectProgressTab({
                 </div>
               )}
 
-              {sub.lectures.length > 0 && (
+              {activeLectures.length > 0 && (
                 <div className="space-y-4 mt-6">
                   <h4 className="text-xs font-black text-slate-700 dark:text-slate-300 flex items-center">
                     <Tv className="w-4 h-4 mr-2 text-[#0071E3]" />
@@ -816,7 +864,7 @@ export function SubjectProgressTab({
                   </h4>
 
                   <div className="space-y-5">
-                    {sub.lectures.map(l => {
+                    {activeLectures.map(l => {
                       const isSelfPaced = l.goalType === 'selfPaced';
                       const percent = l.totalLectures > 0 ? Math.round((l.completedLectures / l.totalLectures) * 100) : 0;
                       const oneMonthPlans = getOneMonthPlans(l.detailedPlans);
@@ -1055,7 +1103,41 @@ export function SubjectProgressTab({
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
+
+          {completedMaterials.length > 0 && (
+            <section className="rounded-[24px] border border-emerald-200/70 dark:border-emerald-500/25 bg-emerald-50/60 dark:bg-emerald-500/10 p-5 md:p-6 shadow-sm">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-[15px] font-semibold text-emerald-800 dark:text-emerald-300">완료된 학습</h4>
+                  <p className="mt-0.5 text-[11px] font-medium text-emerald-700/70 dark:text-emerald-300/70">완독·완강 자료만 모아서 보여줘요.</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white dark:bg-[#1c1c1e] px-2.5 py-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+                  {completedMaterials.length}개
+                </span>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {completedMaterials.map((item) => (
+                  <button
+                    key={`${item.type}:${item.id}`}
+                    type="button"
+                    disabled={!openMaterialDetail}
+                    onClick={() => openMaterialDetail?.(item.type, item.id)}
+                    className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200/70 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2.5 text-left transition hover:border-emerald-300 dark:hover:border-emerald-400/30 active:scale-[0.99] disabled:cursor-default disabled:hover:border-emerald-200/70"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-[12px] font-semibold text-slate-800 dark:text-slate-100">{item.subject} · {item.title}</span>
+                      <span className="mt-0.5 block text-[10px] font-medium text-slate-400 dark:text-slate-500">{item.type === 'book' ? '교재 완독' : '인강 완강'} · {item.total}{item.unit}</span>
+                    </span>
+                    <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-semibold text-white">
+                      <CheckCircle2 className="h-3 w-3" /> 완료
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
       )}
     </div>

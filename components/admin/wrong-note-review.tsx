@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Loader2, Check, ImageIcon, NotebookPen } from 'lucide-react';
+import { Loader2, Check, ImageIcon, MonitorPlay, NotebookPen } from 'lucide-react';
 import { toast } from 'sonner';
-import type { Student, BookProgress, WrongNote } from '@/lib/types/student';
+import type { Student, WrongNote } from '@/lib/types/student';
+import { WrongNoteBody } from '@/components/report/wrong-note-markup';
 
 // 오답 사유 태그 라벨/색 — 학생 오답노트 탭과 동일한 의미 색.
 const TAG_LABEL: Record<string, string> = {
@@ -21,11 +22,13 @@ const TAG_CLS: Record<string, string> = {
 
 interface BookNotes {
   subjectName: string;
-  book: BookProgress;
+  materialId: string;
+  materialTitle: string;
+  materialType: 'book' | 'lecture';
   notes: WrongNote[];
 }
 
-// 관리자: 학생이 남긴 오답 문제(텍스트/사진)를 교재별로 검토하고 '확인' 처리한다.
+// 관리자: 학생이 남긴 오답 문제(텍스트/사진)를 자료(교재/인강)별로 검토하고 '확인' 처리한다.
 export function WrongNoteReview({ student }: { student: Student }) {
   // 로컬 오버레이 — 확인 처리 시 resolvedAt 을 즉시 반영(서버 저장은 전용 라우트).
   const [resolvedOverlay, setResolvedOverlay] = useState<Record<string, string | undefined>>({});
@@ -38,7 +41,12 @@ export function WrongNoteReview({ student }: { student: Student }) {
     (student.subjects || []).forEach((s) => {
       (s.books || []).forEach((b) => {
         const notes = b.wrongNotes || [];
-        if (notes.length > 0) out.push({ subjectName: s.name, book: b, notes });
+        if (notes.length > 0) out.push({ subjectName: s.name, materialId: b.id, materialTitle: b.title, materialType: 'book', notes });
+      });
+      // 인강 오답노트 — 노트가 있으면 useWrongNotes 를 껐더라도 검토 목록에는 표시(기록 보존).
+      (s.lectures || []).forEach((l) => {
+        const notes = l.wrongNotes || [];
+        if (notes.length > 0) out.push({ subjectName: s.name, materialId: l.id, materialTitle: l.name, materialType: 'lecture', notes });
       });
     });
     return out;
@@ -113,11 +121,18 @@ export function WrongNoteReview({ student }: { student: Student }) {
         </span>
       </div>
 
-      {bookNotes.map(({ subjectName, book, notes }) => (
-        <div key={book.id} className="rounded-2xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm">
+      {bookNotes.map(({ subjectName, materialId, materialTitle, materialType, notes }) => (
+        <div key={materialId} className="rounded-2xl border border-black/[0.05] dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-4 shadow-sm">
           <div className="mb-3">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-[#0071E3]">{subjectName || '과목'}</p>
-            <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{book.title}</h4>
+            <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-[#0071E3]">
+              {subjectName || '과목'}
+              {materialType === 'lecture' && (
+                <span className="inline-flex items-center gap-0.5 rounded-md bg-slate-100 dark:bg-white/10 px-1 py-0.5 text-[9px] font-bold normal-case tracking-normal text-slate-500 dark:text-slate-400">
+                  <MonitorPlay className="h-2.5 w-2.5" /> 인강
+                </span>
+              )}
+            </p>
+            <h4 className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{materialTitle}</h4>
           </div>
           <ul className="space-y-2.5">
             {notes.map((note) => {
@@ -134,7 +149,7 @@ export function WrongNoteReview({ student }: { student: Student }) {
                       ) : (
                         <button
                           type="button"
-                          onClick={() => loadImage(book.id, note)}
+                          onClick={() => loadImage(materialId, note)}
                           className="grid h-16 w-16 shrink-0 place-items-center rounded-lg border border-black/10 dark:border-white/10 bg-black/[0.03] dark:bg-white/10 text-slate-400 hover:text-[#0071E3]"
                         >
                           {loadingImg === note.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
@@ -142,7 +157,7 @@ export function WrongNoteReview({ student }: { student: Student }) {
                       )
                     )}
                     <div className="min-w-0 flex-1">
-                      {note.text && <p className="whitespace-pre-wrap break-keep text-xs font-medium text-slate-800 dark:text-slate-100">{note.text}</p>}
+                      <WrongNoteBody note={note} />
                       {note.tags && note.tags.length > 0 && (
                         <div className="mt-1 flex flex-wrap gap-1">
                           {note.tags.map((k) => (
@@ -155,7 +170,7 @@ export function WrongNoteReview({ student }: { student: Student }) {
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => toggleResolve(book.id, note)}
+                          onClick={() => toggleResolve(materialId, note)}
                           className={`ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition disabled:opacity-50 ${resolved ? 'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' : 'bg-[#0071E3] text-white hover:bg-[#0060c0]'}`}
                         >
                           {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}

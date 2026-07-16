@@ -58,7 +58,7 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
   }
 
-  let body: { requestId?: unknown; status?: unknown; reply?: unknown };
+  let body: { requestId?: unknown; status?: unknown; reply?: unknown; planStartDateOverride?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -68,6 +68,9 @@ export async function PATCH(
   const requestId = typeof body?.requestId === 'string' ? body.requestId : '';
   const status = body?.status === 'pending' ? 'pending' : body?.status === 'resolved' ? 'resolved' : null;
   const reply = typeof body?.reply === 'string' ? body.reply.trim() : null;
+  const planStartDateOverride = typeof body?.planStartDateOverride === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.planStartDateOverride)
+    ? body.planStartDateOverride
+    : undefined;
   if (!requestId) {
     return NextResponse.json({ success: false, message: '처리 대상이 올바르지 않습니다.' }, { status: 400 });
   }
@@ -100,12 +103,26 @@ export async function PATCH(
         materialId,
         materialType,
         goalType,
-        goalValue,
         currentProgress,
         proposedWeekNumber,
         proposedRangeText,
         studyDays: proposedStudyDays,
       } = target.proposedGoal;
+      // 계획 시작일: 관리자 override > 학생 선택. 과거 날짜는 오늘로 보정(승인 지연 시 첫날부터 뒤처진 계획 방지).
+      const approvalDateKey = kstDateKey();
+      let planStartDate = planStartDateOverride || target.proposedGoal.planStartDate;
+      if (planStartDate && planStartDate < approvalDateKey) planStartDate = approvalDateKey;
+      // 기록에는 클램프된 값 저장 — 과거 override 가 raw 로 남아 표시·실제가 어긋나지 않게.
+      if (planStartDateOverride) target.proposedGoal.planStartDate = planStartDate || planStartDateOverride;
+      // 마감일 모드: 학생이 신청 시점에 환산한 주수는 시작일이 바뀌면 어긋난다 — 목표 완료일 기준으로 재환산.
+      // 목표일이 이미 지났으면(승인 방치) 1주 최단 계획으로 — 학생이 고른 마감을 조용히 초과 생성하지 않는다.
+      let goalValue = target.proposedGoal.goalValue;
+      if (goalType === 'deadlineWeeks' && target.proposedGoal.targetDate) {
+        const fromMs = new Date(`${planStartDate || approvalDateKey}T00:00:00+09:00`).getTime();
+        const toMs = new Date(`${target.proposedGoal.targetDate}T00:00:00+09:00`).getTime();
+        const days = Math.round((toMs - fromMs) / 86400000);
+        goalValue = days > 0 ? Math.min(12, Math.max(1, Math.ceil(days / 7))) : 1;
+      }
       // 학생이 고른 학습 요일(예: 주말 제외) — 자료 단위 단일 소스(studyDays)로 반영해 계획 생성에 투입.
       const nextStudyDays = Array.isArray(proposedStudyDays) && proposedStudyDays.length > 0
         ? proposedStudyDays
@@ -156,7 +173,8 @@ export async function PATCH(
             1.0,
             updated.estimatedMinutesPerUnit,
             parentSubject?.studyTime,
-            updated.category
+            updated.category,
+            planStartDate
           );
           updated.detailedPlans = plans;
           updated.targetDate = calculatedTargetDate;
@@ -213,7 +231,8 @@ export async function PATCH(
             nextSpeed,
             updated.estimatedMinutesPerUnit,
             parentSubject?.studyTime,
-            updated.category
+            updated.category,
+            planStartDate
           );
           updated.detailedPlans = plans;
           updated.targetDate = calculatedTargetDate;
@@ -247,6 +266,12 @@ export async function PATCH(
     // createdMaterialId 로 멱등 보장 — 재승인(resolved 토글) 시 자료 중복 생성 방지.
     if (status === 'resolved' && target.proposedMaterial && !target.proposedMaterial.createdMaterialId) {
       const pm = target.proposedMaterial;
+      // 계획 시작일: 관리자 override > 학생 선택. 과거 날짜는 오늘로 보정(승인 지연 시 첫날부터 뒤처진 계획 방지).
+      const pmApprovalDateKey = kstDateKey();
+      let planStartDate = planStartDateOverride || pm.planStartDate;
+      if (planStartDate && planStartDate < pmApprovalDateKey) planStartDate = pmApprovalDateKey;
+      // 기록에는 클램프된 값 저장 — 과거 override 가 raw 로 남아 표시·실제가 어긋나지 않게.
+      if (planStartDateOverride) pm.planStartDate = planStartDate || planStartDateOverride;
       if (!Array.isArray(student.subjects)) student.subjects = [];
       const wantName = (pm.subjectName || '').trim().toLowerCase();
       let subject = student.subjects.find((s: any) => String(s.name || '').trim().toLowerCase() === wantName);
@@ -268,7 +293,15 @@ export async function PATCH(
       const wantsPlan = (pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount')
         && Number(pm.goalValue) > 0 && hasTotal;
       const effGoalType: GoalType = wantsPlan ? (pm.goalType as GoalType) : 'selfPaced';
-      const effGoalValue = wantsPlan ? Number(pm.goalValue) : 0;
+      let effGoalValue = wantsPlan ? Number(pm.goalValue) : 0;
+      // 마감일 모드: 시작일이 바뀌면 주수도 목표 완료일 기준으로 재환산(proposedGoal 분기와 동일 규칙).
+      // 목표일이 이미 지났으면 1주 최단 계획으로.
+      if (wantsPlan && pm.goalType === 'deadlineWeeks' && pm.targetDate) {
+        const fromMs = new Date(`${planStartDate || pmApprovalDateKey}T00:00:00+09:00`).getTime();
+        const toMs = new Date(`${pm.targetDate}T00:00:00+09:00`).getTime();
+        const days = Math.round((toMs - fromMs) / 86400000);
+        effGoalValue = days > 0 ? Math.min(12, Math.max(1, Math.ceil(days / 7))) : 1;
+      }
       const effStudyDays = getMaterialStudyDays(subject!.studyDays, pm.studyDays);
       const commonExtra: Record<string, unknown> = {
         goalType: effGoalType,
@@ -291,7 +324,7 @@ export async function PATCH(
         if (wantsPlan) {
           const { plans, calculatedTargetDate } = generateDetailedPlans(
             newBook.id, pm.total!, 'book', effGoalType, effGoalValue,
-            clampedCurrent, pm.unit || undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본',
+            clampedCurrent, pm.unit || undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본', planStartDate,
           );
           newBook.detailedPlans = plans;
           newBook.targetDate = calculatedTargetDate;
@@ -307,12 +340,14 @@ export async function PATCH(
           updatedAt: nowIso,
           category: '기본',
           speedMultiplier: 1.0,
+          // 신청 폼에서 '오답노트 사용'을 체크한 인강 — 오답노트 탭에 노출
+          ...(pm.useWrongNotes ? { useWrongNotes: true } : {}),
           ...commonExtra,
         };
         if (wantsPlan) {
           const { plans, calculatedTargetDate } = generateDetailedPlans(
             newLecture.id, pm.total!, 'lecture', effGoalType, effGoalValue,
-            clampedCurrent, undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본',
+            clampedCurrent, undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본', planStartDate,
           );
           newLecture.detailedPlans = plans;
           newLecture.targetDate = calculatedTargetDate;

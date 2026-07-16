@@ -15,7 +15,7 @@ export type MissionId =
   | 'phone_focus_week'       // 주간 휴대폰 제출/보관 루틴
   | 'weekly_growth'          // 전주 대비 순공 성장
   | 'deadline_zero_overdue'  // 기간 목표 지연 0건
-  | 'mock_review_complete';  // 모의고사 오답분석/보완계획 제출
+  | 'mock_review_complete';  // 오답노트 작성 (구 모의고사 오답분석 제출 — 일반 오답노트로 통합)
 
 export type MissionPeriod = 'weekly' | 'monthly' | 'event' | 'daily';
 
@@ -140,13 +140,19 @@ export const MISSION_META: Record<MissionId, MissionMeta> = {
   },
   mock_review_complete: {
     id: 'mock_review_complete',
-    name: '모의고사 오답분석 제출',
+    name: '오답노트 작성',
     period: 'weekly',
-    settleHint: '매주 정산하세요. 학생 미션 허브에 제출한 모의고사 오답분석/보완계획으로 판정합니다.',
+    settleHint: '매주 정산하세요. 이번 주 일반 오답노트 작성(레거시 모의고사 오답분석 제출 포함)으로 판정합니다.',
     describe: (c) =>
-      `이번 주 모의고사 오답분석과 보완계획을 각각 ${c.mockReviewMinChars ?? 10}자 이상 제출하면 쿠폰 ${c.coupons}장을 지급합니다.`,
-    params: [{ key: 'mockReviewMinChars', label: '최소 글자 수', unit: '자', min: 5, max: 100 }],
+      `이번 주 오답노트에 틀린 문제를 1개 이상 기록하면 쿠폰 ${c.coupons}장을 지급합니다.`,
+    params: [{ key: 'mockReviewMinChars', label: '최소 글자 수(레거시)', unit: '자', min: 5, max: 100 }],
   },
+};
+
+// 미션명 변경 이력 — rewards_log 멱등 판정(missionName 문자열 매칭)이 개명 후에도 과거 지급을
+// 인식하도록 옛 이름을 함께 본다. (mock_review_complete: 모의고사 오답분석 → 일반 오답노트 통합, 2026-07)
+export const MISSION_LEGACY_NAMES: Partial<Record<MissionId, string[]>> = {
+  mock_review_complete: ['모의고사 오답분석 제출'],
 };
 
 export const MISSION_ORDER: MissionId[] = [

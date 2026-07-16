@@ -361,6 +361,7 @@ export function useReportState() {
     materialType: 'book' as 'book' | 'lecture',
     goalType: 'deadlineWeeks' as 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced',
     goalValue: '',
+    planStartDate: getSeoulDateKey(),
     targetDate: '',
     studyDays: [] as Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>,
     currentProgress: '',
@@ -1343,19 +1344,8 @@ export function useReportState() {
     }
   };
 
-  // 저장 promise 를 반환한다 — 오답노트 탭의 낙관적 스테퍼가 저장 완료 시점을 알아야 연속 탭을 정확히 반영한다.
-  const incrementBookIncorrectTag = (materialId: string, tagKey: string, currentTags: Record<string, number> | undefined): Promise<boolean> => {
-    const nextTags = { ...(currentTags || {}) };
-    nextTags[tagKey] = (nextTags[tagKey] || 0) + 1;
-    return saveProgressPatch('book', materialId, { incorrectTags: nextTags });
-  };
-
-  // 오답노트 태그 카운트를 정확한 값으로 수정(잘못 누른 것 되돌리기·직접 조정). 0 이하는 0으로.
-  const setBookIncorrectTag = (materialId: string, tagKey: string, nextCount: number, currentTags: Record<string, number> | undefined): Promise<boolean> => {
-    const nextTags = { ...(currentTags || {}) };
-    nextTags[tagKey] = Math.max(0, Math.round(nextCount));
-    return saveProgressPatch('book', materialId, { incorrectTags: nextTags });
-  };
+  // (제거됨) incrementBookIncorrectTag/setBookIncorrectTag — 오답사유 스테퍼(#8) 삭제로 소비자 0곳.
+  // 서버(progress route)의 incorrectTags 수용 분기는 구 클라이언트 호환으로 유지, 과거 데이터는 취약성 차트에 계속 합산.
 
   const submitChecklist = async (e: React.FormEvent, isEdit = false): Promise<boolean> => {
     e.preventDefault();
@@ -1428,6 +1418,7 @@ export function useReportState() {
           materialType: 'book',
           goalType: 'deadlineWeeks',
           goalValue: '',
+          planStartDate: getSeoulDateKey(),
           targetDate: '',
           studyDays: [],
           currentProgress: '',
@@ -1669,6 +1660,14 @@ export function useReportState() {
     // 슬롯(오전/오후/야간)이 지정된 계획만 제외한다. studyTime 미지정 계획은 제외하지 않음(사용자 규칙).
     const _leaveExemptions = getLeaveExemptions(student);
     const _awayImpact = getAwayImpactSlots(student.awaySchedules, formatDateKey(_today));
+    const _todayKey = formatDateKey(_today);
+    // 완주(총량 도달) 자료의 계획 카드 노출 규칙 — 미래 계획은 숨기고, 오늘 카드는
+    // 오늘 완료 체크/입력이 있을 때만 당일 유지(과거 날짜는 이력 그대로 보존).
+    const keepPlanDate = (finished: boolean, dateKey: string, plan: DetailedPlan, inputLog?: string[]) => {
+      if (!finished || dateKey < _todayKey) return true;
+      if (dateKey > _todayKey) return false;
+      return getPlanDailyCompletion(plan, dateKey).isCompleted || !!inputLog?.includes(dateKey);
+    };
 
     return Array.from({ length: visiblePlanWeeks }, (_, weekOffset) => {
       const start = new Date(_weekStart);
@@ -1696,9 +1695,10 @@ export function useReportState() {
           .flatMap((subject) => {
             const lectures = (subject.lectures || [])
               .filter((lecture) => isMaterialOnDay(lecture.studyDays, subject.studyDays))
-              .flatMap((lecture) =>
-              (lecture.detailedPlans || [])
-                .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey))
+              .flatMap((lecture) => {
+              const finished = (lecture.totalLectures || 0) > 0 && (lecture.completedLectures || 0) >= (lecture.totalLectures || 0);
+              return (lecture.detailedPlans || [])
+                .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey) && keepPlanDate(finished, dateKey, plan, lecture.inputLog))
                 .map((plan) => {
                   const dailyCompletion = getPlanDailyCompletion(plan, dateKey);
                   return {
@@ -1719,13 +1719,14 @@ export function useReportState() {
                     dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
                     dailyLabel: getDailyAmountLabel(plan),
                   };
-                })
-            );
+                });
+            });
             const books = (subject.books || [])
               .filter((book) => isMaterialOnDay(book.studyDays, subject.studyDays))
-              .flatMap((book) =>
-              (book.detailedPlans || [])
-                .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey))
+              .flatMap((book) => {
+              const finished = (book.totalPages || 0) > 0 && (book.currentPage || 0) >= (book.totalPages || 0);
+              return (book.detailedPlans || [])
+                .filter((plan) => !plan.periodType && isPlanActiveOnDate(plan, dateKey) && keepPlanDate(finished, dateKey, plan, book.inputLog))
                 .map((plan) => {
                   const dailyCompletion = getPlanDailyCompletion(plan, dateKey);
                   return {
@@ -1746,8 +1747,8 @@ export function useReportState() {
                     dailyAmount: plan.dailyAmount ?? Math.ceil((plan.targetAmount || 1) / 6),
                     dailyLabel: getDailyAmountLabel(plan),
                   };
-                })
-            );
+                });
+            });
             return [...lectures, ...books];
           });
 
@@ -1804,7 +1805,12 @@ export function useReportState() {
     return (student.subjects || []).flatMap((subject) => {
       // 시간표 노출은 자료별 학생 지정 슬롯(studySlot)이 단독 결정. 과목 studyTime 상속 제거.
       const books = (subject.books || [])
-        .filter((b) => b.goalType === 'selfPaced' && isOnToday(subject.studyDays, b.studyDays))
+        .filter((b) => {
+          if (b.goalType !== 'selfPaced' || !isOnToday(subject.studyDays, b.studyDays)) return false;
+          const loggedToday = !!b.inputLog?.includes(todayKey);
+          const fullyCompleted = (b.totalPages || 0) > 0 && (b.currentPage || 0) >= b.totalPages;
+          return !fullyCompleted || loggedToday;
+        })
         .map((b) => ({
           id: `selfpaced_${subject.id}_${b.id}`,
           subject: subject.name,
@@ -1817,7 +1823,12 @@ export function useReportState() {
           loggedToday: !!b.inputLog?.includes(todayKey),
         }));
       const lectures = (subject.lectures || [])
-        .filter((l) => l.goalType === 'selfPaced' && isOnToday(subject.studyDays, l.studyDays))
+        .filter((l) => {
+          if (l.goalType !== 'selfPaced' || !isOnToday(subject.studyDays, l.studyDays)) return false;
+          const loggedToday = !!l.inputLog?.includes(todayKey);
+          const fullyCompleted = (l.totalLectures || 0) > 0 && (l.completedLectures || 0) >= l.totalLectures;
+          return !fullyCompleted || loggedToday;
+        })
         .map((l) => ({
           id: `selfpaced_${subject.id}_${l.id}`,
           subject: subject.name,
@@ -2049,15 +2060,11 @@ export function useReportState() {
   const homeFullLeft = (thisMonthLeaveUsage ? Math.max(0, MONTHLY_FULLDAY_QUOTA - thisMonthLeaveUsage.fullday) : MONTHLY_FULLDAY_QUOTA) + homeLeaveCredits.fullday;
   const homeLeaveCoupons = isStudentReport ? (student.leaveCoupons ?? 0) : 0;
   
-  const homeElapsedMin = homeAttend.checkedIn && homeAttend.sinceToday && homeAttend.since && homeAttendNow > 0
-    ? Math.max(0, Math.floor((homeAttendNow - new Date(homeAttend.since).getTime()) / 60_000))
-    : 0;
-  
   const homePomodoroMin = parseSpecialNoteObj(student.specialNote).pomodoro_minutes?.[getSeoulDateKey()] || 0;
   // 순공 이원화(운영 결정 2026-07-13): 집중=타이머로 잰 순공(뽀모도로), 체류=등원~현재 재석분.
   // 홈 카드에서 두 값을 나눠 노출한다(예전엔 단순 합산 homeTotalMin 하나였음 — 의미 모호로 폐기).
   const homeFocusMin = homePomodoroMin;
-  const homeStayMin = homeAttend.todayMinutes + homeElapsedMin;
+  const homeStayMin = homeAttend.todayMinutes;
 
   // weeklyDailyPlans 는 위의 useMemo 로 계산됨
 
@@ -2655,8 +2662,6 @@ export function useReportState() {
     updateDeadlineProgress,
     deadlineGoals: deadlineDerivation.deadlineGoals,
     deadlineSummary: deadlineDerivation.deadlineSummary,
-    incrementBookIncorrectTag,
-    setBookIncorrectTag,
     saveMakeupDone,
     submitChecklist,
     studyTimeLabels: STUDY_TIME_LABELS,

@@ -182,9 +182,11 @@ export function HomeOverviewTab({
   const [completionSaving, setCompletionSaving] = useState(false);
   // 계획 완료 패널의 복습 시간(분) 입력 — 선택 입력(0이면 미복습). 패널 열릴 때 초기화.
   const [reviewMinutesInput, setReviewMinutesInput] = useState(0);
-  // 자율 학습 '오늘 입력' 패널 상태 — 열린 항목 id·오늘 한 양·복습 분·저장중.
+  // 자율 학습 '오늘 입력' 패널 상태 — 열린 항목 id·오늘 범위·복습 분·저장중.
+  // 범위 값은 raw 문자열로 보관 — 키 입력마다 클램프하면 타이핑이 안 되므로 검증은 저장 시에만.
   const [selfPacedOpenId, setSelfPacedOpenId] = useState<string | null>(null);
-  const [selfPacedAmount, setSelfPacedAmount] = useState(1);
+  const [selfPacedFrom, setSelfPacedFrom] = useState('1');
+  const [selfPacedTo, setSelfPacedTo] = useState('1');
   const [selfPacedReview, setSelfPacedReview] = useState(0);
   const [selfPacedSaving, setSelfPacedSaving] = useState(false);
   // 자율 학습 시간표 배치(studySlot) 저장 중인 항목 id.
@@ -1135,7 +1137,9 @@ export function HomeOverviewTab({
                               onClick={() => {
                                 if (isOpen) { setSelfPacedOpenId(null); return; }
                                 setSelfPacedOpenId(item.id);
-                                setSelfPacedAmount(item.current); // '몇 X까지' 절대 입력 — 현재 누적에서 시작
+                                const next = Math.max(1, item.current + 1);
+                                setSelfPacedFrom(String(next));
+                                setSelfPacedTo(String(next));
                                 setSelfPacedReview(reviewMin);
                               }}
                               className="shrink-0 rounded-full border border-[#0071E3]/20 bg-white dark:bg-[#1c1c1e] px-3 py-1.5 text-[10px] font-semibold text-[#0071E3] transition hover:bg-[#0071E3]/5 active:scale-95"
@@ -1179,28 +1183,30 @@ export function HomeOverviewTab({
 
                         {isOpen && !item.loggedToday && (
                           <div className="mt-3 rounded-2xl border border-amber-100 dark:border-amber-500/25 bg-white dark:bg-[#1c1c1e] p-3">
-                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">지금 몇 {item.unit}까지 했나요?</p>
+                            <p className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">오늘 학습한 범위</p>
                             <p className="mt-0.5 text-[10px] font-medium text-slate-400 dark:text-slate-500">이전 누적 {item.current}{item.unit}</p>
-                            {/* '까지' = 오늘 한 양이 아니라 누적 현재 위치(절대값) — 개념 안내 상시 캡션 */}
-                            <p className="mt-0.5 break-keep text-[10px] font-medium text-slate-400 dark:text-slate-500">오늘 한 양이 아니라 지금까지 도달한 위치(누적)를 입력해요. 예: 어제 30{item.unit}, 오늘 3{item.unit} 했으면 33{item.unit}.</p>
-                            <div className="mt-2 flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => setSelfPacedAmount((v) => Math.max(item.current, v - 1))}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
-                              >
-                                -
-                              </button>
-                              <span className="min-w-[3.5rem] text-center text-sm font-semibold text-slate-900 dark:text-slate-100">
-                                {selfPacedAmount}{item.unit}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => setSelfPacedAmount((v) => v + 1)}
-                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 active:scale-95"
-                              >
-                                +
-                              </button>
+                            <p className="mt-0.5 break-keep text-[10px] font-medium text-slate-400 dark:text-slate-500">예: 이전 누적이 30{item.unit}이고 오늘 31{item.unit} ~ 40{item.unit}까지 했다면 끝 위치 40{item.unit}까지 자동 반영돼요.</p>
+                            <div className="mt-2 grid grid-cols-[1fr_auto_1fr_auto] items-center gap-2">
+                              <input
+                                type="number"
+                                min={1}
+                                inputMode="numeric"
+                                value={selfPacedFrom}
+                                onChange={(e) => setSelfPacedFrom(e.target.value)}
+                                className="h-9 min-w-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-center text-[13px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
+                                aria-label="자율 학습 시작 범위"
+                              />
+                              <span className="text-[12px] font-semibold text-slate-400">~</span>
+                              <input
+                                type="number"
+                                min={1}
+                                inputMode="numeric"
+                                value={selfPacedTo}
+                                onChange={(e) => setSelfPacedTo(e.target.value)}
+                                className="h-9 min-w-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 text-center text-[13px] font-semibold text-slate-900 dark:text-slate-100 focus:border-[#0071E3] focus:outline-none"
+                                aria-label="자율 학습 종료 범위"
+                              />
+                              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">{item.unit}</span>
                             </div>
                             <div className="mt-3 flex items-center justify-between gap-2">
                               <label className="text-[11px] font-semibold text-slate-600 dark:text-slate-400">복습 시간(분) <span className="font-medium text-slate-400 dark:text-slate-500">선택</span></label>
@@ -1217,13 +1223,17 @@ export function HomeOverviewTab({
                             <div className="mt-3 flex gap-2">
                               <button
                                 type="button"
-                                disabled={selfPacedSaving || !saveSelfPacedToday || (selfPacedAmount <= item.current && !selfPacedReview)}
+                                disabled={(() => {
+                                  const fromNum = Math.round(Number(selfPacedFrom)) || 0;
+                                  const toNum = Math.round(Number(selfPacedTo)) || 0;
+                                  return selfPacedSaving || !saveSelfPacedToday || ((toNum <= item.current || toNum < fromNum) && !selfPacedReview);
+                                })()}
                                 onClick={async () => {
                                   if (selfPacedSaving || !saveSelfPacedToday) return;
                                   setSelfPacedSaving(true);
                                   try {
-                                    // '까지'(절대) 입력 → 증가분(delta)만 저장 훅에 전달.
-                                    const delta = Math.max(0, selfPacedAmount - item.current);
+                                    // 범위 입력 → 끝 위치 기준 증가분(delta)만 저장 훅에 전달(검증은 여기서만 — 타이핑 중 클램프 금지).
+                                    const delta = Math.max(0, (Math.round(Number(selfPacedTo)) || 0) - item.current);
                                     const ok = await saveSelfPacedToday(item.materialType, item.materialId, delta, selfPacedReview);
                                     if (ok) {
                                       setSelfPacedOpenId(null);

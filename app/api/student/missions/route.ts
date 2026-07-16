@@ -4,13 +4,14 @@ import { getStudentById, getStudySessions, getStudyMinutesByStudent } from '@/li
 import { getActiveMissionConfig } from '@/lib/mission-engine';
 import { readActivityEnvelope } from '@/lib/student-activity';
 import { getPeriodBounds } from '@/lib/study-stats';
-import { MISSION_ORDER, MISSION_META, type MissionId } from '@/lib/missions';
+import { MISSION_ORDER, MISSION_META, MISSION_LEGACY_NAMES, type MissionId } from '@/lib/missions';
 import {
   addDateDays,
   getDeadlineZeroOverdueStats,
   getMockReviewStats,
   getPhoneFocusStats,
   getWeeklyPlanCompletionStats,
+  getWrongNoteStats,
 } from '@/lib/mission-metrics';
 import { COUPONS_PER_EXTRA_HALFDAY, REWARD_CATALOG } from '@/lib/leave';
 
@@ -52,8 +53,9 @@ export async function GET() {
   const earnedFor = (id: MissionId): boolean => {
     const key = periodKeyOf(id);
     if (!key) return false;
-    const name = MISSION_META[id].name;
-    return rewardsLog.some((l) => l.date === key && l.missionName === name && (l.rewardGranted || 0) > 0);
+    // 미션명이 바뀐 항목은 옛 이름으로 적립된 기록도 인정(멱등 판정과 동일 규칙).
+    const names = new Set([MISSION_META[id].name, ...(MISSION_LEGACY_NAMES[id] || [])]);
+    return rewardsLog.some((l) => l.date === key && names.has(l.missionName) && (l.rewardGranted || 0) > 0);
   };
 
   // 저비용 진행 힌트 (세션 추가 조회 없이 student 객체/봉투만 사용)
@@ -65,6 +67,7 @@ export async function GET() {
   const phoneFocusStats = getPhoneFocusStats(student, weekStart, todayStr);
   const deadlineStats = getDeadlineZeroOverdueStats(student, new Date(), todayStr);
   const mockReviewStats = getMockReviewStats(student, weekStart, todayStr, config.mock_review_complete.mockReviewMinChars ?? 10);
+  const wrongNoteStats = getWrongNoteStats(student, weekStart, todayStr);
 
   // 세션 기반 진행도 (주말 집중 / 주간 순공 랭킹) — 활성 미션일 때만 조회
   let weekendHits = 0;
@@ -139,10 +142,13 @@ export async function GET() {
       case 'deadline_zero_overdue':
         if (deadlineStats.activeCount <= 0) return '진행 중인 기간 목표 없음';
         return `기간 목표 ${deadlineStats.activeCount}개 중 지연 위험 ${deadlineStats.riskCount}건`;
-      case 'mock_review_complete':
-        return mockReviewStats.count > 0
-          ? `이번 주 오답분석 ${mockReviewStats.count}건 제출`
-          : `이번 주 오답분석 제출 전 · 각 항목 ${c.mockReviewMinChars ?? 10}자 이상`;
+      case 'mock_review_complete': {
+        // 일반 오답노트 작성이 기본 판정 — 레거시 모의고사 오답분석 제출도 계속 인정(OR).
+        const total = wrongNoteStats.count + mockReviewStats.count;
+        return total > 0
+          ? `이번 주 오답노트 ${total}건 기록`
+          : '이번 주 오답노트 기록 전 · 오답 1개만 남겨도 달성';
+      }
       default:
         return null;
     }

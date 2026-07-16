@@ -59,11 +59,14 @@ export interface ReviewPassSetting {
   days: number;            // 해당 회독 완료까지 필요한 소요일
 }
 
-// 오답노트 문제 기록 — 학생이 직접 입력한 오답/문제(타이핑·사진). 자료(교재) 단위로 누적.
+// 오답노트 문제 기록 — 학생이 직접 입력한 오답/문제(타이핑·사진). 자료(교재/인강) 단위로 누적.
 // subjects jsonb 에 통째 저장(마이그레이션 불필요). 사진은 비공개 버킷 경로만 저장하고 조회 시 서명 URL 발급.
+// 본문은 경량 서식 마크업(**볼드**/__밑줄__/{red|blue|mark:…}) 허용 — 렌더는 화이트리스트 파서만 사용(components/report/wrong-note-markup).
 export interface WrongNote {
   id: string;
-  text?: string;              // 타이핑한 문제/오답 내용
+  text?: string;              // (레거시) 단일 입력 시절의 문제/오답 내용 — 읽기 표시만, 신규 저장은 question/answer 2칸
+  question?: string;          // 문제 (2칸 분리 신규 입력)
+  answer?: string;            // 정답 및 풀이 (2칸 분리 신규 입력)
   imagePath?: string;         // 비공개 스토리지 경로(서명 URL로 조회). 없으면 텍스트 전용.
   tags?: string[];            // 오답 사유 태그 키(calculation_error 등)
   createdAt: string;          // 작성 시각(ISO)
@@ -145,6 +148,10 @@ export interface LectureProgress {
   estimatedMinutesPerUnit?: number; // 단위당 예상 소요 시간 (분)
   speedMultiplier?: number;          // 개별 인강 배속 설정 (예: 1.2, 1.5 등)
   reviewPasses?: ReviewPassSetting[]; // 2회독/3회독 계획 설정
+  // 인강 오답노트 — useWrongNotes=true 인 인강만 오답노트 탭에 노출(교재는 항상 노출).
+  // 학생이 직접 켜고 끌 수 있고(본인 세션 API), 신청 폼 체크박스로도 켜진다. subjects jsonb — 마이그레이션 불필요(JSON).
+  useWrongNotes?: boolean;
+  wrongNotes?: WrongNote[]; // 학생이 입력한 오답 문제(타이핑·사진). 관리자 대시보드 리뷰용. 마이그레이션 불필요(JSON).
   // 학생이 지정한 자료 색상(팔레트 key 또는 '#RRGGBB'). 시간표·캘린더·홈 등 어디서나 이 색으로 표시.
   // 미설정이면 자료 id 해시로 안정적 기본색을 파생(getMaterialColor). 학생 소유·마이그레이션 불필요(JSON).
   color?: string;
@@ -169,6 +176,7 @@ export interface ProposedGoal {
   materialType: 'book' | 'lecture';
   goalType: 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
   goalValue: number;
+  planStartDate?: string;                                // 학생 희망 계획 시작일(YYYY-MM-DD). 승인 시 이 날짜부터 계획 생성.
   targetDate?: string;                                    // 학생이 고른 목표 완료일(마감일 지정 모드). 표시·주수 산출 근거.
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; // 학생이 고른 학습 요일(예: 주말 제외). 승인 시 자료 studyDays 로 반영.
   currentProgress?: number;
@@ -197,10 +205,13 @@ export interface ProposedMaterial {
   studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>;
   studyTime?: string;                // 신청 경로는 블록('morning'|'afternoon'|'night'|'')만 허용(sanitizer가 그 외 버림). 시:분 't:'는 생성 후 자료에서 지정.
   note?: string;                     // 희망 메모
+  // 인강 전용 — 체크 시 승인으로 생성되는 인강에 오답노트 사용(useWrongNotes)을 켠다.
+  useWrongNotes?: boolean;
   // 추가하면서 학생이 원하는 학습 방식(선택). 기본(미지정)은 selfPaced(자율).
   // deadlineWeeks/dailyAmount 는 total(총량)이 있어야 승인 시 계획 생성 — 없으면 자율로 폴백.
   goalType?: 'selfPaced' | 'deadlineWeeks' | 'dailyAmount';
   goalValue?: number;                // deadlineWeeks=주수(1~12), dailyAmount=하루 분량
+  planStartDate?: string;            // 계획형 자료 생성 시 시작일(YYYY-MM-DD)
   targetDate?: string;               // 마감일 지정 시 목표 완료일(YYYY-MM-DD, 표시·주수 근거)
   createdMaterialId?: string;        // 승인 시 생성한 자료 id — 재승인(resolved 토글) 시 중복 생성 방지(멱등)
 }

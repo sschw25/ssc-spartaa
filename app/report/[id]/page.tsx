@@ -13,7 +13,6 @@ import { SubjectProgressTab } from '@/components/report/subject-progress-tab';
 import { LearningRequestPanel } from '@/components/report/learning-request-panel';
 import { MakeupTab } from '@/components/report/makeup-tab';
 import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
-import { MockReviewPanel } from '@/components/report/mock-review-panel';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
@@ -256,8 +255,6 @@ function StudentReportInner() {
     updatePlanCompletion,
     updateDeadlineProgress,
     deadlineGoals,
-    incrementBookIncorrectTag,
-    setBookIncorrectTag,
     saveMakeupDone,
     adjustStartPoint,
     submitChecklist,
@@ -878,17 +875,13 @@ function StudentReportInner() {
           saveMakeupDone={saveMakeupDone}
         />
 
-        {/* 오답 노트 (독립 탭) — 과목별 진도에서 분리한 교재별 오답 사유 태깅 */}
+        {/* 오답 노트 (독립 탭) — 교재/인강 오답 기록 + 태그 약점 분석.
+            모의고사 오답분석(MockReviewPanel)은 #19 통합으로 진입점 제거 — 미션 판정도 일반 오답노트가 대체(레거시 데이터는 계속 인정). */}
         <WrongAnswerTab
           student={student}
           isStudentReport={isStudentReport}
-          incrementBookIncorrectTag={incrementBookIncorrectTag}
-          setBookIncorrectTag={setBookIncorrectTag}
           activeTab={activeTab}
         />
-
-        {/* 오답노트 탭 하단 — 모의고사 오답분석 제출(쿠폰 미션 mock_review_complete 유일한 제출 경로) */}
-        <MockReviewPanel isStudentReport={isStudentReport} activeTab={activeTab} />
 
         {/* 5. 성적 분석 탭 */}
         <GradeAnalysisTab

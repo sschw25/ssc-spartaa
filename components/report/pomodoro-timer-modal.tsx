@@ -103,6 +103,17 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   const [targetDraft, setTargetDraft] = useState('');
   const modeKey = `ssc-focus-mode:${student.id}`;
 
+  // 복원용 스토리지 스냅샷 — 첫 렌더에서 1회 캡처(지연 ref 초기화).
+  // 저장 effect 가 마운트 직후 초기값(0/stopwatch)으로 스토리지를 잠깐 덮어써도(특히 StrictMode 이중 실행),
+  // 복원 effect 는 항상 이 깨끗한 스냅샷을 읽으므로 세션 경과·모드가 리셋되지 않는다.
+  const restoreSnapRef = useRef<{ focus: any; mode: any } | null>(null);
+  if (restoreSnapRef.current === null && typeof window !== 'undefined') {
+    let focus: any = null; let modeSnap: any = null;
+    try { focus = JSON.parse(window.localStorage.getItem(focusKey) || 'null'); } catch { /* noop */ }
+    try { modeSnap = JSON.parse(window.localStorage.getItem(modeKey) || 'null'); } catch { /* noop */ }
+    restoreSnapRef.current = { focus, mode: modeSnap };
+  }
+
   const todaySecRef = useRef(todaySec);
   const runningRef = useRef(running);
   const modeRef = useRef(mode);
@@ -110,8 +121,10 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   const hiddenAtRef = useRef<number | null>(null);
   const lastFlushRef = useRef(0);
   const wakeLockRef = useRef<any>(null);
+  const sessionSecRef = useRef(sessionSec);
   useEffect(() => { todaySecRef.current = todaySec; }, [todaySec]);
   useEffect(() => { runningRef.current = running; }, [running]);
+  useEffect(() => { sessionSecRef.current = sessionSec; }, [sessionSec]);
   useEffect(() => { modeRef.current = mode; }, [mode]);
   useEffect(() => { targetMinRef.current = targetMin; }, [targetMin]);
 
@@ -122,21 +135,32 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   // 이어서 실행한다(벽시계 기준 — 페이지 이탈/새로고침에도 타이머가 멈추지 않는다).
   useEffect(() => {
     try {
-      const raw = window.localStorage.getItem(focusKey);
-      if (raw) {
-        const p = JSON.parse(raw) as { sec?: number; dateKey?: string; running?: boolean; savedAt?: number };
+      const p = restoreSnapRef.current?.focus as { sec?: number; sessionSec?: number; dateKey?: string; running?: boolean; savedAt?: number } | null;
+      if (p) {
         if (p.dateKey === todayKey && Number.isFinite(p.sec)) {
-          const gap = p.running && Number.isFinite(p.savedAt) ? Math.max(0, Math.floor((Date.now() - p.savedAt!) / 1000)) : 0;
+          let gap = p.running && Number.isFinite(p.savedAt) ? Math.max(0, Math.floor((Date.now() - p.savedAt!) / 1000)) : 0;
+          let resume = !!p.running;
+          const prevSession = Number.isFinite(p.sessionSec) ? Math.max(0, Math.floor(p.sessionSec!)) : 0;
+          // 뽀모도로 모드였다면 떠나 있던 경과는 세션 목표까지만 인정하고 자동 정지(완료) 처리.
+          // (스톱워치는 기존처럼 벽시계 기준 전부 인정 — '일시 정지'를 눌러야 멈춤)
+          const m = restoreSnapRef.current?.mode as { mode?: string; target?: number } | null;
+          if (m?.mode === 'pomodoro' && resume) {
+            const targetSec = (Number.isFinite(m.target) && m.target! >= 1 ? m.target! : 25) * 60;
+            const remain = Math.max(0, targetSec - prevSession);
+            if (gap >= remain) { gap = remain; resume = false; }
+          }
           setTodaySec((prev) => Math.max(prev, Math.floor(p.sec!) + gap));
-          if (p.running) setRunning(true);
-        } else window.localStorage.removeItem(focusKey);
+          // max 병합 — 재실행돼도(예: StrictMode) 세션 경과가 뒤로 가지 않는다(sec 복원과 같은 단조 규칙).
+          setSessionSec((prev) => Math.max(prev, prevSession + gap));
+          if (resume) setRunning(true);
+        } else if (p.dateKey !== todayKey) window.localStorage.removeItem(focusKey);
       }
     } catch { /* noop */ }
-  }, [focusKey, todayKey]);
+  }, [focusKey, todayKey, modeKey]);
 
   useEffect(() => {
-    window.localStorage.setItem(focusKey, JSON.stringify({ sec: todaySec, dateKey: todayKey, running, savedAt: Date.now() }));
-  }, [todaySec, running, focusKey, todayKey]);
+    window.localStorage.setItem(focusKey, JSON.stringify({ sec: todaySec, sessionSec, dateKey: todayKey, running, savedAt: Date.now() }));
+  }, [todaySec, sessionSec, running, focusKey, todayKey]);
 
   // 자정(KST) 넘김 감지 — 어제 누적이 새 날짜로 이월돼 순공이 부풀지 않게 상태를 리셋한다.
   const dayKeyRef = useRef(todayKey);
@@ -156,16 +180,12 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', checkRollover); };
   }, [focusKey]);
 
-  // 모드·목표 복원/저장
+  // 모드·목표 복원/저장 — 복원은 첫 렌더 스냅샷 기준(저장 effect 의 초기값 덮어쓰기에 오염되지 않게)
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(modeKey);
-      if (raw) {
-        const p = JSON.parse(raw) as { mode?: string; target?: number };
-        if (p.mode === 'pomodoro' || p.mode === 'stopwatch') setMode(p.mode);
-        if (Number.isFinite(p.target) && p.target! >= 1 && p.target! <= 180) setTargetMin(p.target!);
-      }
-    } catch { /* noop */ }
+    const p = restoreSnapRef.current?.mode as { mode?: string; target?: number } | null;
+    if (!p) return;
+    if (p.mode === 'pomodoro' || p.mode === 'stopwatch') setMode(p.mode);
+    if (Number.isFinite(p.target) && p.target! >= 1 && p.target! <= 180) setTargetMin(p.target!);
   }, [modeKey]);
   useEffect(() => {
     window.localStorage.setItem(modeKey, JSON.stringify({ mode, target: targetMin }));
@@ -231,8 +251,8 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
   }, []);
 
   // 가시성 — 다른 앱/화면꺼짐/강의 수강 중에도 벽시계 기준으로 계속 흐른다.
-  // 화면이 숨겨진 동안은 틱이 멈추므로, 돌아온 시점에 경과분 전체를 그대로 인정해 잇는다.
-  // ('일시 정지'를 눌러야만 멈춘다 — 자동 정지 없음)
+  // 스톱워치: 돌아온 시점에 경과분 전체를 그대로 인정('일시 정지'를 눌러야만 멈춤).
+  // 뽀모도로: 숨겨져 있던 경과는 세션 목표까지만 인정하고 자동 정지(완료) — 목표를 넘겨도 순공이 부풀지 않는다.
   useEffect(() => {
     const onVis = () => {
       if (document.hidden) {
@@ -243,7 +263,11 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
         const hiddenAt = hiddenAtRef.current;
         hiddenAtRef.current = null;
         if (hiddenAt && runningRef.current) {
-          const gap = Math.max(0, Math.floor((Date.now() - hiddenAt) / 1000));
+          let gap = Math.max(0, Math.floor((Date.now() - hiddenAt) / 1000));
+          if (modeRef.current === 'pomodoro') {
+            // 세션 목표까지만 인정 — 목표에 닿으면 완료 감지 effect 가 정지·토스트 처리.
+            gap = Math.min(gap, Math.max(0, targetMinRef.current * 60 - sessionSecRef.current));
+          }
           setTodaySec((prev) => prev + gap);
           setSessionSec((prev) => prev + gap);
           flush();
@@ -266,21 +290,22 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
         return next;
       });
       if (modeRef.current === 'pomodoro') {
-        const target = targetMinRef.current;
-        setSessionSec((prev) => {
-          const next = prev + 1;
-          if (next >= target * 60) {
-            // 뽀모도로 세션 완료 — 순공은 그대로 누적된 채, 다음 세션으로(연속).
-            toast.success(`🍅 ${target}분 집중 완료! 순공에 반영됐어요.`, { duration: 3500 });
-            flush();
-            return 0;
-          }
-          return next;
-        });
+        // 완료 판정·정지는 아래 완료 감지 effect 가 단일 담당(state updater 안 부수효과 금지).
+        setSessionSec((prev) => Math.min(prev + 1, targetMinRef.current * 60));
       }
     }, 1000);
     return () => clearInterval(iv);
   }, [running, visible, flush, acquireWake]);
+
+  // 뽀모도로 세션 완료 감지 — 틱/가시성 복귀 어느 경로로 목표에 닿아도 여기서만 정지·토스트.
+  // (StrictMode updater 이중 호출로 인한 토스트/flush 중복 방지)
+  useEffect(() => {
+    if (!running || mode !== 'pomodoro' || sessionSec < targetMin * 60) return;
+    setRunning(false);
+    releaseWake();
+    flush();
+    toast.success(`뽀모도로 ${targetMin}분 집중 완료! 순공에 반영됐어요.`, { duration: 3500 });
+  }, [running, mode, sessionSec, targetMin, releaseWake, flush]);
 
   // 언마운트 — 잔여 반영(유실 방지) + wake 해제
   useEffect(() => {
@@ -308,7 +333,11 @@ export function PomodoroTimer({ student, setStudent, setRewardBanner, isLectureT
     }
   }, [isFs, pseudoFs]);
 
-  const start = () => { setRunning(true); acquireWake(); };
+  const start = () => {
+    if (modeRef.current === 'pomodoro' && sessionSec >= targetMin * 60) setSessionSec(0);
+    setRunning(true);
+    acquireWake();
+  };
   const pause = () => { setRunning(false); releaseWake(); flush(); };
   const switchMode = (m: 'stopwatch' | 'pomodoro') => { setMode(m); if (m === 'pomodoro') setSessionSec(0); };
   const adjustTarget = (delta: number) => { setTargetMin((prev) => Math.max(1, Math.min(180, prev + delta))); setSessionSec(0); };

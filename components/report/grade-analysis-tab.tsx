@@ -337,7 +337,9 @@ export function GradeAnalysisTab({
                 onClick={() => {
                   setActiveTab('student-requests');
                   setRequestCustomOpen(true);
-                  setRequestForm({
+                  // 부분 병합 — requestForm 원본(use-report-state)에만 있는 필드(planStartDate 등)를 날리지 않는다.
+                  setRequestForm((f) => ({
+                    ...f,
                     requestType: 'etc',
                     message: `${dropInfo.subject} 성적 보완을 위한 1:1 약점 피드백 상담을 신청합니다. (최근 시험: ${dropInfo.testName} ${dropInfo.currentScore}점)`,
                     materialId: '',
@@ -348,7 +350,7 @@ export function GradeAnalysisTab({
                     proposedRangeText: '',
                     speedMultiplier: '1.0',
                     currentGoalSnapshot: null,
-                  });
+                  }));
                   setTimeout(() => {
                     window.scrollTo({ top: document.getElementById('student-requests')?.offsetTop || 0, behavior: 'smooth' });
                   }, 100);
@@ -371,48 +373,63 @@ export function GradeAnalysisTab({
         );
       })()}
 
-      {/* 오답 실수 유형 취약성 진단 차트 */}
+      {/* 오답 실수 유형 취약성 진단 차트 — 단일 소스는 오답노트 태그(#8 스테퍼 제거). 레거시 카운터는 과거 기록 보존 합산. */}
       {(() => {
-        const aggregatedTags = {
-          calculation_error: 0,
-          time_limit: 0,
-          misread_condition: 0,
-          concept_leak: 0
+        const TAG_NAMES: Record<string, string> = {
+          calculation_error: '연산실수',
+          time_limit: '시간부족',
+          misread_condition: '조건오독',
+          concept_leak: '개념부족',
         };
+        const counts = new Map<string, number>();
+        const add = (key: string, n: number) => { if (n > 0) counts.set(key, (counts.get(key) || 0) + n); };
 
         (student.subjects || []).forEach(s => {
+          // 교재 + 인강 오답노트의 태그 집계(현재 유일한 쓰기 경로).
+          [...(s.books || []), ...(s.lectures || [])].forEach((m: any) => {
+            (m.wrongNotes || []).forEach((note: any) => {
+              (Array.isArray(note.tags) ? note.tags : []).forEach((t: unknown) => {
+                if (typeof t === 'string' && t) add(t, 1);
+              });
+            });
+          });
+          // 레거시 오답사유 카운터(스테퍼 UI 제거됨) — 이미 쌓인 기록은 계속 반영.
           (s.books || []).forEach(b => {
-            if (b.incorrectTags) {
-              aggregatedTags.calculation_error += Number(b.incorrectTags.calculation_error || 0);
-              aggregatedTags.time_limit += Number(b.incorrectTags.time_limit || 0);
-              aggregatedTags.misread_condition += Number(b.incorrectTags.misread_condition || 0);
-              aggregatedTags.concept_leak += Number(b.incorrectTags.concept_leak || 0);
-            }
+            if (!b.incorrectTags) return;
+            add('calculation_error', Number(b.incorrectTags.calculation_error || 0));
+            add('time_limit', Number(b.incorrectTags.time_limit || 0));
+            add('misread_condition', Number(b.incorrectTags.misread_condition || 0));
+            add('concept_leak', Number(b.incorrectTags.concept_leak || 0));
           });
         });
 
-        const totalIncorrect = Object.values(aggregatedTags).reduce((a, b) => a + b, 0);
+        const totalIncorrect = Array.from(counts.values()).reduce((a, b) => a + b, 0);
 
-        const pieData = [
-          { name: '연산실수', value: aggregatedTags.calculation_error },
-          { name: '시간부족', value: aggregatedTags.time_limit },
-          { name: '조건오독', value: aggregatedTags.misread_condition },
-          { name: '개념부족', value: aggregatedTags.concept_leak }
-        ].filter(d => d.value > 0);
+        const pieData = Array.from(counts.entries())
+          .map(([key, value]) => ({ name: TAG_NAMES[key] || key, value }))
+          .sort((a, b) => b.value - a.value)
+          .slice(0, 6);
 
-        const COLORS = {
+        const COLORS: Record<string, string> = {
           '연산실수': '#EF4444',
           '시간부족': '#F56300',
           '조건오독': '#FBBF24',
           '개념부족': '#0071E3'
         };
+        // 커스텀 태그 색 — 기본 4종과 구분되는 역할 색 순환.
+        const CUSTOM_COLORS = ['#14B8A6', '#0D9488', '#64748B', '#94A3B8'];
+        let customIdx = 0;
+        const colorOf = new Map<string, string>(pieData.map((d) => [
+          d.name,
+          COLORS[d.name] || CUSTOM_COLORS[customIdx++ % CUSTOM_COLORS.length],
+        ]));
 
         return (
           <div className="mt-6 rounded-3xl border border-slate-100 bg-white dark:border-white/10 dark:bg-[#1c1c1e] p-5 shadow-sm space-y-4">
             <div className="flex justify-between items-start">
               <div>
                 <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400">오답 원인 분석 (취약성 진단)</h4>
-                <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">교재 학습 과정에서 직접 등록된 실수 요인 비율</p>
+                <p className="text-[10px] text-slate-400/80 font-bold mt-0.5">오답노트에 붙인 태그로 집계한 실수 요인 비율</p>
               </div>
               {totalIncorrect > 0 && (
                 <span className="text-[9px] font-extrabold text-[#0071E3] bg-[#0071E3]/5 px-2 py-0.5 rounded-lg border border-[#0071E3]/10">
@@ -424,7 +441,7 @@ export function GradeAnalysisTab({
             {totalIncorrect === 0 ? (
               <div className="py-8 px-4 text-center bg-slate-50/50 dark:bg-white/5 rounded-2xl border border-dashed border-slate-200 dark:border-white/10 flex flex-col items-center justify-center gap-1.5">
                 <p className="text-xs font-bold text-slate-400">아직 오답 원인 분석 데이터가 부족합니다.</p>
-                <p className="text-[10px] text-slate-400/80 font-semibold">'오답 노트' 탭에서 교재별로 틀린 이유(연산·시간·오독·개념)를 눌러 두면 여기 취약성 진단에 쌓여요.</p>
+                <p className="text-[10px] text-slate-400/80 font-semibold">'오답 노트' 탭에서 오답을 기록하며 태그(연산·시간·오독·개념 등)를 붙이면 여기 취약성 진단에 쌓여요.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
@@ -441,7 +458,7 @@ export function GradeAnalysisTab({
                         dataKey="value"
                       >
                         {pieData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[entry.name as keyof typeof COLORS] || '#64748B'} />
+                          <Cell key={`cell-${index}`} fill={colorOf.get(entry.name) || '#64748B'} />
                         ))}
                       </Pie>
                     </PieChart>
@@ -458,7 +475,7 @@ export function GradeAnalysisTab({
                     return (
                       <div key={d.name} className="flex justify-between items-center text-xs font-bold">
                         <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400">
-                          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: COLORS[d.name as keyof typeof COLORS] }} />
+                          <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: colorOf.get(d.name) || '#64748B' }} />
                           {d.name}
                         </span>
                         <span className="text-slate-700 dark:text-slate-300">

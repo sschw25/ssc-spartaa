@@ -1,14 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { canAdminAccessStudent } from '@/lib/auth';
 import { getStudentById, patchStudentProgress, signedWrongNoteUrl } from '@/lib/store';
-import type { BookProgress, Student } from '@/lib/types/student';
+import type { BookProgress, LectureProgress, Student } from '@/lib/types/student';
 
-// 대상 교재(루트 books + subjects.books)를 모두 찾는다.
-function matchingBooks(student: Student, materialId: string): BookProgress[] {
-  return [
+// 대상 자료(루트 books/lectures + subjects 하위)를 모두 찾는다 — 인강 오답노트도 검토 대상.
+// 루트 미러는 subjects 와 같은 객체 참조를 공유하므로 참조 기준 dedup(이중 변이 방지).
+function matchingBooks(student: Student, materialId: string): Array<BookProgress | LectureProgress> {
+  return Array.from(new Set<BookProgress | LectureProgress>([
     ...((student.books || []).filter((b) => b.id === materialId)),
     ...((student.subjects || []).flatMap((s) => (s.books || []).filter((b) => b.id === materialId))),
-  ];
+    ...((student.lectures || []).filter((l) => l.id === materialId)),
+    ...((student.subjects || []).flatMap((s) => (s.lectures || []).filter((l) => l.id === materialId))),
+  ]));
 }
 
 // 관리자: 오답노트 문제 사진 열람용 서명 URL 발급 (짧은 수명). 캠퍼스 접근 권한 검사.
@@ -58,7 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!student) return NextResponse.json({ success: false, message: '해당 원생을 찾을 수 없습니다.' }, { status: 404 });
     const originalUpdatedAt = student.updatedAt ?? '';
     const books = matchingBooks(student, materialId);
-    if (books.length === 0) return NextResponse.json({ success: false, message: '해당 교재를 찾을 수 없습니다.' }, { status: 404 });
+    if (books.length === 0) return NextResponse.json({ success: false, message: '해당 자료를 찾을 수 없습니다.' }, { status: 404 });
     const exists = (books[0].wrongNotes || []).some((n) => n.id === noteId);
     if (!exists) return NextResponse.json({ success: false, message: '해당 오답을 찾을 수 없습니다.' }, { status: 404 });
     const nowIso = new Date().toISOString();

@@ -1,4 +1,4 @@
-import type { DetailedPlan, Student } from './types/student';
+import type { DetailedPlan, Student, WrongNote } from './types/student';
 import { deriveDeadlineGoals } from './deadline-goals';
 import { getDailyChecklistFromStudent, getPlanDailyCompletion, readActivityEnvelope } from './student-activity';
 
@@ -103,6 +103,34 @@ export type MockReviewEntry = {
 export function getMockReviews(student: Student): MockReviewEntry[] {
   const note = readActivityEnvelope(student);
   return Array.isArray(note.mock_reviews) ? (note.mock_reviews as MockReviewEntry[]) : [];
+}
+
+// 일반 오답노트 작성 수 — mock_review_complete 미션이 모의고사 오답분석 대신 이 지표로 판정한다(#19 통합).
+// 교재 + 인강 오답노트 전체(createdAt KST 날짜가 [start, end] 안). 루트 books/lectures 미러는 subjects 와
+// 같은 객체를 참조하므로 note.id 기준으로 중복 집계를 막는다.
+export function getWrongNoteStats(student: Student, start: string, end: string) {
+  const kstKey = (iso: string) => {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(d);
+  };
+  const seen = new Set<string>();
+  let count = 0;
+  const collect = (m: { wrongNotes?: WrongNote[] }) => {
+    (m.wrongNotes || []).forEach((n) => {
+      if (!n?.id || seen.has(n.id)) return;
+      seen.add(n.id);
+      const key = kstKey(n.createdAt || '');
+      if (key && key >= start && key <= end) count++;
+    });
+  };
+  (student.books || []).forEach(collect);
+  (student.lectures || []).forEach(collect);
+  (student.subjects || []).forEach((s) => {
+    (s.books || []).forEach(collect);
+    (s.lectures || []).forEach(collect);
+  });
+  return { count };
 }
 
 export function getMockReviewStats(student: Student, start: string, end: string, minChars: number) {

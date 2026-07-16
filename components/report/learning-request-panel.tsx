@@ -19,6 +19,7 @@ type RequestForm = {
   materialType: 'book' | 'lecture';
   goalType: GoalType;
   goalValue: string;
+  planStartDate: string;
   targetDate: string;
   studyDays: MaDay[];
   currentProgress: string;
@@ -33,9 +34,10 @@ function kstToday(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
 }
 // 목표 완료일 → 주수(1~12). 오늘~목표일 사이 일수를 7로 나눠 올림, 1~12 클램프.
-function weeksUntil(dateStr: string): number {
+function weeksUntilFrom(fromStr: string, dateStr: string): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(fromStr)) return 0;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return 0;
-  const today = new Date(kstToday() + 'T00:00:00');
+  const today = new Date(fromStr + 'T00:00:00');
   const target = new Date(dateStr + 'T00:00:00');
   const days = Math.round((target.getTime() - today.getTime()) / 86400000);
   if (days <= 0) return 0;
@@ -117,8 +119,11 @@ export function LearningRequestPanel({
     total: '',
     unit: '',
     note: '',
+    // 인강 전용 — 체크 시 승인으로 만들어지는 인강에 오답노트가 켜져요.
+    useWrongNotes: false,
     // 추가하면서 학습 방식 지정(선택). 기본 자율. 마감일/하루분량은 총량 입력 필요.
     goalMode: 'selfPaced' as 'selfPaced' | 'deadlineWeeks' | 'dailyAmount',
+    goalStartDate: kstToday(),
     goalTargetDate: '',
     goalDaily: '',
   });
@@ -136,7 +141,9 @@ export function LearningRequestPanel({
       total: '',
       unit: '',
       note: '',
+      useWrongNotes: false,
       goalMode: 'selfPaced',
+      goalStartDate: kstToday(),
       goalTargetDate: '',
       goalDaily: '',
     });
@@ -155,17 +162,18 @@ export function LearningRequestPanel({
     const subjName = (maSubjectMode === 'new' ? maForm.newSubjectName : maForm.subjectName).trim();
     const title = maForm.title.trim();
     if (!subjName) { setMaError('과목을 선택하거나 입력해 주세요.'); return; }
-    if (!title) { setMaError('자료명을 입력해 주세요.'); return; }
+    if (!title) { setMaError(maForm.materialType === 'lecture' ? '강의명을 입력해 주세요.' : '자료명을 입력해 주세요.'); return; }
     const totalNum = maForm.total ? Number(maForm.total) : 0;
     // 계획(마감일/하루분량)을 정하려면 총량이 필요 — 없으면 자율로만 추가 가능.
     if (maForm.goalMode !== 'selfPaced' && !(totalNum > 0)) {
       setMaError('마감일·하루 분량 계획을 정하려면 총량을 입력해 주세요. (모르면 자율로 두세요)');
       return;
     }
+    if (maForm.goalMode !== 'selfPaced' && !maForm.goalStartDate) { setMaError('계획 시작일을 골라 주세요.'); return; }
     if (maForm.goalMode === 'deadlineWeeks' && !maForm.goalTargetDate) { setMaError('목표 완료일을 골라 주세요.'); return; }
     if (maForm.goalMode === 'dailyAmount' && !(Number(maForm.goalDaily) > 0)) { setMaError('하루 학습량을 입력해 주세요.'); return; }
-    const deadlineWeeks = maForm.goalMode === 'deadlineWeeks' ? weeksUntil(maForm.goalTargetDate) : 0;
-    if (maForm.goalMode === 'deadlineWeeks' && deadlineWeeks === 0) { setMaError('목표 완료일은 내일 이후 날짜로 골라 주세요.'); return; }
+    const deadlineWeeks = maForm.goalMode === 'deadlineWeeks' ? weeksUntilFrom(maForm.goalStartDate, maForm.goalTargetDate) : 0;
+    if (maForm.goalMode === 'deadlineWeeks' && deadlineWeeks === 0) { setMaError('목표 완료일은 시작일 이후 날짜로 골라 주세요.'); return; }
     setMaError('');
 
     const typeLabel = maForm.materialType === 'book' ? '교재' : '인강';
@@ -176,8 +184,8 @@ export function LearningRequestPanel({
     const schedule = [daysStr, timeStr].filter(Boolean).join(' ');
     if (schedule) parts.push(schedule);
     if (maForm.currentProgress) parts.push(`현재 ${maForm.currentProgress}${unitLabel}`);
-    const planStr = maForm.goalMode === 'deadlineWeeks' ? `${maForm.goalTargetDate}까지`
-      : maForm.goalMode === 'dailyAmount' ? `하루 ${maForm.goalDaily}${unitLabel}`
+    const planStr = maForm.goalMode === 'deadlineWeeks' ? `${maForm.goalStartDate}부터 ${maForm.goalTargetDate}까지`
+      : maForm.goalMode === 'dailyAmount' ? `${maForm.goalStartDate}부터 하루 ${maForm.goalDaily}${unitLabel}`
       : '';
     if (planStr) parts.push(`계획 ${planStr}`);
     const message = `[교재/인강 추가] ${parts.join(' · ')}` + (maForm.note.trim() ? `\n메모: ${maForm.note.trim()}` : '');
@@ -193,9 +201,10 @@ export function LearningRequestPanel({
       currentProgress: maForm.currentProgress ? Number(maForm.currentProgress) : undefined,
       studyDays: maForm.studyDays.length > 0 ? maForm.studyDays : undefined,
       studyTime: maForm.studyTime || undefined,
+      useWrongNotes: maForm.materialType === 'lecture' && maForm.useWrongNotes ? true : undefined,
       note: maForm.note.trim() || undefined,
-      ...(maForm.goalMode === 'deadlineWeeks' ? { goalType: 'deadlineWeeks' as const, goalValue: deadlineWeeks, targetDate: maForm.goalTargetDate }
-        : maForm.goalMode === 'dailyAmount' ? { goalType: 'dailyAmount' as const, goalValue: Number(maForm.goalDaily) }
+      ...(maForm.goalMode === 'deadlineWeeks' ? { goalType: 'deadlineWeeks' as const, goalValue: deadlineWeeks, planStartDate: maForm.goalStartDate, targetDate: maForm.goalTargetDate }
+        : maForm.goalMode === 'dailyAmount' ? { goalType: 'dailyAmount' as const, goalValue: Number(maForm.goalDaily), planStartDate: maForm.goalStartDate }
         : {}),
     };
 
@@ -744,9 +753,9 @@ export function LearningRequestPanel({
                 </div>
               </div>
 
-              {/* 자료명 */}
+              {/* 자료명/강의명 */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">자료명</label>
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{maForm.materialType === 'lecture' ? '강의명' : '자료명'}</label>
                 <input
                   type="text"
                   value={maForm.title}
@@ -756,6 +765,22 @@ export function LearningRequestPanel({
                   className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                 />
               </div>
+
+              {/* 인강 오답노트 사용 (#6) — 체크하면 승인 후 오답노트 탭에서 이 인강의 오답을 기록할 수 있어요 */}
+              {maForm.materialType === 'lecture' && (
+                <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5">
+                  <input
+                    type="checkbox"
+                    checked={maForm.useWrongNotes}
+                    onChange={(e) => setMaForm((f) => ({ ...f, useWrongNotes: e.target.checked }))}
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-[#0071E3]"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[11px] font-bold text-slate-700 dark:text-slate-300">오답노트 사용</span>
+                    <span className="mt-0.5 block break-keep text-[9.5px] font-semibold text-slate-400">체크하면 이 인강도 오답노트 탭에서 오답을 기록할 수 있어요. 나중에 오답노트 탭에서 켜고 끌 수도 있어요.</span>
+                  </span>
+                </label>
+              )}
 
               {/* 학습 요일 */}
               <div className="space-y-1.5">
@@ -839,7 +864,7 @@ export function LearningRequestPanel({
               <div className="space-y-1.5 rounded-xl border border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-2.5">
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">학습 계획 <span className="font-medium text-slate-400">(선택)</span></label>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {([['selfPaced', '자율'], ['deadlineWeeks', '📅 마감일'], ['dailyAmount', '📖 하루 분량']] as const).map(([v, label]) => (
+                  {([['selfPaced', '자율'], ['deadlineWeeks', '마감일'], ['dailyAmount', '하루 분량']] as const).map(([v, label]) => (
                     <button
                       key={v}
                       type="button"
@@ -851,33 +876,60 @@ export function LearningRequestPanel({
                   ))}
                 </div>
                 {maForm.goalMode === 'selfPaced' ? (
-                  <p className="text-[9.5px] font-semibold text-slate-400">자율: 그날 한 만큼 기록해요. 나중에 ‘학습계획’ 신청으로 계획을 정할 수도 있어요.</p>
+                  <p className="text-[9.5px] font-semibold text-slate-400">자율은 정해진 마감 없이 그날 한 범위를 기록해요. 총량을 몰라도 추가할 수 있고, 나중에 계획형으로 바꿀 수 있어요.</p>
                 ) : !(Number(maForm.total) > 0) ? (
                   <p className="text-[9.5px] font-bold text-amber-600">계획을 정하려면 위 ‘총량’을 먼저 입력해 주세요.</p>
                 ) : maForm.goalMode === 'deadlineWeeks' ? (
                   <div className="space-y-1">
-                    <input
-                      type="date"
-                      value={maForm.goalTargetDate}
-                      min={kstToday()}
-                      onChange={(e) => setMaForm((f) => ({ ...f, goalTargetDate: e.target.value }))}
-                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
-                    />
-                    {maForm.goalTargetDate && weeksUntil(maForm.goalTargetDate) > 0 && (
-                      <p className="text-[9.5px] font-bold text-[#0071E3]">약 {weeksUntil(maForm.goalTargetDate)}주 안에 완주하는 계획으로 만들어요.</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div className="space-y-1">
+                        <label className="text-[9.5px] font-bold text-slate-400">시작일</label>
+                        <input
+                          type="date"
+                          value={maForm.goalStartDate}
+                          min={kstToday()}
+                          onChange={(e) => setMaForm((f) => ({ ...f, goalStartDate: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[9.5px] font-bold text-slate-400">완료 목표일</label>
+                        <input
+                          type="date"
+                          value={maForm.goalTargetDate}
+                          min={maForm.goalStartDate || kstToday()}
+                          onChange={(e) => setMaForm((f) => ({ ...f, goalTargetDate: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-[9.5px] font-semibold text-slate-400">마감일은 시작일부터 목표일까지 남은 기간에 맞춰 주차 계획을 자동으로 나눠요.</p>
+                    {maForm.goalTargetDate && weeksUntilFrom(maForm.goalStartDate, maForm.goalTargetDate) > 0 && (
+                      <p className="text-[9.5px] font-bold text-[#0071E3]">약 {weeksUntilFrom(maForm.goalStartDate, maForm.goalTargetDate)}주 안에 완주하는 계획으로 만들어요.</p>
                     )}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1">
+                  <div className="space-y-1">
+                    <label className="text-[9.5px] font-bold text-slate-400">시작일</label>
                     <input
-                      type="number"
-                      min={1}
-                      value={maForm.goalDaily}
-                      onChange={(e) => setMaForm((f) => ({ ...f, goalDaily: e.target.value }))}
-                      placeholder={maForm.materialType === 'book' ? '예: 5' : '예: 1'}
-                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                      type="date"
+                      value={maForm.goalStartDate}
+                      min={kstToday()}
+                      onChange={(e) => setMaForm((f) => ({ ...f, goalStartDate: e.target.value }))}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
                     />
-                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{maForm.materialType === 'book' ? (maForm.unit.trim() || 'p') : '강'} / 일</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        value={maForm.goalDaily}
+                        onChange={(e) => setMaForm((f) => ({ ...f, goalDaily: e.target.value }))}
+                        placeholder={maForm.materialType === 'book' ? '예: 5' : '예: 1'}
+                        className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                      />
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{maForm.materialType === 'book' ? (maForm.unit.trim() || 'p') : '강'} / 일</span>
+                    </div>
+                    <p className="text-[9.5px] font-semibold text-slate-400">하루 분량은 시작일부터 매 학습일에 같은 목표량을 배정하고, 남은 분량에 맞춰 완료일을 자동 계산해요.</p>
                   </div>
                 )}
               </div>
@@ -1186,12 +1238,16 @@ export function LearningRequestPanel({
                   return;
                 }
                 const isPlanEdit = (requestForm.requestType === 'plan' || requestForm.requestType === 'progress') && !!requestForm.materialId;
-                // 마감일 지정 모드: 날짜 → 주수. 날짜가 오늘 이전/미입력이면 막는다.
+                // 마감일 지정 모드: 시작일+날짜 → 주수. 목표일이 시작일 이전/미입력이면 막는다.
                 const deadlineWeeks = requestForm.goalType === 'deadlineWeeks' && requestForm.targetDate
-                  ? weeksUntil(requestForm.targetDate)
+                  ? weeksUntilFrom(requestForm.planStartDate || kstToday(), requestForm.targetDate)
                   : 0;
                 if (isPlanEdit && requestForm.goalType === 'deadlineWeeks' && requestForm.targetDate && deadlineWeeks === 0) {
-                  setValidationError('목표 완료일은 내일 이후 날짜로 골라 주세요.');
+                  setValidationError('목표 완료일은 시작일 이후 날짜로 골라 주세요.');
+                  return;
+                }
+                if (isPlanEdit && !requestForm.planStartDate) {
+                  setValidationError('계획 시작일을 골라 주세요.');
                   return;
                 }
                 // 학습계획 변경(plan)은 구체적인 목표가 있어야 신청 — 빈 값(0) 신청으로 관리자에게 의미 없는 제안이 가는 것 방지.
@@ -1216,6 +1272,7 @@ export function LearningRequestPanel({
                     materialType: requestForm.materialType,
                     goalType: requestForm.goalType,
                     goalValue,
+                    planStartDate: requestForm.planStartDate || undefined,
                     targetDate: requestForm.goalType === 'deadlineWeeks' && requestForm.targetDate ? requestForm.targetDate : undefined,
                     studyDays: requestForm.studyDays.length > 0 ? requestForm.studyDays : undefined,
                     currentProgress: requestForm.requestType === 'progress' && requestForm.currentProgress ? Number(requestForm.currentProgress) : undefined,
@@ -1264,6 +1321,7 @@ export function LearningRequestPanel({
                           materialType: isBook ? 'book' : 'lecture',
                           goalType: material?.goalType === 'dailyAmount' ? 'dailyAmount' : 'deadlineWeeks',
                           goalValue: material?.goalType === 'dailyAmount' && material?.goalValue ? String(material.goalValue) : '',
+                          planStartDate: kstToday(),
                           targetDate: material?.targetDate || '',
                           studyDays: (Array.isArray(material?.studyDays) ? material.studyDays : []) as MaDay[],
                           currentProgress: material
@@ -1313,7 +1371,7 @@ export function LearningRequestPanel({
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">어떻게 끝낼까요?</label>
                         <div className="grid grid-cols-2 gap-1.5">
-                          {([['deadlineWeeks', '📅 마감일까지'], ['dailyAmount', '📖 하루 정해진 분량']] as const).map(([v, label]) => (
+                          {([['deadlineWeeks', '마감일까지'], ['dailyAmount', '하루 정해진 분량']] as const).map(([v, label]) => (
                             <button
                               key={v}
                               type="button"
@@ -1324,6 +1382,18 @@ export function LearningRequestPanel({
                             </button>
                           ))}
                         </div>
+                        <p className="text-[9.5px] font-semibold text-slate-400">마감일까지는 시작일과 완료 목표일 사이를 주차별로 나누고, 하루 정해진 분량은 시작일부터 매 학습일 같은 분량을 배정해요.</p>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">계획 시작일</label>
+                        <input
+                          type="date"
+                          value={requestForm.planStartDate}
+                          min={kstToday()}
+                          onChange={(e) => setRequestForm((f) => ({ ...f, planStartDate: e.target.value }))}
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-start-date-input"
+                        />
                       </div>
 
                       {requestForm.goalType === 'deadlineWeeks' ? (
@@ -1332,15 +1402,15 @@ export function LearningRequestPanel({
                           <input
                             type="date"
                             value={requestForm.targetDate}
-                            min={kstToday()}
+                            min={requestForm.planStartDate || kstToday()}
                             onChange={(e) => setRequestForm((f) => ({ ...f, targetDate: e.target.value }))}
                             className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-target-date-input"
                           />
                           {requestForm.targetDate && (
-                            weeksUntil(requestForm.targetDate) > 0 ? (
-                              <p className="text-[10px] font-bold text-[#0071E3]">약 {weeksUntil(requestForm.targetDate)}주 안에 완주하는 계획으로 신청돼요{weeksUntil(requestForm.targetDate) === 12 && requestForm.targetDate ? ' (최대 12주)' : ''}.</p>
+                            weeksUntilFrom(requestForm.planStartDate || kstToday(), requestForm.targetDate) > 0 ? (
+                              <p className="text-[10px] font-bold text-[#0071E3]">약 {weeksUntilFrom(requestForm.planStartDate || kstToday(), requestForm.targetDate)}주 안에 완주하는 계획으로 신청돼요{weeksUntilFrom(requestForm.planStartDate || kstToday(), requestForm.targetDate) === 12 && requestForm.targetDate ? ' (최대 12주)' : ''}.</p>
                             ) : (
-                              <p className="text-[10px] font-bold text-red-500">내일 이후 날짜를 골라 주세요.</p>
+                              <p className="text-[10px] font-bold text-red-500">시작일 이후 날짜를 골라 주세요.</p>
                             )
                           )}
                         </div>

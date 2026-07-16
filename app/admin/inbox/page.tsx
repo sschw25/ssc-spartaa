@@ -55,6 +55,8 @@ const hasStudentReplyAfter = (thread: ThreadMessage[] | undefined, cutoff?: stri
   return Boolean(last?.at && last.at > cutoff);
 };
 
+const kstToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+
 export default function AdminInboxPage() {
   const confirm = useConfirm();
   const router = useRouter();
@@ -80,6 +82,7 @@ export default function AdminInboxPage() {
   const [mealPlanLabels, setMealPlanLabels] = useState<Record<string, string>>({});
   // 가입신청 (학생 셀프 신청 → 관리자 승인 대기). 승인은 별도 페이지에서 상세정보 입력 후 처리.
   const [applications, setApplications] = useState<any[]>([]);
+  const [planStartDateOverrides, setPlanStartDateOverrides] = useState<Record<string, string>>({});
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -663,6 +666,10 @@ export default function AdminInboxPage() {
     } else if (item.type === 'request') {
       apiUrl += '/requests';
       body = { requestId: item.id, status: actionStatus === 'approved' ? 'resolved' : actionStatus, reply: reply?.trim() || null };
+      const override = planStartDateOverrides[item.id];
+      if ((actionStatus === 'approved' || actionStatus === 'resolved') && /^\d{4}-\d{2}-\d{2}$/.test(override || '')) {
+        body.planStartDateOverride = override;
+      }
     } else {
       apiUrl += '/suggestions';
       body = { suggestionId: item.id, status: actionStatus === 'approved' ? 'resolved' : actionStatus, reply: reply?.trim() || null };
@@ -1366,6 +1373,18 @@ export default function AdminInboxPage() {
                         </span>
                       )}
 
+                      <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
+                        <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">승인 시작일</label>
+                        <input
+                          type="date"
+                          min={kstToday()}
+                          value={planStartDateOverrides[selectedItem.id] ?? pg.planStartDate ?? ''}
+                          onChange={(e) => setPlanStartDateOverrides((prev) => ({ ...prev, [selectedItem.id]: e.target.value }))}
+                          className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                        />
+                        <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">그대로 두면 학생 선택값 또는 오늘 기준으로 승인됩니다.</p>
+                      </div>
+
                       <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
                         <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
                       </p>
@@ -1420,6 +1439,19 @@ export default function AdminInboxPage() {
                           </span>
                         )}
                       </div>
+                      {(pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount') && (
+                        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
+                          <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">승인 시작일</label>
+                          <input
+                            type="date"
+                            min={kstToday()}
+                            value={planStartDateOverrides[selectedItem.id] ?? pm.planStartDate ?? ''}
+                            onChange={(e) => setPlanStartDateOverrides((prev) => ({ ...prev, [selectedItem.id]: e.target.value }))}
+                            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                          />
+                          <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">그대로 두면 학생 선택값 또는 오늘 기준으로 자료 계획이 생성됩니다.</p>
+                        </div>
+                      )}
                       {pm.note && (
                         <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">메모: {pm.note}</p>
                       )}

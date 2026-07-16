@@ -29,6 +29,9 @@ export function normalizeProposedGoal(raw: unknown): ProposedGoal | undefined {
 
   const normalized: ProposedGoal = { materialId, materialType, goalType, goalValue };
 
+  if (typeof g.planStartDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.planStartDate)) {
+    normalized.planStartDate = g.planStartDate;
+  }
   if (typeof g.targetDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(g.targetDate)) {
     normalized.targetDate = g.targetDate;
   }
@@ -108,6 +111,13 @@ export function normalizeProposedMaterial(raw: unknown): ProposedMaterial | unde
   }
   if ((STUDY_TIME_KEYS as readonly unknown[]).includes(m.studyTime)) {
     normalized.studyTime = m.studyTime as ProposedMaterial['studyTime'];
+  }
+  // 인강 전용 — 오답노트 사용 체크. 승인 시 생성되는 인강의 useWrongNotes 로 반영된다.
+  if (materialType === 'lecture' && m.useWrongNotes === true) {
+    normalized.useWrongNotes = true;
+  }
+  if (typeof m.planStartDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(m.planStartDate)) {
+    normalized.planStartDate = m.planStartDate;
   }
   if (typeof m.note === 'string') {
     const note = m.note.trim().slice(0, 500);

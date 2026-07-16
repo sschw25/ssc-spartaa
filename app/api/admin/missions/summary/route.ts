@@ -3,6 +3,15 @@ import { isAdmin } from '@/lib/auth';
 import { getStudents } from '@/lib/store';
 import { getPeriodBounds } from '@/lib/study-stats';
 import { readActivityEnvelope } from '@/lib/student-activity';
+import { MISSION_META, MISSION_LEGACY_NAMES } from '@/lib/missions';
+import type { MissionId } from '@/lib/missions';
+
+// 미션 개명 시 옛 이름 지급 로그를 현재 이름으로 병합 표시(합산은 원래 1회씩 — 표시 그룹핑만).
+const LEGACY_NAME_TO_CURRENT: Record<string, string> = Object.fromEntries(
+  (Object.entries(MISSION_LEGACY_NAMES) as Array<[MissionId, string[] | undefined]>).flatMap(
+    ([id, legacyNames]) => (legacyNames || []).map((legacy) => [legacy, MISSION_META[id].name]),
+  ),
+);
 
 // 관리자: 현재 기간(이번 주/이번 달/오늘) 쿠폰 미션 지급 현황 요약 (대시보드 위젯용)
 export async function GET() {
@@ -29,7 +38,8 @@ export async function GET() {
         const coupons = Number(l?.rewardGranted) || 0;
         if (coupons <= 0) continue;
         const date = String(l?.date || '');
-        const name = String(l?.missionName || '기타');
+        const rawName = String(l?.missionName || '기타');
+        const name = LEGACY_NAME_TO_CURRENT[rawName] || rawName;
         let inPeriod = false;
         if (date === monthKey) { month.coupons += coupons; mHit = true; inPeriod = true; }
         else if (date === weekStart) { week.coupons += coupons; wHit = true; inPeriod = true; }
