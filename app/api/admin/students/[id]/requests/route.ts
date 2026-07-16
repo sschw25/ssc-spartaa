@@ -330,6 +330,64 @@ export async function PATCH(
       target.repliedAt = nowIso;
     }
 
+    // 학생 기존 교재/인강 수정 제안(materialEdit) — 추가/삭제와 대칭인 형제 분기.
+    // subjects(진도 단일소스)와 top-level books/lectures 미러 양쪽의 대상 자료에 "제안된 필드만" 반영한다(dual-write).
+    // 목표(goalType/goalValue)·계획(detailedPlans)은 건드리지 않는다 → 총 분량·요일이 바뀌어도 기존 계획은
+    // 그대로 남는다(필요하면 관리자가 학습계획을 따로 재생성. 인박스가 계획 보유 자료면 그렇게 안내한다).
+    // 진도도 유지가 원칙이나, 총량이 진도보다 작아지는 경우만 새 총량으로 맞춘다(100% 초과 방지).
+    // appliedAt 마킹으로 재승인(resolved 토글) 시 중복 반영 방지(멱등).
+    if (status === 'resolved' && target.proposedMaterialEdit && !target.proposedMaterialEdit.appliedAt) {
+      const pme = target.proposedMaterialEdit;
+      const listKey = pme.materialType === 'book' ? 'books' : 'lectures';
+      const progressKey = pme.materialType === 'book' ? 'currentPage' : 'completedLectures';
+      // 현재 자료를 먼저 찾는다 — goalType/진도에 따라 반영 방식이 갈리기 때문(아래 studySlot·clamp).
+      const currentMaterial = [
+        ...(student.subjects || []).flatMap((sub: any) => sub[listKey] || []),
+        ...(student[listKey] || []),
+      ].find((m: any) => m?.id === pme.materialId);
+
+      const patch: Record<string, unknown> = {};
+      if (pme.title) patch[pme.materialType === 'book' ? 'title' : 'name'] = pme.title;
+      if (typeof pme.total === 'number' && pme.total > 0) {
+        patch[pme.materialType === 'book' ? 'totalPages' : 'totalLectures'] = pme.total;
+        // 관리자가 확인하고 승인한 값이므로 더 이상 학생 예측치가 아니다.
+        patch.totalIsEstimate = false;
+        // 총량이 줄어 진도가 총량을 넘게 되면 진도를 새 총량에 맞춘다(=완료). 그대로 두면 100% 초과가 된다.
+        const currentProgress = Number(currentMaterial?.[progressKey]) || 0;
+        if (currentProgress > pme.total) patch[progressKey] = pme.total;
+      }
+      if (pme.unit && pme.materialType === 'book') patch.unit = pme.unit;
+      if (pme.studyDays && pme.studyDays.length > 0) patch.studyDays = pme.studyDays;
+      if (pme.studyTime !== undefined) {
+        // 시간대는 관리자 소유 필드(studyTime)에 반영한다.
+        patch.studyTime = pme.studyTime;
+        // studySlot(학생 소유·우선순위 1위)이 살아 있으면 studyTime을 덮어써 승인 결과가 화면에 안 보인다.
+        // selfPaced 자료는 studySlot 이 시간표 노출의 단일 소스라 반드시 맞춰 주고,
+        // 계획형 자료는 studySlot 을 남기면 이후 관리자 시간대 편집이 영구히 묻히므로(STUDENT_OWNED_MATERIAL_FIELDS
+        // 라 전체저장으로도 못 지움) 기존에 값이 있을 때만 동기화한다.
+        if (currentMaterial?.goalType === 'selfPaced' || currentMaterial?.studySlot) {
+          patch.studySlot = pme.studyTime;
+        }
+      }
+
+      // 대상 id 하나에만 적용. 이미 없는 자료면 no-op(에러 없이 마킹만) — 삭제 분기와 같은 안전 우선 규칙.
+      const applyTo = (m: any) => (m?.id === pme.materialId ? { ...m, ...patch, updatedAt: nowIso } : m);
+      if (Array.isArray(student.subjects)) {
+        student.subjects = student.subjects.map((sub: any) => ({
+          ...sub,
+          [listKey]: (sub[listKey] || []).map(applyTo),
+        }));
+      }
+      student[listKey] = (student[listKey] || []).map(applyTo);
+
+      pme.appliedAt = nowIso;
+
+      const noticeText = `요청하신 대로 '${pme.materialTitle}' 정보를 수정했어요.`;
+      appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
+      target.adminReply = noticeText;
+      target.repliedAt = nowIso;
+    }
+
     // 학생 교재/인강 또는 과목 삭제 제안(materialDelete) — proposedMaterial(추가)과 대칭인 형제 분기.
     // subjects(진도 단일소스)와 top-level books/lectures 미러 양쪽에서 대상을 제거한다(dual-write).
     // 이미 없는 대상(다른 경로로 지워짐 등)이어도 필터가 no-op 이므로 에러 없이 deletedAt만 마킹(멱등·안전 우선).

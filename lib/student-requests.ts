@@ -1,4 +1,4 @@
-import type { ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialDelete, Student } from '@/lib/types/student';
+import type { ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, Student } from '@/lib/types/student';
 import { getLeaveTypeLabel } from '@/lib/leave';
 
 const STUDY_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -130,6 +130,85 @@ export function normalizeProposedMaterial(raw: unknown): ProposedMaterial | unde
   return normalized;
 }
 
+// 학생이 신청하는 기존 교재/인강 수정 제안(materialEdit)을 서버에서 정규화.
+// 관리자 승인 시 대상 자료에 "채워진 필드만" 반영하므로, 값이 실제로 바뀌는 필드만 남기고
+// 나머지는 undefined 로 떨어뜨린다(= 변경 없음). 식별자(materialId/Type) 없는 제안은 폐기.
+export function normalizeProposedMaterialEdit(raw: unknown): ProposedMaterialEdit | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const m = raw as Record<string, unknown>;
+
+  const materialId = typeof m.materialId === 'string' ? m.materialId.trim().slice(0, 100) : '';
+  const materialType = m.materialType === 'book' || m.materialType === 'lecture' ? m.materialType : null;
+  if (!materialId || !materialType) return undefined; // 자료 식별 불가한 제안은 폐기
+
+  const subjectName = typeof m.subjectName === 'string' ? m.subjectName.trim().slice(0, 50) : '';
+  const materialTitle = typeof m.materialTitle === 'string' ? m.materialTitle.trim().slice(0, 100) : '';
+
+  const normalized: ProposedMaterialEdit = {
+    subjectName: subjectName || '(과목 미지정)',
+    materialType,
+    materialId,
+    materialTitle: materialTitle || materialId,
+  };
+  if (typeof m.subjectId === 'string' && m.subjectId.trim()) {
+    normalized.subjectId = m.subjectId.trim().slice(0, 100);
+  }
+
+  if (typeof m.title === 'string') {
+    const title = m.title.trim().slice(0, 100);
+    if (title) normalized.title = title;
+  }
+  const totalNum = Number(m.total);
+  if (Number.isFinite(totalNum) && totalNum >= 1) {
+    normalized.total = Math.min(99999, Math.round(totalNum));
+  }
+  // 단위는 교재 전용 — 인강은 '강' 고정이라 무시한다.
+  if (materialType === 'book' && typeof m.unit === 'string') {
+    const unit = m.unit.trim().slice(0, 10);
+    if (unit) normalized.unit = unit;
+  }
+  if (Array.isArray(m.studyDays)) {
+    const days = m.studyDays.filter(
+      (d): d is (typeof STUDY_DAY_KEYS)[number] =>
+        typeof d === 'string' && (STUDY_DAY_KEYS as readonly string[]).includes(d),
+    );
+    if (days.length > 0) normalized.studyDays = Array.from(new Set(days));
+  }
+  // 시간대는 블록/미지정('')만 허용. ''(시간표에서 빼기)도 유효한 변경이라 빈 문자열을 살려 둔다.
+  if ((STUDY_TIME_KEYS as readonly unknown[]).includes(m.studyTime)) {
+    normalized.studyTime = m.studyTime as string;
+  }
+  if (typeof m.reason === 'string') {
+    const reason = m.reason.trim().slice(0, 300);
+    if (reason) normalized.reason = reason;
+  }
+
+  // 변경 전 스냅샷(표시 전용) — 클라이언트가 보낸 값을 그대로 믿지 않고 얕게 정제만 한다.
+  if (m.current && typeof m.current === 'object') {
+    const c = m.current as Record<string, unknown>;
+    const cur: NonNullable<ProposedMaterialEdit['current']> = {};
+    if (typeof c.title === 'string' && c.title.trim()) cur.title = c.title.trim().slice(0, 100);
+    const ct = Number(c.total);
+    if (Number.isFinite(ct) && ct >= 0) cur.total = Math.min(99999, Math.round(ct));
+    if (typeof c.unit === 'string' && c.unit.trim()) cur.unit = c.unit.trim().slice(0, 10);
+    if (Array.isArray(c.studyDays)) {
+      const days = c.studyDays.filter(
+        (d): d is string => typeof d === 'string' && (STUDY_DAY_KEYS as readonly string[]).includes(d),
+      );
+      if (days.length > 0) cur.studyDays = Array.from(new Set(days));
+    }
+    if (typeof c.studyTime === 'string') cur.studyTime = c.studyTime.slice(0, 20);
+    if (Object.keys(cur).length > 0) normalized.current = cur;
+  }
+
+  // 바꿀 게 하나도 없으면 제안 자체가 무의미 — 폐기(관리자에게 빈 카드가 뜨지 않게).
+  const hasChange = normalized.title !== undefined || normalized.total !== undefined
+    || normalized.unit !== undefined || normalized.studyDays !== undefined || normalized.studyTime !== undefined;
+  if (!hasChange) return undefined;
+
+  return normalized;
+}
+
 // 학생이 신청하는 교재/인강 또는 과목 전체 삭제 제안(materialDelete)을 서버에서 정규화.
 // 관리자 승인 시 subjects(단일소스)+top-level books/lectures 미러 양쪽에서 대상을 제거하므로
 // 식별자(scope별 필수값) 없는 제안은 폐기(undefined).
@@ -182,6 +261,7 @@ export const REQUEST_TYPE_LABEL: Record<NonNullable<ConsultationLog['requestType
   halfDay: '반차 신청',
   restPass: '휴식권 신청',
   materialAdd: '교재/인강 추가',
+  materialEdit: '교재/강의 수정',
   materialDelete: '교재/강의 삭제',
   makeup: '보강 수정',
   etc: '기타',

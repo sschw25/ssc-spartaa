@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { MessageSquare, Plus, Trash2, CheckCircle2, Calendar, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb, AlertTriangle } from 'lucide-react';
-import { ProposedGoal, ProposedMaterial, ProposedMaterialDelete, Student } from '@/lib/types/student';
+import { MessageSquare, Plus, Trash2, CheckCircle2, Calendar, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb, AlertTriangle, SquarePen } from 'lucide-react';
+import { BookProgress, LectureProgress, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, Student } from '@/lib/types/student';
 import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 
 const MA_DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -50,7 +50,7 @@ interface LearningRequestPanelProps {
   requestSubmitting: boolean;
   requestCustomOpen: boolean;
   setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }, proposedMaterialDelete?: ProposedMaterialDelete) => Promise<boolean>;
+  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }, proposedMaterialDelete?: ProposedMaterialDelete, proposedMaterialEdit?: ProposedMaterialEdit) => Promise<boolean>;
   cancelRequest: (id: string) => Promise<void>;
   showRequestHistory: boolean;
   setShowRequestHistory: (show: boolean) => void;
@@ -205,29 +205,168 @@ export function LearningRequestPanel({
     setMaterialAddOpen(false);
   };
 
-  // 교재/강의(또는 과목 전체) 삭제 신청 — proposedMaterial(추가)과 대칭인 별도 로컬 state.
-  // 자료 목록은 subjects[]를 순회해 부모 과목(id/name)까지 함께 뽑는다(삭제 승인 시 subjectId가 필요).
-  const deletableMaterials = React.useMemo(() => {
-    type DeletableMaterial = { id: string; type: 'book' | 'lecture'; title: string; subjectId?: string; subjectName: string };
-    const list: DeletableMaterial[] = [];
+  // 기존 교재/강의 수정 신청(materialEdit) — 추가/삭제와 대칭인 별도 로컬 state.
+  // 자료 목록은 subjects[]를 순회해 부모 과목(id/name)까지 함께 뽑고(승인 시 subjectId 필요),
+  // 프리필/변경 비교에 필요한 현재 값(자료명·총량·단위·요일·시간대)까지 담는다. 삭제 폼도 이 목록을 공유한다.
+  const editableMaterials = React.useMemo(() => {
+    type EditableMaterial = {
+      id: string; type: 'book' | 'lecture'; title: string; subjectId?: string; subjectName: string;
+      total: number; unit: string; studyDays: MaDay[]; studyTime: string;
+    };
+    const list: EditableMaterial[] = [];
     const seen = new Set<string>();
+    const pushBook = (b: BookProgress, subjectId: string | undefined, subjectName: string) => {
+      if (!b?.id || seen.has(b.id)) return;
+      seen.add(b.id);
+      list.push({
+        id: b.id, type: 'book', title: b.title, subjectId, subjectName,
+        total: Number(b.totalPages) || 0,
+        unit: (b.unit || '').trim(),
+        studyDays: (b.studyDays || []) as MaDay[],
+        studyTime: b.studySlot || b.studyTime || '',
+      });
+    };
+    const pushLecture = (l: LectureProgress, subjectId: string | undefined, subjectName: string) => {
+      if (!l?.id || seen.has(l.id)) return;
+      seen.add(l.id);
+      list.push({
+        id: l.id, type: 'lecture', title: l.name, subjectId, subjectName,
+        total: Number(l.totalLectures) || 0,
+        unit: '',
+        studyDays: (l.studyDays || []) as MaDay[],
+        studyTime: l.studySlot || l.studyTime || '',
+      });
+    };
     for (const s of student.subjects || []) {
-      for (const b of s.books || []) {
-        if (b?.id && !seen.has(b.id)) { seen.add(b.id); list.push({ id: b.id, type: 'book', title: b.title, subjectId: s.id, subjectName: s.name }); }
-      }
-      for (const l of s.lectures || []) {
-        if (l?.id && !seen.has(l.id)) { seen.add(l.id); list.push({ id: l.id, type: 'lecture', title: l.name, subjectId: s.id, subjectName: s.name }); }
-      }
+      for (const b of s.books || []) pushBook(b, s.id, s.name);
+      for (const l of s.lectures || []) pushLecture(l, s.id, s.name);
     }
-    // 과목에 속하지 않은 top-level 전용 자료도 삭제 대상에 포함(subjectId 없음)
-    for (const b of student.books || []) {
-      if (b?.id && !seen.has(b.id)) { seen.add(b.id); list.push({ id: b.id, type: 'book', title: b.title, subjectName: '(과목 미지정)' }); }
-    }
-    for (const l of student.lectures || []) {
-      if (l?.id && !seen.has(l.id)) { seen.add(l.id); list.push({ id: l.id, type: 'lecture', title: l.name, subjectName: '(과목 미지정)' }); }
-    }
+    for (const b of student.books || []) pushBook(b, undefined, '(과목 미지정)');
+    for (const l of student.lectures || []) pushLecture(l, undefined, '(과목 미지정)');
     return list;
   }, [student.subjects, student.books, student.lectures]);
+
+  const [materialEditOpen, setMaterialEditOpen] = React.useState(false);
+  const [meMaterialId, setMeMaterialId] = React.useState('');
+  const [meTitle, setMeTitle] = React.useState('');
+  const [meTotal, setMeTotal] = React.useState('');
+  const [meUnit, setMeUnit] = React.useState('');
+  const [meStudyDays, setMeStudyDays] = React.useState<MaDay[]>([]);
+  const [meStudyTime, setMeStudyTime] = React.useState('');
+  // 시간대는 학생이 직접 건드렸을 때만 신청에 담는다 — 현재 값이 블록이 아닌(특정 교시/시:분 직접지정)
+  // 자료는 폼에 프리필할 수 없어서, 안 건드린 걸 '미지정으로 바꿔주세요'로 오해하면 안 되기 때문.
+  const [meTimeTouched, setMeTimeTouched] = React.useState(false);
+  const [meReason, setMeReason] = React.useState('');
+  const [meError, setMeError] = React.useState('');
+
+  const meTarget = React.useMemo(
+    () => editableMaterials.find((m) => m.id === meMaterialId) || null,
+    [editableMaterials, meMaterialId],
+  );
+  // 현재 시간대가 블록(오전/오후/야간)이면 프리필 가능, 그 외(p0~p8·t:HH:MM)는 폼으로 표현 불가.
+  const meTimeIsBlock = !!meTarget && (['morning', 'afternoon', 'night'] as string[]).includes(meTarget.studyTime);
+
+  const resetMeForm = () => {
+    setMeMaterialId('');
+    setMeTitle('');
+    setMeTotal('');
+    setMeUnit('');
+    setMeStudyDays([]);
+    setMeStudyTime('');
+    setMeTimeTouched(false);
+    setMeReason('');
+    setMeError('');
+  };
+
+  // 대상 자료를 고르면 현재 값으로 폼을 채운다 — 학생이 바꾸고 싶은 칸만 고치면 되게.
+  const selectEditMaterial = (id: string) => {
+    setMeMaterialId(id);
+    setMeError('');
+    setMeTimeTouched(false);
+    const mat = editableMaterials.find((m) => m.id === id);
+    if (!mat) {
+      setMeTitle(''); setMeTotal(''); setMeUnit(''); setMeStudyDays([]); setMeStudyTime('');
+      return;
+    }
+    setMeTitle(mat.title);
+    setMeTotal(mat.total > 0 ? String(mat.total) : '');
+    setMeUnit(mat.unit);
+    setMeStudyDays(mat.studyDays);
+    setMeStudyTime((['morning', 'afternoon', 'night'] as string[]).includes(mat.studyTime) ? mat.studyTime : '');
+  };
+
+  const toggleMeDay = (day: MaDay) => {
+    setMeStudyDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
+  };
+
+  const submitMaterialEdit = async () => {
+    const mat = meTarget;
+    if (!mat) { setMeError('수정할 자료를 선택해 주세요.'); return; }
+
+    const title = meTitle.trim();
+    if (!title) { setMeError('자료명은 비워 둘 수 없어요.'); return; }
+    const totalNum = meTotal.trim() ? Number(meTotal) : 0;
+    if (meTotal.trim() && !(Number.isFinite(totalNum) && totalNum >= 1)) {
+      setMeError('총 분량은 1 이상 숫자로 입력해 주세요.');
+      return;
+    }
+    const unit = meUnit.trim();
+
+    // 현재 값과 실제로 달라진 필드만 담는다(undefined = 변경 없음).
+    const daysChanged = MA_DAY_ORDER.filter((d) => meStudyDays.includes(d)).join(',')
+      !== MA_DAY_ORDER.filter((d) => mat.studyDays.includes(d)).join(',');
+    const proposedMaterialEdit: ProposedMaterialEdit = {
+      subjectId: mat.subjectId,
+      subjectName: mat.subjectName,
+      materialType: mat.type,
+      materialId: mat.id,
+      materialTitle: mat.title,
+      title: title !== mat.title ? title : undefined,
+      total: totalNum > 0 && totalNum !== mat.total ? totalNum : undefined,
+      unit: mat.type === 'book' && unit && unit !== mat.unit ? unit : undefined,
+      studyDays: daysChanged && meStudyDays.length > 0 ? meStudyDays : undefined,
+      studyTime: meTimeTouched && meStudyTime !== mat.studyTime ? meStudyTime : undefined,
+      reason: meReason.trim() || undefined,
+      current: {
+        title: mat.title,
+        total: mat.total,
+        unit: mat.unit || undefined,
+        studyDays: mat.studyDays.length > 0 ? mat.studyDays : undefined,
+        studyTime: mat.studyTime || undefined,
+      },
+    };
+
+    const changes: string[] = [];
+    if (proposedMaterialEdit.title) changes.push(`이름 "${mat.title}" → "${proposedMaterialEdit.title}"`);
+    if (proposedMaterialEdit.total !== undefined) {
+      const unitLabel = mat.type === 'book' ? (unit || mat.unit || 'p') : '강';
+      changes.push(`총 분량 ${mat.total || '미정'}${unitLabel} → ${proposedMaterialEdit.total}${unitLabel}`);
+    }
+    if (proposedMaterialEdit.unit) changes.push(`단위 ${mat.unit || 'p'} → ${proposedMaterialEdit.unit}`);
+    if (proposedMaterialEdit.studyDays) {
+      changes.push(`학습 요일 ${MA_DAY_ORDER.filter((d) => proposedMaterialEdit.studyDays!.includes(d)).map((d) => MA_DAY_LABELS[d]).join('·')}`);
+    }
+    if (proposedMaterialEdit.studyTime !== undefined) {
+      const timeLabel = proposedMaterialEdit.studyTime
+        ? MA_TIME_LABELS[proposedMaterialEdit.studyTime as 'morning' | 'afternoon' | 'night']
+        : '교시 지정 안 함';
+      changes.push(`시간대 ${timeLabel}`);
+    }
+    if (changes.length === 0) { setMeError('바뀐 내용이 없어요. 고치고 싶은 칸을 바꿔 주세요.'); return; }
+    setMeError('');
+
+    const message = `[교재/강의 수정] ${mat.subjectName} · ${mat.title}\n${changes.map((c) => `- ${c}`).join('\n')}`
+      + (meReason.trim() ? `\n사유: ${meReason.trim()}` : '');
+
+    const ok = await sendRequest('materialEdit', message, undefined, undefined, undefined, undefined, proposedMaterialEdit);
+    if (!ok) return; // 실패 시 입력 보존
+    resetMeForm();
+    setMaterialEditOpen(false);
+  };
+
+  // 교재/강의(또는 과목 전체) 삭제 신청 — proposedMaterial(추가)과 대칭인 별도 로컬 state.
+  // 대상 자료 목록은 수정 폼과 같은 것(editableMaterials)을 쓴다 — 두 폼이 항상 같은 자료를 보여주게.
+  const deletableMaterials = editableMaterials;
   const deletableSubjects = React.useMemo(
     () => (student.subjects || []).map((s) => ({ id: s.id, name: s.name, bookCount: (s.books || []).length, lectureCount: (s.lectures || []).length })),
     [student.subjects],
@@ -313,21 +452,23 @@ export function LearningRequestPanel({
     halfDay: '휴식신청',
     restPass: '휴식권 신청',
     materialAdd: '교재/인강 추가',
+    materialEdit: '교재/강의 수정',
     materialDelete: '교재/강의 삭제',
     etc: '기타',
   };
 
   const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
 
-  // openAdd=true 인 항목은 구조화 '교재/인강 추가' 폼을, openDelete=true 인 항목은 '삭제' 폼을 바로 연다(자유서술 폼으로 새지 않게).
-  const QUICK_REQUESTS = [
-    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.', openAdd: false, openDelete: false },
-    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.', openAdd: false, openDelete: false },
-    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.', openAdd: false, openDelete: false },
-    { type: 'materialAdd', label: '교재·인강 추가', icon: BookPlus, message: '', openAdd: true, openDelete: false },
-    { type: 'materialDelete', label: '교재·강의 삭제', icon: Trash2, message: '', openAdd: false, openDelete: true },
-    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.', openAdd: false, openDelete: false },
-    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.', openAdd: false, openDelete: false },
+  // opens 가 있는 항목은 해당 구조화 폼을 바로 연다(자유서술 폼으로 새지 않게). 없으면 자유서술 프리필.
+  const QUICK_REQUESTS: Array<{ type: string; label: string; icon: typeof MessageSquare; message: string; opens?: 'add' | 'edit' | 'delete' }> = [
+    { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.' },
+    { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.' },
+    { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.' },
+    { type: 'materialAdd', label: '교재·인강 추가', icon: BookPlus, message: '', opens: 'add' },
+    { type: 'materialEdit', label: '교재·강의 수정', icon: SquarePen, message: '', opens: 'edit' },
+    { type: 'materialDelete', label: '교재·강의 삭제', icon: Trash2, message: '', opens: 'delete' },
+    { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.' },
+    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.' },
   ];
 
   // 구조화 교재/인강 추가 폼 열기 + 스크롤(퀵버튼 '교재·인강 추가' 진입점)
@@ -343,6 +484,14 @@ export function LearningRequestPanel({
     setMaterialDeleteOpen(true);
     setTimeout(() => {
       document.getElementById('material-delete-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  // 구조화 교재/강의 수정 폼 열기 + 스크롤(퀵버튼 '교재·강의 수정' 진입점)
+  const openMaterialEdit = () => {
+    setMaterialEditOpen(true);
+    setTimeout(() => {
+      document.getElementById('material-edit-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
   };
 
@@ -505,7 +654,7 @@ export function LearningRequestPanel({
                 key={q.label}
                 type="button"
                 disabled={requestSubmitting}
-                onClick={() => (q.openAdd ? openMaterialAdd() : q.openDelete ? openMaterialDelete() : handleQuickRequest(q.type, q.message))}
+                onClick={() => (q.opens === 'add' ? openMaterialAdd() : q.opens === 'edit' ? openMaterialEdit() : q.opens === 'delete' ? openMaterialDelete() : handleQuickRequest(q.type, q.message))}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15 active:scale-[0.97] disabled:opacity-50"
               >
                 {React.createElement(q.icon, { className: 'h-4 w-4 shrink-0 text-[#0071E3]' })}
@@ -753,6 +902,159 @@ export function LearningRequestPanel({
                 className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
               >
                 {requestSubmitting ? '신청 중...' : '이 자료 추가 신청하기'}
+              </button>
+            </form>
+          )}
+
+          {/* 기존 교재/강의 수정 신청 — 되돌릴 수 있는 변경이라 추가와 같은 기본(blue) 톤 */}
+          <button
+            type="button"
+            onClick={() => setMaterialEditOpen((v) => !v)}
+            className="flex w-full items-center justify-center gap-1.5 rounded-2xl border border-[#0071E3]/30 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 py-2.5 text-[11px] font-bold text-[#0071E3] transition hover:bg-[#0071E3]/[0.08]"
+          >
+            <SquarePen className={`w-4 h-4 transition-transform ${materialEditOpen ? 'rotate-12' : ''}`} />
+            {materialEditOpen ? '교재/강의 수정 닫기' : '기존 교재/강의 수정 요청하기'}
+          </button>
+
+          {materialEditOpen && (
+            <form
+              id="material-edit-form"
+              onSubmit={(e) => { e.preventDefault(); if (!requestSubmitting) submitMaterialEdit(); }}
+              className="space-y-3 rounded-2xl border border-[#0071E3]/15 bg-white/70 dark:bg-[#1c1c1e]/95 p-3 scroll-mt-28"
+            >
+              <div className="flex items-start gap-1.5 rounded-xl border border-[#0071E3]/10 bg-[#0071E3]/5 dark:bg-[#0071E3]/15 p-2.5 text-[10px] font-bold leading-normal text-[#0071E3]">
+                <Lightbulb className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span className="break-keep">자료를 고르면 지금 값이 그대로 채워져요. 고치고 싶은 칸만 바꿔서 신청하면 코멘터가 확인 후 반영해요.</span>
+              </div>
+
+              {/* 수정할 자료 */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">수정할 자료</label>
+                {editableMaterials.length > 0 ? (
+                  <select
+                    value={meMaterialId}
+                    onChange={(e) => selectEditMaterial(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                  >
+                    <option value="">-- 수정할 교재/인강 선택 --</option>
+                    {editableMaterials.map((m) => (
+                      <option key={m.id} value={m.id}>{m.subjectName} · {m.title} ({m.type === 'book' ? '교재' : '인강'})</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-[10px] font-semibold text-slate-400">수정할 수 있는 교재/인강이 없어요.</p>
+                )}
+              </div>
+
+              {meTarget && (
+                <>
+                  {/* 자료명 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">자료명</label>
+                    <input
+                      type="text"
+                      value={meTitle}
+                      onChange={(e) => { setMeTitle(e.target.value); setMeError(''); }}
+                      maxLength={100}
+                      className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                    />
+                  </div>
+
+                  {/* 총 분량 + 단위 */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">총 분량</label>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          value={meTotal}
+                          onChange={(e) => { setMeTotal(e.target.value); setMeError(''); }}
+                          placeholder="그대로 두려면 안 고쳐도 돼요"
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                        />
+                        <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{meTarget.type === 'book' ? (meUnit.trim() || 'p') : '강'}</span>
+                      </div>
+                    </div>
+                    {meTarget.type === 'book' && (
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">단위 <span className="font-medium text-slate-400">(선택)</span></label>
+                        <input
+                          type="text"
+                          value={meUnit}
+                          onChange={(e) => { setMeUnit(e.target.value); setMeError(''); }}
+                          placeholder="p / 회"
+                          maxLength={10}
+                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 학습 요일 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">학습 요일</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {MA_DAY_ORDER.map((day) => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => { toggleMeDay(day); setMeError(''); }}
+                          className={`grid h-8 w-8 place-items-center rounded-full text-[11px] font-bold transition ${meStudyDays.includes(day) ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                        >
+                          {MA_DAY_LABELS[day]}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="break-keep text-[9.5px] font-semibold text-slate-400">전부 끄면 요일은 그대로 둬요.</p>
+                  </div>
+
+                  {/* 시간대 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">시간대</label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STUDY_TIME_SLOTS.map((slot) => (
+                        <button
+                          key={slot.key}
+                          type="button"
+                          onClick={() => { setMeStudyTime((v) => (v === slot.key ? '' : slot.key)); setMeTimeTouched(true); setMeError(''); }}
+                          className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${meStudyTime === slot.key ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                        >
+                          {slot.label}
+                        </button>
+                      ))}
+                    </div>
+                    {!meTimeIsBlock && meTarget.studyTime && !meTimeTouched && (
+                      <p className="break-keep text-[9.5px] font-semibold text-slate-400">지금은 특정 교시로 지정돼 있어요. 시간대를 새로 고르면 그 교시 대신 반영해 달라고 신청돼요.</p>
+                    )}
+                    {meTimeTouched && !meStudyTime && (
+                      <p className="break-keep text-[9.5px] font-bold text-amber-600 dark:text-amber-400">아무것도 안 고르면 교시를 정하지 말아 달라는 신청이 돼요. 그날 비어 있는 교시에 자동으로 들어가요.</p>
+                    )}
+                  </div>
+
+                  {/* 사유 */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">사유 <span className="font-medium text-slate-400">(선택)</span></label>
+                    <textarea
+                      value={meReason}
+                      onChange={(e) => setMeReason(e.target.value)}
+                      placeholder="예: 강의 수가 실제와 달라요"
+                      rows={2}
+                      maxLength={300}
+                      className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {meError && <p className="text-[10px] font-bold text-red-500">{meError}</p>}
+              <button
+                type="submit"
+                disabled={requestSubmitting || !meTarget}
+                className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+              >
+                {requestSubmitting ? '신청 중...' : '이 자료 수정 신청하기'}
               </button>
             </form>
           )}

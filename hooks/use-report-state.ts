@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Home, Bell, Award, MessageSquare, ClipboardList, BookOpen, FileText, Shield, Target, Timer, CalendarDays } from 'lucide-react';
 import { WEEKDAY_LABEL } from '@/lib/consultation-schedule';
-import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialDelete, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
+import { Student, SubjectProgress, DetailedPlan, LeaveType, ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, MockExam, LeaveRequest, ThreadMessage } from '@/lib/types/student';
 import {
   getMonthlyLeaveUsage,
   getLeaveCredits,
@@ -71,6 +71,9 @@ const REQUEST_TYPE_LABEL: Record<string, string> = {
   plan: '학습계획',
   halfDay: '휴식신청',
   restPass: '휴식권 신청',
+  materialAdd: '교재/인강 추가',
+  materialEdit: '교재/강의 수정',
+  materialDelete: '교재/강의 삭제',
   etc: '기타',
 };
 
@@ -1400,6 +1403,7 @@ export function useReportState() {
     proposedMaterial?: ProposedMaterial,
     proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number },
     proposedMaterialDelete?: ProposedMaterialDelete,
+    proposedMaterialEdit?: ProposedMaterialEdit,
   ): Promise<boolean> => {
     const message = (rawMessage || '').trim();
     if (!message) {
@@ -1412,7 +1416,7 @@ export function useReportState() {
       const res = await fetch('/api/student/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial, proposedMakeup, proposedMaterialDelete }),
+        body: JSON.stringify({ requestType, message, proposedGoal, proposedMaterial, proposedMakeup, proposedMaterialDelete, proposedMaterialEdit }),
       });
       const json = await res.json();
       if (res.ok && json.success) {

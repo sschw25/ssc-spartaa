@@ -219,6 +219,29 @@ export interface ProposedMaterialDelete {
   deletedAt?: string;                // 승인 처리 완료 마커 — 있으면 재승인(resolved 토글) 시 중복 삭제 방지(멱등)
 }
 
+// 학생이 신청하는 기존 교재/인강(자료) 수정 제안. requestType==='materialEdit' 전용.
+// proposedMaterial(추가)·proposedMaterialDelete(삭제)와 대칭인 형제 필드 — 관리자 승인(resolved) 시
+// app/api/admin/students/[id]/requests PATCH 가 subjects(진도 단일소스)와 top-level books/lectures
+// 미러 양쪽의 대상 자료에 제안된 필드만 반영한다(undefined 필드는 손대지 않음).
+// 진도 숫자 정정은 기존 'progress' 신청, 목표/계획 변경은 proposedGoal 담당 — 여기선 다루지 않는다.
+export interface ProposedMaterialEdit {
+  subjectId?: string;                // 표시용(과목 미지정 자료면 없음)
+  subjectName: string;               // 표시용 — 항상 채움
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  materialTitle: string;             // 수정 전 자료명(표시용)
+  // 아래는 학생이 바꾸고 싶은 값만 채운다. undefined = 변경 없음.
+  title?: string;                    // 새 자료명
+  total?: number;                    // 새 총 분량(book=totalPages, lecture=totalLectures)
+  unit?: string;                     // 새 단위(교재 전용)
+  studyDays?: Array<'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun'>; // 새 학습 요일
+  studyTime?: string;                // 새 학습 시간대. 신청 경로는 블록('morning'|'afternoon'|'night'|'')만 허용.
+  reason?: string;                   // 학생이 적은 사유(선택)
+  // 변경 전 현재 값 스냅샷 — 관리자 인박스 before/after 표시용(승인 반영에는 쓰지 않음)
+  current?: { title?: string; total?: number; unit?: string; studyDays?: string[]; studyTime?: string };
+  appliedAt?: string;                // 승인 반영 완료 마커 — 있으면 재승인(resolved 토글) 시 중복 반영 방지(멱등)
+}
+
 // 학생↔관리자 양방향 대화 메시지 (요청/건의/휴가 신청에 누적되는 스레드)
 // adminReply(단일 답변)와 별개로 thread[]에 시간순 메시지를 쌓아 재답변/재재답변을 지원.
 // consultation_logs / leave_requests JSONB 안에 중첩 저장 — 별도 컬럼/마이그레이션 불필요.
@@ -237,7 +260,7 @@ export interface ConsultationLog {
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
   type?: 'learning' | 'life' | 'request' | 'suggestion'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
-  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'materialDelete' | 'makeup' | 'etc'; // 신청 분류
+  requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'materialEdit' | 'materialDelete' | 'makeup' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
   acknowledgedAt?: string;                                // 관리자가 확인했지만 아직 완료하지 않은 시각 (ISO)
   createdAt?: string;                                     // 신청 시각 (ISO)
@@ -247,6 +270,7 @@ export interface ConsultationLog {
   thread?: ThreadMessage[];                               // 양방향 재답변 대화 (head=content 이후의 추가 메시지들)
   proposedGoal?: ProposedGoal;                            // 학생 변경 제안 계획 데이터
   proposedMaterial?: ProposedMaterial;                    // 학생 교재/인강 추가 제안 데이터(materialAdd)
+  proposedMaterialEdit?: ProposedMaterialEdit;            // 학생 교재/인강 수정 제안 데이터(materialEdit)
   proposedMaterialDelete?: ProposedMaterialDelete;        // 학생 교재/인강 또는 과목 삭제 제안 데이터(materialDelete)
   proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }; // 주말 보강 수정 제안(makeup)
 }

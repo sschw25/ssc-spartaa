@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User, Search, Send, UserPlus, BookPlus, Trash2, AlertTriangle
+  Target, BookOpen, Tv, User, Search, Send, UserPlus, BookPlus, Trash2, AlertTriangle, SquarePen
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ProposedMaterialDelete, ThreadMessage } from '@/lib/types/student';
+import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, ThreadMessage } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
 import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
@@ -196,6 +196,32 @@ export default function AdminInboxPage() {
       return allBooks.find(b => b.id === proposedGoal.materialId)?.title || proposedGoal.materialId;
     }
     return allLectures.find(l => l.id === proposedGoal.materialId)?.name || proposedGoal.materialId;
+  };
+
+  // proposedMaterialEdit 수정 대상 자료의 서버 현재 상태(표시용) 조회.
+  // before 값은 학생이 보낸 스냅샷(pme.current)이 아니라 이 실제 값을 우선한다 — 신청 후 관리자가 자료를
+  // 고쳤거나 학생이 스냅샷을 위조한 경우 옛 값을 '현재'로 보여주면 승인 판단이 틀어지기 때문.
+  const getEditTargetState = (studentId: string, pme: ProposedMaterialEdit) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return null;
+    if (pme.materialType === 'book') {
+      const b = [...(student.books || []), ...(student.subjects || []).flatMap(s => s.books || [])]
+        .find(m => m.id === pme.materialId);
+      if (!b) return null;
+      return {
+        title: b.title, total: Number(b.totalPages) || 0, progress: Number(b.currentPage) || 0,
+        unit: (b.unit || '').trim(), studyDays: b.studyDays as string[] | undefined,
+        studyTime: b.studySlot || b.studyTime || '', hasPlans: (b.detailedPlans?.length || 0) > 0,
+      };
+    }
+    const l = [...(student.lectures || []), ...(student.subjects || []).flatMap(s => s.lectures || [])]
+      .find(m => m.id === pme.materialId);
+    if (!l) return null;
+    return {
+      title: l.name, total: Number(l.totalLectures) || 0, progress: Number(l.completedLectures) || 0,
+      unit: '', studyDays: l.studyDays as string[] | undefined,
+      studyTime: l.studySlot || l.studyTime || '', hasPlans: (l.detailedPlans?.length || 0) > 0,
+    };
   };
 
   // proposedMaterialDelete 삭제 대상의 현재 진도(표시용) 조회. 승인 시 사라질 진도를 미리 경고하는 용도.
@@ -1410,6 +1436,80 @@ export default function AdminInboxPage() {
                   );
                 })()}
 
+                {/* proposedMaterialEdit 기존 교재/강의 수정 제안 표시 — 바뀌는 필드만 before → after 로 */}
+                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterialEdit && (() => {
+                  const pme: ProposedMaterialEdit = selectedItem.rawItem.proposedMaterialEdit;
+                  const isBook = pme.materialType === 'book';
+                  const unitLabel = isBook ? (pme.unit || pme.current?.unit || 'p') : '강';
+                  const dayLabel: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
+                  const timeLabel: Record<string, string> = { morning: '오전', afternoon: '오후', night: '야간' };
+                  const daysText = (days?: string[]) => (days?.length ? days.map((d) => dayLabel[d] || d).join('·') : '기본');
+                  // 미지정('')은 시간표 제외가 아니라 교시 고정 해제 — 빈 교시에 자동 배치되고, 과목 시간대가 있으면 그쪽을 따른다.
+                  const timeText = (t?: string) => (t ? (timeLabel[t] || t) : '교시 미지정(자동 배치)');
+                  // 서버 실제 값 우선, 없으면(자료 조회 실패) 학생 스냅샷으로 폴백.
+                  const cur = getEditTargetState(selectedItem.studentId, pme);
+                  const before = {
+                    title: cur?.title ?? pme.current?.title ?? pme.materialTitle,
+                    total: cur?.total ?? pme.current?.total ?? 0,
+                    unit: cur?.unit || pme.current?.unit || 'p',
+                    studyDays: cur?.studyDays ?? pme.current?.studyDays,
+                    studyTime: cur?.studyTime ?? pme.current?.studyTime,
+                  };
+                  const diffs: Array<{ field: string; before: string; after: string }> = [];
+                  if (pme.title) diffs.push({ field: '자료명', before: before.title, after: pme.title });
+                  if (pme.total !== undefined) diffs.push({ field: '총 분량', before: before.total ? `${before.total}${unitLabel}` : '미정', after: `${pme.total}${unitLabel}` });
+                  if (pme.unit) diffs.push({ field: '단위', before: before.unit, after: pme.unit });
+                  if (pme.studyDays) diffs.push({ field: '학습 요일', before: daysText(before.studyDays), after: daysText(pme.studyDays) });
+                  if (pme.studyTime !== undefined) diffs.push({ field: '시간대', before: timeText(before.studyTime), after: timeText(pme.studyTime) });
+                  const hasPlans = !!cur?.hasPlans;
+                  // 총량이 진도보다 작아지면 승인 시 진도가 새 총량으로 내려간다 — 미리 알린다.
+                  const willClampProgress = pme.total !== undefined && !!cur && cur.progress > pme.total;
+                  return (
+                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
+                        <SquarePen className="w-3.5 h-3.5" />
+                        교재/강의 수정 요청
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        {isBook
+                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
+                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">{pme.subjectName} · {pme.materialTitle}</span>
+                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">{isBook ? '교재' : '인강'}</span>
+                      </div>
+                      <div className="space-y-1">
+                        {diffs.map((d) => (
+                          <div key={d.field} className="flex items-center gap-1.5 text-[10px]">
+                            <span className="w-14 shrink-0 font-bold text-slate-400 dark:text-slate-500">{d.field}</span>
+                            <span className="min-w-0 truncate rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-slate-500 dark:text-slate-400 line-through">{d.before}</span>
+                            <span className="shrink-0 font-black text-slate-300 dark:text-slate-600">→</span>
+                            <span className="min-w-0 truncate rounded-lg border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-black text-[#0071E3]">{d.after}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {pme.reason && (
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {pme.reason}</p>
+                      )}
+                      {(pme.total !== undefined || pme.studyDays) && hasPlans && (
+                        <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 break-keep">
+                          <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                          학습계획 보유 자료입니다. 자료 정보만 반영되고 기존 계획(주차별 분량·요일)은 유지됩니다 — 필요 시 학습계획 재생성.
+                        </p>
+                      )}
+                      {willClampProgress && (
+                        <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 break-keep">
+                          <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                          현재 진도 {cur!.progress}{unitLabel} &gt; 신청 총량 {pme.total}{unitLabel} — 승인 시 진도가 {pme.total}{unitLabel}(완료)로 조정됩니다.
+                        </p>
+                      )}
+                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1 break-keep">
+                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                        승인 시 위 값으로 자료 정보가 수정됩니다. {willClampProgress ? '진도는 위 안내대로 조정됩니다.' : '진도 기록은 유지됩니다.'}
+                      </p>
+                    </div>
+                  );
+                })()}
+
                 {/* proposedMaterialDelete 교재/강의(또는 과목 전체) 삭제 제안 표시 — 파괴적 작업이라 위험(red) 톤 */}
                 {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterialDelete && (() => {
                   const pmd: ProposedMaterialDelete = selectedItem.rawItem.proposedMaterialDelete;
@@ -1548,7 +1648,7 @@ export default function AdminInboxPage() {
                         className={`w-full rounded-xl text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all ${selectedItem.rawItem?.proposedMaterialDelete ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                       >
                         <Check className="w-3.5 h-3.5 mr-1" />
-                        {selectedItem.rawItem?.proposedMaterialDelete ? '승인 및 삭제' : selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
+                        {selectedItem.rawItem?.proposedMaterialDelete ? '승인 및 삭제' : selectedItem.rawItem?.proposedMaterialEdit ? '승인 및 수정 반영' : selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
                       </Button>
                       <Button
                         disabled={processing}
