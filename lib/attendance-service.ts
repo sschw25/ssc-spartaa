@@ -1,6 +1,23 @@
-import { checkIn, checkOut, getOpenSession, getStudentById, type StudySession } from '@/lib/store';
+import { checkIn, checkOut, getOpenSession, autoCloseSession, getStudentById, type StudySession } from '@/lib/store';
+import { getAttendCloseTime } from '@/lib/attendance-sweep';
 import { notifyAttendance } from '@/lib/sms';
 import { enrollmentDaysLeft, isWeeklyGradeMissing } from '@/lib/student-flags';
+
+function seoulDateString(now = new Date()): string {
+  // KST 기준 YYYY-MM-DD
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Seoul' }).format(now);
+}
+
+// 어제(또는 그 이전) 등원한 채 하원을 안 눌러 열린 세션이 남으면, 다음날 등원이 막힌다.
+// 그 유휴 세션을 등원 날짜의 마감시각(sweep과 동일, minutes=null)으로 자동 마감해
+// 다음날 등원을 정상 진행시키고, 실제 하원시각은 관리자가 수동 입력하도록 남긴다.
+async function closeStaleSession(session: StudySession, now: Date): Promise<void> {
+  const closeAt = new Date(`${session.date}T${getAttendCloseTime()}:00+09:00`);
+  // 방어적으로 등원시각보다는 뒤, 현재시각보다는 앞이 되도록 보정
+  const checkInMs = new Date(session.check_in).getTime();
+  const safeMs = Math.min(Math.max(closeAt.getTime(), checkInMs + 60000), now.getTime());
+  await autoCloseSession(session, new Date(safeMs));
+}
 
 export type AttendanceAction = 'check-in' | 'check-out' | 'outing' | 'return';
 
@@ -55,7 +72,15 @@ export async function processAttendance(
   const enrollmentNotice = daysLeft != null && daysLeft <= 3 ? daysLeft : null;
   const gradeReminder = isWeeklyGradeMissing(student);
 
-  const openSession: StudySession | null = await getOpenSession(studentId);
+  const now = new Date();
+  let openSession: StudySession | null = await getOpenSession(studentId);
+
+  // 어제 이전에 하원을 안 눌러 열린 세션이 남아 있으면 자동 마감하고, 오늘 등원은 정상 진행한다.
+  // (오늘 열린 세션은 실제 등원 중이므로 건드리지 않는다.)
+  if (openSession && openSession.date < seoulDateString(now)) {
+    await closeStaleSession(openSession, now);
+    openSession = null;
+  }
 
   if (action === 'check-in' || action === 'return') {
     if (openSession) {
@@ -91,6 +116,9 @@ export async function processAttendance(
 
 export async function toggleAttendance(studentId: string, source = 'qr'): Promise<AttendanceToggleResult> {
   const openSession: StudySession | null = await getOpenSession(studentId);
-  const action: AttendanceAction = openSession ? 'check-out' : 'check-in';
+  // 어제 이전에 하원을 안 눌러 남은 열린 세션은 '등원 중'으로 보지 않는다.
+  // (그대로 두면 오늘 스캔이 하원으로 토글돼 등원이 안 된다. processAttendance가 그 세션을 정리한다.)
+  const activeToday = openSession && openSession.date === seoulDateString() ? openSession : null;
+  const action: AttendanceAction = activeToday ? 'check-out' : 'check-in';
   return processAttendance(studentId, action, source);
 }
