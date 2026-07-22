@@ -137,8 +137,10 @@ export function ExecutionPlanTab({
   ) => {
     if (materialType === 'lecture') return '강';
     if (unit) return unit;
-    if (rangeText.includes('문제')) return '문제';
-    if (rangeText.includes('회')) return '회';
+    // rangeText 는 "1회독 133p ~ 199p" 꼴 — 'N회독' 접두어의 '회'가 단위로 오판되지 않게 떼고 본다.
+    const rangeBody = rangeText.replace(/\d+\s*회독/g, '');
+    if (rangeBody.includes('문제')) return '문제';
+    if (rangeBody.includes('회')) return '회';
     return 'p';
   };
 

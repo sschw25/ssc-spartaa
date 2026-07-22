@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getStudentSessionId } from '@/lib/auth';
 import { updateStudentById } from '@/lib/store';
 // normalizeProposedGoal — lib/student-requests 로 이동(시작점 조정 신청 경로와 공유). 동작 동일.
-import { normalizeProposedGoal, normalizeProposedMaterial, normalizeProposedMaterialEdit, normalizeProposedMaterialDelete, normalizeProposedMakeup } from '@/lib/student-requests';
+import { normalizeProposedGoal, normalizeProposedMaterial, normalizeProposedMaterialEdit, normalizeProposedMaterialDelete, normalizeProposedMakeup, normalizeProposedProgressCorrection } from '@/lib/student-requests';
 import type { ConsultationLog } from '@/lib/types/student';
 
 const REQUEST_TYPES = ['progress', 'subject', 'plan', 'halfDay', 'restPass', 'materialAdd', 'materialEdit', 'materialDelete', 'makeup', 'etc'] as const;
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { requestType?: unknown; message?: unknown; proposedGoal?: unknown; proposedMaterial?: unknown; proposedMaterialEdit?: unknown; proposedMaterialDelete?: unknown; proposedMakeup?: unknown };
+  let body: { requestType?: unknown; message?: unknown; proposedGoal?: unknown; proposedMaterial?: unknown; proposedMaterialEdit?: unknown; proposedMaterialDelete?: unknown; proposedMakeup?: unknown; proposedProgressCorrection?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
     proposedMaterialEdit: normalizeProposedMaterialEdit(body?.proposedMaterialEdit),
     proposedMaterialDelete: normalizeProposedMaterialDelete(body?.proposedMaterialDelete),
     proposedMakeup: normalizeProposedMakeup(body?.proposedMakeup),
+    proposedProgressCorrection: normalizeProposedProgressCorrection(body?.proposedProgressCorrection),
     createdAt: nowIso,
   };
 

@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import type { StalePlanStudent } from '@/lib/plan-integrity';
+import type { StalePlanStudent, TotalMismatchStudent } from '@/lib/plan-integrity';
 
 const CAMPUS_LABEL: Record<string, string> = { wonju: '원주', chuncheon: '춘천', chungju: '충주' };
 
@@ -20,6 +20,7 @@ export default function DiagnosticsPage() {
   const [checkingAuth, setCheckingAuth] = useState(true);
   const [loading, setLoading] = useState(false);
   const [students, setStudents] = useState<StalePlanStudent[]>([]);
+  const [mismatchStudents, setMismatchStudents] = useState<TotalMismatchStudent[]>([]);
   const [fixing, setFixing] = useState<string | null>(null);
 
   const scan = useCallback(async () => {
@@ -29,6 +30,7 @@ export default function DiagnosticsPage() {
       const j = await res.json();
       if (res.ok && j.success) {
         setStudents(j.students || []);
+        setMismatchStudents(j.totalMismatches || []);
       } else {
         toast.error(j.message || '점검에 실패했습니다.');
       }
@@ -95,6 +97,42 @@ export default function DiagnosticsPage() {
     }
   };
 
+  // 총량 ↔ 계획 범위 불일치 자료의 계획 재생성(현재 총량·진도 기준, 목표 방식 보존).
+  const regenerateMaterial = async (studentId: string, materialId: string, title: string) => {
+    const key = `${studentId}_${materialId}_regen`;
+    if (fixing) return;
+    const ok = await confirm({
+      title: '이 자료의 학습계획을 재생성할까요?',
+      description: `${title}의 주차 계획을 현재 총량·진도 기준으로 새로 만듭니다. 진도와 목표 방식은 유지되지만, 기존 주차의 완료 표시는 초기화됩니다.`,
+      confirmText: '재생성',
+    });
+    if (!ok) return;
+    setFixing(key);
+    try {
+      const res = await fetch('/api/admin/plan-integrity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ studentId, materialId, action: 'regenerate' }),
+      });
+      const j = await res.json();
+      if (res.ok && j.success) {
+        toast.success('학습계획을 재생성했어요.');
+        setMismatchStudents((prev) =>
+          prev
+            .map((s) => (s.studentId === studentId ? { ...s, materials: s.materials.filter((m) => m.materialId !== materialId) } : s))
+            .filter((s) => s.materials.length > 0),
+        );
+      } else {
+        toast.error(j.message || '재생성에 실패했습니다.');
+      }
+    } catch {
+      toast.error('네트워크 오류로 재생성에 실패했습니다.');
+    } finally {
+      setFixing(null);
+    }
+  };
+
   if (checkingAuth) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] dark:bg-white/5 flex items-center justify-center">
@@ -104,6 +142,7 @@ export default function DiagnosticsPage() {
   }
 
   const materialCount = students.reduce((n, s) => n + s.materials.length, 0);
+  const mismatchCount = mismatchStudents.reduce((n, s) => n + s.materials.length, 0);
 
   return (
     <div className="ios-app-bg min-h-screen text-slate-900 dark:text-slate-100 font-sans">
@@ -134,24 +173,26 @@ export default function DiagnosticsPage() {
           </Button>
         </div>
 
-        {loading && students.length === 0 ? (
+        {loading && students.length === 0 && mismatchStudents.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-20 text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin" />
             <span className="text-xs font-bold">전체 학생 계획을 점검하는 중…</span>
           </div>
-        ) : students.length === 0 ? (
+        ) : students.length === 0 && mismatchStudents.length === 0 ? (
           <div className="rounded-2xl border border-emerald-300/50 bg-emerald-50 dark:border-emerald-500/25 dark:bg-emerald-500/10 p-6 flex flex-col items-center gap-2 text-center">
             <ShieldCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
             <p className="text-sm font-black text-emerald-800 dark:text-emerald-300">재설정이 필요한 계획이 없어요</p>
             <p className="text-[11px] font-semibold text-emerald-700/80 dark:text-emerald-300/70">
-              모든 하루 목표 자료의 일일량이 정상입니다.
+              일일량·총량 대비 계획 범위 모두 정상입니다.
             </p>
           </div>
         ) : (
           <>
+            {students.length > 0 && (
             <div className="rounded-xl border border-amber-300/50 bg-amber-50 dark:border-amber-500/25 dark:bg-amber-500/10 px-4 py-3 text-[11px] font-bold text-amber-800 dark:text-amber-300">
               재설정 필요: 학생 {students.length}명 · 자료 {materialCount}건. 각 자료의 &lsquo;재설정&rsquo;을 누르면 그 자료만 즉시 교정됩니다.
             </div>
+            )}
 
             <div className="space-y-4">
               {students.map((s) => (
@@ -199,6 +240,54 @@ export default function DiagnosticsPage() {
                 </div>
               ))}
             </div>
+
+            {/* 검사 2: 총량 ↔ 계획 범위 불일치 — 총량 축소 후 옛 범위 계획 잔존(예: 300p 자료에 251~500p 계획) */}
+            {mismatchStudents.length > 0 && (
+              <>
+                <div className="rounded-xl border border-red-300/50 bg-red-50 dark:border-red-500/25 dark:bg-red-500/10 px-4 py-3 text-[11px] font-bold text-red-800 dark:text-red-300">
+                  총량 초과 계획: 학생 {mismatchStudents.length}명 · 자료 {mismatchCount}건. 총량이 줄었는데 주차 계획이 옛 범위로 남은 자료입니다 — &lsquo;계획 재생성&rsquo;으로 현재 총량·진도 기준으로 새로 만듭니다.
+                </div>
+                <div className="space-y-4">
+                  {mismatchStudents.map((s) => (
+                    <div key={`mm_${s.studentId}`} className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] overflow-hidden">
+                      <div className="flex items-center gap-2 px-3 sm:px-4 py-2.5 border-b border-slate-100 dark:border-white/5 bg-slate-50/60 dark:bg-white/5">
+                        <span className="font-black text-sm truncate min-w-0">{s.studentName}</span>
+                        <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                          {CAMPUS_LABEL[s.campus] || s.campus}{s.manager ? ` · ${s.manager}` : ''}
+                        </span>
+                      </div>
+                      <ul className="divide-y divide-slate-100 dark:divide-white/5">
+                        {s.materials.map((m) => {
+                          const key = `${s.studentId}_${m.materialId}_regen`;
+                          return (
+                            <li key={m.materialId} className="flex items-start gap-2.5 sm:gap-3 px-3 sm:px-4 py-3">
+                              <div className="min-w-0 flex-1 space-y-1">
+                                <div className="flex items-baseline gap-x-1.5 gap-y-0.5 flex-wrap">
+                                  <span className="font-bold text-[13px] text-slate-900 dark:text-slate-100 break-keep min-w-0">{m.title}</span>
+                                  <span className="text-[10px] font-bold text-slate-400 break-keep">{m.subjectName} · 진도 {m.progress}/{m.total}{m.unit}</span>
+                                </div>
+                                <span className="inline-flex items-center gap-1 rounded-md bg-red-100 dark:bg-red-500/15 px-1.5 py-0.5 text-[10px] font-bold text-red-800 dark:text-red-300">
+                                  계획이 <span className="tabular-nums">{m.maxPlanEnd}{m.unit}</span>까지 참조 (총량 <span className="tabular-nums">{m.total}{m.unit}</span> 초과)
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => regenerateMaterial(s.studentId, m.materialId, m.title)}
+                                disabled={fixing === key}
+                                className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-red-600 px-3 py-1.5 text-[11px] font-bold text-white transition hover:bg-red-700 disabled:opacity-50"
+                              >
+                                {fixing === key ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Wrench className="w-3.5 h-3.5" />}
+                                계획 재생성
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </>
         )}
       </main>

@@ -1,4 +1,5 @@
 import type { Student, BookProgress, LectureProgress, DetailedPlan } from '@/lib/types/student';
+import { generateDetailedPlans, getMaterialStudyDays } from '@/lib/progress-plan';
 
 // ── 계획 정합성 점검(무결성 검증) ────────────────────────────────────────────
 // 하루 목표(goalType==='dailyAmount') 자료에서, 마지막 부분 주의 일일량이 ceil(잔량/주학습일)로
@@ -158,4 +159,150 @@ export function fixStalePlansForStudentMaterial(student: Student, materialId: st
     }
   });
   return changed;
+}
+
+// ── 검사 2: 총량 ↔ 계획 범위 불일치 ─────────────────────────────────────────
+// 수정 승인 등으로 총량이 줄었는데 주차 계획은 옛 범위(예: 총량 300p 자료에 "251p ~ 500p")로
+// 남은 케이스를 검출한다. 계획 범위 끝(rangeText의 마지막 숫자)이 총량을 넘으면 불일치.
+
+export interface TotalMismatchMaterial {
+  subjectId: string;
+  subjectName: string;
+  materialId: string;
+  type: 'book' | 'lecture';
+  title: string;
+  unit: string;
+  total: number;        // 현재 총량
+  maxPlanEnd: number;   // 계획이 참조하는 최대 위치
+  progress: number;     // 현재 진도(재생성 기준점 표시용)
+  goalLabel: string;    // 표시용 목표 요약(예: dailyAmount/30)
+}
+
+export interface TotalMismatchStudent {
+  studentId: string;
+  studentName: string;
+  campus: string;
+  manager: string;
+  materials: TotalMismatchMaterial[];
+}
+
+// 1회독 계획(rangeText "1회독 251p ~ 500p")의 끝 위치. 회독(passNumber>1) 계획은 같은 범위를
+// 다시 돌므로 총량 초과 판정에서 제외할 필요 없음(같은 총량 기준).
+function planEndOf(p: DetailedPlan): number {
+  const nums = (p.rangeText || '').replace(/\d+\s*회독/g, '').match(/\d+/g)?.map(Number) || [];
+  return nums.length > 0 ? nums[nums.length - 1] : 0;
+}
+
+export function detectTotalMismatchForStudent(student: Student): TotalMismatchMaterial[] {
+  const out: TotalMismatchMaterial[] = [];
+  eachMaterial(student, (subjectId, subjectName, material, type) => {
+    const total = type === 'book'
+      ? Number((material as BookProgress).totalPages) || 0
+      : Number((material as LectureProgress).totalLectures) || 0;
+    if (total <= 0) return; // selfPaced(총량 미정)는 대상 아님
+    const plans = material.detailedPlans || [];
+    if (plans.length === 0) return;
+    const maxPlanEnd = Math.max(...plans.map(planEndOf));
+    if (maxPlanEnd <= total) return;
+    const progress = type === 'book'
+      ? Number((material as BookProgress).currentPage) || 0
+      : Number((material as LectureProgress).completedLectures) || 0;
+    out.push({
+      subjectId,
+      subjectName,
+      materialId: material.id,
+      type,
+      title: type === 'book' ? (material as BookProgress).title : (material as LectureProgress).name,
+      unit: unitOf(material, type),
+      total,
+      maxPlanEnd,
+      progress,
+      goalLabel: `${material.goalType || '-'}${material.goalValue ? `/${material.goalValue}` : ''}`,
+    });
+  });
+  return out;
+}
+
+export function scanTotalMismatches(students: Student[]): TotalMismatchStudent[] {
+  const out: TotalMismatchStudent[] = [];
+  for (const student of students) {
+    const materials = detectTotalMismatchForStudent(student);
+    if (materials.length === 0) continue;
+    out.push({
+      studentId: student.id,
+      studentName: student.name,
+      campus: student.campus,
+      manager: student.manager,
+      materials,
+    });
+  }
+  return out;
+}
+
+// 총량 불일치 자료의 계획을 현재 총량·진도 기준으로 재생성. 진도·목표(goalType/goalValue)는 보존.
+// (updateStudentById 뮤테이터에서 사용 — student 를 직접 변형. 미러(top-level)와 subjects 양쪽에
+// 같은 결과가 들어가도록 한 번 생성해 양쪽에 대입한다.)
+export function regeneratePlansForStudentMaterial(student: Student, materialId: string): boolean {
+  const planTypes = ['weeks', 'weeklyAmount', 'dailyAmount', 'deadlineWeeks'];
+  let generated: { plans: DetailedPlan[]; calculatedTargetDate: string } | null = null;
+  let matType: 'book' | 'lecture' = 'book';
+
+  // 대상 자료(과목 하위 우선)를 찾아 컨텍스트와 함께 1회 생성.
+  let parentStudyDays: string[] | undefined;
+  let parentStudyTime: string | undefined;
+  let found: Material | null = null;
+  for (const sub of student.subjects || []) {
+    const b = (sub.books || []).find((m) => m.id === materialId);
+    if (b) { found = b; matType = 'book'; parentStudyDays = sub.studyDays; parentStudyTime = sub.studyTime; break; }
+    const l = (sub.lectures || []).find((m) => m.id === materialId);
+    if (l) { found = l; matType = 'lecture'; parentStudyDays = sub.studyDays; parentStudyTime = sub.studyTime; break; }
+  }
+  if (!found) {
+    found = (student.books || []).find((m) => m.id === materialId) || null;
+    if (found) matType = 'book';
+    else {
+      found = (student.lectures || []).find((m) => m.id === materialId) || null;
+      if (found) matType = 'lecture';
+    }
+  }
+  if (!found || !planTypes.includes(found.goalType || '')) return false;
+  const total = matType === 'book'
+    ? Number((found as BookProgress).totalPages) || 0
+    : Number((found as LectureProgress).totalLectures) || 0;
+  const goalValue = Number(found.goalValue) || 0;
+  if (total <= 0 || goalValue <= 0) return false;
+  const progress = matType === 'book'
+    ? Number((found as BookProgress).currentPage) || 0
+    : Number((found as LectureProgress).completedLectures) || 0;
+
+  generated = generateDetailedPlans(
+    materialId,
+    total,
+    matType,
+    found.goalType as 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks',
+    goalValue,
+    progress,
+    matType === 'book' ? (found as BookProgress).unit : undefined,
+    found.reviewPasses || [],
+    getMaterialStudyDays(parentStudyDays, found.studyDays),
+    matType === 'lecture' ? Number((found as LectureProgress).speedMultiplier) || 1.0 : 1.0,
+    found.estimatedMinutesPerUnit,
+    parentStudyTime,
+    found.category,
+  );
+
+  const nowIso = new Date().toISOString();
+  const apply = (m: Material) => {
+    if (m.id !== materialId || !generated) return;
+    m.detailedPlans = generated.plans;
+    m.targetDate = generated.calculatedTargetDate;
+    m.updatedAt = nowIso;
+  };
+  for (const sub of student.subjects || []) {
+    (sub.books || []).forEach(apply);
+    (sub.lectures || []).forEach(apply);
+  }
+  (student.books || []).forEach(apply);
+  (student.lectures || []).forEach(apply);
+  return true;
 }

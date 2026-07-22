@@ -1,4 +1,4 @@
-import type { ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, Student } from '@/lib/types/student';
+import type { ConsultationLog, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, ProposedProgressCorrection, Student } from '@/lib/types/student';
 import { getLeaveTypeLabel } from '@/lib/leave';
 
 const STUDY_DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -222,6 +222,40 @@ export function normalizeProposedMaterialEdit(raw: unknown): ProposedMaterialEdi
 // 학생이 신청하는 교재/인강 또는 과목 전체 삭제 제안(materialDelete)을 서버에서 정규화.
 // 관리자 승인 시 subjects(단일소스)+top-level books/lectures 미러 양쪽에서 대상을 제거하므로
 // 식별자(scope별 필수값) 없는 제안은 폐기(undefined).
+// 학생이 신청하는 진도 숫자 정정 제안(progressCorrection)을 서버에서 정규화.
+// 자료 식별자(materialId/Type)와 정정값(toValue, 0 이상 정수) 없는 제안은 폐기.
+// 승인 시 진도에 그대로 반영되므로 값 범위를 저장 시점에 클램프한다(총량 클램프는 승인 시점에 자료 기준으로).
+export function normalizeProposedProgressCorrection(raw: unknown): ProposedProgressCorrection | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const m = raw as Record<string, unknown>;
+
+  const materialId = typeof m.materialId === 'string' ? m.materialId.trim().slice(0, 100) : '';
+  const materialType = m.materialType === 'book' || m.materialType === 'lecture' ? m.materialType : null;
+  const toValueNum = Number(m.toValue);
+  if (!materialId || !materialType || !Number.isFinite(toValueNum) || toValueNum < 0) return undefined;
+
+  const normalized: ProposedProgressCorrection = {
+    materialType,
+    materialId,
+    toValue: Math.min(999999, Math.round(toValueNum)),
+  };
+  if (typeof m.subjectName === 'string' && m.subjectName.trim()) {
+    normalized.subjectName = m.subjectName.trim().slice(0, 50);
+  }
+  if (typeof m.materialTitle === 'string' && m.materialTitle.trim()) {
+    normalized.materialTitle = m.materialTitle.trim().slice(0, 100);
+  }
+  const fromValueNum = Number(m.fromValue);
+  if (Number.isFinite(fromValueNum) && fromValueNum >= 0) {
+    normalized.fromValue = Math.min(999999, Math.round(fromValueNum));
+  }
+  if (typeof m.reason === 'string') {
+    const reason = m.reason.trim().slice(0, 300);
+    if (reason) normalized.reason = reason;
+  }
+  return normalized;
+}
+
 export function normalizeProposedMaterialDelete(raw: unknown): ProposedMaterialDelete | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const m = raw as Record<string, unknown>;

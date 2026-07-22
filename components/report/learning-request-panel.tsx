@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { MessageSquare, Plus, Trash2, CheckCircle2, Calendar, Rabbit, Turtle, BookPlus, CalendarCog, Pencil, RefreshCw, Lightbulb, AlertTriangle, SquarePen } from 'lucide-react';
-import { BookProgress, LectureProgress, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, Student } from '@/lib/types/student';
+import { BookProgress, LectureProgress, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, ProposedProgressCorrection, Student } from '@/lib/types/student';
 import { STUDY_TIME_SLOTS } from '@/lib/academy-timetable';
 
 const MA_DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
@@ -52,7 +52,7 @@ interface LearningRequestPanelProps {
   requestSubmitting: boolean;
   requestCustomOpen: boolean;
   setRequestCustomOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }, proposedMaterialDelete?: ProposedMaterialDelete, proposedMaterialEdit?: ProposedMaterialEdit) => Promise<boolean>;
+  sendRequest: (type: string, message: string, proposedGoal?: ProposedGoal, proposedMaterial?: ProposedMaterial, proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }, proposedMaterialDelete?: ProposedMaterialDelete, proposedMaterialEdit?: ProposedMaterialEdit, proposedProgressCorrection?: ProposedProgressCorrection) => Promise<boolean>;
   cancelRequest: (id: string) => Promise<void>;
   showRequestHistory: boolean;
   setShowRequestHistory: (show: boolean) => void;
@@ -184,6 +184,7 @@ export function LearningRequestPanel({
     const schedule = [daysStr, timeStr].filter(Boolean).join(' ');
     if (schedule) parts.push(schedule);
     if (maForm.currentProgress) parts.push(`현재 ${maForm.currentProgress}${unitLabel}`);
+    if (totalNum > 0) parts.push(`총 ${totalNum}${unitLabel}`);
     const planStr = maForm.goalMode === 'deadlineWeeks' ? `${maForm.goalStartDate}부터 ${maForm.goalTargetDate}까지`
       : maForm.goalMode === 'dailyAmount' ? `${maForm.goalStartDate}부터 하루 ${maForm.goalDaily}${unitLabel}`
       : '';
@@ -432,6 +433,63 @@ export function LearningRequestPanel({
     }
   };
 
+  // 진도 숫자 정정 신청(progressCorrection) — 자료·정정값이 구조화되어 관리자 승인 시 자동 반영된다.
+  // 자료 목록은 editableMaterials(수정/삭제 폼과 동일)를 쓰고, 현재 진도만 student에서 직접 찾는다.
+  const [correctionOpen, setCorrectionOpen] = React.useState(false);
+  const [pcMaterialId, setPcMaterialId] = React.useState('');
+  const [pcToValue, setPcToValue] = React.useState('');
+  const [pcReason, setPcReason] = React.useState('');
+  const [pcError, setPcError] = React.useState('');
+
+  const getCurrentProgressOf = React.useCallback((materialId: string, type: 'book' | 'lecture'): number => {
+    if (type === 'book') {
+      const b = [...(student.books || []), ...(student.subjects || []).flatMap((s) => s.books || [])].find((m) => m.id === materialId);
+      return Number(b?.currentPage) || 0;
+    }
+    const l = [...(student.lectures || []), ...(student.subjects || []).flatMap((s) => s.lectures || [])].find((m) => m.id === materialId);
+    return Number(l?.completedLectures) || 0;
+  }, [student.books, student.lectures, student.subjects]);
+
+  const resetPcForm = () => {
+    setPcMaterialId('');
+    setPcToValue('');
+    setPcReason('');
+    setPcError('');
+  };
+
+  const openProgressCorrection = () => {
+    setCorrectionOpen(true);
+    setTimeout(() => {
+      document.getElementById('progress-correction-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+  };
+
+  const submitProgressCorrection = async () => {
+    const mat = editableMaterials.find((m) => m.id === pcMaterialId);
+    if (!mat) { setPcError('정정할 자료를 선택해 주세요.'); return; }
+    const toValue = Math.round(Number(pcToValue));
+    if (!Number.isFinite(toValue) || toValue < 0) { setPcError('정정할 진도 값을 입력해 주세요.'); return; }
+    if (mat.total > 0 && toValue > mat.total) { setPcError(`총량(${mat.total})을 넘는 값이에요. 총량이 틀렸다면 '교재·강의 수정'으로 신청해 주세요.`); return; }
+    setPcError('');
+    const unitLabel = mat.type === 'book' ? (mat.unit || 'p') : '강';
+    const fromValue = getCurrentProgressOf(mat.id, mat.type);
+    const proposedProgressCorrection: ProposedProgressCorrection = {
+      subjectName: mat.subjectName,
+      materialType: mat.type,
+      materialId: mat.id,
+      materialTitle: mat.title,
+      fromValue,
+      toValue,
+      reason: pcReason.trim() || undefined,
+    };
+    const message = `[진도 숫자 정정] ${mat.subjectName} · ${mat.title} — ${fromValue}${unitLabel} → ${toValue}${unitLabel}`
+      + (pcReason.trim() ? `\n사유: ${pcReason.trim()}` : '');
+    const ok = await sendRequest('progress', message, undefined, undefined, undefined, undefined, undefined, proposedProgressCorrection);
+    if (!ok) return; // 실패 시 입력 보존
+    resetPcForm();
+    setCorrectionOpen(false);
+  };
+
   // #11 — 복귀/진도밀림 재조정: 학생 직접 실행 대신 코멘터에게 '요청'으로 전달
   const [realignRequesting, setRealignRequesting] = React.useState<null | 'keepTargetDate' | 'keepPace'>(null);
   const [realignRequested, setRealignRequested] = React.useState(false);
@@ -469,7 +527,7 @@ export function LearningRequestPanel({
   const getRequestTypeLabel = (type?: string) => REQUEST_TYPE_LABEL[type || 'etc'] || '기타 신청';
 
   // opens 가 있는 항목은 해당 구조화 폼을 바로 연다(자유서술 폼으로 새지 않게). 없으면 자유서술 프리필.
-  const QUICK_REQUESTS: Array<{ type: string; label: string; icon: typeof MessageSquare; message: string; opens?: 'add' | 'edit' | 'delete' }> = [
+  const QUICK_REQUESTS: Array<{ type: string; label: string; icon: typeof MessageSquare; message: string; opens?: 'add' | 'edit' | 'delete' | 'correction' }> = [
     { type: 'etc', label: '상담 신청할래요', icon: MessageSquare, message: '상담을 신청합니다.' },
     { type: 'progress', label: '진도가 너무 빨라요', icon: Rabbit, message: '진도가 너무 빨라요. 속도를 조정하고 싶어요.' },
     { type: 'progress', label: '진도가 너무 느려요', icon: Turtle, message: '진도가 너무 느려요. 계획을 조정하고 싶어요.' },
@@ -477,7 +535,7 @@ export function LearningRequestPanel({
     { type: 'materialEdit', label: '교재·강의 수정', icon: SquarePen, message: '', opens: 'edit' },
     { type: 'materialDelete', label: '교재·강의 삭제', icon: Trash2, message: '', opens: 'delete' },
     { type: 'plan', label: '학습계획 바꾸고 싶어요', icon: CalendarCog, message: '학습계획 조정을 신청합니다.' },
-    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '진도 숫자 정정이 필요해요.' },
+    { type: 'progress', label: '진도 숫자 정정', icon: Pencil, message: '', opens: 'correction' },
   ];
 
   // 구조화 교재/인강 추가 폼 열기 + 스크롤(퀵버튼 '교재·인강 추가' 진입점)
@@ -663,7 +721,7 @@ export function LearningRequestPanel({
                 key={q.label}
                 type="button"
                 disabled={requestSubmitting}
-                onClick={() => (q.opens === 'add' ? openMaterialAdd() : q.opens === 'edit' ? openMaterialEdit() : q.opens === 'delete' ? openMaterialDelete() : handleQuickRequest(q.type, q.message))}
+                onClick={() => (q.opens === 'add' ? openMaterialAdd() : q.opens === 'edit' ? openMaterialEdit() : q.opens === 'delete' ? openMaterialDelete() : q.opens === 'correction' ? openProgressCorrection() : handleQuickRequest(q.type, q.message))}
                 className="flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2.5 text-left text-[11px] font-bold text-slate-700 dark:text-slate-300 shadow-sm transition hover:border-[#0071E3]/40 hover:bg-[#0071E3]/[0.03] dark:hover:bg-[#0071E3]/15 active:scale-[0.97] disabled:opacity-50"
               >
                 {React.createElement(q.icon, { className: 'h-4 w-4 shrink-0 text-[#0071E3]' })}
@@ -1214,6 +1272,82 @@ export function LearningRequestPanel({
                 className="w-full rounded-xl bg-red-600 py-2.5 text-xs font-bold text-white transition hover:bg-red-700 active:scale-[0.98] disabled:opacity-50"
               >
                 {requestSubmitting ? '신청 중...' : '삭제 신청하기'}
+              </button>
+            </form>
+          )}
+
+          {/* 진도 숫자 정정 신청 — 자료·정정값 구조화. 승인 시 코멘터 수작업 없이 진도가 자동 반영된다. */}
+          {correctionOpen && (
+            <form
+              id="progress-correction-form"
+              onSubmit={(e) => { e.preventDefault(); if (!requestSubmitting) submitProgressCorrection(); }}
+              className="space-y-3 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-[#1c1c1e]/95 p-3 scroll-mt-28"
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200">진도 숫자 정정 신청</p>
+                <button type="button" onClick={() => { resetPcForm(); setCorrectionOpen(false); }} className="text-[10px] font-bold text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">닫기</button>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">정정할 자료</label>
+                {editableMaterials.length > 0 ? (
+                  <select
+                    value={pcMaterialId}
+                    onChange={(e) => { setPcMaterialId(e.target.value); setPcError(''); }}
+                    className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
+                  >
+                    <option value="">-- 정정할 교재/인강 선택 --</option>
+                    {editableMaterials.map((m) => (
+                      <option key={m.id} value={m.id}>{m.subjectName} · {m.title} ({m.type === 'book' ? '교재' : '인강'})</option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="text-[10px] font-semibold text-slate-400">정정할 수 있는 교재/인강이 없어요.</p>
+                )}
+              </div>
+              {(() => {
+                const mat = editableMaterials.find((m) => m.id === pcMaterialId);
+                if (!mat) return null;
+                const unitLabel = mat.type === 'book' ? (mat.unit || 'p') : '강';
+                const cur = getCurrentProgressOf(mat.id, mat.type);
+                return (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
+                      정정할 진도 <span className="font-medium text-slate-400">(현재 {cur}{unitLabel}{mat.total > 0 ? ` / 총 ${mat.total}${unitLabel}` : ''})</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        inputMode="numeric"
+                        value={pcToValue}
+                        onChange={(e) => { setPcToValue(e.target.value); setPcError(''); }}
+                        placeholder={`예: ${cur}`}
+                        className="w-28 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                      />
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{unitLabel}까지 한 걸로</span>
+                    </div>
+                    <p className="text-[9.5px] font-semibold text-slate-400 dark:text-slate-500 break-keep">잘못 입력한 누적 위치를 실제 위치로 바로잡아요. 코멘터 승인 후 자동 반영돼요.</p>
+                  </div>
+                );
+              })()}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">사유 <span className="font-medium text-slate-400">(선택)</span></label>
+                <textarea
+                  value={pcReason}
+                  onChange={(e) => setPcReason(e.target.value)}
+                  placeholder="예: 실수로 30까지 입력했는데 실제로는 25까지 했어요"
+                  rows={2}
+                  maxLength={300}
+                  className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                />
+              </div>
+              {pcError && <p className="text-[10px] font-bold text-red-500">{pcError}</p>}
+              <button
+                type="submit"
+                disabled={requestSubmitting}
+                className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
+              >
+                {requestSubmitting ? '신청 중...' : '진도 정정 신청하기'}
               </button>
             </form>
           )}

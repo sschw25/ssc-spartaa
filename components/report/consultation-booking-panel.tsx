@@ -130,18 +130,24 @@ export function ConsultationBookingPanel({ whyConsultation, consultationHistory 
   // 이번 주 / 다음 주로 그룹핑
   const weekGroups = useMemo(() => {
     if (calendar.length === 0) return [] as { label: string; days: CalendarDay[] }[];
-    // 기준: 첫 운영일이 속한 주를 '이번 주', 그 다음 주를 '다음 주'
-    const thisMonday = mondayOf(calendar[0].date);
-    const nextMonday = (() => {
-      const dt = new Date(`${thisMonday}T00:00:00Z`);
-      dt.setUTCDate(dt.getUTCDate() + 7);
+    // 기준: 오늘(KST)이 속한 주가 '이번 주'. 첫 운영일 기준으로 잡으면 이번 주 상담요일이
+    // 모두 지난 뒤(예: 수요일에 월·화 상담 센터) 다음 주 날짜가 '이번 주'로 잘못 표시된다.
+    const todayKst = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
+    const thisMonday = mondayOf(todayKst);
+    const addDays = (base: string, days: number) => {
+      const dt = new Date(`${base}T00:00:00Z`);
+      dt.setUTCDate(dt.getUTCDate() + days);
       return dt.toISOString().slice(0, 10);
-    })();
+    };
+    const nextMonday = addDays(thisMonday, 7);
+    const afterNextMonday = addDays(thisMonday, 14);
     const thisWeek = calendar.filter((d) => d.date < nextMonday);
-    const nextWeek = calendar.filter((d) => d.date >= nextMonday);
+    const nextWeek = calendar.filter((d) => d.date >= nextMonday && d.date < afterNextMonday);
+    const later = calendar.filter((d) => d.date >= afterNextMonday);
     const groups: { label: string; days: CalendarDay[] }[] = [];
     if (thisWeek.length) groups.push({ label: '이번 주', days: thisWeek });
     if (nextWeek.length) groups.push({ label: '다음 주', days: nextWeek });
+    if (later.length) groups.push({ label: '다다음 주', days: later });
     return groups;
   }, [calendar]);
 

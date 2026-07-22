@@ -4,6 +4,7 @@ import { updateStudentById } from '@/lib/store';
 import { generateDetailedPlans, getMaterialStudyDays } from '@/lib/progress-plan';
 import { appendThreadMessage } from '@/lib/thread';
 import { weekKeyOf } from '@/lib/makeup-carryover';
+import { findStreamByLabel } from '@/lib/streams';
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
@@ -58,7 +59,7 @@ export async function PATCH(
     return NextResponse.json({ success: false, message: '권한이 없습니다.' }, { status: 403 });
   }
 
-  let body: { requestId?: unknown; status?: unknown; reply?: unknown; planStartDateOverride?: unknown };
+  let body: { requestId?: unknown; status?: unknown; reply?: unknown; planStartDateOverride?: unknown; deadlinePolicy?: unknown; regeneratePlans?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -71,6 +72,12 @@ export async function PATCH(
   const planStartDateOverride = typeof body?.planStartDateOverride === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.planStartDateOverride)
     ? body.planStartDateOverride
     : undefined;
+  // 마감일형(deadlineWeeks) 승인 정책: 기본은 학생이 고른 마감일 유지(마지막 주 절단).
+  // 'keep-duration'을 명시하면 기간(주수)을 유지하고 마감일이 뒤로 밀리는 것을 허용한다.
+  const deadlinePolicy: 'keep-deadline' | 'keep-duration' =
+    body?.deadlinePolicy === 'keep-duration' ? 'keep-duration' : 'keep-deadline';
+  // 수정 승인(materialEdit) 시 기존 학습계획을 새 총량·요일 기준으로 재생성할지 여부(관리자 선택).
+  const regeneratePlans = body?.regeneratePlans === true;
   if (!requestId) {
     return NextResponse.json({ success: false, message: '처리 대상이 올바르지 않습니다.' }, { status: 400 });
   }
@@ -114,14 +121,22 @@ export async function PATCH(
       if (planStartDate && planStartDate < approvalDateKey) planStartDate = approvalDateKey;
       // 기록에는 클램프된 값 저장 — 과거 override 가 raw 로 남아 표시·실제가 어긋나지 않게.
       if (planStartDateOverride) target.proposedGoal.planStartDate = planStartDate || planStartDateOverride;
-      // 마감일 모드: 학생이 신청 시점에 환산한 주수는 시작일이 바뀌면 어긋난다 — 목표 완료일 기준으로 재환산.
-      // 목표일이 이미 지났으면(승인 방치) 1주 최단 계획으로 — 학생이 고른 마감을 조용히 초과 생성하지 않는다.
+      // 마감일 모드 두 정책:
+      //  - keep-deadline(기본): 시작일이 늦어져도 학생이 고른 마감일을 지킨다. 주수를 마감일까지로 재환산하고
+      //    마지막 주 창을 마감일에서 절단(deadlineForPlan) — 계획이 마감일을 넘지 않는다(주당 분량↑).
+      //  - keep-duration: 학생이 고른 학습 기간(주수)을 유지하고 마감일이 뒤로 밀리는 걸 허용한다. 절단 없음.
+      // 목표일이 이미 지났으면(승인 방치) keep-deadline 은 1주 최단 계획으로.
       let goalValue = target.proposedGoal.goalValue;
+      let deadlineForPlan: string | undefined;
       if (goalType === 'deadlineWeeks' && target.proposedGoal.targetDate) {
         const fromMs = new Date(`${planStartDate || approvalDateKey}T00:00:00+09:00`).getTime();
         const toMs = new Date(`${target.proposedGoal.targetDate}T00:00:00+09:00`).getTime();
         const days = Math.round((toMs - fromMs) / 86400000);
-        goalValue = days > 0 ? Math.min(12, Math.max(1, Math.ceil(days / 7))) : 1;
+        if (deadlinePolicy === 'keep-deadline') {
+          goalValue = days > 0 ? Math.min(12, Math.max(1, Math.ceil(days / 7))) : 1;
+          if (days > 0) deadlineForPlan = target.proposedGoal.targetDate;
+        }
+        // keep-duration 은 학생이 고른 주수(goalValue) 그대로 두고 마감 절단도 하지 않는다.
       }
       // 학생이 고른 학습 요일(예: 주말 제외) — 자료 단위 단일 소스(studyDays)로 반영해 계획 생성에 투입.
       const nextStudyDays = Array.isArray(proposedStudyDays) && proposedStudyDays.length > 0
@@ -174,7 +189,8 @@ export async function PATCH(
             updated.estimatedMinutesPerUnit,
             parentSubject?.studyTime,
             updated.category,
-            planStartDate
+            planStartDate,
+            deadlineForPlan
           );
           updated.detailedPlans = plans;
           updated.targetDate = calculatedTargetDate;
@@ -232,7 +248,8 @@ export async function PATCH(
             updated.estimatedMinutesPerUnit,
             parentSubject?.studyTime,
             updated.category,
-            planStartDate
+            planStartDate,
+            deadlineForPlan
           );
           updated.detailedPlans = plans;
           updated.targetDate = calculatedTargetDate;
@@ -294,13 +311,19 @@ export async function PATCH(
         && Number(pm.goalValue) > 0 && hasTotal;
       const effGoalType: GoalType = wantsPlan ? (pm.goalType as GoalType) : 'selfPaced';
       let effGoalValue = wantsPlan ? Number(pm.goalValue) : 0;
-      // 마감일 모드: 시작일이 바뀌면 주수도 목표 완료일 기준으로 재환산(proposedGoal 분기와 동일 규칙).
-      // 목표일이 이미 지났으면 1주 최단 계획으로.
+      // 마감일 모드 두 정책(proposedGoal 분기와 동일 규칙):
+      //  - keep-deadline(기본): 주수를 마감일까지로 재환산 + 마지막 주 마감일 절단.
+      //  - keep-duration: 학생이 고른 주수 유지, 마감 뒤로 밀림 허용(절단 없음).
+      let pmDeadlineForPlan: string | undefined;
       if (wantsPlan && pm.goalType === 'deadlineWeeks' && pm.targetDate) {
         const fromMs = new Date(`${planStartDate || pmApprovalDateKey}T00:00:00+09:00`).getTime();
         const toMs = new Date(`${pm.targetDate}T00:00:00+09:00`).getTime();
         const days = Math.round((toMs - fromMs) / 86400000);
-        effGoalValue = days > 0 ? Math.min(12, Math.max(1, Math.ceil(days / 7))) : 1;
+        if (deadlinePolicy === 'keep-deadline') {
+          effGoalValue = days > 0 ? Math.min(12, Math.max(1, Math.ceil(days / 7))) : 1;
+          if (days > 0) pmDeadlineForPlan = pm.targetDate;
+        }
+        // keep-duration 은 effGoalValue(=학생 goalValue) 유지, 절단 없음.
       }
       const effStudyDays = getMaterialStudyDays(subject!.studyDays, pm.studyDays);
       const commonExtra: Record<string, unknown> = {
@@ -324,7 +347,7 @@ export async function PATCH(
         if (wantsPlan) {
           const { plans, calculatedTargetDate } = generateDetailedPlans(
             newBook.id, pm.total!, 'book', effGoalType, effGoalValue,
-            clampedCurrent, pm.unit || undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본', planStartDate,
+            clampedCurrent, pm.unit || undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본', planStartDate, pmDeadlineForPlan,
           );
           newBook.detailedPlans = plans;
           newBook.targetDate = calculatedTargetDate;
@@ -347,7 +370,7 @@ export async function PATCH(
         if (wantsPlan) {
           const { plans, calculatedTargetDate } = generateDetailedPlans(
             newLecture.id, pm.total!, 'lecture', effGoalType, effGoalValue,
-            clampedCurrent, undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본', planStartDate,
+            clampedCurrent, undefined, [], effStudyDays, 1.0, undefined, pm.studyTime || undefined, '기본', planStartDate, pmDeadlineForPlan,
           );
           newLecture.detailedPlans = plans;
           newLecture.targetDate = calculatedTargetDate;
@@ -405,6 +428,47 @@ export async function PATCH(
         }
       }
 
+      // 관리자가 '계획 재생성'을 선택한 경우: 수정 반영 후의 값(총량·요일·시간대) 기준으로
+      // 주차 계획을 새로 만든다. 미러 이중기록(subjects/top-level)에 같은 계획이 들어가도록
+      // 반드시 한 번만 생성해 patch 에 담는다(따로 생성하면 plan id 가 갈라진다).
+      let plansRegenerated = false;
+      if (regeneratePlans && currentMaterial) {
+        const merged: any = { ...currentMaterial, ...patch };
+        const planTypes = ['weeks', 'weeklyAmount', 'dailyAmount', 'deadlineWeeks'];
+        const mergedTotal = Number(pme.materialType === 'book' ? merged.totalPages : merged.totalLectures) || 0;
+        const mergedGoalValue = Number(merged.goalValue) || 0;
+        const hadPlans = Array.isArray(currentMaterial.detailedPlans) && currentMaterial.detailedPlans.length > 0;
+        if (hadPlans && planTypes.includes(merged.goalType) && mergedTotal > 0 && mergedGoalValue > 0) {
+          const parentSubject = (student.subjects || []).find((sub: any) =>
+            (sub[listKey] || []).some((m: any) => m?.id === pme.materialId));
+          const mergedProgress = Number(merged[progressKey]) || 0;
+          // 마감일형은 기존 마감일을 유지(초과 생성 방지). 마감이 이미 지났으면 절단 없이 재생성.
+          const editDeadline = merged.goalType === 'deadlineWeeks' && typeof merged.targetDate === 'string'
+            ? merged.targetDate
+            : undefined;
+          const { plans, calculatedTargetDate } = generateDetailedPlans(
+            pme.materialId,
+            mergedTotal,
+            pme.materialType,
+            merged.goalType,
+            mergedGoalValue,
+            mergedProgress,
+            pme.materialType === 'book' ? merged.unit : undefined,
+            merged.reviewPasses || [],
+            getMaterialStudyDays(parentSubject?.studyDays, merged.studyDays),
+            Number(merged.speedMultiplier) || 1.0,
+            merged.estimatedMinutesPerUnit,
+            parentSubject?.studyTime,
+            merged.category,
+            kstDateKey(),
+            editDeadline,
+          );
+          patch.detailedPlans = plans;
+          patch.targetDate = calculatedTargetDate;
+          plansRegenerated = true;
+        }
+      }
+
       // 대상 id 하나에만 적용. 이미 없는 자료면 no-op(에러 없이 마킹만) — 삭제 분기와 같은 안전 우선 규칙.
       const applyTo = (m: any) => (m?.id === pme.materialId ? { ...m, ...patch, updatedAt: nowIso } : m);
       if (Array.isArray(student.subjects)) {
@@ -417,7 +481,9 @@ export async function PATCH(
 
       pme.appliedAt = nowIso;
 
-      const noticeText = `요청하신 대로 '${pme.materialTitle}' 정보를 수정했어요.`;
+      const noticeText = plansRegenerated
+        ? `요청하신 대로 '${pme.materialTitle}' 정보를 수정하고 학습 계획도 새로 맞췄어요.`
+        : `요청하신 대로 '${pme.materialTitle}' 정보를 수정했어요.`;
       appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
       target.adminReply = noticeText;
       target.repliedAt = nowIso;
@@ -447,6 +513,20 @@ export async function PATCH(
           }
           student.lectures = (student.lectures || []).filter((l: any) => l.id !== materialId);
         }
+        // 삭제로 비게 된 과목 껍데기 정리 — 단, 직렬 기본 과목(가입승인이 만드는 껍데기)은 남긴다.
+        // (기본 과목 껍데기는 자료가 없어도 의도된 상태라 지우면 안 된다.)
+        const streamDefaults = new Set(
+          (findStreamByLabel(student.contact)?.subjects || []).map((n) => n.trim().toLowerCase()),
+        );
+        if (Array.isArray(student.subjects)) {
+          student.subjects = student.subjects.filter((sub: any) => {
+            const isTargetSubject = pmd.subjectId ? sub.id === pmd.subjectId : String(sub.name || '').trim() === pmd.subjectName.trim();
+            if (!isTargetSubject) return true;
+            const empty = (sub.books || []).length === 0 && (sub.lectures || []).length === 0;
+            const isDefault = streamDefaults.has(String(sub.name || '').trim().toLowerCase());
+            return !(empty && !isDefault);
+          });
+        }
       } else if (pmd.scope === 'subject' && pmd.subjectId) {
         const subjectId = pmd.subjectId;
         const targetSubject = (student.subjects || []).find((s: any) => s.id === subjectId);
@@ -471,6 +551,49 @@ export async function PATCH(
       appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
       target.adminReply = noticeText;
       target.repliedAt = nowIso;
+    }
+
+    // 학생 진도 숫자 정정 제안(progressCorrection) — 승인 시 대상 자료의 진도를 정정값으로 반영한다.
+    // subjects(진도 단일소스)와 top-level 미러 양쪽에 적용(dual-write), 총량 클램프, adjustLog 이력.
+    // appliedAt 마킹으로 재승인(resolved 토글) 시 중복 반영 방지(멱등).
+    if (status === 'resolved' && target.proposedProgressCorrection && !target.proposedProgressCorrection.appliedAt) {
+      const ppc = target.proposedProgressCorrection;
+      const listKey = ppc.materialType === 'book' ? 'books' : 'lectures';
+      const progressKey = ppc.materialType === 'book' ? 'currentPage' : 'completedLectures';
+      const totalKey = ppc.materialType === 'book' ? 'totalPages' : 'totalLectures';
+      const inputDate = kstDateKey();
+      let corrected = false;
+      const applyCorrection = (m: any) => {
+        if (m?.id !== ppc.materialId) return m;
+        const clamped = clampProgress(ppc.toValue, m[totalKey]);
+        if (clamped === null) return m;
+        const prevCurrent = Number(m[progressKey] || 0);
+        if (clamped === prevCurrent) { corrected = true; return m; }
+        corrected = true;
+        return {
+          ...m,
+          [progressKey]: clamped,
+          // 정정도 시작점 조정 이력으로 남긴다(auto:false = 승인 배지) — 벤치마크/히트맵 추적 가능.
+          adjustLog: [...(m.adjustLog || []), { date: inputDate, from: prevCurrent, to: clamped, auto: false }].slice(-30),
+          inputLog: appendInputLog(m.inputLog, inputDate),
+          updatedAt: nowIso,
+        };
+      };
+      if (Array.isArray(student.subjects)) {
+        student.subjects = student.subjects.map((sub: any) => ({
+          ...sub,
+          [listKey]: (sub[listKey] || []).map(applyCorrection),
+        }));
+      }
+      student[listKey] = (student[listKey] || []).map(applyCorrection);
+
+      if (corrected) {
+        ppc.appliedAt = nowIso;
+        const noticeText = `'${ppc.materialTitle || ppc.subjectName || '자료'}' 진도를 ${ppc.toValue}로 정정했어요.`;
+        appendThreadMessage(target, { from: 'admin', text: noticeText, author: '코멘터' });
+        target.adminReply = noticeText;
+        target.repliedAt = nowIso;
+      }
     }
 
     // 학생 주말 보강 수정 제안(makeup) — 승인 시 해당 자료의 makeupDone(주 스코프)을 제안값으로 반영한다.

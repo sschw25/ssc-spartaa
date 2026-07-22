@@ -50,11 +50,13 @@ function StudentLoginForm() {
         return;
       }
 
-      // 로그인 성공 시 next 파라미터가 있으면 그곳으로 이동, 없으면 학생 홈 URL로 이동
+      // 로그인 성공 시 next 파라미터가 있으면 그곳으로 이동.
+      // 없으면 학생 포털 진입점(/student)으로 — 온보딩(welcome) 미완료면 그쪽에서 캐러셀로 분기한다.
+      // (reportUrl 직행은 관리자 등록 학생이 온보딩을 영영 못 보는 우회 경로였다.)
       if (next) {
         router.replace(next);
       } else {
-        router.replace(data.reportUrl);
+        router.replace('/student');
       }
     } catch (error) {
       setErrorMsg('로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');

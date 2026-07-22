@@ -253,6 +253,20 @@ export interface ProposedMaterialEdit {
   appliedAt?: string;                // 승인 반영 완료 마커 — 있으면 재승인(resolved 토글) 시 중복 반영 방지(멱등)
 }
 
+// 학생이 신청하는 진도 숫자 정정 제안. requestType==='progress' 신청에 선택적으로 붙는다.
+// 기존 자유서식 정정(관리자가 원생 시트에서 수작업)과 달리, 자료·정정값이 구조화되어 있어
+// 관리자 승인(resolved) 시 app/api/admin/students/[id]/requests PATCH 가 진도를 자동 반영한다.
+export interface ProposedProgressCorrection {
+  subjectName?: string;              // 표시용
+  materialType: 'book' | 'lecture';
+  materialId: string;
+  materialTitle?: string;            // 표시용
+  fromValue?: number;                // 신청 시점의 현재 진도(표시용 스냅샷)
+  toValue: number;                   // 정정할 진도 값(누적 위치)
+  reason?: string;                   // 학생이 적은 사유(선택)
+  appliedAt?: string;                // 승인 반영 완료 마커 — 재승인(resolved 토글) 시 중복 반영 방지(멱등)
+}
+
 // 학생↔관리자 양방향 대화 메시지 (요청/건의/휴가 신청에 누적되는 스레드)
 // adminReply(단일 답변)와 별개로 thread[]에 시간순 메시지를 쌓아 재답변/재재답변을 지원.
 // consultation_logs / leave_requests JSONB 안에 중첩 저장 — 별도 컬럼/마이그레이션 불필요.
@@ -284,6 +298,7 @@ export interface ConsultationLog {
   proposedMaterialEdit?: ProposedMaterialEdit;            // 학생 교재/인강 수정 제안 데이터(materialEdit)
   proposedMaterialDelete?: ProposedMaterialDelete;        // 학생 교재/인강 또는 과목 삭제 제안 데이터(materialDelete)
   proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }; // 주말 보강 수정 제안(makeup)
+  proposedProgressCorrection?: ProposedProgressCorrection; // 진도 숫자 정정 제안 데이터(progress)
 }
 
 // 상담 담당자 휴무/출장으로 특정 날짜(또는 일부 슬롯)를 예약 불가로 막는 차단 항목.

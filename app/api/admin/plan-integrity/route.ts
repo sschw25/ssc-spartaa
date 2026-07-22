@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAdminSession, canAdminAccessStudent } from '@/lib/auth';
 import { getStudents, updateStudentById } from '@/lib/store';
-import { scanStalePlans, fixStalePlansForStudentMaterial } from '@/lib/plan-integrity';
+import { scanStalePlans, fixStalePlansForStudentMaterial, scanTotalMismatches, regeneratePlansForStudentMaterial } from '@/lib/plan-integrity';
 
 // 계획 정합성 점검(비상 진단). GET=재설정 필요 학생/자료 스캔, POST=특정 자료 제자리 교정.
 // 하루 목표(dailyAmount) 자료의 일일량 희석 버그를 검출/교정한다.
@@ -17,7 +17,10 @@ export async function GET() {
   const scoped = session.campus === 'all' ? all : all.filter((s) => s.campus === session.campus);
   const students = scanStalePlans(scoped);
   const materialCount = students.reduce((n, s) => n + s.materials.length, 0);
-  return NextResponse.json({ success: true, students, studentCount: students.length, materialCount });
+  // 검사 2: 총량 ↔ 계획 범위 불일치(총량 축소 후 옛 범위 계획 잔존)
+  const totalMismatches = scanTotalMismatches(scoped);
+  const totalMismatchCount = totalMismatches.reduce((n, s) => n + s.materials.length, 0);
+  return NextResponse.json({ success: true, students, studentCount: students.length, materialCount, totalMismatches, totalMismatchCount });
 }
 
 // POST /api/admin/plan-integrity { studentId, materialId } — 그 자료의 일일량만 제자리 교정.
@@ -27,10 +30,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: '로그인이 필요합니다.' }, { status: 401 });
   }
 
-  let body: { studentId?: unknown; materialId?: unknown } = {};
+  let body: { studentId?: unknown; materialId?: unknown; action?: unknown } = {};
   try { body = await req.json(); } catch { /* noop */ }
   const studentId = typeof body.studentId === 'string' ? body.studentId : '';
   const materialId = typeof body.materialId === 'string' ? body.materialId : '';
+  // action: 'fix-daily'(기본, 일일량 제자리 교정) | 'regenerate'(총량 불일치 — 계획 전체 재생성)
+  const action = body.action === 'regenerate' ? 'regenerate' : 'fix-daily';
   if (!studentId || !materialId) {
     return NextResponse.json({ success: false, message: 'studentId·materialId 가 필요합니다.' }, { status: 400 });
   }
@@ -39,7 +44,9 @@ export async function POST(req: NextRequest) {
   }
 
   const result = await updateStudentById(studentId, (student) => {
-    return fixStalePlansForStudentMaterial(student, materialId);
+    return action === 'regenerate'
+      ? regeneratePlansForStudentMaterial(student, materialId)
+      : fixStalePlansForStudentMaterial(student, materialId);
   });
 
   if (result === 'not_found') return NextResponse.json({ success: false, message: '학생을 찾을 수 없습니다.' }, { status: 404 });

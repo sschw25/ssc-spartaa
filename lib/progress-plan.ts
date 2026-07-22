@@ -738,7 +738,10 @@ export function generateDetailedPlans(
   category?: string,
   // 계획 시작일(YYYY-MM-DD). 미지정=오늘(레거시). 지정 시 이 날짜를 계획 기준점(anchor)으로 잡아
   // "내일부터"/"다음 주부터" 시작을 만든다. 아래 today 변수를 anchor 로 재사용한다.
-  startDateStr?: string
+  startDateStr?: string,
+  // 마감일(YYYY-MM-DD, deadlineWeeks 전용). 지정 시 1회독 주차 창을 이 날짜에서 절단해
+  // 계획이 학생이 고른 마감일을 넘어가지 않게 한다(마지막 주가 7일 미만이 될 수 있음).
+  deadlineDateStr?: string
 ): { plans: DetailedPlan[], calculatedTargetDate: string } {
   const plans: DetailedPlan[] = [];
   // 명시 시작일이 유효하면 그 날짜를, 아니면 오늘을 기준점으로 쓴다(변수명은 today 유지 — 내부 전 참조 재사용).
@@ -836,6 +839,7 @@ export function generateDetailedPlans(
       amount: number,
       baseAmount: number,
       weeklyLimit?: number,
+      capDate?: Date,
     ) => {
       const safeWeeks = Math.max(1, Math.min(12, Math.round(weeks)));
       const totalAmount = Math.max(0, Math.round(amount));
@@ -868,8 +872,11 @@ export function generateDetailedPlans(
 
       let completed = 0;
       for (const thisWeekAmount of weekAmounts) {
-        const currentEnd = new Date(currentStart);
+        let currentEnd = new Date(currentStart);
         currentEnd.setDate(currentStart.getDate() + 6);
+        // 마감일 절단: 마지막 주 창이 마감일을 넘으면 마감일에서 끝낸다.
+        // (주수 = ceil(일수/7)이라 모든 창의 시작일은 항상 마감일 이전 — 끝만 당기면 된다.)
+        if (capDate && currentEnd > capDate) currentEnd = new Date(capDate);
 
         const startStr = seoulDateStr(currentStart);
         const endStr = seoulDateStr(currentEnd);
@@ -907,6 +914,15 @@ export function generateDetailedPlans(
       ? Math.max(1, Math.min(12, Math.ceil(planAmount / Math.max(1, Math.round(goalValue || 1)))))
       : Math.max(1, Math.min(12, Math.round(goalValue || 1)));
 
+    // 마감일 절단 대상(1회독 창에만 적용): 유효한 날짜이고 시작일 이후일 때만.
+    const deadlineCap = (() => {
+      if (!deadlineDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(deadlineDateStr)) return undefined;
+      const cap = parseDate(deadlineDateStr);
+      if (!cap) return undefined;
+      cap.setHours(0, 0, 0, 0);
+      return cap >= today ? cap : undefined;
+    })();
+
     if (planAmount > 0) {
       phaseStart = appendDeadlineWeeks(
         1,
@@ -915,6 +931,7 @@ export function generateDetailedPlans(
         planAmount,
         safeCurrentAmount,
         goalType === 'weeklyAmount' ? Math.max(1, Math.round(goalValue || 1)) : undefined,
+        deadlineCap,
       );
     }
 

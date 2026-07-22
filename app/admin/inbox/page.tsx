@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, ThreadMessage } from '@/lib/types/student';
+import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, ProposedProgressCorrection, ThreadMessage } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
 import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
@@ -83,6 +83,10 @@ export default function AdminInboxPage() {
   // 가입신청 (학생 셀프 신청 → 관리자 승인 대기). 승인은 별도 페이지에서 상세정보 입력 후 처리.
   const [applications, setApplications] = useState<any[]>([]);
   const [planStartDateOverrides, setPlanStartDateOverrides] = useState<Record<string, string>>({});
+  // 마감일형(deadlineWeeks) 승인 정책 — 기본 'keep-deadline'(학생이 고른 마감일 유지, 마지막 주 절단).
+  const [deadlinePolicies, setDeadlinePolicies] = useState<Record<string, 'keep-deadline' | 'keep-duration'>>({});
+  // 수정 승인 시 학습계획 재생성 여부 — 계획 보유 자료의 총량/요일 변경 요청에서 노출(기본 켬).
+  const [regenerateChecks, setRegenerateChecks] = useState<Record<string, boolean>>({});
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -199,6 +203,17 @@ export default function AdminInboxPage() {
       return allBooks.find(b => b.id === proposedGoal.materialId)?.title || proposedGoal.materialId;
     }
     return allLectures.find(l => l.id === proposedGoal.materialId)?.name || proposedGoal.materialId;
+  };
+
+  // 자료의 실제 단위 조회(교재 전용 — 인강은 '강' 고정). '문'·'회' 단위 자료가 'p'로 표시되지 않게 한다.
+  const getMaterialUnit = (studentId: string, materialType: 'book' | 'lecture', materialId: string): string => {
+    if (materialType === 'lecture') return '강';
+    const student = students.find(s => s.id === studentId);
+    const book = [
+      ...(student?.books || []),
+      ...(student?.subjects || []).flatMap(s => s.books || []),
+    ].find(b => b.id === materialId);
+    return book?.unit || 'p';
   };
 
   // proposedMaterialEdit 수정 대상 자료의 서버 현재 상태(표시용) 조회.
@@ -669,6 +684,15 @@ export default function AdminInboxPage() {
       const override = planStartDateOverrides[item.id];
       if ((actionStatus === 'approved' || actionStatus === 'resolved') && /^\d{4}-\d{2}-\d{2}$/.test(override || '')) {
         body.planStartDateOverride = override;
+      }
+      if (actionStatus === 'approved' || actionStatus === 'resolved') {
+        // 마감일형 승인 정책(기본 keep-deadline)과 수정 승인 계획 재생성 선택을 함께 전달.
+        if (deadlinePolicies[item.id]) body.deadlinePolicy = deadlinePolicies[item.id];
+        if (item.rawItem?.proposedMaterialEdit && (regenerateChecks[item.id] ?? true)) {
+          const pme = item.rawItem.proposedMaterialEdit;
+          // 계획에 영향을 주는 변경(총량/요일/시간대)일 때만 재생성 플래그를 보낸다.
+          if (pme.total !== undefined || pme.studyDays || pme.studyTime !== undefined) body.regeneratePlans = true;
+        }
       }
     } else {
       apiUrl += '/suggestions';
@@ -1277,11 +1301,12 @@ export default function AdminInboxPage() {
                   const cg = pg.currentGoal;
                   const materialTitle = getMaterialTitle(selectedItem.studentId, pg);
                   const isBook = pg.materialType === 'book';
+                  const matUnit = getMaterialUnit(selectedItem.studentId, pg.materialType, pg.materialId);
                   const unitFor = (gt?: string) =>
                     gt === 'weeks' || gt === 'deadlineWeeks' ? '주'
-                    : gt === 'weeklyAmount' ? (isBook ? 'p/주' : '강/주')
+                    : gt === 'weeklyAmount' ? `${matUnit}/주`
                     : gt === 'selfPaced' ? ''
-                    : (isBook ? 'p/일' : '강/일');
+                    : `${matUnit}/일`;
                   // 변경 후 값 문구: 마감일 모드는 날짜를, 자율은 '자율'을, 그 외는 값+단위를 보여준다.
                   // 값이 비어(0) 있고 날짜도 없으면 목표 문구는 생략(요일만 변경 등).
                   const hasGoal = pg.goalType === 'selfPaced' || !!pg.targetDate || Number(pg.goalValue) > 0;
@@ -1357,7 +1382,7 @@ export default function AdminInboxPage() {
 
                       {pg.currentProgress !== undefined && (
                         <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-[#0071E3]">
-                          현재 진도 정정: {pg.currentProgress}{isBook ? 'p' : '강'}
+                          현재 진도 정정: {pg.currentProgress}{matUnit}
                         </span>
                       )}
 
@@ -1384,6 +1409,29 @@ export default function AdminInboxPage() {
                         />
                         <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">그대로 두면 학생 선택값 또는 오늘 기준으로 승인됩니다.</p>
                       </div>
+
+                      {pg.goalType === 'deadlineWeeks' && pg.targetDate && (
+                        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
+                          <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">마감일 처리</label>
+                          <div className="flex gap-1.5">
+                            {([['keep-deadline', `마감일 유지 (${pg.targetDate})`], ['keep-duration', `기간 유지 (약 ${pg.goalValue}주)`]] as const).map(([mode, label]) => (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() => setDeadlinePolicies((prev) => ({ ...prev, [selectedItem.id]: mode }))}
+                                className={`rounded-lg border px-2 py-1 text-[10px] font-bold transition ${
+                                  (deadlinePolicies[selectedItem.id] ?? 'keep-deadline') === mode
+                                    ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
+                                    : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 break-keep">마감일 유지는 시작일이 늦어져도 계획이 학생이 고른 마감일을 넘지 않아요(주당 분량 증가).</p>
+                        </div>
+                      )}
 
                       <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
                         <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
@@ -1450,6 +1498,28 @@ export default function AdminInboxPage() {
                             className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
                           />
                           <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">그대로 두면 학생 선택값 또는 오늘 기준으로 자료 계획이 생성됩니다.</p>
+                          {pm.goalType === 'deadlineWeeks' && pm.targetDate && (
+                            <div className="space-y-1.5 pt-1">
+                              <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">마감일 처리</label>
+                              <div className="flex gap-1.5">
+                                {([['keep-deadline', `마감일 유지 (${pm.targetDate})`], ['keep-duration', `기간 유지 (약 ${pm.goalValue}주)`]] as const).map(([mode, label]) => (
+                                  <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => setDeadlinePolicies((prev) => ({ ...prev, [selectedItem.id]: mode }))}
+                                    className={`rounded-lg border px-2 py-1 text-[10px] font-bold transition ${
+                                      (deadlinePolicies[selectedItem.id] ?? 'keep-deadline') === mode
+                                        ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
+                                        : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
+                                    }`}
+                                  >
+                                    {label}
+                                  </button>
+                                ))}
+                              </div>
+                              <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 break-keep">마감일 유지는 시작일이 늦어져도 계획이 학생이 고른 마감일을 넘지 않아요(주당 분량 증가).</p>
+                            </div>
+                          )}
                         </div>
                       )}
                       {pm.note && (
@@ -1522,11 +1592,18 @@ export default function AdminInboxPage() {
                       {pme.reason && (
                         <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {pme.reason}</p>
                       )}
-                      {(pme.total !== undefined || pme.studyDays) && hasPlans && (
-                        <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 break-keep">
-                          <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
-                          학습계획 보유 자료입니다. 자료 정보만 반영되고 기존 계획(주차별 분량·요일)은 유지됩니다 — 필요 시 학습계획 재생성.
-                        </p>
+                      {(pme.total !== undefined || pme.studyDays || pme.studyTime !== undefined) && hasPlans && (
+                        <label className="flex items-start gap-2 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/10 p-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={regenerateChecks[selectedItem.id] ?? true}
+                            onChange={(e) => setRegenerateChecks((prev) => ({ ...prev, [selectedItem.id]: e.target.checked }))}
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#0071E3]"
+                          />
+                          <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300 break-keep">
+                            승인하면서 학습계획도 새 총량·요일 기준으로 재생성 (권장) — 끄면 자료 정보만 바뀌고 기존 주차 계획(옛 범위)이 그대로 남아요.
+                          </span>
+                        </label>
                       )}
                       {willClampProgress && (
                         <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 break-keep">
@@ -1582,6 +1659,44 @@ export default function AdminInboxPage() {
                       <p className="text-[9px] font-bold text-red-600/80 dark:text-red-400/80 flex items-center gap-1">
                         <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
                         승인 시 되돌릴 수 없이 삭제됩니다. 진도 기록도 함께 사라져요.
+                      </p>
+                    </div>
+                  );
+                })()}
+
+                {/* proposedProgressCorrection 진도 숫자 정정 제안 표시 — 승인 시 진도 자동 반영 */}
+                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedProgressCorrection && (() => {
+                  const ppc: ProposedProgressCorrection = selectedItem.rawItem.proposedProgressCorrection;
+                  const unitLabel = getMaterialUnit(selectedItem.studentId, ppc.materialType, ppc.materialId);
+                  return (
+                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
+                        <Target className="w-3.5 h-3.5" />
+                        진도 숫자 정정 요청
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px]">
+                        {ppc.materialType === 'book'
+                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
+                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
+                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">
+                          {ppc.subjectName ? `${ppc.subjectName} · ` : ''}{ppc.materialTitle || ppc.materialId}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px]">
+                        <span className="min-w-0 truncate rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-slate-500 dark:text-slate-400 line-through">
+                          {ppc.fromValue !== undefined ? `${ppc.fromValue}${unitLabel}` : '현재값'}
+                        </span>
+                        <span className="shrink-0 font-black text-slate-300 dark:text-slate-600">→</span>
+                        <span className="min-w-0 truncate rounded-lg border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-black text-[#0071E3]">
+                          {ppc.toValue}{unitLabel}
+                        </span>
+                      </div>
+                      {ppc.reason && (
+                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {ppc.reason}</p>
+                      )}
+                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1 break-keep">
+                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
+                        승인 시 진도가 {ppc.toValue}{unitLabel}(으)로 자동 정정됩니다(총량 초과 시 총량으로 조정).
                       </p>
                     </div>
                   );
@@ -1680,7 +1795,7 @@ export default function AdminInboxPage() {
                         className={`w-full rounded-xl text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all ${selectedItem.rawItem?.proposedMaterialDelete ? 'bg-red-600 hover:bg-red-700' : 'bg-emerald-600 hover:bg-emerald-700'}`}
                       >
                         <Check className="w-3.5 h-3.5 mr-1" />
-                        {selectedItem.rawItem?.proposedMaterialDelete ? '승인 및 삭제' : selectedItem.rawItem?.proposedMaterialEdit ? '승인 및 수정 반영' : selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : '해결/처리 완료'}
+                        {selectedItem.rawItem?.proposedMaterialDelete ? '승인 및 삭제' : selectedItem.rawItem?.proposedMaterialEdit ? '승인 및 수정 반영' : selectedItem.rawItem?.proposedMaterial ? '승인 및 자료 생성' : selectedItem.rawItem?.proposedGoal ? '승인 및 계획 자동 반영' : selectedItem.rawItem?.proposedProgressCorrection ? '승인 및 진도 정정' : '해결/처리 완료'}
                       </Button>
                       <Button
                         disabled={processing}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getStudents, saveStudent } from '@/lib/store';
 import { Student } from '@/lib/types/student';
 import { getAdminSession } from '@/lib/auth';
+import { buildDefaultSubjectsForContact } from '@/lib/streams';
 
 type SmsTarget = 'parent' | 'student';
 
@@ -95,7 +96,12 @@ export async function POST(request: Request) {
       lectures: capArr(studentData.lectures, 500),
       consultationLogs: capArr(studentData.consultationLogs, 500),
       grades: capArr(studentData.grades, 500),
-      subjects: capArr(studentData.subjects, 500),
+      // 목표 시험(직렬)이 표준 라벨과 일치하면 기본 과목 껍데기를 자동 생성 —
+      // 가입신청 승인 경로(applications/[id])와 동일 규칙. 클라이언트가 보낸 과목이 있으면 뒤에 이어붙는다(멱등).
+      subjects: [
+        ...buildDefaultSubjectsForContact(capStr(studentData.contact, 200), capArr(studentData.subjects, 500)),
+        ...capArr(studentData.subjects, 500),
+      ],
       enrollmentEndDate: studentData.enrollmentEndDate || undefined,
       weeklyGradeCheck: Boolean(studentData.weeklyGradeCheck),
       awaySchedules: capArr(studentData.awaySchedules, 500),
