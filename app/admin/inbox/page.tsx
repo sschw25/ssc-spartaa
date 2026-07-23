@@ -75,6 +75,12 @@ export default function AdminInboxPage() {
   useEffect(() => {
     const saved = typeof window !== 'undefined' ? window.localStorage.getItem('ssc-inbox-view-mode') : null;
     if (saved === 'list' || saved === 'chat') setViewMode(saved);
+    // 딥링크 ?student=<id> — 채팅 독/외부 진입에서 해당 학생 방을 바로 연다(저장된 뷰 모드보다 우선).
+    const sid = typeof window !== 'undefined' ? new URL(window.location.href).searchParams.get('student') : null;
+    if (sid) {
+      setViewMode('chat');
+      setSelectedStudentId(sid);
+    }
   }, []);
   const changeViewMode = (mode: 'chat' | 'list') => {
     setViewMode(mode);
@@ -660,6 +666,13 @@ export default function AdminInboxPage() {
       }
     });
   }, [inboxItems]);
+
+  // 딥링크로 온 studentId 가 로드 결과에 없으면(삭제·타 캠퍼스 스코프) 목록으로 폴백 —
+  // 모바일에서 빈 방만 남는 막다른 화면 방지.
+  useEffect(() => {
+    if (!selectedStudentId || students.length === 0) return;
+    if (!students.some((s) => s.id === selectedStudentId)) setSelectedStudentId(null);
+  }, [students, selectedStudentId]);
 
   // 방 열람 읽음 처리 — 학생 발신 '자유채팅' 미읽음이 있을 때만.
   // ⚠️ source==='chat' 한정이 무한 루프 방지의 핵심: thread 재답변(leave/request 등)까지 세면

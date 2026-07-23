@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { AdminGlobalProvider, useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import { StudentDetailSheet } from '@/components/admin/student-detail-sheet';
 import { AdminGlassTabBar } from '@/components/admin/admin-glass-tabbar';
+import { AdminChatDock } from '@/components/admin/admin-chat-dock';
 import { cn } from '@/lib/utils';
 
 function GlobalStudentSheet() {
@@ -45,6 +46,8 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         {children}
       </div>
       <GlobalStudentSheet />
+      {/* 전역 채팅 독 — 어느 관리자 화면에서든 학생 대화 즉시 접근(인박스 페이지 제외) */}
+      <AdminChatDock />
       {/* 고정 사이드바가 보일 땐 데스크톱에서 하단 탭바 숨김(중복 방지) */}
       <div className={cn(isMenuPinned && 'lg:hidden')}>
         <AdminGlassTabBar />

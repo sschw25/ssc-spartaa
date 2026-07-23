@@ -251,7 +251,7 @@ export function StudentChatPanel({
                   )}
 
                   {e.kind === 'status' ? (
-                    <div className="flex justify-center">
+                    <div className="flex justify-center animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                         {e.statusKind === 'rejected' || e.statusKind === 'cancelled' || e.statusKind === 'noshow'
                           ? <XCircle className="h-3 w-3 text-red-500" />
@@ -261,7 +261,7 @@ export function StudentChatPanel({
                       </span>
                     </div>
                   ) : e.kind === 'message' ? (
-                    <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex ${mine ? 'justify-end' : 'justify-start'} animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]`}>
                       <div className={`max-w-[82%] rounded-2xl px-3.5 py-2.5 text-xs font-semibold whitespace-pre-wrap break-words shadow-sm ${
                         mine
                           ? 'bg-[#0071E3] text-white rounded-br-md'
@@ -283,7 +283,7 @@ export function StudentChatPanel({
                       const info = cardInfo(e);
                       const Icon = SOURCE_META[e.source]?.icon || MessageSquare;
                       return (
-                        <div className="flex justify-end">
+                        <div className="flex justify-end animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
                           <div className="max-w-[86%] min-w-[220px] rounded-2xl rounded-br-md border border-[#0071E3]/15 dark:border-[#0071E3]/25 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/10 p-3 shadow-sm">
                             <div className="flex items-center justify-between gap-2">
                               <span className="inline-flex min-w-0 items-center gap-1.5 text-[10px] font-black text-[#0071E3]">

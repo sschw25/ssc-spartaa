@@ -328,7 +328,7 @@ function ChatRoom(props: ChatViewProps & { student: Student; events: TimelineEve
                   </div>
                 )}
                 {e.kind === 'status' ? (
-                  <div className="flex justify-center">
+                  <div className="flex justify-center animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-100 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-3 py-1 text-[10px] font-bold text-slate-500 dark:text-slate-400">
                       {e.statusKind === 'rejected' || e.statusKind === 'cancelled' || e.statusKind === 'noshow'
                         ? <XCircle className="h-3 w-3 text-red-500" />
@@ -383,7 +383,7 @@ function ChatRoom(props: ChatViewProps & { student: Student; events: TimelineEve
 function MessageBubble({ event }: { event: TimelineEvent }) {
   const mine = event.side === 'admin'; // 관리자 화면: 관리자=오른쪽
   return (
-    <div className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex ${mine ? 'justify-end' : 'justify-start'} animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]`}>
       <div className={`max-w-[80%] rounded-2xl px-3.5 py-2.5 text-xs font-semibold whitespace-pre-wrap break-words shadow-sm ${
         mine
           ? 'bg-[#0071E3] text-white rounded-br-md'
@@ -442,7 +442,7 @@ function AdminActionCard(props: ChatViewProps & { event: TimelineEvent; item?: I
   };
 
   return (
-    <div className="flex justify-start">
+    <div className="flex justify-start animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
       <div className="w-full max-w-[92%] rounded-2xl rounded-bl-md border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/[0.04] p-3.5 shadow-sm space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <span className="inline-flex min-w-0 items-center gap-1.5 text-[10px] font-black text-slate-500 dark:text-slate-400">

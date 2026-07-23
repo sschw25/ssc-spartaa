@@ -16,6 +16,7 @@ import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
 import { StudentChatPanel } from '@/components/report/student-chat-panel';
+import { AnimatedOverlay } from '@/components/ui/animated-overlay';
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
@@ -63,6 +64,8 @@ function StudentReportInner() {
   const [mealPlans, setMealPlans] = useState<MealPlanWithOrder[]>([]);
   // 미션 탭은 첫 활성화 때 마운트(그때 API 호출) — 초기 로딩을 가볍게 유지한다.
   const [requestSubTab, setRequestSubTab] = useState<ApplicationSubTab>('leave');
+  // 플로팅 채팅 오버레이 — 어느 탭에서든 현재 화면을 벗어나지 않고 대화를 열람/전송.
+  const [chatSheetOpen, setChatSheetOpen] = useState(false);
   const [learningSubTab, setLearningSubTab] = useState<LearningSubTab>('timetable');
   const [lifeSubTab, setLifeSubTab] = useState<LifeSubTab>('attendance-status');
 
@@ -928,7 +931,7 @@ function StudentReportInner() {
           suggestionChatNode={
             <StudentChatPanel
               events={chatTimeline || []}
-              active={activeTab === 'student-requests' && requestSubTab === 'suggestion'}
+              active={activeTab === 'student-requests' && requestSubTab === 'suggestion' && !chatSheetOpen}
               chatUnreadCount={chatUnreadCount || 0}
               chatSending={chatSending}
               sendChatMessage={sendChatMessage}
@@ -1011,23 +1014,63 @@ function StudentReportInner() {
         />
       )}
 
-      {/* 새 메시지 플로팅 배지 — 채팅 탭 밖에서 관리자 답변이 오면 어느 탭에서든 보인다. 탭하면 채팅으로 이동 */}
-      {isStudentReport && (chatUnreadCount || 0) > 0 && !(activeTab === 'student-requests' && requestSubTab === 'suggestion') && (
+      {/* 플로팅 채팅 버튼 — 어느 탭에서든 항상 접근(채팅 서브탭 표시 중엔 숨김). 미읽음 배지 포함 */}
+      {isStudentReport && !chatSheetOpen && !(activeTab === 'student-requests' && requestSubTab === 'suggestion') && (
         <button
           type="button"
-          onClick={() => {
-            setRequestSubTab('suggestion');
-            setActiveTab('student-requests');
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-          }}
-          className="no-print glass-strong fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full py-2.5 pl-3.5 pr-4 text-xs font-black text-[#0071E3] shadow-lg transition active:scale-[0.96]"
-          aria-label={`새 메시지 ${chatUnreadCount}개 — 채팅 열기`}
+          onClick={() => setChatSheetOpen(true)}
+          className="no-print glass-strong press-spring fixed bottom-24 right-4 z-40 grid h-13 w-13 place-items-center rounded-full text-[#0071E3] shadow-lg transition active:scale-[0.92]"
+          aria-label={`채팅 열기${(chatUnreadCount || 0) > 0 ? ` — 새 메시지 ${chatUnreadCount}개` : ''}`}
+          title="코멘터와 채팅"
         >
-          <span className="relative grid h-6 w-6 place-items-center rounded-full bg-[#0071E3]/10">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          </span>
-          새 메시지 {chatUnreadCount! > 9 ? '9+' : chatUnreadCount}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" className="h-5.5 w-5.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {(chatUnreadCount || 0) > 0 && (
+            <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white dark:ring-[#1c1c1e]">
+              {chatUnreadCount! > 9 ? '9+' : chatUnreadCount}
+            </span>
+          )}
         </button>
+      )}
+
+      {/* 채팅 오버레이 시트 — 현재 탭을 벗어나지 않고 대화 확인/전송 (iOS26 슬라이드업 전환) */}
+      {isStudentReport && chatSheetOpen && (
+        <AnimatedOverlay
+          align="bottom"
+          onClose={() => setChatSheetOpen(false)}
+          closeOnEscape
+          lockScroll
+          ariaLabel="코멘터와 채팅"
+          backdropClassName="no-print fixed inset-0 z-[70] flex items-end justify-center bg-black/30 backdrop-blur-[2px] md:items-center md:p-6"
+          panelClassName="relative flex max-h-[88dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-[#F8FAFC] dark:bg-[#111113] md:max-w-2xl md:rounded-3xl"
+        >
+          {(requestClose) => (
+            <div className="min-h-0 overflow-y-auto overscroll-contain p-4 pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="mx-auto h-1.5 w-10 rounded-full bg-slate-200 dark:bg-white/15 md:hidden" aria-hidden />
+                <button
+                  type="button"
+                  onClick={requestClose}
+                  className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400"
+                  aria-label="채팅 닫기"
+                >
+                  ✕
+                </button>
+              </div>
+              <StudentChatPanel
+                events={chatTimeline || []}
+                active={chatSheetOpen}
+                chatUnreadCount={chatUnreadCount || 0}
+                chatSending={chatSending}
+                sendChatMessage={sendChatMessage}
+                markChatRead={markChatRead}
+                refreshCore={refreshCore}
+                cancelSuggestion={cancelSuggestion}
+                cancelLeave={cancelLeave}
+                cancelRequest={cancelRequest}
+              />
+            </div>
+          )}
+        </AnimatedOverlay>
       )}
 
       {/* 1일 1문제 — 오답노트가 있는 학생에게 홈 진입 시 하루 1회 랜덤 복습 문제 시트(노트 0개면 안 뜸) */}
