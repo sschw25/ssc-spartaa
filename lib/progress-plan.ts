@@ -14,6 +14,7 @@ export interface ManagedProgressItem {
   itemId: string;
   type: ProgressItemType;
   title: string;
+  unit: string;             // 표시용 분량 단위 — 교재는 material.unit(기본 p), 인강은 '강'
   total: number;
   current: number;
   targetDate?: string;
@@ -382,6 +383,7 @@ function buildItem(
     itemId: material.id,
     type,
     title,
+    unit: type === 'book' ? ((material as BookProgress).unit || 'p') : '강',
     total,
     current,
     targetDate: effectiveTargetDate,
@@ -507,6 +509,9 @@ export function getEstimatedStudyTimeMin(
   }
   if (rawUnit.includes('문제')) {
     return amount * 2;
+  }
+  if (rawUnit.includes('시간')) {
+    return amount * 60; // 시간 단위 자료 — 1단위 = 60분(분 정규화 집계·기간 목표 페이스의 기준)
   }
   if (rawUnit.includes('장')) {
     return amount * 10;

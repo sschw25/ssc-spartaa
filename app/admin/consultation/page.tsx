@@ -505,7 +505,7 @@ function ConsultationContent() {
             title: book.title,
             current: book.currentPage,
             total: book.totalPages,
-            unit: 'p',
+            unit: book.unit || 'p',
             updatedAt: book.updatedAt,
             targetDate: book.targetDate,
             percent: book.totalPages > 0 ? Math.round((book.currentPage / book.totalPages) * 100) : 0,
@@ -726,7 +726,7 @@ function ConsultationContent() {
           <span className="shrink-0">{item.type === 'book' ? <BookOpen className="inline-block w-3.5 h-3.5 align-[-2px]" /> : <Monitor className="inline-block w-3.5 h-3.5 align-[-2px]" />}</span>
           <div className="min-w-0">
             <p className="truncate">{item.title}</p>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{item.subjectName} · 총 {item.total}{item.type === 'book' ? 'p' : '강'}</p>
+            <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">{item.subjectName} · 총 {item.total}{item.unit}</p>
           </div>
         </div>
       </td>
@@ -758,11 +758,11 @@ function ConsultationContent() {
       </td>
 
       <td className={`p-3.5 text-center font-bold ${item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-        {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}
+        {item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.unit}` : '없음'}
       </td>
 
       <td className="p-3.5 text-center font-bold text-slate-900 dark:text-slate-100">
-        {item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}
+        {item.expectedToday === null ? '-' : `${item.expectedToday}${item.unit}`}
       </td>
 
       <td className="p-3.5 text-center">
@@ -805,7 +805,7 @@ function ConsultationContent() {
               }}
               className="h-7 w-16 rounded-lg border-black/[0.08] dark:border-white/10 bg-white dark:bg-white/5 px-2 text-center text-xs font-bold"
             />
-            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.type === 'book' ? 'p' : '강'}</span>
+            <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{item.unit}</span>
             <Button
               size="icon"
               variant="outline"
@@ -895,8 +895,8 @@ function ConsultationContent() {
 
           <div className="bg-[#F5F5F7] dark:bg-white/5 p-2.5 rounded-xl space-y-2">
             <div className="flex justify-between items-center text-[10px] text-slate-500 dark:text-slate-400">
-              <span>오늘 기준 권장: <strong className="text-slate-900 dark:text-slate-100">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.type === 'book' ? 'p' : '강'}`}</strong></span>
-              <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.type === 'book' ? 'p' : '강'}` : '없음'}</strong></span>
+              <span>오늘 기준 권장: <strong className="text-slate-900 dark:text-slate-100">{item.expectedToday === null ? '-' : `${item.expectedToday}${item.unit}`}</strong></span>
+              <span>부족분: <strong className={item.shortage && item.shortage > 0 ? 'text-red-600' : 'text-emerald-600'}>{item.shortage === null ? '-' : item.shortage > 0 ? `${item.shortage}${item.unit}` : '없음'}</strong></span>
             </div>
             <div className="h-1.5 rounded-full bg-white dark:bg-white/10 overflow-hidden border border-black/[0.03] dark:border-white/10">
               <div
@@ -947,7 +947,7 @@ function ConsultationContent() {
                   }}
                   className="h-5 w-12 border-none bg-transparent p-0 text-center text-xs font-bold focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">/ {item.total}{item.type === 'book' ? 'p' : '강'}</span>
+                <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">/ {item.total}{item.unit}</span>
               </div>
               <Button
                 size="icon"

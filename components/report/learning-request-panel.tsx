@@ -9,6 +9,12 @@ const MA_DAY_ORDER = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const;
 type MaDay = (typeof MA_DAY_ORDER)[number];
 const MA_DAY_LABELS: Record<MaDay, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
 const MA_TIME_LABELS: Record<'morning' | 'afternoon' | 'night', string> = { morning: '오전', afternoon: '오후', night: '야간' };
+// 교재형 자료의 분량 단위 선택지 — 인강은 '강' 고정. '시간'은 총량=총 몇 시간, 하루 분량과 함께 쓰면 '하루 N시간' 계획이 돼요.
+const MA_UNIT_OPTIONS = [
+  { key: 'p', label: '페이지', hint: '' },
+  { key: '문제', label: '문제 수', hint: '문제집처럼 푼 문제 수로 진도를 세요.' },
+  { key: '시간', label: '시간', hint: '총 몇 시간 분량인지로 계획을 세요. 하루 분량과 함께 쓰면 ‘하루 N시간’이 돼요.' },
+] as const;
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
@@ -106,6 +112,12 @@ export function LearningRequestPanel({
     if (lecture) return { kind: 'lecture' as const, mat: lecture };
     return null;
   }, [student.subjects, student.books, student.lectures]);
+  // 진도·계획 요청 폼에서 선택한 자료의 표시 단위 — 교재는 material.unit(기본 p·문제·시간 등), 인강은 '강'.
+  const requestFormUnit = React.useMemo(() => {
+    if (requestForm.materialType !== 'book') return '강';
+    const found = requestForm.materialId ? findMaterialById(requestForm.materialId) : null;
+    return found?.kind === 'book' ? ((found.mat as BookProgress).unit || 'p') : 'p';
+  }, [requestForm.materialId, requestForm.materialType, findMaterialById]);
   const [materialAddOpen, setMaterialAddOpen] = React.useState(false);
   const [maSubjectMode, setMaSubjectMode] = React.useState<'existing' | 'new'>(subjectNames.length > 0 ? 'existing' : 'new');
   const [maForm, setMaForm] = React.useState({
@@ -118,6 +130,8 @@ export function LearningRequestPanel({
     currentProgress: '',
     total: '',
     unit: '',
+    // 단위 직접입력 모드 — false면 칩 선택(페이지/문제/시간), true면 자유 텍스트 입력.
+    unitCustom: false,
     note: '',
     // 인강 전용 — 체크 시 승인으로 만들어지는 인강에 오답노트가 켜져요.
     useWrongNotes: false,
@@ -140,6 +154,7 @@ export function LearningRequestPanel({
       currentProgress: '',
       total: '',
       unit: '',
+      unitCustom: false,
       note: '',
       useWrongNotes: false,
       goalMode: 'selfPaced',
@@ -261,6 +276,8 @@ export function LearningRequestPanel({
   const [meTitle, setMeTitle] = React.useState('');
   const [meTotal, setMeTotal] = React.useState('');
   const [meUnit, setMeUnit] = React.useState('');
+  // 단위 직접입력 모드 — 기존 단위가 칩(페이지/문제/시간) 밖의 값(회·장 등)이면 켜진 채로 프리필된다.
+  const [meUnitCustom, setMeUnitCustom] = React.useState(false);
   const [meStudyDays, setMeStudyDays] = React.useState<MaDay[]>([]);
   const [meStudyTime, setMeStudyTime] = React.useState('');
   // 시간대는 학생이 직접 건드렸을 때만 신청에 담는다 — 현재 값이 블록이 아닌(특정 교시/시:분 직접지정)
@@ -281,6 +298,7 @@ export function LearningRequestPanel({
     setMeTitle('');
     setMeTotal('');
     setMeUnit('');
+    setMeUnitCustom(false);
     setMeStudyDays([]);
     setMeStudyTime('');
     setMeTimeTouched(false);
@@ -295,12 +313,13 @@ export function LearningRequestPanel({
     setMeTimeTouched(false);
     const mat = editableMaterials.find((m) => m.id === id);
     if (!mat) {
-      setMeTitle(''); setMeTotal(''); setMeUnit(''); setMeStudyDays([]); setMeStudyTime('');
+      setMeTitle(''); setMeTotal(''); setMeUnit(''); setMeUnitCustom(false); setMeStudyDays([]); setMeStudyTime('');
       return;
     }
     setMeTitle(mat.title);
     setMeTotal(mat.total > 0 ? String(mat.total) : '');
-    setMeUnit(mat.unit);
+    setMeUnit(mat.unit || (mat.type === 'book' ? 'p' : ''));
+    setMeUnitCustom(mat.type === 'book' && !['p', '문제', '시간'].includes(mat.unit || 'p'));
     setMeStudyDays(mat.studyDays);
     setMeStudyTime((['morning', 'afternoon', 'night'] as string[]).includes(mat.studyTime) ? mat.studyTime : '');
   };
@@ -333,7 +352,8 @@ export function LearningRequestPanel({
       materialTitle: mat.title,
       title: title !== mat.title ? title : undefined,
       total: totalNum > 0 && totalNum !== mat.total ? totalNum : undefined,
-      unit: mat.type === 'book' && unit && unit !== mat.unit ? unit : undefined,
+      // 미설정('')은 기본 p와 같은 뜻 — 'p → p' 같은 유령 변경을 만들지 않게 정규화해 비교한다.
+      unit: mat.type === 'book' && unit && unit !== (mat.unit || 'p') ? unit : undefined,
       studyDays: daysChanged && meStudyDays.length > 0 ? meStudyDays : undefined,
       studyTime: meTimeTouched && meStudyTime !== mat.studyTime ? meStudyTime : undefined,
       reason: meReason.trim() || undefined,
@@ -875,6 +895,46 @@ export function LearningRequestPanel({
                 </div>
               </div>
 
+              {/* 분량 단위 — 페이지/문제/시간 중 선택(교재형). 인강은 강의 수(강) 고정. */}
+              {maForm.materialType === 'book' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">분량 단위</label>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {MA_UNIT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => setMaForm((f) => ({ ...f, unit: opt.key, unitCustom: false }))}
+                        className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${!maForm.unitCustom && (maForm.unit.trim() || 'p') === opt.key ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setMaForm((f) => ({ ...f, unitCustom: true }))}
+                      className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${maForm.unitCustom ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                    >
+                      직접 입력
+                    </button>
+                    {maForm.unitCustom && (
+                      <input
+                        type="text"
+                        value={maForm.unit}
+                        onChange={(e) => setMaForm((f) => ({ ...f, unit: e.target.value }))}
+                        placeholder="예: 회, 장"
+                        maxLength={10}
+                        className="w-20 shrink-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                      />
+                    )}
+                  </div>
+                  {!maForm.unitCustom && (() => {
+                    const sel = MA_UNIT_OPTIONS.find((o) => o.key === (maForm.unit.trim() || 'p'));
+                    return sel?.hint ? <p className="break-keep text-[9.5px] font-semibold text-slate-400">{sel.hint}</p> : null;
+                  })()}
+                </div>
+              )}
+
               {/* 현재 진도 + 총량/단위 */}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
@@ -899,21 +959,10 @@ export function LearningRequestPanel({
                       min={1}
                       value={maForm.total}
                       onChange={(e) => setMaForm((f) => ({ ...f, total: e.target.value }))}
-                      placeholder="예: 64강처럼 알면 입력, 몰라도 돼요"
+                      placeholder={maForm.materialType === 'book' && maForm.unit.trim() === '시간' ? '예: 30 (총 몇 시간 분량인지)' : '예: 64강처럼 알면 입력, 몰라도 돼요'}
                       className="w-full min-w-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
                     />
-                    {maForm.materialType === 'book' ? (
-                      <input
-                        type="text"
-                        value={maForm.unit}
-                        onChange={(e) => setMaForm((f) => ({ ...f, unit: e.target.value }))}
-                        placeholder="p"
-                        maxLength={10}
-                        className="w-12 shrink-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
-                      />
-                    ) : (
-                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">강</span>
-                    )}
+                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{maForm.materialType === 'book' ? (maForm.unit.trim() || 'p') : '강'}</span>
                   </div>
                 </div>
               </div>
@@ -1087,20 +1136,47 @@ export function LearningRequestPanel({
                         <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{meTarget.type === 'book' ? (meUnit.trim() || 'p') : '강'}</span>
                       </div>
                     </div>
-                    {meTarget.type === 'book' && (
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">단위 <span className="font-medium text-slate-400">(선택)</span></label>
-                        <input
-                          type="text"
-                          value={meUnit}
-                          onChange={(e) => { setMeUnit(e.target.value); setMeError(''); }}
-                          placeholder="p / 회"
-                          maxLength={10}
-                          className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
-                        />
-                      </div>
-                    )}
                   </div>
+
+                  {/* 분량 단위 — 페이지/문제/시간 칩 선택(교재형). 기존 회·장 등은 직접 입력으로 프리필. */}
+                  {meTarget.type === 'book' && (
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400">분량 단위 <span className="font-medium text-slate-400">(선택)</span></label>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {MA_UNIT_OPTIONS.map((opt) => (
+                          <button
+                            key={opt.key}
+                            type="button"
+                            onClick={() => { setMeUnit(opt.key); setMeUnitCustom(false); setMeError(''); }}
+                            className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${!meUnitCustom && (meUnit.trim() || 'p') === opt.key ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => { setMeUnitCustom(true); setMeError(''); }}
+                          className={`rounded-full px-3 py-1.5 text-[11px] font-bold transition ${meUnitCustom ? 'bg-[#0071E3] text-white' : 'border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] text-slate-500 dark:text-slate-400'}`}
+                        >
+                          직접 입력
+                        </button>
+                        {meUnitCustom && (
+                          <input
+                            type="text"
+                            value={meUnit}
+                            onChange={(e) => { setMeUnit(e.target.value); setMeError(''); }}
+                            placeholder="예: 회, 장"
+                            maxLength={10}
+                            className="w-20 shrink-0 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-1.5 text-center text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none"
+                          />
+                        )}
+                      </div>
+                      {!meUnitCustom && (() => {
+                        const sel = MA_UNIT_OPTIONS.find((o) => o.key === (meUnit.trim() || 'p'));
+                        return sel?.hint ? <p className="break-keep text-[9.5px] font-semibold text-slate-400">{sel.hint}</p> : null;
+                      })()}
+                    </div>
+                  )}
 
                   {/* 학습 요일 */}
                   <div className="space-y-1.5">
@@ -1494,7 +1570,7 @@ export function LearningRequestPanel({
                       {requestForm.currentGoalSnapshot?.goalValue ? (
                         <div className="rounded-lg bg-slate-100/80 dark:bg-white/10 border border-slate-200 dark:border-white/10 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
                           <span className="font-black text-slate-400">현재 설정:</span>
-                          <span>{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '목표 기간' : requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '기간 목표' : requestForm.currentGoalSnapshot.goalType === 'weeklyAmount' ? '주간 학습량' : '일일 학습량'} {requestForm.currentGoalSnapshot.goalValue}{requestForm.currentGoalSnapshot.goalType === 'weeks' || requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '주' : requestForm.materialType === 'book' ? 'p' : '강'}</span>
+                          <span>{requestForm.currentGoalSnapshot.goalType === 'weeks' ? '목표 기간' : requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '기간 목표' : requestForm.currentGoalSnapshot.goalType === 'weeklyAmount' ? '주간 학습량' : '일일 학습량'} {requestForm.currentGoalSnapshot.goalValue}{requestForm.currentGoalSnapshot.goalType === 'weeks' || requestForm.currentGoalSnapshot.goalType === 'deadlineWeeks' ? '주' : requestFormUnit}</span>
                           {requestForm.currentGoalSnapshot.speedMultiplier && requestForm.currentGoalSnapshot.speedMultiplier !== 1.0 && (
                             <span>· {requestForm.currentGoalSnapshot.speedMultiplier}배속</span>
                           )}
@@ -1561,7 +1637,7 @@ export function LearningRequestPanel({
                               className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-goal-value-input"
                             />
                             <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                              {requestForm.materialType === 'book' ? 'p' : '강'} / 일
+                              {requestFormUnit} / 일
                             </span>
                           </div>
                         </div>
@@ -1628,7 +1704,7 @@ export function LearningRequestPanel({
                                 className="w-full rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2.5 py-1.5 text-xs font-semibold text-slate-800 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none request-current-progress-input"
                               />
                               <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                {requestForm.materialType === 'book' ? 'p' : '강'}
+                                {requestFormUnit}
                               </span>
                             </div>
                           </div>

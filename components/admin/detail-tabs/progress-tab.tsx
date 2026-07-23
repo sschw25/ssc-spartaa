@@ -690,6 +690,15 @@ export function ProgressTab() {
                                 setNewMaterialSubject(mat.subject);
                                 if (mat.type === 'book') {
                                   setNewMaterialPublisher(mat.publisher || '');
+                                  if (mat.unit) {
+                                    setNewMaterialUnit(mat.unit);
+                                    if (['p', '회', '문제', '시간'].includes(mat.unit)) {
+                                      setIsCustomUnit(false);
+                                    } else {
+                                      setIsCustomUnit(true);
+                                      setCustomUnitInput(mat.unit);
+                                    }
+                                  }
                                 }
                                 setNewMaterialAuthor(mat.author || '');
                                 setShowIntegratedSuggestions(false);
@@ -704,7 +713,7 @@ export function ProgressTab() {
                                 </span>
                               </div>
                               <span className="text-[9px] font-bold text-[#0071E3] shrink-0">
-                                {mat.totalPagesOrLectures}{mat.type === 'book' ? 'p' : '강'}
+                                {mat.totalPagesOrLectures}{mat.type === 'book' ? (mat.unit || 'p') : '강'}
                               </span>
                             </div>
                           ))}
@@ -723,34 +732,23 @@ export function ProgressTab() {
                       </Label>
                       {newMaterialType === 'book' && (
                         <div className="flex gap-1 items-center">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewMaterialUnit('p');
-                              setIsCustomUnit(false);
-                            }}
-                            className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-colors ${
-                              !isCustomUnit && newMaterialUnit === 'p'
-                                ? 'bg-slate-900 text-white border-transparent'
-                                : 'bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/10'
-                            }`}
-                          >
-                            페이지
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setNewMaterialUnit('회');
-                              setIsCustomUnit(false);
-                            }}
-                            className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-colors ${
-                              !isCustomUnit && newMaterialUnit === '회'
-                                ? 'bg-slate-900 text-white border-transparent'
-                                : 'bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/10'
-                            }`}
-                          >
-                            회
-                          </button>
+                          {([['p', '페이지'], ['회', '회'], ['문제', '문제'], ['시간', '시간']] as const).map(([key, label]) => (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => {
+                                setNewMaterialUnit(key);
+                                setIsCustomUnit(false);
+                              }}
+                              className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-colors ${
+                                !isCustomUnit && newMaterialUnit === key
+                                  ? 'bg-slate-900 text-white border-transparent'
+                                  : 'bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 border-black/[0.08] dark:border-white/10 hover:bg-[#F5F5F7] dark:hover:bg-white/10'
+                              }`}
+                            >
+                              {label}
+                            </button>
+                          ))}
                           <button
                             type="button"
                             onClick={() => {
@@ -771,7 +769,7 @@ export function ProgressTab() {
                     <div className="flex gap-2">
                       <Input
                         type="number"
-                        placeholder={newMaterialType === 'book' ? (newMaterialUnit === 'p' ? "예: 350 (몰라도 비워두세요)" : "예: 10 (몰라도 비워두세요)") : "예: 30 (몰라도 비워두세요)"}
+                        placeholder={newMaterialType === 'book' ? (newMaterialUnit === 'p' ? "예: 350 (몰라도 비워두세요)" : newMaterialUnit === '시간' ? "예: 30 (총 몇 시간·몰라도 비워두세요)" : "예: 10 (몰라도 비워두세요)") : "예: 30 (몰라도 비워두세요)"}
                         value={newMaterialTotal || ''}
                         onChange={(e) => setNewMaterialTotal(e.target.value === '' ? '' : Number(e.target.value))}
                         className="rounded-lg border-black/[0.08] dark:border-white/10 text-xs h-9 bg-white dark:bg-white/5 dark:text-slate-100 flex-1"

@@ -254,7 +254,8 @@ export default function AdminInboxPage() {
       const total = Number(book.totalPages) || 0;
       const current = Number(book.currentPage) || 0;
       const percent = total > 0 ? Math.round((current / total) * 100) : 0;
-      return { percent, label: total > 0 ? `${current}/${total}p (${percent}%)` : `${current}p 진행` };
+      const unit = book.unit || 'p';
+      return { percent, label: total > 0 ? `${current}/${total}${unit} (${percent}%)` : `${current}${unit} 진행` };
     }
     const lecture = allLectures.find(l => l.id === pmd.materialId);
     if (!lecture) return null;
