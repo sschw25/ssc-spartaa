@@ -1998,12 +1998,15 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
       estimatedDailyAmount = totalDays > 0 ? remainingAmount / totalDays : 0;
     }
 
-    const isDailyGoalOverload = (type === 'book' && estimatedDailyAmount > 30) || (type === 'lecture' && estimatedDailyAmount > 3);
+    // 과부하 경고 임계 — 단위별 하루 권장 한계(시간=8, 문제=100, 그 외 교재 단위=30, 인강=3강).
+    const overloadUnitLabel = type === 'book' ? (customUnit || 'p') : '강';
+    const overloadLimit = type === 'lecture' ? 3 : customUnit === '시간' ? 8 : customUnit === '문제' ? 100 : 30;
+    const isDailyGoalOverload = estimatedDailyAmount > overloadLimit;
 
     if (isDailyGoalOverload) {
       const confirmed = await confirm({
         title: '무리한 계획을 생성할까요?',
-        description: `현재 목표 조건이면 하루 평균 ${Math.round(estimatedDailyAmount)}${type === 'book' ? (customUnit || 'p') : '강'} 이상 학습해야 해요. (권장 한계: 하루 30p / 3강 이하) 이대로 생성하면 부담이 클 수 있어요.`,
+        description: `현재 목표 조건이면 하루 평균 ${Math.round(estimatedDailyAmount)}${overloadUnitLabel} 이상 학습해야 해요. (권장 한계: 하루 ${overloadLimit}${overloadUnitLabel} 이하) 이대로 생성하면 부담이 클 수 있어요.`,
         confirmText: '이대로 생성',
       });
       if (!confirmed) {
@@ -2223,6 +2226,10 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
     setNewMaterialAuthor('');
     setNewMaterialEstimatedMinutes('');
     setNewMaterialSpeedMultiplier(1.0);
+    // 단위도 기본값으로 — 직전 자료의 '시간'/'문제' 선택이 다음 등록에 이월되면 페이스 계산까지 왜곡된다.
+    setNewMaterialUnit('p');
+    setIsCustomUnit(false);
+    setCustomUnitInput('');
     setShowIntegratedSuggestions(false);
     setIntegratedSearchResults([]);
   };
@@ -4266,7 +4273,7 @@ export function StudentDetailSheet({ student, isOpen, onClose, onUpdate, onDelet
                         </p>
                         {req.proposedGoal.currentProgress !== undefined && (
                           <p className="font-bold text-slate-600 dark:text-slate-300">
-                            • 현재 진도 정정: <span className="text-[#0071E3] font-semibold">{req.proposedGoal.currentProgress}{req.proposedGoal.materialType === 'book' ? (subjectsState.flatMap(s => s.books || []).find(b => b.id === req.proposedGoal?.materialId)?.unit || 'p') : '강'}</span>
+                            • 현재 진도 정정: <span className="text-[#0071E3] font-semibold">{req.proposedGoal.currentProgress}{req.proposedGoal.materialType === 'book' ? ((subjectsState.flatMap(s => s.books || []).find(b => b.id === req.proposedGoal?.materialId) || (student?.books || []).find(b => b.id === req.proposedGoal?.materialId))?.unit || 'p') : '강'}</span>
                           </p>
                         )}
                         {req.proposedGoal.proposedWeekNumber && req.proposedGoal.proposedRangeText && (

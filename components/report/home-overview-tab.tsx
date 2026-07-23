@@ -729,7 +729,7 @@ export function HomeOverviewTab({
                 todayPlanEntries.map((entry, index) => {
                   const isPending = pendingPlanId === entry.id;
                   const _r = entry.rangeText || '';
-                  const unit = _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
+                  const unit = _r.includes('시간') ? '시간' : _r.includes('문제') ? '문제' : _r.includes('강') ? '강' : _r.toLowerCase().includes('p') ? 'p' : _r.replace(/\d+회독/g, '').includes('회') ? '회' : '';
                   // 시작점 조정 — 완료 항목·selfPaced·분량 미상 자료는 대상 아님(adjustInfoFor 가 null).
                   const adjustInfo = adjustStartPoint && !entry.isCompleted
                     ? adjustInfoFor(entry.materialType, entry.materialId)

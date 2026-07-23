@@ -15,6 +15,8 @@ const MA_UNIT_OPTIONS = [
   { key: '문제', label: '문제 수', hint: '문제집처럼 푼 문제 수로 진도를 세요.' },
   { key: '시간', label: '시간', hint: '총 몇 시간 분량인지로 계획을 세요. 하루 분량과 함께 쓰면 ‘하루 N시간’이 돼요.' },
 ] as const;
+// 커스텀(직접입력) 판정도 같은 칩 목록에서 파생 — 칩을 추가하면 프리필 판정이 자동으로 따라온다.
+const MA_UNIT_KEYS: readonly string[] = MA_UNIT_OPTIONS.map((o) => o.key);
 
 type GoalType = 'weeks' | 'weeklyAmount' | 'dailyAmount' | 'deadlineWeeks' | 'selfPaced';
 
@@ -319,7 +321,7 @@ export function LearningRequestPanel({
     setMeTitle(mat.title);
     setMeTotal(mat.total > 0 ? String(mat.total) : '');
     setMeUnit(mat.unit || (mat.type === 'book' ? 'p' : ''));
-    setMeUnitCustom(mat.type === 'book' && !['p', '문제', '시간'].includes(mat.unit || 'p'));
+    setMeUnitCustom(mat.type === 'book' && !MA_UNIT_KEYS.includes(mat.unit || 'p'));
     setMeStudyDays(mat.studyDays);
     setMeStudyTime((['morning', 'afternoon', 'night'] as string[]).includes(mat.studyTime) ? mat.studyTime : '');
   };

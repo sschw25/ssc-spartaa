@@ -25,6 +25,7 @@ function getDailyAmountLabel(plan: DetailedPlan) {
   const range = plan.rangeText || '';
   const rangeWithoutPass = range.replace(/\d+회독/g, '');
   const unit =
+    range.includes('시간') ? '시간' :
     range.includes('문제') ? '문제' :
     range.includes('강') ? '강' :
     range.toLowerCase().includes('p') ? 'p' :

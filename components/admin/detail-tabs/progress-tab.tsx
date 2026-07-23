@@ -207,6 +207,10 @@ function MaterialStudyTimePicker({
   );
 }
 
+// 교재 분량 단위 칩 — 등록 폼 칩과 공유DB 자동완성 프리필의 커스텀 판정이 같은 목록을 쓴다(단일 소스).
+const BOOK_UNIT_CHIPS = [['p', '페이지'], ['회', '회'], ['문제', '문제'], ['시간', '시간']] as const;
+const BOOK_UNIT_KEYS: readonly string[] = BOOK_UNIT_CHIPS.map(([k]) => k);
+
 // 시작점 조정 이력 — 학생이 시작점(current)을 옮긴 감사 로그(adjustLog) 읽기 전용 노출.
 // 최근 5개(최신 먼저). (자동)=하루 한도 내 즉시 반영 / (승인)=신청 후 관리자 승인 반영.
 // 표시는 학생 화면과 동일하게 "시작점"(=current+1) 기준. 사유는 괄호+툴팁.
@@ -692,12 +696,16 @@ export function ProgressTab() {
                                   setNewMaterialPublisher(mat.publisher || '');
                                   if (mat.unit) {
                                     setNewMaterialUnit(mat.unit);
-                                    if (['p', '회', '문제', '시간'].includes(mat.unit)) {
+                                    if (BOOK_UNIT_KEYS.includes(mat.unit)) {
                                       setIsCustomUnit(false);
                                     } else {
                                       setIsCustomUnit(true);
                                       setCustomUnitInput(mat.unit);
                                     }
+                                  } else {
+                                    // unit 없는 레거시 공유자료 — 직전 선택 칩('시간' 등)이 새 자료로 이월되지 않게 기본값으로 되돌린다.
+                                    setNewMaterialUnit('p');
+                                    setIsCustomUnit(false);
                                   }
                                 }
                                 setNewMaterialAuthor(mat.author || '');
@@ -732,7 +740,7 @@ export function ProgressTab() {
                       </Label>
                       {newMaterialType === 'book' && (
                         <div className="flex gap-1 items-center">
-                          {([['p', '페이지'], ['회', '회'], ['문제', '문제'], ['시간', '시간']] as const).map(([key, label]) => (
+                          {BOOK_UNIT_CHIPS.map(([key, label]) => (
                             <button
                               key={key}
                               type="button"
