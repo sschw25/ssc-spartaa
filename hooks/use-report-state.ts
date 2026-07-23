@@ -22,6 +22,8 @@ import { getMaterialStudyDays, getLeaveExemptions } from '@/lib/progress-plan';
 import { getAwayImpactSlots } from '@/lib/away-impact';
 import { getTodayScheduleItems, getBlockedPeriodKeys, assignItemsToPeriods, getPeriodNumLabel, type AssignedScheduleItem } from '@/lib/today-schedule';
 import { buildDisplayThread } from '@/lib/thread';
+import { buildTimeline, unreadCountFor } from '@/lib/chat-timeline';
+import { MEAL_DAY_LABELS, MEAL_KIND_LABELS } from '@/lib/meal';
 import type { StudyStats } from '@/components/report/study-stats-card';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
@@ -377,9 +379,10 @@ export function useReportState() {
   const [requestError, setRequestError] = useState('');
   const [requestCustomOpen, setRequestCustomOpen] = useState(false);
 
-  const [suggestionMessage, setSuggestionMessage] = useState('');
-  const [suggestionSubmitting, setSuggestionSubmitting] = useState(false);
-  const [suggestionError, setSuggestionError] = useState('');
+  // 자유채팅 — 전송 중 플래그 + 로컬 읽음 마커(서버 chatLog.studentReadAt 과 max 병합).
+  // 채팅 로그가 아직 없는 학생도 배지 계산이 되도록 localStorage 를 폴백 축으로 쓴다.
+  const [chatSending, setChatSending] = useState(false);
+  const [chatReadAtLocal, setChatReadAtLocal] = useState('');
 
   const [checklistForm, setChecklistForm] = useState<{
     sleepHours: number;
@@ -395,7 +398,6 @@ export function useReportState() {
 
   const [showRequestHistory, setShowRequestHistory] = useState(false);
   const [showLeaveHistory, setShowLeaveHistory] = useState(false);
-  const [showSuggestionHistory, setShowSuggestionHistory] = useState(false);
 
   const [mockExams, setMockExams] = useState<MockExam[]>([]);
   const [leaveForm, setLeaveForm] = useState<{ type: LeaveType; slot?: 'morning' | 'afternoon' | 'night' | 'fullday'; date: string; reason: string }>(() => ({
@@ -489,6 +491,27 @@ export function useReportState() {
   // 재조회 발사 후 도착 전에 로컬 저장(진도/점검표)이 반영되면 stale 응답이 그걸 화면에서 되돌린다
   // — 저장 성공 시마다 증가시키고, 발사 시점과 달라진 응답은 버린다.
   const mutationSeqRef = useRef(0);
+  // 조용한 core 재조회 — 포커스 복귀(30초 스로틀)와 채팅 패널 12초 폴링이 공용으로 쓴다.
+  // 진행 중 요청 가드(in-flight ref)로 중복 발사를 막고, seq 가드로 stale 응답을 폐기한다.
+  const coreRefreshInFlightRef = useRef(false);
+  const refreshCore = React.useCallback(async () => {
+    if (coreRefreshInFlightRef.current) return;
+    coreRefreshInFlightRef.current = true;
+    const seqAtStart = mutationSeqRef.current;
+    try {
+      const res = await fetch(`/api/report/${studentId}?audience=${audience}&scope=core`, { cache: 'no-store' });
+      const json = res.ok ? await res.json() : null;
+      if (mutationSeqRef.current !== seqAtStart) return; // 그 사이 저장 반영됨 — stale 응답 폐기
+      if (json?.success && json.data) {
+        setStudent(json.data);
+        setMockExams(json.mockExams || []);
+      }
+    } catch {
+      // 조용한 갱신 실패는 무시 — 기존 화면 유지, 다음 기회에 재시도
+    } finally {
+      coreRefreshInFlightRef.current = false;
+    }
+  }, [studentId, audience]);
   useEffect(() => {
     if (!isStudentReport || shareTokenParam) return;
     // 마운트 직후 첫 포커스에 곧바로 재조회하지 않도록 기준 시각을 지금으로 초기화
@@ -498,19 +521,7 @@ export function useReportState() {
       const now = Date.now();
       if (now - lastFocusRefreshRef.current < 30_000) return;
       lastFocusRefreshRef.current = now;
-      const seqAtStart = mutationSeqRef.current;
-      fetch(`/api/report/${studentId}?audience=${audience}&scope=core`, { cache: 'no-store' })
-        .then((res) => (res.ok ? res.json() : null))
-        .then((json) => {
-          if (mutationSeqRef.current !== seqAtStart) return; // 그 사이 저장 반영됨 — stale 응답 폐기
-          if (json?.success && json.data) {
-            setStudent(json.data);
-            setMockExams(json.mockExams || []);
-          }
-        })
-        .catch(() => {
-          // 조용한 갱신 실패는 무시 — 기존 화면 유지, 다음 포커스 때 재시도
-        });
+      refreshCore();
     };
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -518,7 +529,25 @@ export function useReportState() {
       window.removeEventListener('focus', refresh);
       document.removeEventListener('visibilitychange', refresh);
     };
-  }, [isStudentReport, shareTokenParam, studentId, audience]);
+  }, [isStudentReport, shareTokenParam, refreshCore]);
+
+  // 자유채팅 로컬 읽음 마커 초기화 — 저장값이 없으면(첫 방문) 지금 시각으로 심어
+  // 과거 답변 전체가 '새 메시지'로 쏟아지는 것을 막는다.
+  useEffect(() => {
+    if (!isStudentReport || !student?.id || typeof window === 'undefined') return;
+    const key = `ssc-chat-read-at:${student.id}`;
+    const stored = window.localStorage.getItem(key) || '';
+    if (stored) {
+      setChatReadAtLocal(stored);
+      return;
+    }
+    // 새 기기/localStorage 초기화 첫 진입: 서버 마커가 있으면 그 값을 시드해 그 이후 온 답변의
+    // 미읽음 배지를 보존하고, 서버 마커도 없을 때만 '지금'으로 심는다(과거 전체가 쏟아지는 것 방지).
+    const seed = student.chatLog?.studentReadAt || new Date().toISOString();
+    window.localStorage.setItem(key, seed);
+    setChatReadAtLocal(seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStudentReport, student?.id]);
 
   // 3. 탭 포커스/모션 이펙트
   useEffect(() => {
@@ -683,42 +712,6 @@ export function useReportState() {
       commitDismissedNotifications(next);
       return next;
     });
-  };
-
-  // 학생이 코멘터 답변에 재답변 — 서버 append 후 로컬 스레드 낙관적 갱신
-  const replyToThread = async (
-    kind: 'request' | 'suggestion' | 'leave',
-    id: string,
-    text: string,
-  ): Promise<boolean> => {
-    if (!student?.id) return false;
-    try {
-      const res = await fetch('/api/student/thread-reply', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind, id, message: text }),
-      });
-      const json = await res.json().catch(() => null);
-      if (!res.ok || !json?.success) return false;
-      const msg = { id: `local_${Date.now()}`, from: 'student' as const, text, at: new Date().toISOString() };
-      // 서버 seedLegacyThread와 동일하게: thread 비어있고 adminReply만 있으면 레거시 답변을 선승격
-      const appendTo = (arr?: any[]) => (arr || []).map((it) => {
-        if (it.id !== id) return it;
-        const base = (it.thread && it.thread.length > 0)
-          ? it.thread
-          : (it.adminReply ? [{ id: 'legacy', from: 'admin', text: it.adminReply, at: it.repliedAt || '' }] : []);
-        return { ...it, thread: [...base, msg] };
-      });
-      setStudent((prev) => {
-        if (!prev) return prev;
-        if (kind === 'leave') return { ...prev, leaveRequests: appendTo(prev.leaveRequests) };
-        if (kind === 'request') return { ...prev, changeRequests: appendTo(prev.changeRequests) };
-        return { ...prev, suggestionRequests: appendTo(prev.suggestionRequests) };
-      });
-      return true;
-    } catch {
-      return false;
-    }
   };
 
   const handleSharePasswordSubmit = async (e: React.FormEvent) => {
@@ -1554,36 +1547,6 @@ export function useReportState() {
     }
   };
 
-  const submitSuggestion = async () => {
-    const message = suggestionMessage.trim();
-    if (!message) {
-      setSuggestionError('건의 내용을 입력해 주세요.');
-      return;
-    }
-    setSuggestionError('');
-    setSuggestionSubmitting(true);
-    try {
-      const res = await fetch('/api/student/suggestions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ studentId, message }),
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setStudent((prev) => (prev ? { ...prev, suggestionRequests: [json.suggestion as ConsultationLog, ...(prev.suggestionRequests || [])] } : prev));
-        setSuggestionMessage('');
-        toast.success('건의가 접수되었어요.', { description: '코멘터 확인 후 알림으로 답변드릴게요.' });
-      } else {
-        setSuggestionError(json.message || '건의사항 등록에 실패했습니다.');
-        toast.error(json.message || '건의 등록에 실패했어요.');
-      }
-    } catch {
-      setSuggestionError('네트워크 오류가 발생했습니다.');
-    } finally {
-      setSuggestionSubmitting(false);
-    }
-  };
-
   const cancelSuggestion = async (id: string) => {
     if (!(await confirm({ title: '이 건의를 취소할까요?', tone: 'danger', confirmText: '건의 취소' }))) return;
     try {
@@ -1598,6 +1561,59 @@ export function useReportState() {
     } catch {
       toast.error('네트워크 오류로 취소하지 못했어요. 다시 시도해 주세요.');
     }
+  };
+
+  // 자유채팅 전송 — 서버 append 후 로컬 chatLog 낙관적 갱신(재조회 없이 즉시 말풍선).
+  const sendChatMessage = async (text: string): Promise<boolean> => {
+    const message = text.trim();
+    if (!message || chatSending) return false;
+    setChatSending(true);
+    try {
+      const res = await fetch('/api/student/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.success) {
+        toast.error(json?.message || '메시지를 보내지 못했어요. 다시 시도해 주세요.');
+        return false;
+      }
+      const sent = json.sent || { id: `local_${Date.now()}`, from: 'student' as const, text: message, at: new Date().toISOString() };
+      mutationSeqRef.current += 1; // 발사 중이던 stale 재조회가 방금 보낸 말풍선을 되돌리지 않게
+      setStudent((prev) => {
+        if (!prev) return prev;
+        const chat = prev.chatLog || {
+          id: 'chat_main', date: '', manager: '채팅', content: '', type: 'chat' as const, thread: [],
+        };
+        return { ...prev, chatLog: { ...chat, thread: [...(chat.thread || []), sent], studentReadAt: sent.at } };
+      });
+      return true;
+    } catch {
+      toast.error('네트워크 오류로 메시지를 보내지 못했어요.');
+      return false;
+    } finally {
+      setChatSending(false);
+    }
+  };
+
+  // 채팅방 열람 읽음 처리 — 패널이 미읽음>0일 때만 호출(쓰기 절약). 로컬 마커는 즉시,
+  // 서버 마커(chatLog.studentReadAt)는 best-effort(채팅 로그 없으면 서버가 조용히 스킵).
+  const markChatRead = () => {
+    if (!student?.id) return;
+    const now = new Date().toISOString();
+    setChatReadAtLocal(now);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(`ssc-chat-read-at:${student.id}`, now);
+    }
+    fetch('/api/student/chat', { method: 'PATCH' })
+      .then(async (res) => {
+        const json = await res.json().catch(() => null);
+        if (res.ok && json?.success && json.readAt) {
+          setStudent((prev) => (prev?.chatLog ? { ...prev, chatLog: { ...prev.chatLog, studentReadAt: json.readAt } } : prev));
+        }
+      })
+      .catch(() => {});
   };
 
   const handleSwipeStart = (e: React.TouchEvent) => {
@@ -2416,6 +2432,37 @@ export function useReportState() {
       : []),
   ];
 
+  // 채팅 타임라인 — 내 신청/건의/휴가/쿠폰/자리이동/상담 카드 + 자유채팅을 시간순 단일 스트림으로.
+  // 관리자 메신저 인박스와 같은 buildTimeline 을 공유한다(양쪽이 같은 대화를 본다).
+  const chatTimeline = buildTimeline({
+    leaveRequests: student.leaveRequests,
+    changeRequests: student.changeRequests,
+    suggestions: student.suggestionRequests,
+    rewardRedemptions: student.rewardRedemptions,
+    seatMoves: student.seatMoveRequests,
+    consultationBookings: student.consultationBookings,
+    otAbsences: (student.otEvents || []).map((e) => ({
+      eventId: e.eventId, status: e.status, reason: e.reason, updatedAt: e.updatedAt,
+    })),
+    mockAbsences: (student.mockExams || []).map((e) => ({
+      eventId: e.examId, status: e.status, reason: e.reason, updatedAt: e.updatedAt,
+      eventName: mockExams.find((x) => x.id === e.examId)?.name,
+    })),
+    mealAdds: (student.mealAddRequests || []).map((r) => ({
+      id: r.id, planId: r.planId, reason: r.reason, status: r.status, createdAt: r.createdAt,
+      label: `${(MEAL_DAY_LABELS as Record<string, string>)[r.day] || ''} ${(MEAL_KIND_LABELS as Record<string, string>)[r.meal] || ''}`.trim(),
+    })),
+    chatLog: student.chatLog,
+  });
+  // 읽음 기준 = 서버 마커와 로컬 마커 중 최신. 배지는 '새 메시지'(관리자 말풍선)만 센다 —
+  // 승인/반려 상태변화는 알림 섹션이 이미 배지로 다루므로 이중 계산하지 않는다.
+  const chatReadAt = [student.chatLog?.studentReadAt || '', chatReadAtLocal].sort().pop() || '';
+  const chatUnreadCount = unreadCountFor(
+    chatTimeline.filter((e) => e.kind === 'message'),
+    'student',
+    chatReadAt,
+  );
+
   const allStudentNotifications = [...requestNotifications, ...suggestionNotifications, ...leaveNotifications, ...seatMoveNotifications, ...systemNotifications].sort((a, b) => {
     const priorityDiff = a.priority - b.priority;
     if (priorityDiff !== 0) return priorityDiff;
@@ -2581,12 +2628,13 @@ export function useReportState() {
     setRequestCustomOpen,
     sendRequest,
     cancelRequest,
-    suggestionMessage,
-    setSuggestionMessage,
-    suggestionSubmitting,
-    suggestionError,
-    submitSuggestion,
     cancelSuggestion,
+    sendChatMessage,
+    chatSending,
+    markChatRead,
+    chatTimeline,
+    chatUnreadCount,
+    refreshCore,
     checklistForm,
     setChecklistForm,
     checklistSubmitting,
@@ -2599,8 +2647,6 @@ export function useReportState() {
     setShowRequestHistory,
     showLeaveHistory,
     setShowLeaveHistory,
-    showSuggestionHistory,
-    setShowSuggestionHistory,
     leaveForm,
     setLeaveForm,
     leaveSubmitting,
@@ -2647,7 +2693,6 @@ export function useReportState() {
     dismissAllNotifications,
     restoreNotification,
     restoreAllNotifications,
-    replyToThread,
     reportNavItems,
     tabIds,
     hasGradeThisWeek,

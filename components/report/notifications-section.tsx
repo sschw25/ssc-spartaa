@@ -71,34 +71,21 @@ interface NotificationsSectionProps {
   onDismissAllNotifications: () => void;
   onRestoreNotification: (notificationId: string) => void;
   onRestoreAllNotifications: () => void;
-  onReplyToThread?: (kind: 'request' | 'suggestion' | 'leave', id: string, text: string) => Promise<boolean>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   slideDirRef: React.MutableRefObject<number>;
   formatNotificationDate: (value?: string) => string;
 }
 
-// 알림 카드 내 양방향 대화 + 재답변 입력 (학생)
+// 알림 카드 내 양방향 대화 표시 + 채팅 딥링크 (재답변 입력은 채팅방으로 일원화)
 function NotificationThread({
   notification,
-  onReplyToThread,
+  onOpenChat,
 }: {
   notification: StudentNotification;
-  onReplyToThread?: (kind: 'request' | 'suggestion' | 'leave', id: string, text: string) => Promise<boolean>;
+  onOpenChat: () => void;
 }) {
-  const [text, setText] = React.useState('');
-  const [sending, setSending] = React.useState(false);
   const convo = notification.thread || [];
-
-  const send = async () => {
-    if (!onReplyToThread || !notification.replyKind || !notification.replyId) return;
-    const trimmed = text.trim();
-    if (!trimmed || sending) return;
-    setSending(true);
-    const ok = await onReplyToThread(notification.replyKind, notification.replyId, trimmed);
-    setSending(false);
-    if (ok) setText('');
-  };
 
   return (
     <div className="mt-3 space-y-2">
@@ -116,23 +103,14 @@ function NotificationThread({
           ))}
         </div>
       )}
-      <div className="flex items-end gap-2">
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={1}
-          placeholder="코멘터에게 답장하기..."
-          className="min-h-9 flex-1 resize-none rounded-2xl border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-800 placeholder:text-slate-300 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-200 dark:placeholder:text-slate-600"
-        />
-        <button
-          type="button"
-          onClick={send}
-          disabled={sending || !text.trim()}
-          className="h-9 shrink-0 rounded-2xl bg-[#0071E3] px-3.5 text-[11px] font-black text-white shadow-sm transition hover:bg-[#0071E3]/90 disabled:opacity-40 active:scale-[0.98]"
-        >
-          {sending ? '전송중' : '답장'}
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={onOpenChat}
+        className="inline-flex h-9 items-center gap-1.5 rounded-2xl bg-[#0071E3] px-3.5 text-[11px] font-black text-white shadow-sm transition hover:bg-[#0071E3]/90 active:scale-[0.98]"
+      >
+        <MessageSquare className="h-3.5 w-3.5" />
+        채팅에서 답장하기
+      </button>
     </div>
   );
 }
@@ -146,7 +124,6 @@ export function NotificationsSection({
   onDismissAllNotifications,
   onRestoreNotification,
   onRestoreAllNotifications,
-  onReplyToThread,
   activeTab,
   setActiveTab,
   slideDirRef,
@@ -242,7 +219,14 @@ export function NotificationsSection({
                       </p>
                     )}
                     {notification.replyKind && notification.replyId && (
-                      <NotificationThread notification={notification} onReplyToThread={onReplyToThread} />
+                      <NotificationThread
+                        notification={notification}
+                        onOpenChat={() => {
+                          slideDirRef.current = 1;
+                          setActiveTab('suggestion'); // 리포트 페이지가 신청 탭 + 메시지 서브탭으로 승격
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                      />
                     )}
                   </div>
                 </div>

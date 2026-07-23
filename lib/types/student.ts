@@ -283,7 +283,7 @@ export interface ConsultationLog {
   date: string;       // 상담일 (YYYY-MM-DD)
   manager: string;    // 상담자
   content: string;    // 상담 내용 (노션 마크다운 형식 등)
-  type?: 'learning' | 'life' | 'request' | 'suggestion'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항
+  type?: 'learning' | 'life' | 'request' | 'suggestion' | 'chat'; // 학습 상담 / 생활 면담 / 학생 변경 신청 / 건의사항 / 자유채팅(학생당 싱글턴 id='chat_main')
   // type === 'request' 인 학생 변경 신청 전용 필드 (consultation_logs jsonb 재사용)
   requestType?: 'progress' | 'subject' | 'plan' | 'halfDay' | 'restPass' | 'materialAdd' | 'materialEdit' | 'materialDelete' | 'makeup' | 'etc'; // 신청 분류
   status?: 'pending' | 'resolved';                       // 처리 상태
@@ -299,6 +299,10 @@ export interface ConsultationLog {
   proposedMaterialDelete?: ProposedMaterialDelete;        // 학생 교재/인강 또는 과목 삭제 제안 데이터(materialDelete)
   proposedMakeup?: { materialId: string; materialType: 'book' | 'lecture'; done: number }; // 주말 보강 수정 제안(makeup)
   proposedProgressCorrection?: ProposedProgressCorrection; // 진도 숫자 정정 제안 데이터(progress)
+  // type === 'chat' 싱글턴 로그 전용 — 채팅방 읽음 마커(각 측이 방을 마지막으로 본 시각).
+  // 처리상태(status/needsAction)와는 별개 축: 읽음 dot·미읽음 배지에만 쓴다.
+  adminReadAt?: string;                                    // 관리자가 채팅방을 마지막으로 읽은 시각 (ISO)
+  studentReadAt?: string;                                  // 학생이 채팅방을 마지막으로 읽은 시각 (ISO)
 }
 
 // 상담 담당자 휴무/출장으로 특정 날짜(또는 일부 슬롯)를 예약 불가로 막는 차단 항목.
@@ -713,6 +717,13 @@ export interface Student {
   changeRequests?: ConsultationLog[];
   // 학생 본인 건의사항 내역 (consultation_logs 중 type==='suggestion'만 추려서 전달)
   suggestionRequests?: ConsultationLog[];
+  // 자유채팅 싱글턴 (consultation_logs 중 type==='chat' 1건 — 학생 audience 리포트 전용 전달)
+  chatLog?: ConsultationLog | null;
+  // 도시락 추가신청 경량 발췌 (학생 채팅 타임라인용 — mealOrders 전체 대신 필요한 필드만)
+  mealAddRequests?: Array<{
+    id: string; planId: string; day: string; meal: string;
+    reason?: string; status: 'pending' | 'approved' | 'rejected'; createdAt?: string;
+  }>;
   // 휴가/반차/휴식권/병가 신청 내역 (전용 leave_requests jsonb)
   leaveRequests?: LeaveRequest[];
   // 반차 추가 신청용 쿠폰 잔액 (관리자 수동 지급/차감)

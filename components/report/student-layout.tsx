@@ -44,7 +44,7 @@ const FEATURE_INDEX: Array<{ label: string; desc: string; keywords: string[]; ta
   { label: '휴가 · 반차 신청', desc: '신청 · 휴가/휴식권/병가', keywords: ['휴가', '반차', '휴식권', '병가', '외출'], tabId: 'leave' },
   { label: '상담 예약', desc: '신청 · 클리닉 상담', keywords: ['상담', '클리닉', '예약'], tabId: 'consultation' },
   { label: '학습 신청', desc: '신청 · 계획/자료 요청', keywords: ['신청', '요청', '자료'], tabId: 'learning-request' },
-  { label: '건의사항', desc: '신청 · 의견 보내기', keywords: ['건의', '문의', '의견', '제안'], tabId: 'suggestion' },
+  { label: '메시지 · 건의', desc: '신청 · 코멘터와 채팅', keywords: ['건의', '문의', '의견', '제안', '메시지', '채팅', '대화'], tabId: 'suggestion' },
   { label: '쿠폰 교환소', desc: '신청 · 쿠폰으로 보상 교환', keywords: ['쿠폰', '교환', '보상', '상품권', '교환소'], tabId: 'coupon' },
   { label: '자리 이동 신청', desc: '신청 탭에서 자리 선택', keywords: ['자리', '좌석', '이동'], tabId: 'student-requests' },
   { label: '도시락 신청', desc: '신청 탭에서 도시락 선택', keywords: ['도시락', '식사', '밥', '급식'], tabId: 'student-requests' },

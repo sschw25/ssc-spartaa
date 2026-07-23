@@ -49,14 +49,6 @@ interface ConsultationTabProps {
   reappealLeave: (id: string, note: string) => Promise<boolean>;
   showLeaveHistory: boolean;
   setShowLeaveHistory: (show: boolean) => void;
-  suggestionMessage: string;
-  setSuggestionMessage: (msg: string) => void;
-  suggestionSubmitting: boolean;
-  suggestionError: string;
-  submitSuggestion: (e: React.FormEvent) => Promise<void>;
-  cancelSuggestion: (id: string) => Promise<void>;
-  showSuggestionHistory: boolean;
-  setShowSuggestionHistory: (show: boolean) => void;
   activeTab: string;
   requestSubTab: ApplicationSubTab;
   setRequestSubTab: (tab: ApplicationSubTab) => void;
@@ -72,6 +64,9 @@ interface ConsultationTabProps {
   // 학습 관련 요청(LearningRequestPanel) — 과목별 진도 탭에서 이 탭의 '학습신청' 서브탭으로 이동됨.
   // 패널 내부는 그대로 두고, page 에서 완성한 노드를 받아 서브탭에 그대로 렌더한다.
   learningRequestNode?: React.ReactNode;
+  // 메시지(채팅) — 기존 건의사항 폼을 대체하는 채팅 패널. learningRequestNode 와 같은 노드 주입 패턴.
+  suggestionChatNode?: React.ReactNode;
+  chatUnreadCount?: number;
 }
 
 export function ConsultationTab({
@@ -86,14 +81,6 @@ export function ConsultationTab({
   reappealLeave,
   showLeaveHistory,
   setShowLeaveHistory,
-  suggestionMessage,
-  setSuggestionMessage,
-  suggestionSubmitting,
-  suggestionError,
-  submitSuggestion,
-  cancelSuggestion,
-  showSuggestionHistory,
-  setShowSuggestionHistory,
   activeTab,
   requestSubTab,
   setRequestSubTab,
@@ -106,6 +93,8 @@ export function ConsultationTab({
   onMealSaved,
   pendingMealCount = 0,
   learningRequestNode,
+  suggestionChatNode,
+  chatUnreadCount = 0,
 }: ConsultationTabProps) {
   const prompt = usePrompt();
   if (!isStudentReport) return null;
@@ -159,9 +148,6 @@ export function ConsultationTab({
   const pendingConsultationCount = (student.consultationBookings || []).filter(
     (b) => b.status === 'booked' && (!b.date || b.date >= badgeToday),
   ).length;
-  const pendingSuggestionCount = (student.suggestionRequests || []).filter(
-    (r) => r.status !== 'resolved',
-  ).length;
   const pendingLearningCount = (student.changeRequests || []).filter((r) => r.status === 'pending').length;
 
   const applicationTabs: Array<{
@@ -178,7 +164,7 @@ export function ConsultationTab({
     { id: 'meal', label: '도시락', meta: '주간 신청', icon: Utensils, badge: pendingMealCount, badgeLabel: '미신청' },
     { id: 'seat', label: '자리이동', meta: '좌석 변경', icon: Armchair },
     { id: 'coupon', label: '쿠폰교환', meta: `쿠폰 ${homeLeaveCoupons}장`, icon: Ticket },
-    { id: 'suggestion', label: '건의사항', meta: '의견 남기기', icon: MessageSquare, badge: pendingSuggestionCount, badgeLabel: '대기' },
+    { id: 'suggestion', label: '메시지', meta: '문의·건의 채팅', icon: MessageSquare, badge: chatUnreadCount, badgeLabel: '새 메시지' },
   ];
 
   return (
@@ -194,7 +180,7 @@ export function ConsultationTab({
               신청
             </h3>
             <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500 dark:text-slate-400">
-              학습신청, 휴식/반차, 상담, 도시락, 자리이동, 쿠폰교환, 건의사항을 한곳에서 처리해요.
+              학습신청, 휴식/반차, 상담, 도시락, 자리이동, 쿠폰교환, 메시지를 한곳에서 처리해요.
             </p>
           </div>
         </div>
@@ -542,120 +528,8 @@ export function ConsultationTab({
         </div>
       )}
 
-      {/* 건의사항 (관리자에게) */}
-      {requestSubTab === 'suggestion' && (
-      <div id="student-suggestions" className="space-y-5">
-      <div className="rounded-3xl border border-[#0071E3]/15 dark:border-white/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-5 shadow-sm md:p-6">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-[#0071E3]/10 dark:bg-[#0071E3]/15 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#0071E3]">
-          <MessageSquare className="h-3.5 w-3.5" /> 건의사항
-        </div>
-        <h3 className="mt-2 text-xl font-black text-slate-900 dark:text-slate-100">건의사항</h3>
-        <p className="mt-1 text-[11px] font-semibold leading-5 text-slate-500 dark:text-slate-400">
-          시설·운영·학습 환경에 대한 의견을 남기면 담당 코멘터가 확인해요.
-        </p>
-      </div>
-
-      <div id="student-suggestion-panel" className="no-print scroll-mt-28 rounded-3xl border border-[#0071E3]/15 dark:border-white/10 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-5 md:p-6 shadow-sm space-y-4">
-        <div>
-          <h4 className="flex items-center gap-2 text-sm font-black text-[#0071E3]">
-            <MessageSquare className="w-4 h-4" /> 건의 남기기
-          </h4>
-          <p className="mt-1 text-[10px] font-semibold text-slate-400 dark:text-slate-400">
-            구체적으로 적어 주실수록 빠르게 확인하고 반영할 수 있어요.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <textarea
-            value={suggestionMessage}
-            onChange={(e) => setSuggestionMessage(e.target.value)}
-            placeholder="건의 내용을 적어 주세요. 예) 자습실 조명이 조금 어두워요"
-            rows={3}
-            className="w-full resize-none rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-3 py-2 text-xs font-semibold text-slate-800 dark:text-slate-200 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/20 focus:ring-offset-0"
-          />
-          <button
-            id="btn-submit-suggestion"
-            type="button"
-            onClick={submitSuggestion}
-            disabled={suggestionSubmitting}
-            className="w-full rounded-xl bg-[#0071E3] py-2.5 text-xs font-bold text-white transition hover:bg-[#0077ED] active:scale-[0.98] disabled:opacity-50"
-          >
-            {suggestionSubmitting ? '등록 중...' : '건의사항 등록'}
-          </button>
-          {suggestionError && <p className="text-[10px] font-bold text-red-500">{suggestionError}</p>}
-        </div>
-
-        {(() => {
-          const suggestions = student.suggestionRequests || [];
-          const pending = suggestions.filter(r => r.status !== 'resolved');
-          const resolved = suggestions.filter(r => r.status === 'resolved');
-          return (
-            (pending.length > 0 || resolved.length > 0) && (
-              <div className="space-y-2 border-t border-[#0071E3]/10 pt-3">
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">내 건의사항 내역</p>
-
-                {/* 대기중 건의사항 */}
-                {pending.map((r) => (
-                  <div key={r.id} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-3 text-[11px]">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="flex min-w-0 items-center gap-1.5">
-                        <span className="shrink-0 rounded-full bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 text-[10px] font-black text-slate-500 dark:text-slate-400">건의사항</span>
-                        {getTimelineStatusBadge(r.status || 'pending', r.adminReply)}
-                      </span>
-                      <button type="button" onClick={() => cancelSuggestion(r.id)} className="shrink-0 text-slate-300 dark:text-slate-600 transition-colors hover:text-red-500" aria-label="건의사항 취소">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-600 dark:text-slate-400">{r.content}</p>
-                    {r.adminReply && (
-                      <div className="mt-2 rounded-xl border border-[#0071E3]/15 dark:border-white/10 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                        코멘터 답변: {r.adminReply}
-                      </div>
-                    )}
-                  </div>
-                ))}
-
-                {/* 지난 건의 내역 보기 */}
-                {resolved.length > 0 && (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowSuggestionHistory(!showSuggestionHistory)}
-                      className="flex w-full items-center justify-between rounded-xl bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 px-3 py-2 text-left text-[11px] font-bold text-slate-500 dark:text-slate-400 transition hover:bg-slate-50 dark:hover:bg-white/5 hover:border-slate-300 dark:hover:border-white/20"
-                    >
-                      <span>지난 건의 내역 보기 ({resolved.length}건)</span>
-                      <span className="text-[10px]">{showSuggestionHistory ? '접기 ▲' : '펼치기 ▼'}</span>
-                    </button>
-
-                    {showSuggestionHistory && (
-                      <div className="space-y-2 pl-1 border-l-2 border-slate-100 dark:border-white/10 ml-1">
-                        {resolved.map((r) => (
-                          <div key={r.id} className="rounded-2xl border border-slate-100 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 p-3 text-[11px]">
-                            <div className="flex items-center justify-between gap-2">
-                              <span className="flex min-w-0 items-center gap-1.5">
-                                <span className="shrink-0 rounded-full bg-white dark:bg-[#1c1c1e] px-1.5 py-0.5 text-[10px] font-black text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/10">건의사항</span>
-                                {getTimelineStatusBadge(r.status || 'resolved', r.adminReply)}
-                                <span className="shrink-0 text-[10px] font-bold text-slate-400 dark:text-slate-400">{r.date || (r.createdAt ? r.createdAt.split('T')[0] : '')}</span>
-                              </span>
-                            </div>
-                            <p className="mt-1.5 whitespace-pre-wrap break-words font-semibold text-slate-500 dark:text-slate-400">{r.content}</p>
-                            {r.adminReply && (
-                              <div className="mt-2 rounded-xl border border-[#0071E3]/15 dark:border-white/10 bg-[#0071E3]/[0.05] dark:bg-[#0071E3]/15 px-2.5 py-1.5 text-[10px] font-semibold text-[#0071E3]">
-                                코멘터 답변: {r.adminReply}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )
-          );
-        })()}
-      </div>
-      </div>
-      )}
+      {/* 메시지(채팅) — 기존 건의사항 폼 대체. 패널은 page 에서 완성해 노드로 주입 */}
+      {requestSubTab === 'suggestion' && suggestionChatNode}
     </section>
     </>
   );

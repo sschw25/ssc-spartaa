@@ -58,7 +58,7 @@ function buildMaskedStudent(
     updatedAt: student.updatedAt,
     books: isStudent ? student.books : (student.books || []).map(stripWrongNotes),
     lectures: student.lectures,
-    consultationLogs: (student.consultationLogs || []).filter((l) => l.type !== 'request' && l.type !== 'suggestion').slice(0, 3),
+    consultationLogs: (student.consultationLogs || []).filter((l) => l.type !== 'request' && l.type !== 'suggestion' && l.type !== 'chat').slice(0, 3),
     changeRequests: (student.consultationLogs || [])
       .filter((l) => l.type === 'request')
       .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || '')),
@@ -94,6 +94,15 @@ function buildMaskedStudent(
           rewardRedemptions: student.rewardRedemptions || [],
           // 쿠폰 지급 내역(최근순 30건) — 학생 홈 알림 '쿠폰 지급'과 언제/왜 받았는지 표시용.
           couponGrants: getRewardGrantsFromStudent(student, 30),
+          // 자유채팅 싱글턴(type='chat') — 학생 채팅방 전용. 학부모 audience 에는 절대 미포함.
+          chatLog: (student.consultationLogs || []).find((l) => l.type === 'chat') || null,
+          // 채팅 타임라인 소스 — OT 불참 신청 흔적과 도시락 추가신청(경량 발췌, mealOrders 전체는 무거움).
+          otEvents: student.otEvents || [],
+          mealAddRequests: (student.mealOrders || []).flatMap((o) =>
+            (o.addRequests || []).map((r) => ({
+              id: r.id, planId: o.planId, day: r.day, meal: r.meal,
+              reason: r.reason, status: r.status, createdAt: r.createdAt,
+            }))),
         }
       : {}),
     ddays: audience === 'student' ? (student.ddays || []) : [],

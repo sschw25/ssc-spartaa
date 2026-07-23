@@ -15,6 +15,7 @@ import { MakeupTab } from '@/components/report/makeup-tab';
 import { WrongAnswerTab } from '@/components/report/wrong-answer-tab';
 import { GradeAnalysisTab } from '@/components/report/grade-analysis-tab';
 import { ConsultationTab, type ApplicationSubTab } from '@/components/report/consultation-tab';
+import { StudentChatPanel } from '@/components/report/student-chat-panel';
 import { ConsultationBookingPanel } from '@/components/report/consultation-booking-panel';
 import { isConsultationCampus } from '@/lib/consultation-schedule';
 import { PenaltiesTab } from '@/components/report/penalties-tab';
@@ -181,12 +182,13 @@ function StudentReportInner() {
     setRequestCustomOpen,
     sendRequest,
     cancelRequest,
-    suggestionMessage,
-    setSuggestionMessage,
-    suggestionSubmitting,
-    suggestionError,
-    submitSuggestion,
     cancelSuggestion,
+    sendChatMessage,
+    chatSending,
+    markChatRead,
+    chatTimeline,
+    chatUnreadCount,
+    refreshCore,
     checklistForm,
     setChecklistForm,
     checklistSubmitting,
@@ -198,8 +200,6 @@ function StudentReportInner() {
     setShowRequestHistory,
     showLeaveHistory,
     setShowLeaveHistory,
-    showSuggestionHistory,
-    setShowSuggestionHistory,
     leaveForm,
     setLeaveForm,
     leaveSubmitting,
@@ -242,7 +242,6 @@ function StudentReportInner() {
     dismissAllNotifications,
     restoreNotification,
     restoreAllNotifications,
-    replyToThread,
     reportNavItems,
     tabIds,
     daysUntilEnrollmentEnd,
@@ -623,7 +622,6 @@ function StudentReportInner() {
             onDismissAllNotifications={() => dismissAllNotifications(studentNotifications.map((n: { id: string }) => n.id))}
             onRestoreNotification={restoreNotification}
             onRestoreAllNotifications={restoreAllNotifications}
-            onReplyToThread={replyToThread}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             slideDirRef={slideDirRef}
@@ -915,14 +913,6 @@ function StudentReportInner() {
           reappealLeave={reappealLeave}
           showLeaveHistory={showLeaveHistory}
           setShowLeaveHistory={setShowLeaveHistory}
-          suggestionMessage={suggestionMessage}
-          setSuggestionMessage={setSuggestionMessage}
-          suggestionSubmitting={suggestionSubmitting}
-          suggestionError={suggestionError}
-          submitSuggestion={submitSuggestion}
-          cancelSuggestion={cancelSuggestion}
-          showSuggestionHistory={showSuggestionHistory}
-          setShowSuggestionHistory={setShowSuggestionHistory}
           activeTab={activeTab}
           requestSubTab={requestSubTab}
           setRequestSubTab={setRequestSubTab}
@@ -934,6 +924,21 @@ function StudentReportInner() {
           mealPlans={mealPlans}
           onMealSaved={handleMealSaved}
           pendingMealCount={pendingMealCount}
+          chatUnreadCount={chatUnreadCount}
+          suggestionChatNode={
+            <StudentChatPanel
+              events={chatTimeline || []}
+              active={activeTab === 'student-requests' && requestSubTab === 'suggestion'}
+              chatUnreadCount={chatUnreadCount || 0}
+              chatSending={chatSending}
+              sendChatMessage={sendChatMessage}
+              markChatRead={markChatRead}
+              refreshCore={refreshCore}
+              cancelSuggestion={cancelSuggestion}
+              cancelLeave={cancelLeave}
+              cancelRequest={cancelRequest}
+            />
+          }
           learningRequestNode={
             <LearningRequestPanel
               student={student}
@@ -1004,6 +1009,25 @@ function StudentReportInner() {
           onOpenTimetable={openTimetableFromSheet}
           onOpenChangeRequest={openChangeRequestFromSheet}
         />
+      )}
+
+      {/* 새 메시지 플로팅 배지 — 채팅 탭 밖에서 관리자 답변이 오면 어느 탭에서든 보인다. 탭하면 채팅으로 이동 */}
+      {isStudentReport && (chatUnreadCount || 0) > 0 && !(activeTab === 'student-requests' && requestSubTab === 'suggestion') && (
+        <button
+          type="button"
+          onClick={() => {
+            setRequestSubTab('suggestion');
+            setActiveTab('student-requests');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="no-print glass-strong fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full py-2.5 pl-3.5 pr-4 text-xs font-black text-[#0071E3] shadow-lg transition active:scale-[0.96]"
+          aria-label={`새 메시지 ${chatUnreadCount}개 — 채팅 열기`}
+        >
+          <span className="relative grid h-6 w-6 place-items-center rounded-full bg-[#0071E3]/10">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" className="h-3.5 w-3.5"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </span>
+          새 메시지 {chatUnreadCount! > 9 ? '9+' : chatUnreadCount}
+        </button>
       )}
 
       {/* 1일 1문제 — 오답노트가 있는 학생에게 홈 진입 시 하루 1회 랜덤 복습 문제 시트(노트 0개면 안 뜸) */}

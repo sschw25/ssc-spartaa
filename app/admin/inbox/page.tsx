@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,39 +8,23 @@ import { Badge } from '@/components/ui/badge';
 import {
   Inbox, Calendar, MessageSquare, AlertCircle, CheckCircle2,
   Clock, ArrowLeft, RefreshCw, LogOut, Check, X, ShieldAlert, Loader2,
-  Target, BookOpen, Tv, User, Search, Send, UserPlus, BookPlus, Trash2, AlertTriangle, SquarePen
+  User, Search, Send, UserPlus
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useConfirm } from '@/components/ui/confirm-dialog';
-import type { Student, LeaveType, ProposedGoal, ProposedMaterial, ProposedMaterialEdit, ProposedMaterialDelete, ProposedProgressCorrection, ThreadMessage } from '@/lib/types/student';
+import type { Student, LeaveType, SeatMoveRequest, ConsultationBooking } from '@/lib/types/student';
 import { AdminTopNav } from '@/components/admin/admin-top-nav';
 import { getLeaveTypeLabel, getRewardLabel, formatLeaveLabel } from '@/lib/leave';
 import { MEAL_DAY_LABELS, MEAL_KIND_LABELS, weekRangeLabel } from '@/lib/meal';
 import { getRequestTypeLabel } from '@/lib/student-requests';
 import { awaitingAdminReply, buildDisplayThread } from '@/lib/thread';
 import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import { ApprovalForms } from '@/components/admin/inbox/approval-forms';
+import { ChatView, eventPreview } from '@/components/admin/inbox/chat-view';
+import type { InboxItem, ConversationSummary, TimelineTone } from '@/components/admin/inbox/inbox-types';
+import { buildTimeline, lastActivityAt, needsActionCount, unreadCountFor, hasStudentReplyAfter, type TimelineEvent } from '@/lib/chat-timeline';
 
 type InboxCategory = 'all' | 'living' | 'counsel' | 'facility';
-type TimelineTone = 'amber' | 'blue' | 'emerald';
-
-interface InboxItem {
-  id: string;
-  studentId: string;
-  studentName: string;
-  campus: string;
-  type: 'leave' | 'request' | 'suggestion' | 'ot_absence' | 'mock_absence' | 'reward' | 'meal_add' | 'signup';
-  category: 'living' | 'counsel' | 'facility';
-  title: string;
-  content: string;
-  date: string;
-  status: string;
-  statusText: '접수중' | '처리중' | '완료';
-  needsAction: boolean;
-  tone: TimelineTone;
-  adminReply: string;
-  createdAt: string;
-  rawItem: any;
-}
 
 const CATEGORY_TABS: { value: InboxCategory; label: string }[] = [
   { value: 'all', label: '전체 요청' },
@@ -48,14 +32,6 @@ const CATEGORY_TABS: { value: InboxCategory; label: string }[] = [
   { value: 'counsel', label: '학습 변경 (과목/진도)' },
   { value: 'facility', label: '시설 수리 (건의사항)' },
 ];
-
-const hasStudentReplyAfter = (thread: ThreadMessage[] | undefined, cutoff?: string) => {
-  if (!cutoff || !awaitingAdminReply(thread)) return false;
-  const last = thread?.[thread.length - 1];
-  return Boolean(last?.at && last.at > cutoff);
-};
-
-const kstToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date());
 
 export default function AdminInboxPage() {
   const confirm = useConfirm();
@@ -82,11 +58,28 @@ export default function AdminInboxPage() {
   const [mealPlanLabels, setMealPlanLabels] = useState<Record<string, string>>({});
   // 가입신청 (학생 셀프 신청 → 관리자 승인 대기). 승인은 별도 페이지에서 상세정보 입력 후 처리.
   const [applications, setApplications] = useState<any[]>([]);
+  // 자리이동 신청 원장 + 상담 예약 원장 — 채팅 타임라인 편입용(캠퍼스 스코프 GET).
+  const [seatMoves, setSeatMoves] = useState<SeatMoveRequest[]>([]);
+  const [adminBookings, setAdminBookings] = useState<ConsultationBooking[]>([]);
   const [planStartDateOverrides, setPlanStartDateOverrides] = useState<Record<string, string>>({});
   // 마감일형(deadlineWeeks) 승인 정책 — 기본 'keep-deadline'(학생이 고른 마감일 유지, 마지막 주 절단).
   const [deadlinePolicies, setDeadlinePolicies] = useState<Record<string, 'keep-deadline' | 'keep-duration'>>({});
   // 수정 승인 시 학습계획 재생성 여부 — 계획 보유 자료의 총량/요일 변경 요청에서 노출(기본 켬).
   const [regenerateChecks, setRegenerateChecks] = useState<Record<string, boolean>>({});
+  // 메신저(채팅) 뷰 ↔ 리스트 뷰 토글 — 기본 채팅, 일괄승인 등 기존 워크플로는 리스트에서.
+  const [viewMode, setViewMode] = useState<'chat' | 'list'>('chat');
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  const [adminChatSending, setAdminChatSending] = useState(false);
+
+  // 뷰 모드 localStorage 기억 (마운트 후 복원 — SSR 불일치 방지)
+  useEffect(() => {
+    const saved = typeof window !== 'undefined' ? window.localStorage.getItem('ssc-inbox-view-mode') : null;
+    if (saved === 'list' || saved === 'chat') setViewMode(saved);
+  }, []);
+  const changeViewMode = (mode: 'chat' | 'list') => {
+    setViewMode(mode);
+    if (typeof window !== 'undefined') window.localStorage.setItem('ssc-inbox-view-mode', mode);
+  };
 
   // 1. 관리자 인증 확인
   useEffect(() => {
@@ -110,20 +103,31 @@ export default function AdminInboxPage() {
   }, [router]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 2. 학생 데이터 및 신청 내역 수집
-  //    silent=true 면 로딩 스피너/전체 깜빡임 없이 백그라운드 동기화만 수행
+  //    silent=true 면 로딩 스피너/전체 깜빡임 없이 백그라운드 동기화만 수행.
+  //    폴링(12초)과 낙관적 갱신(채팅 전송·승인 처리)이 겹칠 때 늦게 도착한 stale 응답이
+  //    방금 반영한 상태를 되돌리지 않도록, 낙관적 쓰기마다 seq 를 올리고 발사 시점과
+  //    달라진 응답은 통째로 버린다(학생 훅의 mutationSeq 가드와 동일 패턴).
+  const adminMutationSeqRef = useRef(0);
+  const loadInFlightRef = useRef(false);
   const loadStudents = async (silent = false) => {
+    if (silent && loadInFlightRef.current) return; // 폴링 중복 발사 방지(수동 새로고침은 통과)
+    loadInFlightRef.current = true;
+    const seqAtStart = adminMutationSeqRef.current;
+    const fresh = () => adminMutationSeqRef.current === seqAtStart;
     if (!silent) setLoading(true);
     try {
-      const [res, otRes, mockRes, mealRes, appRes] = await Promise.all([
+      const [res, otRes, mockRes, mealRes, appRes, seatRes, bookingRes] = await Promise.all([
         fetch('/api/admin/students', { cache: 'no-store' }),
         fetch('/api/admin/ot-events', { cache: 'no-store' }).catch(() => null),
         fetch('/api/admin/mock-exams', { cache: 'no-store' }).catch(() => null),
         fetch('/api/admin/meal-plans', { cache: 'no-store' }).catch(() => null),
         fetch('/api/admin/applications', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/admin/seat-moves', { cache: 'no-store' }).catch(() => null),
+        fetch('/api/admin/consultation-bookings', { cache: 'no-store' }).catch(() => null),
       ]);
       if (res.ok) {
         const json = await res.json();
-        if (json.success) {
+        if (fresh() && json.success) {
           setStudents(json.data || []);
         }
       } else {
@@ -138,20 +142,29 @@ export default function AdminInboxPage() {
         const j = await mockRes.json();
         for (const e of (j.exams || [])) names[e.id] = { name: e.name, date: e.date };
       }
-      setEventNames(names);
+      if (fresh()) setEventNames(names);
       if (mealRes && mealRes.ok) {
         const j = await mealRes.json();
         const labels: Record<string, string> = {};
         for (const p of (j.plans || [])) labels[p.id] = `${weekRangeLabel(p.weekStart)} 주`;
-        setMealPlanLabels(labels);
+        if (fresh()) setMealPlanLabels(labels);
       }
       if (appRes && appRes.ok) {
         const j = await appRes.json();
-        if (j.success) setApplications(j.data || []);
+        if (fresh() && j.success) setApplications(j.data || []);
+      }
+      if (seatRes && seatRes.ok) {
+        const j = await seatRes.json();
+        if (fresh() && j.success) setSeatMoves(j.requests || []);
+      }
+      if (bookingRes && bookingRes.ok) {
+        const j = await bookingRes.json();
+        if (fresh() && j.success) setAdminBookings(j.bookings || []);
       }
     } catch {
       toast.error('네트워크 에러가 발생했습니다.');
     } finally {
+      loadInFlightRef.current = false;
       setLoading(false);
     }
   };
@@ -186,104 +199,6 @@ export default function AdminInboxPage() {
       });
     }
   };
-
-  // proposedGoal에서 자료 제목 조회
-  const getMaterialTitle = (studentId: string, proposedGoal: ProposedGoal): string => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return proposedGoal.materialId;
-    const allBooks = [
-      ...(student.books || []),
-      ...(student.subjects || []).flatMap(s => s.books || []),
-    ];
-    const allLectures = [
-      ...(student.lectures || []),
-      ...(student.subjects || []).flatMap(s => s.lectures || []),
-    ];
-    if (proposedGoal.materialType === 'book') {
-      return allBooks.find(b => b.id === proposedGoal.materialId)?.title || proposedGoal.materialId;
-    }
-    return allLectures.find(l => l.id === proposedGoal.materialId)?.name || proposedGoal.materialId;
-  };
-
-  // 자료의 실제 단위 조회(교재 전용 — 인강은 '강' 고정). '문'·'회' 단위 자료가 'p'로 표시되지 않게 한다.
-  const getMaterialUnit = (studentId: string, materialType: 'book' | 'lecture', materialId: string): string => {
-    if (materialType === 'lecture') return '강';
-    const student = students.find(s => s.id === studentId);
-    const book = [
-      ...(student?.books || []),
-      ...(student?.subjects || []).flatMap(s => s.books || []),
-    ].find(b => b.id === materialId);
-    return book?.unit || 'p';
-  };
-
-  // proposedMaterialEdit 수정 대상 자료의 서버 현재 상태(표시용) 조회.
-  // before 값은 학생이 보낸 스냅샷(pme.current)이 아니라 이 실제 값을 우선한다 — 신청 후 관리자가 자료를
-  // 고쳤거나 학생이 스냅샷을 위조한 경우 옛 값을 '현재'로 보여주면 승인 판단이 틀어지기 때문.
-  const getEditTargetState = (studentId: string, pme: ProposedMaterialEdit) => {
-    const student = students.find(s => s.id === studentId);
-    if (!student) return null;
-    if (pme.materialType === 'book') {
-      const b = [...(student.books || []), ...(student.subjects || []).flatMap(s => s.books || [])]
-        .find(m => m.id === pme.materialId);
-      if (!b) return null;
-      return {
-        title: b.title, total: Number(b.totalPages) || 0, progress: Number(b.currentPage) || 0,
-        unit: (b.unit || '').trim(), studyDays: b.studyDays as string[] | undefined,
-        studyTime: b.studySlot || b.studyTime || '', hasPlans: (b.detailedPlans?.length || 0) > 0,
-      };
-    }
-    const l = [...(student.lectures || []), ...(student.subjects || []).flatMap(s => s.lectures || [])]
-      .find(m => m.id === pme.materialId);
-    if (!l) return null;
-    return {
-      title: l.name, total: Number(l.totalLectures) || 0, progress: Number(l.completedLectures) || 0,
-      unit: '', studyDays: l.studyDays as string[] | undefined,
-      studyTime: l.studySlot || l.studyTime || '', hasPlans: (l.detailedPlans?.length || 0) > 0,
-    };
-  };
-
-  // proposedMaterialDelete 삭제 대상의 현재 진도(표시용) 조회. 승인 시 사라질 진도를 미리 경고하는 용도.
-  const getMaterialDeleteProgress = (studentId: string, pmd: ProposedMaterialDelete): { percent: number; label: string } | null => {
-    const student = students.find(s => s.id === studentId);
-    if (!student || pmd.scope !== 'material' || !pmd.materialId) return null;
-    const allBooks = [...(student.books || []), ...(student.subjects || []).flatMap(s => s.books || [])];
-    const allLectures = [...(student.lectures || []), ...(student.subjects || []).flatMap(s => s.lectures || [])];
-    if (pmd.materialType === 'book') {
-      const book = allBooks.find(b => b.id === pmd.materialId);
-      if (!book) return null;
-      const total = Number(book.totalPages) || 0;
-      const current = Number(book.currentPage) || 0;
-      const percent = total > 0 ? Math.round((current / total) * 100) : 0;
-      const unit = book.unit || 'p';
-      return { percent, label: total > 0 ? `${current}/${total}${unit} (${percent}%)` : `${current}${unit} 진행` };
-    }
-    const lecture = allLectures.find(l => l.id === pmd.materialId);
-    if (!lecture) return null;
-    const total = Number(lecture.totalLectures) || 0;
-    const current = Number(lecture.completedLectures) || 0;
-    const percent = total > 0 ? Math.round((current / total) * 100) : 0;
-    return { percent, label: total > 0 ? `${current}/${total}강 (${percent}%)` : `${current}강 진행` };
-  };
-
-  // proposedMaterialDelete scope==='subject' 삭제 대상의 하위 자료 개수(표시용).
-  const getSubjectDeleteCount = (studentId: string, pmd: ProposedMaterialDelete): number => {
-    const student = students.find(s => s.id === studentId);
-    if (!student || pmd.scope !== 'subject' || !pmd.subjectId) return 0;
-    const subject = (student.subjects || []).find(s => s.id === pmd.subjectId);
-    if (!subject) return 0;
-    return (subject.books || []).length + (subject.lectures || []).length;
-  };
-
-  const getGoalTypeLabel = (goalType: string) => {
-    if (goalType === 'weeks') return '기간 지정';
-    if (goalType === 'weeklyAmount') return '주당 분량';
-    if (goalType === 'dailyAmount') return '일일 분량';
-    if (goalType === 'deadlineWeeks') return '마감일까지';
-    if (goalType === 'selfPaced') return '자율 진행';
-    return goalType;
-  };
-
-  const DAY_LABEL_KO: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
 
   // 모든 신청건 통합 변환 가공
   const inboxItems = React.useMemo(() => {
@@ -544,9 +459,37 @@ export default function AdminInboxPage() {
           });
         });
       });
+
+      // 8) 미답 자유채팅 — 마지막 발신이 학생이면 리스트 뷰에서도 답변할 수 있게 항목화.
+      const chatLog = (student.consultationLogs || []).find((l) => l.type === 'chat');
+      if (chatLog && awaitingAdminReply(chatLog.thread)) {
+        const lastMsg = chatLog.thread![chatLog.thread!.length - 1];
+        // 표시 날짜는 KST 변환 — ISO(UTC)를 그대로 자르면 자정~09시 메시지가 전날로 표기된다.
+        const lastMsgDate = lastMsg?.at
+          ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date(lastMsg.at))
+          : '';
+        items.push({
+          id: `chat:${student.id}`,
+          studentId: student.id,
+          studentName: student.name,
+          campus: student.campus,
+          type: 'chat',
+          category: 'facility',
+          title: '채팅 문의',
+          content: lastMsg?.text || '(내용 없음)',
+          date: lastMsgDate,
+          status: 'pending',
+          statusText: '접수중',
+          needsAction: true,
+          tone: 'amber',
+          adminReply: '',
+          createdAt: lastMsg?.at || chatLog.createdAt || '',
+          rawItem: chatLog,
+        });
+      }
     });
 
-    // 8) 가입신청 (학생 셀프 신청 → 승인 대기). 상세 승인은 전용 페이지에서 처리.
+    // 9) 가입신청 (학생 셀프 신청 → 승인 대기). 상세 승인은 전용 페이지에서 처리.
     applications.forEach((app) => {
       const bits: string[] = [];
       if (app.studentPhone) bits.push(`본인 ${app.studentPhone}`);
@@ -626,6 +569,234 @@ export default function AdminInboxPage() {
       return comparison;
     });
   }, [filteredItems, inboxSortField, inboxSortOrder]);
+
+  // ── 메신저(채팅) 뷰 파생 데이터 ──────────────────────────────────────────
+  // 학생별 타임라인 — 이벤트가 있는 학생만. (자리이동·상담예약 소스는 별도 fetch 후 합류)
+  const studentTimelines = React.useMemo(() => {
+    const map = new Map<string, TimelineEvent[]>();
+    const seatByStudent = new Map<string, SeatMoveRequest[]>();
+    for (const r of seatMoves) {
+      const list = seatByStudent.get(r.studentId) || [];
+      list.push(r);
+      seatByStudent.set(r.studentId, list);
+    }
+    const bookingsByStudent = new Map<string, ConsultationBooking[]>();
+    for (const b of adminBookings) {
+      const list = bookingsByStudent.get(b.studentId) || [];
+      list.push(b);
+      bookingsByStudent.set(b.studentId, list);
+    }
+    for (const s of students) {
+      const events = buildTimeline({
+        seatMoves: seatByStudent.get(s.id),
+        consultationBookings: bookingsByStudent.get(s.id),
+        leaveRequests: s.leaveRequests,
+        changeRequests: (s.consultationLogs || []).filter((l) => l.type === 'request'),
+        suggestions: (s.consultationLogs || []).filter((l) => l.type === 'suggestion'),
+        rewardRedemptions: s.rewardRedemptions,
+        otAbsences: (s.otEvents || []).map((e) => ({
+          eventId: e.eventId, status: e.status, reason: e.reason, updatedAt: e.updatedAt,
+          eventName: eventNames[e.eventId]?.name, eventDate: eventNames[e.eventId]?.date,
+        })),
+        mockAbsences: (s.mockExams || []).map((e) => ({
+          eventId: e.examId, status: e.status, reason: e.reason, updatedAt: e.updatedAt,
+          eventName: eventNames[e.examId]?.name, eventDate: eventNames[e.examId]?.date,
+        })),
+        mealAdds: (s.mealOrders || []).flatMap((o) => (o.addRequests || []).map((r) => ({
+          id: r.id, planId: o.planId, reason: r.reason, status: r.status, createdAt: r.createdAt,
+          label: `${mealPlanLabels[o.planId] || ''} ${MEAL_DAY_LABELS[r.day]} ${MEAL_KIND_LABELS[r.meal]}`.trim(),
+        }))),
+        chatLog: (s.consultationLogs || []).find((l) => l.type === 'chat'),
+      });
+      if (events.length > 0) map.set(s.id, events);
+    }
+    return map;
+  }, [students, eventNames, mealPlanLabels, seatMoves, adminBookings]);
+
+  // 대화목록 요약 — 최신 활동순. unread(파란 dot)는 학생 발신 '메시지' 기준(카드 미처리는 amber 배지가 담당).
+  const conversations = React.useMemo<ConversationSummary[]>(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const list: ConversationSummary[] = [];
+    for (const s of students) {
+      const events = studentTimelines.get(s.id);
+      if (!events || events.length === 0) continue;
+      if (q && !s.name.toLowerCase().includes(q)) continue;
+      const chatLog = (s.consultationLogs || []).find((l) => l.type === 'chat');
+      list.push({
+        studentId: s.id,
+        studentName: s.name,
+        campus: s.campus,
+        lastActivityAt: lastActivityAt(events),
+        lastPreview: eventPreview(events[events.length - 1]),
+        needsActionCount: needsActionCount(events),
+        // 파란 dot = 학생 발신 자유채팅 미읽음만(스레드 재답변은 needsAction amber 배지가 담당 —
+        // chat 로그 없는 학생에게 지울 수 없는 dot 이 영구히 뜨는 것 방지).
+        unread: unreadCountFor(events.filter((e) => e.kind === 'message' && e.source === 'chat'), 'admin', chatLog?.adminReadAt) > 0,
+      });
+    }
+    return list.sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
+  }, [students, studentTimelines, searchQuery]);
+
+  // 타임라인 카드 이벤트 → 인박스 항목 매칭(승인폼/처리 버튼 연결용). 처리 완료된 항목은 매칭 없음.
+  const findInboxItem = React.useCallback((studentId: string, e: TimelineEvent): InboxItem | undefined => {
+    const raw: any = e.raw;
+    return inboxItems.find((i) => {
+      if (i.studentId !== studentId) return false;
+      switch (e.source) {
+        case 'leave':
+        case 'request':
+        case 'suggestion':
+          return i.type === e.source && i.id === raw?.id;
+        case 'ot_absence':
+          return i.type === 'ot_absence' && i.rawItem?.eventId === raw?.eventId;
+        case 'mock_absence':
+          return i.type === 'mock_absence' && i.rawItem?.examId === raw?.eventId;
+        case 'reward':
+          return i.type === 'reward' && i.rawItem?.id === raw?.id;
+        case 'meal_add':
+          return i.type === 'meal_add' && i.rawItem?.requestId === raw?.id;
+        default:
+          return false;
+      }
+    });
+  }, [inboxItems]);
+
+  // 방 열람 읽음 처리 — 학생 발신 '자유채팅' 미읽음이 있을 때만.
+  // ⚠️ source==='chat' 한정이 무한 루프 방지의 핵심: thread 재답변(leave/request 등)까지 세면
+  // chat 로그가 없는 학생에서 adminReadAt 을 저장할 곳이 없어 unread 가 영원히 >0 —
+  // setStudents(참조만 교체) → effect 재실행 → PATCH 스팸 + 재렌더 루프에 빠진다.
+  useEffect(() => {
+    if (viewMode !== 'chat' || !selectedStudentId) return;
+    const student = students.find((s) => s.id === selectedStudentId);
+    const events = studentTimelines.get(selectedStudentId);
+    if (!student || !events) return;
+    const chatLog = (student.consultationLogs || []).find((l) => l.type === 'chat');
+    if (!chatLog) return; // 채팅 자체가 없으면 읽음 마커 대상 아님
+    const unread = unreadCountFor(
+      events.filter((e) => e.kind === 'message' && e.source === 'chat'),
+      'admin',
+      chatLog.adminReadAt,
+    );
+    if (unread === 0) return;
+    const nowIso = new Date().toISOString();
+    setStudents((prev) => prev.map((s) => (s.id === selectedStudentId
+      ? { ...s, consultationLogs: (s.consultationLogs || []).map((l) => (l.type === 'chat' ? { ...l, adminReadAt: nowIso } : l)) }
+      : s)));
+    fetch(`/api/admin/students/${selectedStudentId}/chat`, { method: 'PATCH' }).catch(() => {});
+  }, [viewMode, selectedStudentId, students, studentTimelines]);
+
+  // 채팅 뷰 폴링 — 보이는 동안 12초 silent 동기화 + 포커스 복귀(3초 스로틀) 즉시 갱신.
+  const lastInboxFocusRef = useRef(0);
+  useEffect(() => {
+    if (viewMode !== 'chat') return;
+    const iv = setInterval(() => {
+      if (document.visibilityState === 'visible') loadStudents(true);
+    }, 12_000);
+    const onFocus = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastInboxFocusRef.current < 3_000) return;
+      lastInboxFocusRef.current = now;
+      loadStudents(true);
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
+
+  // 채팅 카드 인라인 처리 — 리스트 뷰와 같은 코어(processRequestItem/applyOptimistic) 공유.
+  const handleProcessInline = async (item: InboxItem, actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending') => {
+    setProcessing(true);
+    try {
+      await processRequestItem(item, actionStatus);
+      applyOptimistic(item, actionStatus);
+      toast.success('처리 완료');
+      loadStudents(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '네트워크 에러가 발생했습니다.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleReplyInline = async (item: InboxItem, reply: string) => {
+    try {
+      await processReplyOnly(item, reply);
+      applyReplyOptimistic(item, reply);
+      toast.success('답변을 보냈습니다.');
+      loadStudents(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '답변 전송 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 자유채팅 전송 — 낙관적 append 후 silent 재동기화(서버가 진실원).
+  const sendAdminChat = async (studentId: string, text: string): Promise<boolean> => {
+    const message = text.trim();
+    if (!message || adminChatSending) return false;
+    setAdminChatSending(true);
+    try {
+      const res = await fetch(`/api/admin/students/${studentId}/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) {
+        toast.error(json.message || '메시지 전송 실패');
+        return false;
+      }
+      const sent = json.sent || { id: `local_${Date.now()}`, from: 'admin' as const, text: message, at: new Date().toISOString(), author: '코멘터' };
+      adminMutationSeqRef.current += 1; // 발사 중인 stale 폴링 응답이 방금 보낸 말풍선을 되돌리지 않게
+      setStudents((prev) => prev.map((s) => {
+        if (s.id !== studentId) return s;
+        const logs = s.consultationLogs || [];
+        const has = logs.some((l) => l.type === 'chat');
+        const nextLogs = has
+          ? logs.map((l) => (l.type === 'chat' ? { ...l, thread: [...(l.thread || []), sent], adminReadAt: sent.at } : l))
+          : [...logs, { id: 'chat_main', date: (sent.at || '').slice(0, 10), manager: '채팅', content: '', type: 'chat' as const, createdAt: sent.at, thread: [sent], adminReadAt: sent.at }];
+        return { ...s, consultationLogs: nextLogs };
+      }));
+      loadStudents(true);
+      return true;
+    } catch {
+      toast.error('네트워크 에러가 발생했습니다.');
+      return false;
+    } finally {
+      setAdminChatSending(false);
+    }
+  };
+
+  // 자리이동 승인/거절 — seat-board 패널과 같은 API. 승인=좌석 이동 확정, 거절=원장만 갱신.
+  const handleSeatMove = async (reqItem: SeatMoveRequest, approve: boolean) => {
+    setProcessing(true);
+    try {
+      const res = approve
+        ? await fetch(`/api/admin/seat-moves/${reqItem.id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ campus: reqItem.campus }),
+          })
+        : await fetch(`/api/admin/seat-moves/${reqItem.id}?campus=${encodeURIComponent(reqItem.campus)}`, { method: 'DELETE' });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok || !json.success) throw new Error(json.message || '자리이동 처리 실패');
+      adminMutationSeqRef.current += 1;
+      setSeatMoves((prev) => prev.map((r) => (r.id === reqItem.id
+        ? { ...r, status: approve ? 'approved' as const : 'rejected' as const, processedAt: new Date().toISOString() }
+        : r)));
+      toast.success('처리 완료');
+      loadStudents(true);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : '네트워크 에러가 발생했습니다.');
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   // 3. 통합 요청 해결 PATCH API 호출 (단건 코어) — 성공 시 resolve, 실패 시 throw
   const processRequestItem = async (
@@ -716,6 +887,7 @@ export default function AdminInboxPage() {
     actionStatus: 'approved' | 'rejected' | 'resolved' | 'pending',
     reply?: string,
   ) => {
+    adminMutationSeqRef.current += 1; // 발사 중인 stale 폴링 응답이 이 반영을 되돌리지 않게
     const replyTrim = reply?.trim() || '';
     const nowIso = new Date().toISOString();
     setStudents((prev) => prev.map((s) => {
@@ -766,11 +938,12 @@ export default function AdminInboxPage() {
   };
 
   const canSendReply = (item: InboxItem | null) =>
-    item?.type === 'leave' || item?.type === 'request' || item?.type === 'suggestion';
+    item?.type === 'leave' || item?.type === 'request' || item?.type === 'suggestion' || item?.type === 'chat';
 
   const processReplyOnly = async (item: InboxItem, reply: string) => {
     let apiUrl = `/api/admin/students/${item.studentId}`;
     let body: any = {};
+    let method: 'PATCH' | 'POST' = 'PATCH';
 
     if (item.type === 'leave') {
       apiUrl += '/leave';
@@ -781,12 +954,17 @@ export default function AdminInboxPage() {
     } else if (item.type === 'suggestion') {
       apiUrl += '/suggestions';
       body = { suggestionId: item.id, reply };
+    } else if (item.type === 'chat') {
+      // 자유채팅 답변 — 스레드 append 가 아니라 채팅 로그에 메시지 전송.
+      apiUrl += '/chat';
+      body = { message: reply };
+      method = 'POST';
     } else {
       throw new Error('이 요청에는 답변을 보낼 수 없습니다.');
     }
 
     const res = await fetch(apiUrl, {
-      method: 'PATCH',
+      method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
@@ -816,6 +994,7 @@ export default function AdminInboxPage() {
   };
 
   const applyReplyOptimistic = (item: InboxItem, reply: string) => {
+    adminMutationSeqRef.current += 1; // 발사 중인 stale 폴링 응답이 이 답변을 되돌리지 않게
     const nextRawItem = appendLocalAdminReply(item.rawItem, reply);
     setStudents((prev) => prev.map((student) => {
       if (student.id !== item.studentId) return student;
@@ -831,6 +1010,14 @@ export default function AdminInboxPage() {
           ...student,
           consultationLogs: (student.consultationLogs || []).map((log) =>
             log.id === item.id ? { ...log, ...nextRawItem } : log),
+        };
+      }
+      if (item.type === 'chat') {
+        // 채팅 답변 낙관적 반영 — chat 로그 thread 에 append + 읽음 마커 갱신.
+        return {
+          ...student,
+          consultationLogs: (student.consultationLogs || []).map((log) =>
+            log.type === 'chat' ? { ...log, thread: nextRawItem.thread, adminReadAt: nextRawItem.repliedAt } : log),
         };
       }
       return student;
@@ -879,7 +1066,7 @@ export default function AdminInboxPage() {
 
   // 다중 선택 일괄 승인 (완료되지 않은 건만 대상)
   const handleBulkApprove = async () => {
-    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료' && i.type !== 'reward' && i.type !== 'signup');
+    const targets = inboxItems.filter((i) => selectedIds.has(i.id) && i.statusText !== '완료' && i.type !== 'reward' && i.type !== 'signup' && i.type !== 'chat');
     if (targets.length === 0) return;
     if (!(await confirm({ title: `선택한 ${targets.length}건을 일괄 승인할까요?`, confirmText: '일괄 승인' }))) return;
     setBulkProcessing(true);
@@ -956,18 +1143,33 @@ export default function AdminInboxPage() {
         }
       />
 
-      <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-
-        {/* 좌측: 카테고리 필터 및 요청 목록 */}
-        <div className="lg:col-span-2 space-y-4">
-          {/* 검색 — 신청 원생 / 코멘터 답장 / 전달 텍스트 */}
-          <div className="relative">
+      <main className="stagger-children max-w-7xl mx-auto p-4 md:p-8 space-y-4">
+        {/* 뷰 토글(채팅/리스트) + 공용 검색 */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5">
+          <div className="flex items-center gap-1 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-2xl border border-black/[0.02] dark:border-white/10 shrink-0">
+            {([['chat', '채팅'], ['list', '리스트']] as const).map(([mode, label]) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => changeViewMode(mode)}
+                className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+                  viewMode === mode
+                    ? 'bg-white dark:bg-[#1c1c1e] text-black dark:text-slate-100 shadow-sm'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                {mode === 'chat' ? <MessageSquare className="w-3.5 h-3.5" /> : <Inbox className="w-3.5 h-3.5" />}
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 dark:text-slate-600 pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="원생 이름 · 신청 내용 · 코멘터 답변으로 검색"
+              placeholder={viewMode === 'chat' ? '원생 이름으로 대화 검색' : '원생 이름 · 신청 내용 · 코멘터 답변으로 검색'}
               className="w-full rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] pl-10 pr-9 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-600 focus:border-[#0071E3] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/15 transition-all shadow-sm"
             />
             {searchQuery && (
@@ -981,7 +1183,45 @@ export default function AdminInboxPage() {
               </button>
             )}
           </div>
+        </div>
 
+        {/* 메신저(채팅) 뷰 */}
+        {viewMode === 'chat' && (
+          <ChatView
+            students={students}
+            conversations={conversations}
+            timelines={studentTimelines}
+            selectedStudentId={selectedStudentId}
+            onSelectStudent={setSelectedStudentId}
+            signupCount={applications.length}
+            onOpenSignups={() => router.push('/admin/applications')}
+            onOpenStudent={openStudentById}
+            getCampusLabel={getCampusLabel}
+            findInboxItem={findInboxItem}
+            processing={processing}
+            onProcessItem={handleProcessInline}
+            onReplyItem={handleReplyInline}
+            onSendChat={sendAdminChat}
+            chatSending={adminChatSending}
+            onGoRewards={() => router.push('/admin/leave?tab=rewards')}
+            onProcessSeatMove={handleSeatMove}
+            onOpenConsultations={() => router.push('/admin/consultation-bookings')}
+            loading={loading}
+            planStartDateOverrides={planStartDateOverrides}
+            setPlanStartDateOverride={(id, v) => setPlanStartDateOverrides((prev) => ({ ...prev, [id]: v }))}
+            deadlinePolicies={deadlinePolicies}
+            setDeadlinePolicy={(id, v) => setDeadlinePolicies((prev) => ({ ...prev, [id]: v }))}
+            regenerateChecks={regenerateChecks}
+            setRegenerateCheck={(id, v) => setRegenerateChecks((prev) => ({ ...prev, [id]: v }))}
+          />
+        )}
+
+        {/* 리스트 뷰 — 기존 워크플로 무손실 보존(일괄승인 포함) */}
+        {viewMode === 'list' && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+
+        {/* 좌측: 카테고리 필터 및 요청 목록 */}
+        <div className="lg:col-span-2 space-y-4">
           <div className="flex flex-wrap gap-1.5 bg-[#F5F5F7] dark:bg-white/5 p-1 rounded-2xl border border-black/[0.02] dark:border-white/10">
             {CATEGORY_TABS.map((tab) => (
               <button
@@ -1078,7 +1318,8 @@ export default function AdminInboxPage() {
 
           {/* 일괄 승인 바 — 미처리(완료 아님) 건이 있을 때만 */}
           {!loading && sortedInboxItems.some((i) => i.statusText !== '완료') && (() => {
-            const approvable = sortedInboxItems.filter((i) => i.statusText !== '완료');
+            // 일괄승인 대상과 동일 필터(리워드/가입/채팅 제외) — "선택 N건"과 실제 처리 건수 불일치 방지
+            const approvable = sortedInboxItems.filter((i) => i.statusText !== '완료' && i.type !== 'reward' && i.type !== 'signup' && i.type !== 'chat');
             const selCount = approvable.filter((i) => selectedIds.has(i.id)).length;
             const allSel = approvable.length > 0 && selCount === approvable.length;
             return (
@@ -1131,7 +1372,7 @@ export default function AdminInboxPage() {
                   >
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <span className="flex items-center gap-2 min-w-0">
-                        {item.statusText !== '완료' && item.type !== 'reward' && item.type !== 'signup' && (
+                        {item.statusText !== '완료' && item.type !== 'reward' && item.type !== 'signup' && item.type !== 'chat' && (
                           <input
                             type="checkbox"
                             checked={selectedIds.has(item.id)}
@@ -1296,412 +1537,19 @@ export default function AdminInboxPage() {
                 </>
                 )}
 
-                {/* proposedGoal 제안 계획 표시 */}
-                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedGoal && (() => {
-                  const pg: ProposedGoal = selectedItem.rawItem.proposedGoal;
-                  const cg = pg.currentGoal;
-                  const materialTitle = getMaterialTitle(selectedItem.studentId, pg);
-                  const isBook = pg.materialType === 'book';
-                  const matUnit = getMaterialUnit(selectedItem.studentId, pg.materialType, pg.materialId);
-                  const unitFor = (gt?: string) =>
-                    gt === 'weeks' || gt === 'deadlineWeeks' ? '주'
-                    : gt === 'weeklyAmount' ? `${matUnit}/주`
-                    : gt === 'selfPaced' ? ''
-                    : `${matUnit}/일`;
-                  // 변경 후 값 문구: 마감일 모드는 날짜를, 자율은 '자율'을, 그 외는 값+단위를 보여준다.
-                  // 값이 비어(0) 있고 날짜도 없으면 목표 문구는 생략(요일만 변경 등).
-                  const hasGoal = pg.goalType === 'selfPaced' || !!pg.targetDate || Number(pg.goalValue) > 0;
-                  const afterText = pg.goalType === 'deadlineWeeks' && pg.targetDate
-                    ? `${pg.targetDate}까지 (약 ${pg.goalValue}주)`
-                    : pg.goalType === 'selfPaced'
-                    ? '자율 진행'
-                    : `${getGoalTypeLabel(pg.goalType)}: ${pg.goalValue}${unitFor(pg.goalType)}`;
-                  return (
-                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-3">
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
-                        <Target className="w-3.5 h-3.5" />
-                        학생 제안 변경 내역
-                      </div>
-
-                      {/* 교재/인강 제목 */}
-                      <div className="flex items-center gap-2 text-[11px]">
-                        {isBook
-                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
-                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">{materialTitle}</span>
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">{isBook ? '교재' : '인강'}</span>
-                      </div>
-
-                      {/* 변경 전/후 비교 */}
-                      {cg ? (
-                        <div className="grid grid-cols-2 gap-2 text-[10px]">
-                          <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
-                            <p className="font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider text-[9px]">변경 전 (현재)</p>
-                            {cg.goalType && cg.goalValue ? (
-                              <span className="inline-block bg-slate-100 dark:bg-white/10 rounded-md px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
-                                {getGoalTypeLabel(cg.goalType)}: {cg.goalValue}{unitFor(cg.goalType)}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 dark:text-slate-500 font-semibold">미설정</span>
-                            )}
-                            {cg.speedMultiplier && cg.speedMultiplier !== 1.0 && (
-                              <span className="inline-block ml-1 bg-slate-100 dark:bg-white/10 rounded-md px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
-                                {cg.speedMultiplier}×
-                              </span>
-                            )}
-                          </div>
-                          <div className="rounded-xl border border-[#0071E3]/30 dark:border-[#0071E3]/40 bg-[#0071E3]/[0.04] dark:bg-[#0071E3]/15 p-2.5 space-y-1.5">
-                            <p className="font-black text-[#0071E3]/70 uppercase tracking-wider text-[9px]">변경 후 (신청)</p>
-                            {hasGoal ? (
-                              <span className="inline-block bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
-                                {afterText}
-                              </span>
-                            ) : (
-                              <span className="text-slate-400 dark:text-slate-500 font-semibold">요일만 변경</span>
-                            )}
-                            {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
-                              <span className="inline-block ml-1 bg-[#0071E3]/10 rounded-md px-2 py-0.5 font-black text-[#0071E3]">
-                                {pg.speedMultiplier}×
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {hasGoal && (
-                            <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                              {afterText}
-                            </span>
-                          )}
-                          {pg.speedMultiplier && pg.speedMultiplier !== 1.0 && (
-                            <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                              배속 {pg.speedMultiplier}×
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {pg.currentProgress !== undefined && (
-                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-[#0071E3]">
-                          현재 진도 정정: {pg.currentProgress}{matUnit}
-                        </span>
-                      )}
-
-                      {pg.proposedWeekNumber && pg.proposedRangeText && (
-                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
-                          {pg.proposedWeekNumber}주차: {pg.proposedRangeText}
-                        </span>
-                      )}
-
-                      {pg.studyDays && pg.studyDays.length > 0 && (
-                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-[#0071E3]">
-                          학습 요일: {pg.studyDays.map((d) => DAY_LABEL_KO[d] || d).join('·')}
-                        </span>
-                      )}
-
-                      <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
-                        <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">승인 시작일</label>
-                        <input
-                          type="date"
-                          min={kstToday()}
-                          value={planStartDateOverrides[selectedItem.id] ?? pg.planStartDate ?? ''}
-                          onChange={(e) => setPlanStartDateOverrides((prev) => ({ ...prev, [selectedItem.id]: e.target.value }))}
-                          className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
-                        />
-                        <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">그대로 두면 학생 선택값 또는 오늘 기준으로 승인됩니다.</p>
-                      </div>
-
-                      {pg.goalType === 'deadlineWeeks' && pg.targetDate && (
-                        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
-                          <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">마감일 처리</label>
-                          <div className="flex gap-1.5">
-                            {([['keep-deadline', `마감일 유지 (${pg.targetDate})`], ['keep-duration', `기간 유지 (약 ${pg.goalValue}주)`]] as const).map(([mode, label]) => (
-                              <button
-                                key={mode}
-                                type="button"
-                                onClick={() => setDeadlinePolicies((prev) => ({ ...prev, [selectedItem.id]: mode }))}
-                                className={`rounded-lg border px-2 py-1 text-[10px] font-bold transition ${
-                                  (deadlinePolicies[selectedItem.id] ?? 'keep-deadline') === mode
-                                    ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
-                                    : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
-                                }`}
-                              >
-                                {label}
-                              </button>
-                            ))}
-                          </div>
-                          <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 break-keep">마감일 유지는 시작일이 늦어져도 계획이 학생이 고른 마감일을 넘지 않아요(주당 분량 증가).</p>
-                        </div>
-                      )}
-
-                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
-                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" /> 승인 시 해당 교재/인강에 제안 계획이 자동 반영됩니다.
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* proposedMaterial 교재/인강 추가 제안 표시 */}
-                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterial && (() => {
-                  const pm: ProposedMaterial = selectedItem.rawItem.proposedMaterial;
-                  const isBook = pm.materialType === 'book';
-                  const unitLabel = isBook ? (pm.unit || 'p') : '강';
-                  const dayLabel: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
-                  const timeLabel: Record<string, string> = { morning: '오전', afternoon: '오후', night: '야간' };
-                  return (
-                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-2.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
-                        <BookPlus className="w-3.5 h-3.5" />
-                        교재/인강 추가 요청
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        {isBook
-                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
-                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">{pm.title}</span>
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">{isBook ? '교재' : '인강'}</span>
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 text-[10px]">
-                        <span className="inline-flex items-center gap-1 bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
-                          과목: {pm.subjectName}
-                          {pm.isNewSubject && <span className="rounded-full bg-[#0071E3]/10 px-1.5 py-0.5 text-[9px] font-black text-[#0071E3]">신규</span>}
-                        </span>
-                        {(pm.studyDays?.length || pm.studyTime) && (
-                          <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
-                            {pm.studyDays?.length ? pm.studyDays.map((d) => dayLabel[d]).join('·') : ''}
-                            {pm.studyTime ? ` ${timeLabel[pm.studyTime]}` : ''}
-                          </span>
-                        )}
-                        {pm.currentProgress !== undefined && (
-                          <span className="bg-white dark:bg-[#1c1c1e] border border-[#0071E3]/20 dark:border-[#0071E3]/30 rounded-lg px-2 py-0.5 font-bold text-[#0071E3]">
-                            현재 {pm.currentProgress}{unitLabel}
-                          </span>
-                        )}
-                        <span className="bg-white dark:bg-[#1c1c1e] border border-slate-200 dark:border-white/10 rounded-lg px-2 py-0.5 font-bold text-slate-600 dark:text-slate-300">
-                          총량: {pm.total ? `${pm.total}${unitLabel} (예상)` : '자율(총량 미정)'}
-                        </span>
-                        {(pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount') && (
-                          <span className="bg-[#0071E3]/10 border border-[#0071E3]/20 rounded-lg px-2 py-0.5 font-black text-[#0071E3]">
-                            계획: {pm.goalType === 'deadlineWeeks'
-                              ? `${pm.targetDate || ''}까지 (약 ${pm.goalValue}주)`
-                              : `하루 ${pm.goalValue}${unitLabel}`}
-                          </span>
-                        )}
-                      </div>
-                      {(pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount') && (
-                        <div className="rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2.5 space-y-1.5">
-                          <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">승인 시작일</label>
-                          <input
-                            type="date"
-                            min={kstToday()}
-                            value={planStartDateOverrides[selectedItem.id] ?? pm.planStartDate ?? ''}
-                            onChange={(e) => setPlanStartDateOverrides((prev) => ({ ...prev, [selectedItem.id]: e.target.value }))}
-                            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 px-2 py-1.5 text-[11px] font-bold text-slate-700 dark:text-slate-200 focus:border-[#0071E3] focus:outline-none"
-                          />
-                          <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500">그대로 두면 학생 선택값 또는 오늘 기준으로 자료 계획이 생성됩니다.</p>
-                          {pm.goalType === 'deadlineWeeks' && pm.targetDate && (
-                            <div className="space-y-1.5 pt-1">
-                              <label className="block text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">마감일 처리</label>
-                              <div className="flex gap-1.5">
-                                {([['keep-deadline', `마감일 유지 (${pm.targetDate})`], ['keep-duration', `기간 유지 (약 ${pm.goalValue}주)`]] as const).map(([mode, label]) => (
-                                  <button
-                                    key={mode}
-                                    type="button"
-                                    onClick={() => setDeadlinePolicies((prev) => ({ ...prev, [selectedItem.id]: mode }))}
-                                    className={`rounded-lg border px-2 py-1 text-[10px] font-bold transition ${
-                                      (deadlinePolicies[selectedItem.id] ?? 'keep-deadline') === mode
-                                        ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
-                                        : 'border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400'
-                                    }`}
-                                  >
-                                    {label}
-                                  </button>
-                                ))}
-                              </div>
-                              <p className="text-[9px] font-semibold text-slate-400 dark:text-slate-500 break-keep">마감일 유지는 시작일이 늦어져도 계획이 학생이 고른 마감일을 넘지 않아요(주당 분량 증가).</p>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      {pm.note && (
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">메모: {pm.note}</p>
-                      )}
-                      {(() => {
-                        const willPlan = (pm.goalType === 'deadlineWeeks' || pm.goalType === 'dailyAmount') && !!pm.total && pm.total > 0;
-                        return (
-                          <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1">
-                            <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                            {willPlan ? ' 승인 시 위 계획으로 자료가 생성됩니다.' : ' 승인 시 자율(selfPaced) 자료로 생성됩니다.'}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                  );
-                })()}
-
-                {/* proposedMaterialEdit 기존 교재/강의 수정 제안 표시 — 바뀌는 필드만 before → after 로 */}
-                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterialEdit && (() => {
-                  const pme: ProposedMaterialEdit = selectedItem.rawItem.proposedMaterialEdit;
-                  const isBook = pme.materialType === 'book';
-                  const unitLabel = isBook ? (pme.unit || pme.current?.unit || 'p') : '강';
-                  const dayLabel: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금', sat: '토', sun: '일' };
-                  const timeLabel: Record<string, string> = { morning: '오전', afternoon: '오후', night: '야간' };
-                  const daysText = (days?: string[]) => (days?.length ? days.map((d) => dayLabel[d] || d).join('·') : '기본');
-                  // 미지정('')은 시간표 제외가 아니라 교시 고정 해제 — 빈 교시에 자동 배치되고, 과목 시간대가 있으면 그쪽을 따른다.
-                  const timeText = (t?: string) => (t ? (timeLabel[t] || t) : '교시 미지정(자동 배치)');
-                  // 서버 실제 값 우선, 없으면(자료 조회 실패) 학생 스냅샷으로 폴백.
-                  const cur = getEditTargetState(selectedItem.studentId, pme);
-                  const before = {
-                    title: cur?.title ?? pme.current?.title ?? pme.materialTitle,
-                    total: cur?.total ?? pme.current?.total ?? 0,
-                    unit: cur?.unit || pme.current?.unit || 'p',
-                    studyDays: cur?.studyDays ?? pme.current?.studyDays,
-                    studyTime: cur?.studyTime ?? pme.current?.studyTime,
-                  };
-                  const diffs: Array<{ field: string; before: string; after: string }> = [];
-                  if (pme.title) diffs.push({ field: '자료명', before: before.title, after: pme.title });
-                  if (pme.total !== undefined) diffs.push({ field: '총 분량', before: before.total ? `${before.total}${unitLabel}` : '미정', after: `${pme.total}${unitLabel}` });
-                  if (pme.unit) diffs.push({ field: '단위', before: before.unit, after: pme.unit });
-                  if (pme.studyDays) diffs.push({ field: '학습 요일', before: daysText(before.studyDays), after: daysText(pme.studyDays) });
-                  if (pme.studyTime !== undefined) diffs.push({ field: '시간대', before: timeText(before.studyTime), after: timeText(pme.studyTime) });
-                  const hasPlans = !!cur?.hasPlans;
-                  // 총량이 진도보다 작아지면 승인 시 진도가 새 총량으로 내려간다 — 미리 알린다.
-                  const willClampProgress = pme.total !== undefined && !!cur && cur.progress > pme.total;
-                  return (
-                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-2.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
-                        <SquarePen className="w-3.5 h-3.5" />
-                        교재/강의 수정 요청
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        {isBook
-                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
-                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">{pme.subjectName} · {pme.materialTitle}</span>
-                        <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 shrink-0">{isBook ? '교재' : '인강'}</span>
-                      </div>
-                      <div className="space-y-1">
-                        {diffs.map((d) => (
-                          <div key={d.field} className="flex items-center gap-1.5 text-[10px]">
-                            <span className="w-14 shrink-0 font-bold text-slate-400 dark:text-slate-500">{d.field}</span>
-                            <span className="min-w-0 truncate rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-slate-500 dark:text-slate-400 line-through">{d.before}</span>
-                            <span className="shrink-0 font-black text-slate-300 dark:text-slate-600">→</span>
-                            <span className="min-w-0 truncate rounded-lg border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-black text-[#0071E3]">{d.after}</span>
-                          </div>
-                        ))}
-                      </div>
-                      {pme.reason && (
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {pme.reason}</p>
-                      )}
-                      {(pme.total !== undefined || pme.studyDays || pme.studyTime !== undefined) && hasPlans && (
-                        <label className="flex items-start gap-2 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50/60 dark:bg-amber-500/10 p-2.5 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={regenerateChecks[selectedItem.id] ?? true}
-                            onChange={(e) => setRegenerateChecks((prev) => ({ ...prev, [selectedItem.id]: e.target.checked }))}
-                            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#0071E3]"
-                          />
-                          <span className="text-[9px] font-bold text-amber-700 dark:text-amber-300 break-keep">
-                            승인하면서 학습계획도 새 총량·요일 기준으로 재생성 (권장) — 끄면 자료 정보만 바뀌고 기존 주차 계획(옛 범위)이 그대로 남아요.
-                          </span>
-                        </label>
-                      )}
-                      {willClampProgress && (
-                        <p className="text-[9px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 break-keep">
-                          <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
-                          현재 진도 {cur!.progress}{unitLabel} &gt; 신청 총량 {pme.total}{unitLabel} — 승인 시 진도가 {pme.total}{unitLabel}(완료)로 조정됩니다.
-                        </p>
-                      )}
-                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1 break-keep">
-                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                        승인 시 위 값으로 자료 정보가 수정됩니다. {willClampProgress ? '진도는 위 안내대로 조정됩니다.' : '진도 기록은 유지됩니다.'}
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* proposedMaterialDelete 교재/강의(또는 과목 전체) 삭제 제안 표시 — 파괴적 작업이라 위험(red) 톤 */}
-                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedMaterialDelete && (() => {
-                  const pmd: ProposedMaterialDelete = selectedItem.rawItem.proposedMaterialDelete;
-                  const isSubject = pmd.scope === 'subject';
-                  const progress = getMaterialDeleteProgress(selectedItem.studentId, pmd);
-                  const subjectCount = isSubject ? getSubjectDeleteCount(selectedItem.studentId, pmd) : 0;
-                  return (
-                    <div className="rounded-2xl border border-red-200 dark:border-red-500/30 bg-red-50/60 dark:bg-red-500/10 p-4 space-y-2.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-red-600 dark:text-red-400 uppercase tracking-wider">
-                        <Trash2 className="w-3.5 h-3.5" />
-                        교재/강의 삭제 요청
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        {isSubject
-                          ? <Target className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                          : pmd.materialType === 'book'
-                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
-                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">
-                          {isSubject
-                            ? `과목 전체 삭제: ${pmd.subjectName}`
-                            : `자료 하나 삭제: ${pmd.subjectName} · ${pmd.materialTitle || pmd.materialId}`}
-                        </span>
-                      </div>
-                      {isSubject && (
-                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-red-200 dark:border-red-500/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
-                          하위 자료 {subjectCount}개 포함
-                        </span>
-                      )}
-                      {progress && (
-                        <span className="inline-block bg-white dark:bg-[#1c1c1e] border border-red-200 dark:border-red-500/30 rounded-lg px-2 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-400">
-                          현재 진도 {progress.label} — 삭제하면 사라져요
-                        </span>
-                      )}
-                      {pmd.reason && (
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {pmd.reason}</p>
-                      )}
-                      <p className="text-[9px] font-bold text-red-600/80 dark:text-red-400/80 flex items-center gap-1">
-                        <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
-                        승인 시 되돌릴 수 없이 삭제됩니다. 진도 기록도 함께 사라져요.
-                      </p>
-                    </div>
-                  );
-                })()}
-
-                {/* proposedProgressCorrection 진도 숫자 정정 제안 표시 — 승인 시 진도 자동 반영 */}
-                {selectedItem.type === 'request' && selectedItem.rawItem?.proposedProgressCorrection && (() => {
-                  const ppc: ProposedProgressCorrection = selectedItem.rawItem.proposedProgressCorrection;
-                  const unitLabel = getMaterialUnit(selectedItem.studentId, ppc.materialType, ppc.materialId);
-                  return (
-                    <div className="rounded-2xl border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-[#0071E3]/[0.03] dark:bg-[#0071E3]/15 p-4 space-y-2.5">
-                      <div className="flex items-center gap-1.5 text-[10px] font-black text-[#0071E3] uppercase tracking-wider">
-                        <Target className="w-3.5 h-3.5" />
-                        진도 숫자 정정 요청
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px]">
-                        {ppc.materialType === 'book'
-                          ? <BookOpen className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />
-                          : <Tv className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500 shrink-0" />}
-                        <span className="font-black text-slate-700 dark:text-slate-300 truncate">
-                          {ppc.subjectName ? `${ppc.subjectName} · ` : ''}{ppc.materialTitle || ppc.materialId}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[10px]">
-                        <span className="min-w-0 truncate rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-semibold text-slate-500 dark:text-slate-400 line-through">
-                          {ppc.fromValue !== undefined ? `${ppc.fromValue}${unitLabel}` : '현재값'}
-                        </span>
-                        <span className="shrink-0 font-black text-slate-300 dark:text-slate-600">→</span>
-                        <span className="min-w-0 truncate rounded-lg border border-[#0071E3]/20 dark:border-[#0071E3]/30 bg-white dark:bg-[#1c1c1e] px-2 py-0.5 font-black text-[#0071E3]">
-                          {ppc.toValue}{unitLabel}
-                        </span>
-                      </div>
-                      {ppc.reason && (
-                        <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 break-keep">사유: {ppc.reason}</p>
-                      )}
-                      <p className="text-[9px] font-bold text-[#0071E3]/70 flex items-center gap-1 break-keep">
-                        <CheckCircle2 className="w-2.5 h-2.5 shrink-0" />
-                        승인 시 진도가 {ppc.toValue}{unitLabel}(으)로 자동 정정됩니다(총량 초과 시 총량으로 조정).
-                      </p>
-                    </div>
-                  );
-                })()}
+                {/* 학생 제안 페이로드(계획/자료추가/수정/삭제/진도정정) 승인폼 — 리스트·채팅 뷰 공용 */}
+                {selectedItem.type === 'request' && (
+                  <ApprovalForms
+                    raw={selectedItem.rawItem}
+                    student={students.find((s) => s.id === selectedItem.studentId)}
+                    planStartDateOverride={planStartDateOverrides[selectedItem.id]}
+                    onPlanStartDateChange={(v) => setPlanStartDateOverrides((prev) => ({ ...prev, [selectedItem.id]: v }))}
+                    deadlinePolicy={deadlinePolicies[selectedItem.id]}
+                    onDeadlinePolicyChange={(v) => setDeadlinePolicies((prev) => ({ ...prev, [selectedItem.id]: v }))}
+                    regenerate={regenerateChecks[selectedItem.id]}
+                    onRegenerateChange={(v) => setRegenerateChecks((prev) => ({ ...prev, [selectedItem.id]: v }))}
+                  />
+                )}
 
                 <div className="space-y-2 border-t border-slate-100 dark:border-white/10 pt-4">
                   {selectedItem.type === 'signup' ? (
@@ -1788,6 +1636,17 @@ export default function AdminInboxPage() {
                         <X className="w-3.5 h-3.5 mr-1" /> 반려 처리
                       </Button>
                     </div>
+                  ) : selectedItem.type === 'chat' ? (
+                    <Button
+                      onClick={() => {
+                        changeViewMode('chat');
+                        setSelectedStudentId(selectedItem.studentId);
+                        setSelectedItem(null);
+                      }}
+                      className="w-full rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white text-xs font-bold py-2.5 shadow-sm active:scale-[0.98] transition-all"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 mr-1" /> 채팅 뷰에서 대화 전체 보기
+                    </Button>
                   ) : (
                     <div className="space-y-2">
                       <Button
@@ -1818,6 +1677,9 @@ export default function AdminInboxPage() {
             )}
           </Card>
         </div>
+
+        </div>
+        )}
 
       </main>
     </div>
