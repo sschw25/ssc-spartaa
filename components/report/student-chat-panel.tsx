@@ -4,9 +4,10 @@
 // 말풍선으로 이어지는 연속 대화 스트림 + 자유 메시지 입력. 관리자 메신저 인박스와
 // lib/chat-timeline 의 같은 타임라인을 공유한다(양쪽이 같은 대화를 본다).
 import React, { useEffect, useRef, useState } from 'react';
-import { MessageSquare, Send, Loader2, Trash2, CheckCircle2, XCircle, Armchair, CalendarClock, Ticket, GraduationCap, Calendar, Utensils, Users } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Trash2, CheckCircle2, XCircle, Armchair, CalendarClock, Ticket, GraduationCap, Calendar, Utensils, Users, Plus } from 'lucide-react';
 import type { ConsultationLog, LeaveRequest, RewardRedemption, SeatMoveRequest, ConsultationBooking } from '@/lib/types/student';
 import type { TimelineEvent } from '@/lib/chat-timeline';
+import type { ApplicationSubTab } from '@/components/report/consultation-tab';
 import { formatLeaveLabel, getRewardLabel } from '@/lib/leave';
 import { getRequestTypeLabel } from '@/lib/student-requests';
 
@@ -21,7 +22,19 @@ interface StudentChatPanelProps {
   cancelSuggestion: (id: string) => Promise<void>;
   cancelLeave: (id: string) => Promise<void>;
   cancelRequest: (id: string) => Promise<void>;
+  // + 메뉴 — 신청 탭의 각 폼으로 원터치 이동(폼은 신청 탭 단일소스, 결과는 이 타임라인에 카드로 회귀)
+  onApply?: (kind: ApplicationSubTab) => void;
 }
+
+// + 메뉴 항목 — 신청 탭 서브탭과 1:1(메시지 서브탭 자신은 제외).
+const APPLY_MENU: Array<{ kind: ApplicationSubTab; label: string; desc: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { kind: 'learning-request', label: '학습신청', desc: '진도·계획 요청', icon: GraduationCap },
+  { kind: 'leave', label: '휴식·반차', desc: '휴가 신청', icon: Calendar },
+  { kind: 'consultation', label: '상담신청', desc: '상담 예약', icon: CalendarClock },
+  { kind: 'meal', label: '도시락', desc: '주간 신청', icon: Utensils },
+  { kind: 'seat', label: '자리이동', desc: '좌석 변경', icon: Armchair },
+  { kind: 'coupon', label: '쿠폰교환', desc: '보상 교환', icon: Ticket },
+];
 
 const SOURCE_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   leave: { label: '휴가·반차', icon: Calendar },
@@ -177,9 +190,16 @@ export function StudentChatPanel({
   cancelSuggestion,
   cancelLeave,
   cancelRequest,
+  onApply,
 }: StudentChatPanelProps) {
   const [message, setMessage] = useState('');
+  const [applyOpen, setApplyOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 탭 이탈/시트 닫힘 시 + 메뉴도 접는다.
+  useEffect(() => {
+    if (!active) setApplyOpen(false);
+  }, [active]);
 
   // 채팅 탭이 보이는 동안 12초 폴링 — 관리자 답변을 새로고침 없이 반영.
   useEffect(() => {
@@ -319,7 +339,48 @@ export function StudentChatPanel({
 
         {/* 입력창 */}
         <div className="border-t border-slate-100 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] p-3">
+          {/* + 퀵 신청 메뉴 — 신청 탭의 각 폼으로 원터치 이동. 신청 결과는 이 채팅에 카드로 돌아온다. */}
+          {applyOpen && onApply && (
+            <div className="mb-2 grid grid-cols-3 gap-1.5 animate-in fade-in-0 slide-in-from-bottom-2 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]">
+              {APPLY_MENU.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <button
+                    key={item.kind}
+                    type="button"
+                    onClick={() => {
+                      setApplyOpen(false);
+                      onApply(item.kind);
+                    }}
+                    className="flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] px-2 py-2 text-center shadow-sm transition hover:border-[#0071E3]/40 active:scale-[0.96]"
+                  >
+                    <span className="grid h-7 w-7 place-items-center rounded-xl bg-[#0071E3]/10 text-[#0071E3]">
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">{item.label}</span>
+                    <span className="text-[8px] font-bold text-slate-400 dark:text-slate-500">{item.desc}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="flex items-end gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-2 focus-within:border-[#0071E3] focus-within:ring-2 focus-within:ring-[#0071E3]/15">
+            {onApply && (
+              <button
+                type="button"
+                onClick={() => setApplyOpen((v) => !v)}
+                aria-expanded={applyOpen}
+                aria-label={applyOpen ? '신청 메뉴 닫기' : '신청 메뉴 열기'}
+                title="신청하기"
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition active:scale-[0.94] ${
+                  applyOpen
+                    ? 'border-[#0071E3] bg-[#0071E3]/10 text-[#0071E3]'
+                    : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-[#0071E3] hover:border-[#0071E3]/40'
+                }`}
+              >
+                <Plus className={`h-4.5 w-4.5 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${applyOpen ? 'rotate-45' : ''}`} />
+              </button>
+            )}
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
@@ -344,7 +405,7 @@ export function StudentChatPanel({
             </button>
           </div>
           <p className="mt-1.5 px-1 text-[9px] font-bold text-slate-400 dark:text-slate-500">
-            Enter로 보내고 Shift+Enter로 줄을 바꿔요. 담당 코멘터가 확인하는 대로 답해 드려요.
+            Enter로 보내고 Shift+Enter로 줄을 바꿔요.{onApply ? ' + 버튼으로 휴가·상담 같은 신청도 바로 할 수 있어요.' : ''} 담당 코멘터가 확인하는 대로 답해 드려요.
           </p>
         </div>
       </div>

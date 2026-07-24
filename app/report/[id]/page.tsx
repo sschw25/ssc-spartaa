@@ -317,6 +317,14 @@ function StudentReportInner() {
     setActiveTab(tabId);
   }, [setActiveTab, applyContainerTab]);
 
+  // 채팅 + 메뉴 → 신청 폼 원터치 이동(폼은 신청 탭 단일소스 — 시트에서 열었으면 닫고 이동).
+  const applyFromChat = useCallback((kind: ApplicationSubTab) => {
+    setChatSheetOpen(false);
+    setRequestSubTab(kind);
+    setActiveTab('student-requests');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [setActiveTab]);
+
   const openWeeklyPlanTab = useCallback(() => {
     selectReportTab('execution-plan');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -940,6 +948,7 @@ function StudentReportInner() {
               cancelSuggestion={cancelSuggestion}
               cancelLeave={cancelLeave}
               cancelRequest={cancelRequest}
+              onApply={applyFromChat}
             />
           }
           learningRequestNode={
@@ -1067,6 +1076,7 @@ function StudentReportInner() {
                 cancelSuggestion={cancelSuggestion}
                 cancelLeave={cancelLeave}
                 cancelRequest={cancelRequest}
+                onApply={applyFromChat}
               />
             </div>
           )}
