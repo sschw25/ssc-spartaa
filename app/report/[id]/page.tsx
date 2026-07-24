@@ -26,6 +26,9 @@ import { OtEventNotice } from '@/components/report/ot-event-notice';
 import { StudentCalendarTab } from '@/components/report/student-calendar-tab';
 import { CampusEventNotice } from '@/components/report/campus-event-notice';
 import { MealPlanNotice, type MealPlanWithOrder } from '@/components/report/meal-plan-notice';
+import { SeatMoveCard } from '@/components/report/seat-move-card';
+import { CouponExchangeCard } from '@/components/report/coupon-exchange-card';
+import { LeaveRequestSection } from '@/components/report/leave-request-section';
 import { MaterialDetailSheet } from '@/components/report/material-detail-sheet';
 import { DailyWrongQuiz } from '@/components/report/daily-wrong-quiz';
 import { SaturdayLateExcuseNotice } from '@/components/report/saturday-late-excuse-notice';
@@ -317,13 +320,19 @@ function StudentReportInner() {
     setActiveTab(tabId);
   }, [setActiveTab, applyContainerTab]);
 
-  // 채팅 + 메뉴 → 신청 폼 원터치 이동(폼은 신청 탭 단일소스 — 시트에서 열었으면 닫고 이동).
+  // 채팅 + 메뉴 → 신청 폼을 채팅 위 플로팅 오버레이로 띄운다(현재 화면·채팅을 벗어나지 않음).
+  // 폼 컴포넌트는 신청 탭 서브탭과 공용(단일소스) — 같은 폼이 서브탭에 이미 렌더 중이면
+  // 서브탭을 채팅으로 돌려 이중 마운트(자체 fetch 중복·DOM id 충돌)를 차단한다.
+  const [applyFormKind, setApplyFormKind] = useState<ApplicationSubTab | null>(null);
   const applyFromChat = useCallback((kind: ApplicationSubTab) => {
-    setChatSheetOpen(false);
-    setRequestSubTab(kind);
-    setActiveTab('student-requests');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [setActiveTab]);
+    setRequestSubTab((prev) => (prev === kind ? 'suggestion' : prev));
+    setApplyFormKind(kind);
+  }, []);
+  // 쿠폰 잔액 반영 — 신청 탭 서브탭과 채팅 오버레이의 CouponExchangeCard 가 공유.
+  const handleCouponsChange = useCallback(
+    (n: number) => setStudent((prev: Student | null) => (prev ? { ...prev, leaveCoupons: n } : prev)),
+    [setStudent],
+  );
 
   const openWeeklyPlanTab = useCallback(() => {
     selectReportTab('execution-plan');
@@ -593,6 +602,26 @@ function StudentReportInner() {
   const attentionCount = isStudentReport
     ? notificationCount + pendingMockExams.length + pendingOtEvents.length + pendingCampusEvents.length + pendingMealCount + pendingSaturdayLateExcuses.length
     : notificationCount;
+
+  // 학습신청 패널 — 신청 서브탭과 채팅 + 오버레이가 같은 노드를 공유(동시 마운트는 applyFromChat 가드가 차단).
+  const learningRequestNode = (
+    <LearningRequestPanel
+      student={student}
+      isStudentReport={isStudentReport}
+      requestForm={requestForm}
+      setRequestForm={setRequestForm}
+      requestSubmitting={requestSubmitting}
+      requestCustomOpen={requestCustomOpen}
+      setRequestCustomOpen={setRequestCustomOpen}
+      sendRequest={sendRequest}
+      cancelRequest={cancelRequest}
+      showRequestHistory={showRequestHistory}
+      setShowRequestHistory={setShowRequestHistory}
+      requestError={requestError}
+      realignStudentPlans={realignStudentPlans}
+      realigningPlans={realigningPlans}
+    />
+  );
 
   return (
     <StudentLayout
@@ -931,7 +960,7 @@ function StudentReportInner() {
           homeHalfLeft={homeHalfLeft}
           homeFullLeft={homeFullLeft}
           homeLeaveCoupons={homeLeaveCoupons}
-          onCouponsChange={(n) => setStudent((prev: Student | null) => (prev ? { ...prev, leaveCoupons: n } : prev))}
+          onCouponsChange={handleCouponsChange}
           mealPlans={mealPlans}
           onMealSaved={handleMealSaved}
           pendingMealCount={pendingMealCount}
@@ -951,28 +980,13 @@ function StudentReportInner() {
               onApply={applyFromChat}
             />
           }
-          learningRequestNode={
-            <LearningRequestPanel
-              student={student}
-              isStudentReport={isStudentReport}
-              requestForm={requestForm}
-              setRequestForm={setRequestForm}
-              requestSubmitting={requestSubmitting}
-              requestCustomOpen={requestCustomOpen}
-              setRequestCustomOpen={setRequestCustomOpen}
-              sendRequest={sendRequest}
-              cancelRequest={cancelRequest}
-              showRequestHistory={showRequestHistory}
-              setShowRequestHistory={setShowRequestHistory}
-              requestError={requestError}
-              realignStudentPlans={realignStudentPlans}
-              realigningPlans={realigningPlans}
-            />
-          }
+          learningRequestNode={learningRequestNode}
         />
 
-        {/* 6-1. 클리닉 상담 예약 탭 (상담 운영 센터 학생 전용) */}
-        {isStudentReport && isConsultationCampus(student.campus) && (
+        {/* 6-1. 클리닉 상담 예약 탭 (상담 운영 센터 학생 전용).
+            채팅 + 오버레이가 상담 폼을 띄우는 동안엔 언마운트 — 패널이 mount 시 자체 fetch 하므로
+            이중 마운트(중복 요청·id 충돌)를 피한다(오버레이 닫으면 재마운트·재조회). */}
+        {isStudentReport && isConsultationCampus(student.campus) && applyFormKind !== 'consultation' && (
           <section
             id="clinic-booking"
             className={`scroll-mt-24 print-card ${activeTab === 'student-requests' && requestSubTab === 'consultation' ? '' : 'hidden print:block'}`}
@@ -1046,7 +1060,7 @@ function StudentReportInner() {
         <AnimatedOverlay
           align="bottom"
           onClose={() => setChatSheetOpen(false)}
-          closeOnEscape
+          closeOnEscape={!applyFormKind} // 신청 오버레이가 위에 떠 있으면 Esc 는 그쪽만 닫는다(이중 닫힘 방지)
           lockScroll
           ariaLabel="코멘터와 채팅"
           backdropClassName="no-print fixed inset-0 z-[70] flex items-end justify-center bg-black/30 backdrop-blur-[2px] md:items-center md:p-6"
@@ -1078,6 +1092,83 @@ function StudentReportInner() {
                 cancelRequest={cancelRequest}
                 onApply={applyFromChat}
               />
+            </div>
+          )}
+        </AnimatedOverlay>
+      )}
+
+      {/* 신청 폼 플로팅 오버레이 — 채팅 + 메뉴에서 고른 폼을 현재 화면(채팅 시트 포함) 위에 띄운다.
+          폼 컴포넌트는 신청 탭과 단일소스 공유, 제출 결과는 채팅 타임라인 카드로 회귀. */}
+      {isStudentReport && applyFormKind && (
+        <AnimatedOverlay
+          align="bottom"
+          onClose={() => setApplyFormKind(null)}
+          closeOnEscape
+          lockScroll
+          ariaLabel="신청 작성"
+          backdropClassName="no-print fixed inset-0 z-[85] flex items-end justify-center bg-black/35 backdrop-blur-[2px] md:items-center md:p-6"
+          panelClassName="relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-[#F8FAFC] dark:bg-[#111113] md:max-w-2xl md:rounded-3xl"
+        >
+          {(requestClose) => (
+            <div className="min-h-0 overflow-y-auto overscroll-contain p-4 pt-3">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="mx-auto h-1.5 w-10 rounded-full bg-slate-200 dark:bg-white/15 md:hidden" aria-hidden />
+                <button
+                  type="button"
+                  onClick={requestClose}
+                  className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm dark:border-white/10 dark:bg-[#1c1c1e] dark:text-slate-400"
+                  aria-label="신청 창 닫기"
+                >
+                  ✕
+                </button>
+              </div>
+              {applyFormKind === 'learning-request' && learningRequestNode}
+              {applyFormKind === 'leave' && (
+                <LeaveRequestSection
+                  student={student}
+                  leaveForm={leaveForm}
+                  setLeaveForm={setLeaveForm}
+                  leaveSubmitting={leaveSubmitting}
+                  leaveError={leaveError}
+                  submitLeave={submitLeave}
+                  cancelLeave={cancelLeave}
+                  reappealLeave={reappealLeave}
+                  showLeaveHistory={showLeaveHistory}
+                  setShowLeaveHistory={setShowLeaveHistory}
+                />
+              )}
+              {applyFormKind === 'consultation' && (
+                isConsultationCampus(student.campus) ? (
+                  <ConsultationBookingPanel
+                    studentId={student.id}
+                    campus={student.campus}
+                    bookings={consultationBookings || []}
+                    whyConsultation={whyConsultation}
+                    consultationHistory={consultationHistory || []}
+                  />
+                ) : (
+                  <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-5 text-center shadow-sm">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">상담 신청은 담당 코멘터에게 채팅으로 남겨 주세요.</p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">현재 캠퍼스는 시간 예약형 상담을 운영하지 않아요.</p>
+                  </div>
+                )
+              )}
+              {applyFormKind === 'meal' && (
+                mealPlans.length > 0 ? (
+                  <MealPlanNotice plans={mealPlans} onSaved={handleMealSaved} />
+                ) : (
+                  <div className="rounded-3xl border border-slate-100 dark:border-white/10 bg-white dark:bg-[#1c1c1e] p-6 text-center shadow-sm">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">지금 신청할 수 있는 도시락이 없어요</p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-400 dark:text-slate-400">새로운 주간 도시락 신청이 열리면 여기에서 바로 신청할 수 있어요.</p>
+                  </div>
+                )
+              )}
+              {applyFormKind === 'seat' && (
+                <SeatMoveCard campus={student.campus} active />
+              )}
+              {applyFormKind === 'coupon' && (
+                <CouponExchangeCard onCouponsChange={handleCouponsChange} />
+              )}
             </div>
           )}
         </AnimatedOverlay>

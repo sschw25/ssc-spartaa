@@ -10,6 +10,7 @@ import {
   MessageSquare, Send, Loader2, ArrowLeft, X, Inbox, CheckCircle2, XCircle, ExternalLink,
 } from 'lucide-react';
 import { AnimatedOverlay } from '@/components/ui/animated-overlay';
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
 import type { Student, ConsultationLog, SeatMoveRequest, ConsultationBooking } from '@/lib/types/student';
 import {
   buildTimeline, lastActivityAt, needsActionCount, unreadCountFor, type TimelineEvent,
@@ -40,7 +41,8 @@ const chatLogOf = (s: Student): ConsultationLog | undefined =>
 export function AdminChatDock() {
   const pathname = usePathname();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  // 열림 상태·배지는 전역 컨텍스트 — 퀵탭 '채팅' 탭과 사이드바가 같은 독을 연다.
+  const { chatDockOpen: open, closeChatDock, setChatBadgeCount } = useAdminGlobalSheet();
   const [students, setStudents] = useState<Student[]>([]);
   const [seatMoves, setSeatMoves] = useState<SeatMoveRequest[]>([]);
   const [bookings, setBookings] = useState<ConsultationBooking[]>([]);
@@ -52,8 +54,8 @@ export function AdminChatDock() {
   const seqRef = useRef(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 로그인 페이지 제외. 인박스는 자체 메신저가 있으므로 독 버튼 숨김(중복 방지).
-  const hidden = !pathname || pathname === '/admin' || pathname.startsWith('/admin/inbox');
+  // 로그인 페이지 제외 — 퀵탭 배지·독 오버레이는 인박스 포함 전 관리자 화면에서 동작.
+  const hidden = !pathname || pathname === '/admin';
 
   const load = useCallback(async () => {
     if (inFlightRef.current) return;
@@ -167,6 +169,11 @@ export function AdminChatDock() {
     [conversations],
   );
 
+  // 배지를 전역 컨텍스트로 보고 — 퀵탭 '채팅' 탭 아이콘이 표시한다.
+  useEffect(() => {
+    setChatBadgeCount(loaded ? badgeCount : 0);
+  }, [loaded, badgeCount, setChatBadgeCount]);
+
   const selectedStudent = selectedId ? students.find((s) => s.id === selectedId) : undefined;
   const events = selectedId ? timelines.get(selectedId) || [] : [];
 
@@ -234,7 +241,7 @@ export function AdminChatDock() {
   };
 
   const openInbox = (studentId?: string) => {
-    setOpen(false);
+    closeChatDock();
     router.push(studentId ? `/admin/inbox?student=${encodeURIComponent(studentId)}` : '/admin/inbox');
   };
 
@@ -242,28 +249,10 @@ export function AdminChatDock() {
 
   return (
     <>
-      {/* 플로팅 버튼 — 어느 관리자 화면에서든 채팅 즉시 접근 */}
-      {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="glass-strong press-spring animate-in zoom-in-90 fade-in-0 duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] fixed bottom-24 right-4 z-40 grid h-12 w-12 place-items-center rounded-full text-[#0071E3] shadow-lg transition active:scale-[0.92]"
-          aria-label={`학생 채팅 열기${badgeCount > 0 ? ` — 확인 필요 ${badgeCount}건` : ''}`}
-          title="학생 채팅"
-        >
-          <MessageSquare className="h-5 w-5" />
-          {loaded && badgeCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-red-500 px-1 text-[10px] font-black leading-none text-white ring-2 ring-white dark:ring-[#1c1c1e]">
-              {badgeCount > 99 ? '99+' : badgeCount}
-            </span>
-          )}
-        </button>
-      )}
-
       {open && (
         <AnimatedOverlay
           align="bottom"
-          onClose={() => setOpen(false)}
+          onClose={closeChatDock}
           closeOnEscape
           lockScroll
           ariaLabel="학생 채팅 독"

@@ -3,120 +3,81 @@
 import React from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Home,
-  Users,
-  ClipboardList,
-  MessageSquare,
-  BarChart3,
-  BookOpen,
-  CalendarClock,
-  UserPlus,
-  LayoutGrid,
-  Shield,
-  CalendarHeart,
-  CalendarDays,
-  AlarmClock,
-  Inbox,
-  Trophy,
-  Sparkles,
-  Ticket,
-  HeartPulse,
-  type LucideIcon,
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { haptic } from '@/lib/haptics';
 import { navigateWithTransition } from '@/lib/view-transition';
-
-type SubItem = { icon: LucideIcon; label: string; href: string };
-type TabGroup = {
-  key: string;
-  icon: LucideIcon;
-  label: string;
-  /** 바로 이동하는 단일 목적지 (팝오버 없음) */
-  href?: string;
-  /** 팝오버로 펼치는 하위 화면들 */
-  items?: SubItem[];
-};
-
-// 사이드바(AdminMenuList) 섹션 구성을 하단 슈퍼탭으로 그대로 반영.
-const GROUPS: TabGroup[] = [
-  { key: 'home', icon: Home, label: '홈', href: '/admin/dashboard' },
-  {
-    key: 'students',
-    icon: Users,
-    label: '학생',
-    items: [
-      { icon: BookOpen, label: '학생 종합 관리', href: '/admin/consultation' },
-      { icon: CalendarClock, label: '상담 예약', href: '/admin/consultation-bookings' },
-      { icon: UserPlus, label: '가입신청', href: '/admin/applications' },
-    ],
-  },
-  {
-    key: 'attendance',
-    icon: ClipboardList,
-    label: '출결·생활',
-    items: [
-      { icon: ClipboardList, label: '출결 상세', href: '/admin/attendance' },
-      { icon: LayoutGrid, label: '좌석 현황판', href: '/admin/seat-board' },
-      // 모의고사·OT·도시락은 학원 캘린더로 통합 — 네비에서 제외.
-      { icon: Shield, label: '벌점·상점', href: '/admin/penalties' },
-      { icon: CalendarHeart, label: '휴식·반차', href: '/admin/leave-requests' },
-      { icon: Ticket, label: '쿠폰', href: '/admin/leave' },
-    ],
-  },
-  {
-    key: 'comms',
-    icon: MessageSquare,
-    label: '소통',
-    items: [
-      { icon: Inbox, label: '통합 인박스', href: '/admin/inbox' },
-      { icon: MessageSquare, label: '메시지 발송', href: '/admin/messages' },
-      { icon: CalendarDays, label: '캘린더', href: '/admin/calendar' },
-      { icon: AlarmClock, label: '예약 스케줄', href: '/admin/schedules' },
-    ],
-  },
-  {
-    key: 'stats',
-    icon: BarChart3,
-    label: '통계',
-    items: [
-      { icon: Trophy, label: '순공 랭킹', href: '/admin/leaderboard' },
-      { icon: Sparkles, label: '쿠폰 미션', href: '/admin/missions' },
-      { icon: HeartPulse, label: '케어 지수', href: '/admin/health-score' },
-    ],
-  },
-];
+import { useAdminGlobalSheet } from '@/components/admin/admin-global-context';
+import {
+  getQuickTabGroups,
+  type AdminMenuAction,
+  type AdminMenuItem,
+  type AdminQuickTabGroup,
+} from '@/components/admin/admin-menu-data';
 
 /**
  * iOS 26 Liquid Glass 하단 그룹 슈퍼탭.
- * 홈은 바로 이동하고, 나머지 그룹은 탭하면 유리 팝오버로 하위 화면을 펼친다.
- * 섹션 구성은 사이드바(AdminMenuList)와 동일 — 모든 관리자 화면을 하단바에서 도달.
+ * 홈·채팅은 바로 실행하고, 나머지 그룹은 탭하면 유리 팝오버로 하위 화면을 펼친다.
+ * 항목 구성은 사이드바(AdminMenuList)와 admin-menu-data 단일소스를 공유 —
+ * 모든 관리자 화면(+학생 검색·추가·키오스크 액션)을 하단바에서 도달한다.
  */
 export function AdminGlassTabBar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { openChatDock, chatBadgeCount } = useAdminGlobalSheet();
   const [openKey, setOpenKey] = React.useState<string | null>(null);
+
+  const groups = React.useMemo(() => getQuickTabGroups(), []);
 
   // 라우트가 바뀌면 열린 팝오버를 닫는다.
   React.useEffect(() => {
     setOpenKey(null);
   }, [pathname]);
 
-  const isGroupActive = (g: TabGroup) =>
-    g.href ? pathname === g.href : !!g.items?.some((i) => pathname === i.href);
+  const runAction = (action: AdminMenuAction) => {
+    if (action === 'chatDock') {
+      openChatDock();
+      return;
+    }
+    if (action === 'kiosk') {
+      window.open('/attend/kiosk', '_blank');
+      return;
+    }
+    if (action === 'search') {
+      navigateWithTransition(() => router.push('/admin/consultation?focus=search'));
+      return;
+    }
+    navigateWithTransition(() => router.push('/admin/consultation?action=add'));
+  };
 
-  const handleTab = (g: TabGroup) => {
+  const isGroupActive = (g: AdminQuickTabGroup) =>
+    g.href ? pathname === g.href : !!g.items?.some((i) => i.href && pathname === i.href);
+
+  const handleTab = (g: AdminQuickTabGroup) => {
     haptic('select');
     if (g.href) {
       navigateWithTransition(() => router.push(g.href!));
       setOpenKey(null);
-    } else {
-      setOpenKey((k) => (k === g.key ? null : g.key));
+      return;
     }
+    if (g.action) {
+      runAction(g.action);
+      setOpenKey(null);
+      return;
+    }
+    setOpenKey((k) => (k === g.key ? null : g.key));
   };
 
-  const openGroup = GROUPS.find((g) => g.key === openKey);
+  const handleItem = (item: AdminMenuItem) => {
+    haptic('select');
+    setOpenKey(null);
+    if (item.href) {
+      navigateWithTransition(() => router.push(item.href!));
+      return;
+    }
+    if (item.action) runAction(item.action);
+  };
+
+  const openGroup = groups.find((g) => g.key === openKey);
 
   return (
     <nav
@@ -157,16 +118,12 @@ export function AdminGlassTabBar() {
             <div className="grid grid-cols-2 gap-1">
               {openGroup.items.map((item) => {
                 const Icon = item.icon;
-                const active = pathname === item.href;
+                const active = !!item.href && pathname === item.href;
                 return (
                   <button
-                    key={item.href}
+                    key={item.key}
                     type="button"
-                    onClick={() => {
-                      haptic('select');
-                      setOpenKey(null);
-                      navigateWithTransition(() => router.push(item.href));
-                    }}
+                    onClick={() => handleItem(item)}
                     aria-current={active ? 'page' : undefined}
                     className={cn(
                       'press-spring flex items-center gap-2 rounded-2xl px-3 py-2.5 text-left transition-colors',
@@ -176,7 +133,7 @@ export function AdminGlassTabBar() {
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0 text-[#0071E3]" />
-                    <span className="min-w-0 truncate text-[12px] font-bold">{item.label}</span>
+                    <span className="min-w-0 truncate text-[12px] font-bold">{item.shortLabel || item.label}</span>
                   </button>
                 );
               })}
@@ -187,10 +144,11 @@ export function AdminGlassTabBar() {
 
       {/* 슈퍼탭 바 */}
       <div className="glass-strong pointer-events-auto flex items-center gap-0.5 rounded-full p-1.5">
-        {GROUPS.map((group) => {
+        {groups.map((group) => {
           const active = isGroupActive(group);
           const open = openKey === group.key;
           const Icon = group.icon;
+          const showBadge = group.key === 'chat' && chatBadgeCount > 0;
           return (
             <button
               key={group.key}
@@ -198,17 +156,25 @@ export function AdminGlassTabBar() {
               onClick={() => handleTab(group)}
               aria-current={active ? 'page' : undefined}
               aria-expanded={group.items ? open : undefined}
+              aria-label={showBadge ? `${group.label} — 확인 필요 ${chatBadgeCount}건` : undefined}
               className={cn(
-                'press-spring flex min-w-[58px] flex-col items-center justify-center gap-0.5 rounded-full px-3 py-2 transition-colors duration-300',
+                'press-spring relative flex min-w-[50px] flex-col items-center justify-center gap-0.5 rounded-full px-2.5 py-2 transition-colors duration-300 sm:min-w-[58px] sm:px-3',
                 active || open
                   ? 'bg-[#0071E3]/12 text-[#0071E3]'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-black/[0.04]'
               )}
             >
               <Icon className="h-5 w-5" />
-              <span className={cn('text-[10px] tracking-tight', active || open ? 'font-semibold' : 'font-bold')}>
-                {group.label}
+              <span className={cn('text-[10px] tracking-tight whitespace-nowrap', active || open ? 'font-semibold' : 'font-bold')}>
+                {/* 좁은 화면(360px대)에서 6탭이 넘치지 않게 모바일은 축약 라벨 */}
+                <span className="sm:hidden">{group.shortLabel || group.label}</span>
+                <span className="hidden sm:inline">{group.label}</span>
               </span>
+              {showBadge && (
+                <span className="absolute right-1 top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-red-500 px-1 text-[9px] font-black leading-none text-white">
+                  {chatBadgeCount > 99 ? '99+' : chatBadgeCount}
+                </span>
+              )}
             </button>
           );
         })}

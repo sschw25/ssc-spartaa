@@ -39,7 +39,7 @@ export function AdminTopNav({
 }: AdminTopNavProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { isMenuPinned, toggleMenuPin } = useAdminGlobalSheet();
+  const { isMenuPinned, toggleMenuPin, openChatDock } = useAdminGlobalSheet();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [adminSession, setAdminSession] = useState<{ id: string; username: string; campus: string; role: string } | null>(null);
 
@@ -74,6 +74,12 @@ export function AdminTopNav({
   const openKiosk = () => {
     setIsMenuOpen(false);
     window.open('/attend/kiosk', '_blank');
+  };
+
+  // 전역 채팅 독 — Sheet 를 먼저 닫아야 Radix modal 의 body pointer-events 잠금이 독을 막지 않는다.
+  const openChat = () => {
+    setIsMenuOpen(false);
+    openChatDock();
   };
 
   const searchStudent = () => {
@@ -194,6 +200,7 @@ export function AdminTopNav({
             onSearchStudent={searchStudent}
             onAddStudent={addStudent}
             onOpenKiosk={openKiosk}
+            onOpenChatDock={openChat}
             onLogout={logout}
           />
         </aside>
@@ -212,6 +219,7 @@ export function AdminTopNav({
             onSearchStudent={searchStudent}
             onAddStudent={addStudent}
             onOpenKiosk={openKiosk}
+            onOpenChatDock={openChat}
             onLogout={logout}
           />
         </SheetContent>

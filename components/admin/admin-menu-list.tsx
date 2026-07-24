@@ -1,38 +1,10 @@
 'use client';
 
 import React from 'react';
-import {
-  AlarmClock,
-  BookOpen,
-  CalendarDays,
-  CalendarClock,
-  CalendarHeart,
-  ChevronDown,
-  ClipboardCheck,
-  ClipboardList,
-  Home,
-  Presentation,
-  Utensils,
-  LayoutGrid,
-  LogOut,
-  MessageSquare,
-  Plus,
-  ScanLine,
-  Search,
-  Shield,
-  Trophy,
-  Inbox,
-  Sparkles,
-  Ticket,
-  UserPlus,
-  PinOff,
-  Pin,
-  HeartPulse,
-  Stethoscope,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronDown, LogOut, Pin, PinOff, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { getSidebarSections, type AdminMenuAction } from '@/components/admin/admin-menu-data';
 
 type AdminSession = { id: string; username: string; campus: string; role: string } | null;
 
@@ -46,6 +18,8 @@ type AdminMenuListProps = {
   onSearchStudent: () => void;
   onAddStudent: () => void;
   onOpenKiosk: () => void;
+  /** 전역 채팅 독 열기 — Sheet 닫힘 처리를 위해 부모(AdminTopNav)가 감싸서 전달 */
+  onOpenChatDock: () => void;
   onLogout: () => void;
 };
 
@@ -81,80 +55,30 @@ export function AdminMenuList({
   onSearchStudent,
   onAddStudent,
   onOpenKiosk,
+  onOpenChatDock,
   onLogout,
 }: AdminMenuListProps) {
   const isSuper = !!adminSession && (adminSession.campus === 'all' || adminSession.role === 'super');
 
-  const sections: MenuSection[] = [
-    {
-      key: 'main',
-      title: '메인',
-      items: [
-        { key: 'dashboard', icon: Home, label: '홈 대시보드', href: '/admin/dashboard' },
-        { key: 'inbox', icon: Inbox, label: '통합 인박스', href: '/admin/inbox' },
-        { key: 'diagnostics', icon: Stethoscope, label: '계획 정합성 점검', href: '/admin/diagnostics' },
-      ],
-    },
-    {
-      // 모의고사·OT·도시락은 캘린더 날짜에서 생성·알림하는 것이 기본 동선이지만,
-      // 성적 입력·정산·인쇄용 단독 화면도 유지된다. 메뉴가 곧 전체 지도이도록 여기서 함께 노출.
-      key: 'schedule',
-      title: '캘린더 · 일정',
-      items: [
-        { key: 'calendar', icon: CalendarDays, label: '캘린더 (일정 생성·알림)', href: '/admin/calendar' },
-        { key: 'mock-exam', icon: ClipboardCheck, label: '모의고사 관리', href: '/admin/mock-exam' },
-        { key: 'ot-events', icon: Presentation, label: 'OT · 설명회 관리', href: '/admin/ot-events' },
-        { key: 'meals', icon: Utensils, label: '도시락 신청 · 정산', href: '/admin/meals' },
-        { key: 'schedules', icon: AlarmClock, label: '예약 스케줄', href: '/admin/schedules' },
-      ],
-    },
-    {
-      key: 'students',
-      title: '학생 관리',
-      items: [
-        { key: 'consultation', icon: BookOpen, label: '학생 종합 관리', href: '/admin/consultation' },
-        { key: 'consultation-bookings', icon: CalendarClock, label: '상담 예약', href: '/admin/consultation-bookings' },
-        { key: 'applications', icon: UserPlus, label: '가입신청', href: '/admin/applications' },
-        { key: 'search', icon: Search, label: '학생 검색', action: onSearchStudent },
-        { key: 'add', icon: Plus, label: '학생 추가', action: onAddStudent },
-      ],
-    },
-    {
-      key: 'attendance',
-      title: '출결 · 생활',
-      items: [
-        { key: 'attendance', icon: ClipboardList, label: '출결 상세', href: '/admin/attendance' },
-        { key: 'seat-board', icon: LayoutGrid, label: '좌석 현황판', href: '/admin/seat-board' },
-        { key: 'kiosk', icon: ScanLine, label: '등하원 체크 ↗', action: onOpenKiosk },
-        { key: 'penalties', icon: Shield, label: '벌점 · 상점 관리', href: '/admin/penalties' },
-        { key: 'leave-requests', icon: CalendarHeart, label: '휴식 · 반차 관리', href: '/admin/leave-requests' },
-        { key: 'leave', icon: Ticket, label: '쿠폰 관리', href: '/admin/leave' },
-      ],
-    },
-    {
-      key: 'comms',
-      title: '소통',
-      items: [{ key: 'messages', icon: MessageSquare, label: '메시지 발송', href: '/admin/messages' }],
-    },
-    {
-      key: 'stats',
-      title: '통계',
-      items: [
-        { key: 'leaderboard', icon: Trophy, label: '순공 랭킹', href: '/admin/leaderboard' },
-        { key: 'missions', icon: Sparkles, label: '쿠폰 미션 설정', href: '/admin/missions' },
-        { key: 'health-score', icon: HeartPulse, label: '케어 지수', href: '/admin/health-score' },
-      ],
-    },
-    ...(isSuper
-      ? [
-          {
-            key: 'settings',
-            title: '설정',
-            items: [{ key: 'accounts', icon: Shield, label: '관리자 계정 관리', href: '/admin/accounts' }],
-          } as MenuSection,
-        ]
-      : []),
-  ];
+  // 섹션 구성은 admin-menu-data 단일소스(퀵탭과 공유) — 액션 키만 부모가 준 핸들러로 해석한다.
+  // chatDock 도 search 등과 같이 부모 경유 — Sheet 닫기(setIsMenuOpen(false))를 우회하지 않게.
+  const actionHandlers: Record<AdminMenuAction, () => void> = {
+    search: onSearchStudent,
+    addStudent: onAddStudent,
+    kiosk: onOpenKiosk,
+    chatDock: onOpenChatDock,
+  };
+  const sections: MenuSection[] = getSidebarSections(isSuper).map((section) => ({
+    key: section.key,
+    title: section.title,
+    items: section.items.map((item) => ({
+      key: item.key,
+      icon: item.icon,
+      label: item.label,
+      ...(item.href ? { href: item.href } : {}),
+      ...(item.action ? { action: actionHandlers[item.action] } : {}),
+    })),
+  }));
 
   // 섹션별 접힘 상태 — localStorage에 저장해 Sheet/사이드바/새로고침 간 유지
   const [collapsed, setCollapsed] = React.useState<Record<string, boolean>>({});
